@@ -100,28 +100,9 @@ resource "vault_config_ui_header" "multi_value" {
 }
 ```
 
-### Namespace-Specific Header (Enterprise)
-
-```hcl
-resource "vault_namespace" "example" {
-  path = "example"
-}
-
-resource "vault_config_ui_header" "ns_header" {
-  namespace = vault_namespace.example.path
-  name      = "X-Namespace-Header"
-  values    = ["namespace-specific-value"]
-}
-```
-
 ## Argument Reference
 
 The following arguments are supported:
-
-* `namespace` - (Optional) The namespace to provision the resource in.
-  The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
-  *Available only for Vault Enterprise*.
 
 * `name` - (Required, Forces new resource) The name of the custom header (e.g., "Content-Security-Policy", "X-Frame-Options").
   Changing this will recreate the resource.
@@ -129,11 +110,11 @@ The following arguments are supported:
 * `values` - (Required) A list of values for the header. At least one value is required.
   Multiple values can be provided for headers that support them.
 
+~> **Important** This resource must be called from the **root namespace**. UI header configuration is a global setting that applies to the entire Vault cluster.
+
 ## Attributes Reference
 
-In addition to the arguments above, the following attributes are exported:
-
-* `id` - The resource identifier, which is the same as the `name`.
+No additional attributes are exported beyond the arguments above.
 
 ## Import
 
@@ -141,12 +122,6 @@ UI header configurations can be imported using the header `name`, e.g.
 
 ```
 $ terraform import vault_config_ui_header.csp Content-Security-Policy
-```
-
-For namespace-specific headers in Vault Enterprise:
-
-```
-$ terraform import vault_config_ui_header.ns_header example/X-Namespace-Header
 ```
 
 ## Migration from vault_generic_endpoint
@@ -182,6 +157,12 @@ resource "vault_config_ui_header" "csp" {
 4. Run `terraform plan` to verify no changes are required
 
 ## Important Notes
+
+### State Management
+
+This resource follows Terraform best practices by reading the actual configuration from Vault
+after create and update operations. This ensures that the Terraform state always reflects the
+actual state in Vault, including any server-side processing or normalization of values.
 
 ### Sudo Capability Requirement
 
