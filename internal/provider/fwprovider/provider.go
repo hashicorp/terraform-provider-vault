@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
+	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 )
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
@@ -238,6 +239,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
 		sys.NewPasswordPolicyResource,
+		sysconfig.NewConfigGroupPolicyApplicationResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
