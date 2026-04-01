@@ -169,8 +169,23 @@ func (r *ConfigUIHeaderResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// Save data into Terraform state
+	// Set the state first so Read can access it
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Read back from Vault to update state with fresh data
+	readReq := resource.ReadRequest{
+		State: resp.State,
+	}
+	readResp = &resource.ReadResponse{
+		State:       resp.State,
+		Diagnostics: resp.Diagnostics,
+	}
+	r.Read(ctx, readReq, readResp)
+	resp.Diagnostics = readResp.Diagnostics
+	resp.State = readResp.State
 }
 
 // Read is called during the terraform apply, terraform plan, and terraform
@@ -191,20 +206,19 @@ func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), "")
+	vaultClient, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	// Use the name field directly
+	// Read from Vault - if resource not found, remove from state
 	name := data.Name.ValueString()
 	path := r.path(name)
-	// Use multivalue=true parameter to get consistent response format
 	queryParams := map[string][]string{
 		"multivalue": {"true"},
 	}
-	headerResp, err := client.Logical().ReadWithDataWithContext(ctx, path, queryParams)
+	headerResp, err := vaultClient.Logical().ReadWithDataWithContext(ctx, path, queryParams)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultReadErr(err),
@@ -218,7 +232,6 @@ func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	// Extract values from response
-	// Note: With multivalue=true, Vault returns "values" (plural) as an array
 	if valuesRaw, ok := headerResp.Data["values"]; ok {
 		if valuesInterface, ok := valuesRaw.([]interface{}); ok {
 			values := make([]string, len(valuesInterface))
@@ -299,8 +312,23 @@ func (r *ConfigUIHeaderResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// Save data into Terraform state
+	// Set the state first so Read can access it
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Read back from Vault to update state with fresh data
+	readReq := resource.ReadRequest{
+		State: resp.State,
+	}
+	readResp = &resource.ReadResponse{
+		State:       resp.State,
+		Diagnostics: resp.Diagnostics,
+	}
+	r.Read(ctx, readReq, readResp)
+	resp.Diagnostics = readResp.Diagnostics
+	resp.State = readResp.State
 }
 
 // Delete is called during the terraform apply command
