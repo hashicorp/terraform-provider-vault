@@ -798,6 +798,8 @@ const (
 	FieldPrivateKeyWOVersion        = "private_key_wo_version"
 	FieldClientKeyWO                = "client_key_wo"
 	FieldClientKeyWOVersion         = "client_key_wo_version"
+	FieldActivatedFlags             = "activated_flags"
+	FieldUnactivatedFlags           = "unactivated_flags"
 	FieldOIDCClientSecretWO         = "oidc_client_secret_wo"
 	FieldOIDCClientSecretWOVersion  = "oidc_client_secret_wo_version"
 	FieldServiceAccountJWTWO        = "service_account_jwt_wo"
