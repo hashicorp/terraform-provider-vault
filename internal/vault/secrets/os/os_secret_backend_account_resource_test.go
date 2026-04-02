@@ -35,6 +35,7 @@ func TestAccOSSecretBackendAccount_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -96,6 +97,7 @@ func TestAccOSSecretBackendAccount_basicSSH(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{
