@@ -232,7 +232,7 @@ func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	// Extract values from response
-	if valuesRaw, ok := headerResp.Data["values"]; ok {
+	if valuesRaw, ok := headerResp.Data[consts.FieldValues]; ok {
 		if valuesInterface, ok := valuesRaw.([]interface{}); ok {
 			values := make([]string, len(valuesInterface))
 			for i, val := range valuesInterface {
