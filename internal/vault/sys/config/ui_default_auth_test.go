@@ -1,11 +1,10 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package sys_test
+package config_test
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -138,100 +137,6 @@ func TestAccConfigUIDefaultAuthAllAuthTypes(t *testing.T) {
 	}
 }
 
-func TestAccConfigUIDefaultAuthEmptyBackupList(t *testing.T) {
-	configName := acctest.RandomWithPrefix("test-config")
-	resourceName := "vault_config_ui_default_auth.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion120)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccConfigUIDefaultAuthConfigEmptyBackups(configName, "ldap"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "ldap"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldBackupAuthTypes+".#", "0"),
-				),
-			},
-			testutil.GetImportTestStep(resourceName, false, nil),
-		},
-	})
-}
-
-func TestAccConfigUIDefaultAuthInvalidAuthType(t *testing.T) {
-	configName := acctest.RandomWithPrefix("test-config")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion120)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccConfigUIDefaultAuthConfigMinimal(configName, "invalid_auth_type"),
-				ExpectError: regexp.MustCompile(`Attribute default_auth_type value must be one of`),
-			},
-		},
-	})
-}
-
-func TestAccConfigUIDefaultAuthInvalidBackupAuthType(t *testing.T) {
-	configName := acctest.RandomWithPrefix("test-config")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion120)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccConfigUIDefaultAuthConfigInvalidBackup(configName, "ldap", `["invalid_method"]`),
-				ExpectError: regexp.MustCompile(`Attribute backup_auth_types\[0\] value must be one of`),
-			},
-		},
-	})
-}
-
-func TestAccConfigUIDefaultAuthNameChange(t *testing.T) {
-	configName1 := acctest.RandomWithPrefix("test-config-1")
-	configName2 := acctest.RandomWithPrefix("test-config-2")
-	resourceName := "vault_config_ui_default_auth.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion120)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccConfigUIDefaultAuthConfigMinimal(configName1, "ldap"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName1),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "ldap"),
-				),
-			},
-			{
-				Config: testAccConfigUIDefaultAuthConfigMinimal(configName2, "ldap"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName2),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "ldap"),
-				),
-			},
-		},
-	})
-}
-
 func TestAccConfigUIDefaultAuthConfigNotFound(t *testing.T) {
 	configName := acctest.RandomWithPrefix("test-config")
 	resourceName := "vault_config_ui_default_auth.test"
@@ -303,21 +208,4 @@ resource "vault_config_ui_default_auth" "test" {
   default_auth_type = "%s"
   namespace_path    = "%s"
 }`, name, defaultAuthType, namespacePath)
-}
-func testAccConfigUIDefaultAuthConfigEmptyBackups(name, defaultAuthType string) string {
-	return fmt.Sprintf(`
-resource "vault_config_ui_default_auth" "test" {
-  name              = "%s"
-  default_auth_type = "%s"
-  backup_auth_types = []
-}`, name, defaultAuthType)
-}
-
-func testAccConfigUIDefaultAuthConfigInvalidBackup(name, defaultAuthType, backupAuthTypes string) string {
-	return fmt.Sprintf(`
-resource "vault_config_ui_default_auth" "test" {
-  name              = "%s"
-  default_auth_type = "%s"
-  backup_auth_types = %s
-}`, name, defaultAuthType, backupAuthTypes)
 }
