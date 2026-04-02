@@ -11,6 +11,12 @@ description: |-
 Manages host configurations in the OS Secrets Engine. Hosts represent remote systems where
 Vault will manage operating system account credentials via SSH. This resource requires Vault 2.0.0 or later.
 
+The OS Secrets Engine mount itself is managed separately, typically with `vault_mount`. This resource manages
+hosts beneath an existing OS mount.
+
+The examples below use the canonical plugin name `vault-plugin-secrets-os`. If your Vault cluster registers the
+OS plugin under a different catalog name, use that name in `vault_mount.type` instead.
+
 See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for more information.
 
 ## Example Usage
@@ -18,8 +24,13 @@ See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for m
 ### Basic Host Configuration
 
 ```hcl
-resource "vault_os_secret_backend" "os" {
+resource "vault_mount" "os" {
   path = "os"
+  type = "vault-plugin-secrets-os"
+}
+
+resource "vault_os_secret_backend" "os" {
+  path = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "example" {
@@ -33,8 +44,13 @@ resource "vault_os_secret_backend_host" "example" {
 ### Advanced Host Configuration
 
 ```hcl
-resource "vault_os_secret_backend" "os" {
+resource "vault_mount" "os" {
   path = "os"
+  type = "vault-plugin-secrets-os"
+}
+
+resource "vault_os_secret_backend" "os" {
+  path = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "production" {
@@ -56,8 +72,13 @@ resource "vault_os_secret_backend_host" "production" {
 ### Host with SSH Host Key
 
 ```hcl
-resource "vault_os_secret_backend" "os" {
+resource "vault_mount" "os" {
   path = "os"
+  type = "vault-plugin-secrets-os"
+}
+
+resource "vault_os_secret_backend" "os" {
+  path = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "secure" {
@@ -117,6 +138,7 @@ $ terraform import vault_os_secret_backend_host.example os/hosts/web-server-01
 ## Notes
 
 * This resource requires Vault 2.0.0 or later.
+* Use `vault_mount` to create, tune, or remove the OS Secrets Engine mount before managing hosts with this resource.
 * The host must be configured before accounts can be created on it.
 * When `ssh_host_key` is not provided, the backend's `ssh_host_key_trust_on_first_use` setting determines whether the host key will be automatically trusted on first connection.
 * Use either `rotation_period` or `rotation_schedule`.
