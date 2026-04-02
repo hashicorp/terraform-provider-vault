@@ -157,4 +157,3 @@ func listValueFromStrings(ctx context.Context, values []string, diagnostics diag
 	diagnostics.Append(diags...)
 	return listValue, diagnostics
 }
-
