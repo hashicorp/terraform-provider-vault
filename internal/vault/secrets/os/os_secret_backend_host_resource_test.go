@@ -36,7 +36,6 @@ func TestAccOSSecretBackendHost_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "ssh"),
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2222"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_period", "86400"),
@@ -53,16 +52,12 @@ func TestAccOSSecretBackendHost_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccOSSecretBackendHostImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore: []string{
-					consts.FieldType,
-				},
 			},
 			{
 				Config: testAccOSSecretBackendHostConfig_updated(mount, name),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "ssh"),
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2222"),
 					resource.TestCheckResourceAttr(resourceName, "rotation_period", "172800"),
@@ -132,7 +127,6 @@ func TestAccOSSecretBackendHost_optionalFields(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "ssh"),
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2222"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_period"),
@@ -146,7 +140,6 @@ func TestAccOSSecretBackendHost_optionalFields(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "ssh"),
 					resource.TestCheckResourceAttr(resourceName, "address", "127.0.0.1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2222"),
 					resource.TestCheckNoResourceAttr(resourceName, "rotation_period"),
@@ -205,9 +198,6 @@ func TestAccOSSecretBackendHost_sshHostKey(t *testing.T) {
 				ImportStateIdFunc:                    testAccOSSecretBackendHostImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore: []string{
-					consts.FieldType,
-				},
 			},
 		},
 	})
@@ -232,8 +222,13 @@ func testAccOSSecretBackendHostImportStateIdFunc(resourceName string) resource.I
 // valid period-based rotation configuration.
 func testAccOSSecretBackendHostConfig_basic(mount, name string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path = vault_mount.test.path
 }
 
 # Note: verify_connection defaults to true in production.
@@ -241,7 +236,6 @@ resource "vault_os_secret_backend" "test" {
 resource "vault_os_secret_backend_host" "test" {
 	mount           = vault_os_secret_backend.test.path
 	name            = "%s"
-	type            = "ssh"
 	address         = "127.0.0.1"
 	port            = 2222
 	rotation_period = 86400
@@ -258,14 +252,18 @@ resource "vault_os_secret_backend_host" "test" {
 // host fixture.
 func testAccOSSecretBackendHostConfig_updated(mount, name string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path = vault_mount.test.path
 }
 
 resource "vault_os_secret_backend_host" "test" {
 	mount           = vault_os_secret_backend.test.path
 	name            = "%s"
-	type            = "ssh"
 	address         = "127.0.0.1"
 	port            = 2222
 	rotation_period = 172800
@@ -283,14 +281,18 @@ resource "vault_os_secret_backend_host" "test" {
 // so optional settings can be cleared deterministically.
 func testAccOSSecretBackendHostConfig_minimal(mount, name string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path = vault_mount.test.path
 }
 
 resource "vault_os_secret_backend_host" "test" {
   mount   = vault_os_secret_backend.test.path
   name    = "%s"
-  type    = "ssh"
 	address = "127.0.0.1"
 	port    = 2222
 }
@@ -301,14 +303,18 @@ resource "vault_os_secret_backend_host" "test" {
 // accepted by the beta plugin while also covering metadata updates.
 func testAccOSSecretBackendHostConfig_allFields(mount, name string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path = vault_mount.test.path
 }
 
 resource "vault_os_secret_backend_host" "test" {
   mount             = vault_os_secret_backend.test.path
   name              = "%s"
-  type              = "ssh"
 	address           = "127.0.0.1"
   port              = 2222
 	rotation_period   = null
@@ -326,14 +332,18 @@ resource "vault_os_secret_backend_host" "test" {
 
 func testAccOSSecretBackendHostConfig_withSSHKey(mount, name, sshHostKey string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path = vault_mount.test.path
 }
 
 resource "vault_os_secret_backend_host" "test" {
   mount        = vault_os_secret_backend.test.path
   name         = "%s"
-  type         = "ssh"
 	address      = "127.0.0.1"
 	port         = 2222
   ssh_host_key = "%s"

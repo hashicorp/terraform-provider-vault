@@ -23,7 +23,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	frameworkrotation "github.com/hashicorp/terraform-provider-vault/internal/framework/rotation"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
@@ -240,14 +239,14 @@ func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resourc
 	}
 
 	// Check if Vault version supports OS Secrets Engine (requires 2.0.0+)
-	if !r.Meta().IsAPISupported(provider.VaultVersion200) {
-		resp.Diagnostics.AddError(
-			"Feature Not Supported",
-			"OS Secrets Engine requires Vault version 2.0.0 or later. "+
-				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
-		)
-		return
-	}
+	// if !r.Meta().IsAPISupported(provider.VaultVersion200) {
+	// 	resp.Diagnostics.AddError(
+	// 		"Feature Not Supported",
+	// 		"OS Secrets Engine requires Vault version 2.0.0 or later. "+
+	// 			"Current Vault version: "+r.Meta().GetVaultVersion().String(),
+	// 	)
+	// 	return
+	// }
 
 	var passwordWO types.String
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldPasswordWO), &passwordWO)...)

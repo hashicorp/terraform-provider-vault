@@ -25,7 +25,6 @@ resource "vault_os_secret_backend" "os" {
 resource "vault_os_secret_backend_host" "example" {
   mount   = vault_os_secret_backend.os.path
   name    = "web-server-01"
-  type    = "ssh"
   address = "192.168.1.100"
   port    = 22
 }
@@ -41,7 +40,6 @@ resource "vault_os_secret_backend" "os" {
 resource "vault_os_secret_backend_host" "production" {
   mount             = vault_os_secret_backend.os.path
   name              = "prod-db-01"
-  type              = "ssh"
   address           = "10.0.1.50"
   port              = 2222
   rotation_schedule = "0 2 * * *"
@@ -65,7 +63,6 @@ resource "vault_os_secret_backend" "os" {
 resource "vault_os_secret_backend_host" "secure" {
   mount        = vault_os_secret_backend.os.path
   name         = "secure-host"
-  type         = "ssh"
   address      = "192.168.1.200"
   port         = 22
   ssh_host_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."
@@ -84,8 +81,6 @@ The following arguments are supported:
 * `mount` - (Required) The path where the OS secrets engine is mounted.
 
 * `name` - (Required) Unique name for the host within the mount.
-
-* `type` - (Required) The type of connection to use. The current implementation is exercised with `"ssh"`.
 
 * `address` - (Required) The address of the host (IP address or hostname).
 

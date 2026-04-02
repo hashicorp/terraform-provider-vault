@@ -15,7 +15,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
+
+const testAccOSSSHHostEnvVar = "TF_VAULT_OS_SSH_HOST"
 
 // TestAccOSSecretBackendAccount_basic covers CRUD and import without requiring
 // a live SSH login. It disables verify_connection and uses a unique username so
@@ -32,7 +35,6 @@ func TestAccOSSecretBackendAccount_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -86,6 +88,7 @@ func TestAccOSSecretBackendAccount_basicSSH(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-os")
 	hostName := acctest.RandomWithPrefix("test-host")
 	accountName := acctest.RandomWithPrefix("test-account")
+	sshHost := testutil.SkipTestEnvUnset(t, testAccOSSSHHostEnvVar)[0]
 	resourceType := "vault_os_secret_backend_account"
 	resourceName := resourceType + ".test"
 
@@ -93,21 +96,81 @@ func TestAccOSSecretBackendAccount_basicSSH(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, "user-1", true),
+				Config: testAccOSSecretBackendAccountConfig_basicWithHost(mount, hostName, accountName, "user-1", sshHost, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, "user-1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "true"),
+					testAccOSSecretBackendAccountCheckManualRotate(resourceName),
 				),
 			},
 		},
 	})
+}
+
+// testAccOSSecretBackendAccountCheckManualRotate uses the provider-managed
+// client to invoke the account rotate endpoint and then verifies Vault reports
+// a populated last_vault_rotation timestamp.
+func testAccOSSecretBackendAccountCheckManualRotate(resourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+
+		client, err := provider.GetClient(rs.Primary, acctestutil.TestProvider.Meta())
+		if err != nil {
+			return err
+		}
+
+		accountPath := fmt.Sprintf("%s/hosts/%s/accounts/%s",
+			rs.Primary.Attributes[consts.FieldMount],
+			rs.Primary.Attributes[consts.FieldHost],
+			rs.Primary.Attributes[consts.FieldName],
+		)
+
+		before, err := client.Logical().Read(accountPath)
+		if err != nil {
+			return fmt.Errorf("error reading account before manual rotation: %w", err)
+		}
+		if before == nil {
+			return fmt.Errorf("account not found before manual rotation at %q", accountPath)
+		}
+		if len(before.Warnings) > 0 {
+			return fmt.Errorf("unexpected warnings before manual rotation at %q: %v", accountPath, before.Warnings)
+		}
+
+		rotateResp, err := client.Logical().Write(accountPath+"/rotate", map[string]interface{}{})
+		if err != nil {
+			return fmt.Errorf("error manually rotating account at %q: %w", accountPath, err)
+		}
+		if rotateResp != nil && len(rotateResp.Warnings) > 0 {
+			return fmt.Errorf("unexpected warnings from manual rotation at %q: %v", accountPath, rotateResp.Warnings)
+		}
+
+		after, err := client.Logical().Read(accountPath)
+		if err != nil {
+			return fmt.Errorf("error reading account after manual rotation: %w", err)
+		}
+		if after == nil {
+			return fmt.Errorf("account not found after manual rotation at %q", accountPath)
+		}
+		if len(after.Warnings) > 0 {
+			return fmt.Errorf("unexpected warnings after manual rotation at %q: %v", accountPath, after.Warnings)
+		}
+
+		lastRotation := fmt.Sprint(after.Data[consts.FieldLastVaultRotation])
+		if lastRotation == "" || lastRotation == "<nil>" || lastRotation == "1970-01-01 00:00:00 +0000 UTC" || lastRotation == "0001-01-01 00:00:00 +0000 UTC" {
+			return fmt.Errorf("expected %s to be populated after manual rotation at %q, got %v", consts.FieldLastVaultRotation, accountPath, after.Data[consts.FieldLastVaultRotation])
+		}
+
+		return nil
+	}
 }
 
 // TestAccOSSecretBackendAccount_remount verifies remount behavior without
@@ -305,22 +368,30 @@ func testAccOSSecretBackendAccountImportStateIdFunc(resourceName string) resourc
 // verify_connection is parameterized so the same fixture can be reused for both
 // the SSH-independent and SSH-dependent test lanes.
 func testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, username string, verifyConnection bool) string {
+	return testAccOSSecretBackendAccountConfig_basicWithHost(mount, hostName, accountName, username, "127.0.0.1", verifyConnection)
+}
+
+func testAccOSSecretBackendAccountConfig_basicWithHost(mount, hostName, accountName, username, address string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-	path                            = "%s"
+	path                            = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
   mount             = vault_os_secret_backend.test.path
   name              = "%s"
-  type              = "ssh"
-	address           = "127.0.0.1"
+	address           = "%s"
 	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
-  mount           = vault_os_secret_backend.test.path
+	mount           = vault_os_secret_backend.test.path
   host            = vault_os_secret_backend_host.test.name
   name            = "%s"
 	username        = "%s"
@@ -328,22 +399,26 @@ resource "vault_os_secret_backend_account" "test" {
 	rotation_period = 86400
 	verify_connection = %t
 }
-`, mount, hostName, accountName, username, verifyConnection)
+`, mount, hostName, address, accountName, username, verifyConnection)
 }
 
 // testAccOSSecretBackendAccountConfig_updated is the update variant of the
 // baseline fixture used by the SSH-independent CRUD coverage.
 func testAccOSSecretBackendAccountConfig_updated(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-	path                            = "%s"
+	path                            = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
   mount             = vault_os_secret_backend.test.path
   name              = "%s"
-  type              = "ssh"
 	address           = "127.0.0.1"
 	port              = 2222
 }
@@ -364,15 +439,19 @@ resource "vault_os_secret_backend_account" "test" {
 // fields so optional-field clearing can be tested deterministically.
 func testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-	path                            = "%s"
+	path                            = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
   mount             = vault_os_secret_backend.test.path
   name              = "%s"
-  type              = "ssh"
 	address           = "127.0.0.1"
 	port              = 2222
 }
@@ -392,15 +471,19 @@ resource "vault_os_secret_backend_account" "test" {
 // fields together using a combination accepted by the beta plugin.
 func testAccOSSecretBackendAccountConfig_allFields(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-	path                            = "%s"
+	path                            = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
   mount             = vault_os_secret_backend.test.path
   name              = "%s"
-  type              = "ssh"
 	address           = "127.0.0.1"
 	port              = 2222
 }
@@ -422,15 +505,19 @@ resource "vault_os_secret_backend_account" "test" {
 // path for import and readback coverage.
 func testAccOSSecretBackendAccountConfig_withSchedule(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-	path                            = "%s"
+	path                            = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
   mount             = vault_os_secret_backend.test.path
   name              = "%s"
-  type              = "ssh"
 	address           = "127.0.0.1"
 	port              = 2222
 }

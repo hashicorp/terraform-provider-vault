@@ -11,6 +11,12 @@ description: |-
 Manages OS Secrets Engine backend configuration in a Vault server. The OS Secrets Engine manages credentials
 for operating system accounts on remote hosts via SSH. This resource requires Vault 2.0.0 or later.
 
+The OS Secrets Engine mount itself is managed separately, typically with `vault_mount`. This resource only manages
+backend configuration for an existing OS mount.
+
+The examples below use the canonical plugin name `vault-plugin-secrets-os`. If your Vault cluster registers the
+OS plugin under a different catalog name, use that name in `vault_mount.type` instead.
+
 See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for more information.
 
 ## Example Usage
@@ -18,20 +24,28 @@ See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for m
 ### Basic Configuration
 
 ```hcl
-resource "vault_os_secret_backend" "os" {
+resource "vault_mount" "os" {
   path = "os"
+  type = "vault-plugin-secrets-os"
+}
+
+resource "vault_os_secret_backend" "os" {
+  path = vault_mount.os.path
 }
 ```
 
 ### Advanced Configuration
 
 ```hcl
+resource "vault_mount" "os" {
+  path = "os-prod"
+  type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "os" {
-  path                             = "os-prod"
-  description                      = "Production OS secrets engine"
+  path                             = vault_mount.os.path
   max_versions                     = 10
   ssh_host_key_trust_on_first_use  = true
-  password_policy                  = "complex-password-policy"
 }
 ```
 
@@ -44,61 +58,11 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `path` - (Required) The path where the OS secrets engine will be mounted. Must not begin or end with a `/`.
+* `path` - (Required) The path where the OS secrets engine is already mounted. Must not begin or end with a `/`.
 
-* `max_versions` - (Optional) The maximum number of versions to keep for SSH host keys. Set to `0` for unlimited versions. Defaults to `0`.
+* `max_versions` - (Optional, Computed) The maximum number of versions to keep. When omitted, Vault applies its server-side default of `10`. If you later remove the field from configuration, Vault retains the current value. Set to `0` to explicitly store zero in Vault.
 
-* `ssh_host_key_trust_on_first_use` - (Optional, Computed) If `true`, SSH host keys will be trusted on first use (TOFU). If `false`, host keys must be explicitly configured. Defaults to `false`.
-
-* `password_policy` - (Optional) The name of the password policy to use when generating passwords for managed accounts. Vault does not return this value on read, so the provider preserves the configured value in state.
-
-* `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
-  See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
-
-### Common Mount Arguments
-
-These arguments are common across all resources that mount a secret engine.
-
-* `default_lease_ttl_seconds` - (Optional) Default lease duration for tokens and secrets in seconds
-
-* `max_lease_ttl_seconds` - (Optional) Maximum possible lease duration for tokens and secrets in seconds
-
-* `audit_non_hmac_response_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the response data object.
-
-* `audit_non_hmac_request_keys` - (Optional) Specifies the list of keys that will not be HMAC'd by audit devices in the request data object.
-
-* `local` - (Optional) Boolean flag that can be explicitly set to true to enforce local mount in HA environment
-
-* `options` - (Optional) Specifies mount type specific options that are passed to the backend
-
-* `seal_wrap` - (Optional) Boolean flag that can be explicitly set to true to enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability
-
-* `external_entropy_access` - (Optional) Boolean flag that can be explicitly set to true to enable the secrets engine to access Vault's external entropy source
-
-* `allowed_managed_keys` - (Optional) Set of managed key registry entry names that the mount in question is allowed to access
-
-* `listing_visibility` - (Optional) Specifies whether to show this mount in the UI-specific
-  listing endpoint. Valid values are `unauth` or `hidden`. If not set, behaves like `hidden`.
-
-* `passthrough_request_headers` - (Optional) List of headers to allow and pass from the request to
-  the plugin.
-
-* `allowed_response_headers` - (Optional) List of headers to allow, allowing a plugin to include
-  them in the response.
-
-* `delegated_auth_accessors` - (Optional)  List of allowed authentication mount accessors the
-  backend can request delegated authentication for.
-
-* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use, e.g. "v1.0.0".
-  If unspecified, the server will select any matching unversioned plugin that may have been
-  registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.
-
-* `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
-  not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
-
-## Attributes Reference
-
-No additional attributes are exported by this resource.
+* `ssh_host_key_trust_on_first_use` - (Optional) If `true`, SSH host keys will be trusted on first use (TOFU). If `false`, host keys must be explicitly configured. Defaults to `false`.
 
 ## Import
 
@@ -111,7 +75,6 @@ $ terraform import vault_os_secret_backend.os os
 ## Notes
 
 * This resource requires Vault 2.0.0 or later.
-* The OS Secrets Engine must be enabled before hosts and accounts can be configured.
+* The OS Secrets Engine must be enabled before this resource can manage its configuration.
+* Use `vault_mount` to create, tune, or remove the OS Secrets Engine mount.
 * When `ssh_host_key_trust_on_first_use` is enabled, the first connection to a host will automatically trust and store its SSH host key.
-* The `password_policy` must reference an existing password policy in Vault. See `vault_password_policy` resource for creating password policies.
-* Changing the `path` will cause the backend to be remounted at the new path.

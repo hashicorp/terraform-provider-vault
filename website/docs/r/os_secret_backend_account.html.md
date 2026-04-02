@@ -31,7 +31,6 @@ resource "vault_os_secret_backend" "os" {
 resource "vault_os_secret_backend_host" "server" {
   mount   = vault_os_secret_backend.os.path
   name    = "web-server"
-  type    = "ssh"
   address = "192.168.1.100"
   port    = 22
 }
@@ -55,7 +54,6 @@ resource "vault_os_secret_backend" "os" {
 resource "vault_os_secret_backend_host" "database" {
   mount   = vault_os_secret_backend.os.path
   name    = "db-server"
-  type    = "ssh"
   address = "10.0.1.50"
   port    = 22
 }
@@ -81,7 +79,6 @@ resource "vault_os_secret_backend" "os" {
 resource "vault_os_secret_backend_host" "app_server" {
   mount   = vault_os_secret_backend.os.path
   name    = "app-01"
-  type    = "ssh"
   address = "192.168.1.200"
   port    = 22
 }

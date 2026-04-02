@@ -45,7 +45,6 @@ type OSSecretBackendHostModel struct {
 
 	Mount          types.String `tfsdk:"mount"`
 	Name           types.String `tfsdk:"name"`
-	Type           types.String `tfsdk:"type"`
 	Address        types.String `tfsdk:"address"`
 	Port           types.Int64  `tfsdk:"port"`
 	SSHHostKey     types.String `tfsdk:"ssh_host_key"`
@@ -56,7 +55,6 @@ type OSSecretBackendHostModel struct {
 
 // OSSecretBackendHostAPIModel describes the Vault API data model
 type OSSecretBackendHostAPIModel struct {
-	Type           string `json:"type" mapstructure:"type"`
 	Address        string `json:"address" mapstructure:"address"`
 	Port           int64  `json:"port,omitempty" mapstructure:"port"`
 	SSHHostKey     string `json:"ssh_host_key,omitempty" mapstructure:"ssh_host_key"`
@@ -85,10 +83,6 @@ func (r *OSSecretBackendHostResource) Schema(_ context.Context, _ resource.Schem
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-			},
-			consts.FieldType: schema.StringAttribute{
-				MarkdownDescription: "Type of the host OS (e.g., 'rhel', 'ubuntu', 'windows').",
-				Required:            true,
 			},
 			consts.FieldAddress: schema.StringAttribute{
 				MarkdownDescription: "Address of the host (hostname or IP).",
@@ -145,9 +139,6 @@ func (r *OSSecretBackendHostResource) readHostFromVault(ctx context.Context, cli
 	}
 
 	// Map values back to Terraform model
-	if apiModel.Type != "" {
-		data.Type = types.StringValue(apiModel.Type)
-	}
 	data.Address = types.StringValue(apiModel.Address)
 	if apiModel.Port != 0 {
 		data.Port = types.Int64Value(apiModel.Port)
@@ -218,7 +209,6 @@ func (r *OSSecretBackendHostResource) Create(ctx context.Context, req resource.C
 
 	// Build the request data
 	requestData := make(map[string]interface{})
-	requestData[consts.FieldType] = data.Type.ValueString()
 	requestData[consts.FieldAddress] = data.Address.ValueString()
 
 	if !data.Port.IsNull() && !data.Port.IsUnknown() {
@@ -311,7 +301,6 @@ func (r *OSSecretBackendHostResource) Update(ctx context.Context, req resource.U
 
 	// Build the request data
 	requestData := make(map[string]interface{})
-	requestData[consts.FieldType] = data.Type.ValueString()
 	requestData[consts.FieldAddress] = data.Address.ValueString()
 
 	if !data.Port.IsNull() && !data.Port.IsUnknown() {

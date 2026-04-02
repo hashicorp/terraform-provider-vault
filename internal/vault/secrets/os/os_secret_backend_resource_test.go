@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
-// TestAccOSSecretBackend_basic covers baseline mount configuration behavior
-// for the OS backend resource, including updates to the primary config fields.
+// TestAccOSSecretBackend_basic covers baseline backend configuration behavior
+// for an existing OS mount, including updates to the primary config fields.
 func TestAccOSSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-os")
 	resourceType := "vault_os_secret_backend"
@@ -37,7 +37,6 @@ func TestAccOSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "5"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "true"),
-					resource.TestCheckNoResourceAttr(resourceName, "password_policy"),
 				),
 			},
 			// TODO: Fix import test - currently fails because resource is destroyed between steps
@@ -52,16 +51,15 @@ func TestAccOSSecretBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "10"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "false"),
-					resource.TestCheckResourceAttr(resourceName, "password_policy", "test-policy"),
 				),
 			},
 		},
 	})
 }
 
-// TestAccOSSecretBackend_remount verifies that changing path remounts the OS
-// backend cleanly at the new location.
-func TestAccOSSecretBackend_remount(t *testing.T) {
+// TestAccOSSecretBackend_pathChange verifies that changing path recreates the
+// backend configuration against a different pre-mounted OS backend.
+func TestAccOSSecretBackend_pathChange(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-os")
 	updatedPath := acctest.RandomWithPrefix("tf-test-os-updated")
 	resourceType := "vault_os_secret_backend"
@@ -108,9 +106,8 @@ func TestAccOSSecretBackend_optionalFields(t *testing.T) {
 				Config: testAccOSSecretBackendConfig_minimal(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckNoResourceAttr(resourceName, "max_versions"),
+					resource.TestCheckResourceAttr(resourceName, "max_versions", "10"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "false"),
-					resource.TestCheckNoResourceAttr(resourceName, "password_policy"),
 				),
 			},
 			{
@@ -119,25 +116,23 @@ func TestAccOSSecretBackend_optionalFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "15"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "true"),
-					resource.TestCheckResourceAttr(resourceName, "password_policy", "complex-policy"),
 				),
 			},
 			{
 				Config: testAccOSSecretBackendConfig_minimal(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckNoResourceAttr(resourceName, "max_versions"),
+					resource.TestCheckResourceAttr(resourceName, "max_versions", "15"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "false"),
-					resource.TestCheckNoResourceAttr(resourceName, "password_policy"),
 				),
 			},
 		},
 	})
 }
 
-// TestAccOSSecretBackend_passwordPolicy isolates the write-only password
-// policy setting to verify set, update, and clear behavior.
-func TestAccOSSecretBackend_passwordPolicy(t *testing.T) {
+// TestAccOSSecretBackend_maxVersionsZero verifies that an explicit zero value
+// is preserved in Vault and remains after the field is later removed from config.
+func TestAccOSSecretBackend_maxVersionsZero(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-os")
 	resourceType := "vault_os_secret_backend"
 	resourceName := resourceType + ".test"
@@ -150,24 +145,25 @@ func TestAccOSSecretBackend_passwordPolicy(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccOSSecretBackendConfig_withPasswordPolicy(path, "policy1"),
+				Config: testAccOSSecretBackendConfig_withMaxVersions(path, 0),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "password_policy", "policy1"),
+					resource.TestCheckResourceAttr(resourceName, "max_versions", "0"),
 				),
 			},
 			{
-				Config: testAccOSSecretBackendConfig_withPasswordPolicy(path, "policy2"),
+				Config: testAccOSSecretBackendConfig_minimal(path),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckResourceAttr(resourceName, "password_policy", "policy2"),
+					resource.TestCheckResourceAttr(resourceName, "max_versions", "0"),
 				),
 			},
 			{
-				Config: testAccOSSecretBackendConfig_basic(path),
+				Config: testAccOSSecretBackendConfig_withTOFU(path, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
-					resource.TestCheckNoResourceAttr(resourceName, "password_policy"),
+					resource.TestCheckResourceAttr(resourceName, "max_versions", "0"),
+					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "true"),
 				),
 			},
 		},
@@ -191,8 +187,13 @@ func testAccOSSecretBackendImportStateIdFunc(resourceName string) resource.Impor
 // with TOFU enabled and a non-zero max_versions value.
 func testAccOSSecretBackendConfig_basic(path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path                             = "%s"
+	path                             = vault_mount.test.path
   max_versions                     = 5
   ssh_host_key_trust_on_first_use  = true
 }
@@ -203,11 +204,15 @@ resource "vault_os_secret_backend" "test" {
 // backend fixture.
 func testAccOSSecretBackendConfig_updated(path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path                             = "%s"
+	path                             = vault_mount.test.path
   max_versions                     = 10
   ssh_host_key_trust_on_first_use  = false
-  password_policy                  = "test-policy"
 }
 `, path)
 }
@@ -216,8 +221,13 @@ resource "vault_os_secret_backend" "test" {
 // so optional mount configuration can be cleared deterministically.
 func testAccOSSecretBackendConfig_minimal(path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+	path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path = "%s"
+	path = vault_mount.test.path
 }
 `, path)
 }
@@ -226,24 +236,45 @@ resource "vault_os_secret_backend" "test" {
 // backend-level configuration fields.
 func testAccOSSecretBackendConfig_allFields(path string) string {
 	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
 resource "vault_os_secret_backend" "test" {
-  path                             = "%s"
+  path                             = vault_mount.test.path
   max_versions                     = 15
   ssh_host_key_trust_on_first_use  = true
-  password_policy                  = "complex-policy"
 }
 `, path)
 }
 
 // Made with Bob
 
-// testAccOSSecretBackendConfig_withPasswordPolicy isolates the password_policy
-// setting for focused lifecycle coverage.
-func testAccOSSecretBackendConfig_withPasswordPolicy(path, policy string) string {
+func testAccOSSecretBackendConfig_withMaxVersions(path string, maxVersions int) string {
 	return fmt.Sprintf(`
-resource "vault_os_secret_backend" "test" {
-  path            = "%s"
-  password_policy = "%s"
+resource "vault_mount" "test" {
+  path = "%s"
+	type = "vault-plugin-secrets-os"
 }
-`, path, policy)
+
+resource "vault_os_secret_backend" "test" {
+	path         = vault_mount.test.path
+	max_versions = %d
+}
+`, path, maxVersions)
+}
+
+func testAccOSSecretBackendConfig_withTOFU(path string, tofu bool) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+	type = "vault-plugin-secrets-os"
+}
+
+resource "vault_os_secret_backend" "test" {
+	path                            = vault_mount.test.path
+	ssh_host_key_trust_on_first_use = %t
+}
+`, path, tofu)
 }
