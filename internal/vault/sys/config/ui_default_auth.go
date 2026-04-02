@@ -224,6 +224,17 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.Read(ctx, resource.ReadRequest{
+		State:        resp.State,
+		ProviderMeta: req.ProviderMeta,
+	}, &resource.ReadResponse{
+		State:       resp.State,
+		Diagnostics: resp.Diagnostics,
+	})
 }
 
 // Read is called during the terraform apply, terraform plan, and terraform
@@ -386,6 +397,17 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.Read(ctx, resource.ReadRequest{
+		State:        resp.State,
+		ProviderMeta: req.ProviderMeta,
+	}, &resource.ReadResponse{
+		State:       resp.State,
+		Diagnostics: resp.Diagnostics,
+	})
 }
 
 // Delete is called during the terraform apply command
