@@ -58,34 +58,6 @@ func TestResourceToken_basic(t *testing.T) {
 	})
 }
 
-func TestResourceToken_import(t *testing.T) {
-	resourceName := "vault_token.test"
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		CheckDestroy:             testResourceTokenCheckDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testResourceTokenConfig_basic(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "60s"),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseDuration),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseStarted),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				// the API can't serve these fields, so ignore them
-				ImportStateVerifyIgnore: []string{consts.FieldTTL, consts.FieldLeaseDuration, consts.FieldLeaseStarted, consts.FieldClientToken},
-			},
-		},
-	})
-}
-
 func testResourceTokenConfig_basic() string {
 	return `
 resource "vault_policy" "test" {
@@ -99,6 +71,82 @@ resource "vault_token" "test" {
 	policies = [ vault_policy.test.name ]
 	ttl = "60s"
 }`
+}
+
+func TestResourceToken_import(t *testing.T) {
+	resourceName := "vault_token.test"
+	roleName := "test-role-import"
+	entityName := "test-entity-import"
+	aliasName := "test-alias-import"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testResourceTokenCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceTokenConfig_import(roleName, entityName, aliasName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "60s"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "service"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleName, roleName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEntityAlias, aliasName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseDuration),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLeaseStarted),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+
+				// the API can't serve these fields, so ignore them
+				ImportStateVerifyIgnore: []string{consts.FieldTTL, consts.FieldLeaseDuration, consts.FieldLeaseStarted, consts.FieldClientToken, consts.FieldRoleName, consts.FieldEntityAlias},
+			},
+		},
+	})
+}
+
+func testResourceTokenConfig_import(roleName, entityName, aliasName string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "test" {
+  name = "test"
+  policy = <<EOT
+path "secret/*" { capabilities = [ "list" ] }
+EOT
+}
+
+resource "vault_auth_backend" "test" {
+  type = "userpass"
+  path = "userpass-test-import"
+}
+
+resource "vault_identity_entity" "test" {
+  name = "%s"
+}
+
+resource "vault_identity_entity_alias" "test" {
+  name           = "%s"
+  mount_accessor = vault_auth_backend.test.accessor
+  canonical_id   = vault_identity_entity.test.id
+}
+
+resource "vault_token_auth_backend_role" "test" {
+  role_name              = "%s"
+  allowed_policies       = [vault_policy.test.name]
+  allowed_entity_aliases = [vault_identity_entity_alias.test.name]
+}
+
+resource "vault_token" "test" {
+  policies     = [vault_policy.test.name]
+  ttl          = "60s"
+  type         = "service"
+  role_name    = vault_token_auth_backend_role.test.role_name
+  entity_alias = vault_identity_entity_alias.test.name
+}
+`, entityName, aliasName, roleName)
 }
 
 func TestResourceToken_full(t *testing.T) {
@@ -487,6 +535,13 @@ func TestResourceToken_withType(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				// the API can't serve these fields, so ignore them
+				ImportStateVerifyIgnore: []string{consts.FieldTTL, consts.FieldLeaseDuration, consts.FieldLeaseStarted, consts.FieldClientToken, consts.FieldEntityAlias},
+			},
 		},
 	})
 }
@@ -506,6 +561,10 @@ func TestResourceToken_withTypeBatch(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientToken),
 				),
 			},
+			// Note: Batch tokens cannot be imported via accessor because they don't have accessors.
+			// The resource uses RequestID as the ID for batch tokens, but ImportStatePassthrough
+			// doesn't work for batch tokens since they can't be looked up by the ID we store.
+			// This is a known limitation - batch tokens are not importable.
 		},
 	})
 }

@@ -45,6 +45,31 @@ resource "vault_token" "example" {
 }
 ```
 
+### Batch Token Example
+
+```hcl
+resource "vault_token" "batch" {
+  policies = ["policy1"]
+  
+  type = "batch"
+  ttl  = "1h"
+}
+```
+
+### Token with Entity Alias
+
+```hcl
+resource "vault_token" "with_entity" {
+  role_name = "app"
+  
+  policies     = ["policy1"]
+  entity_alias = "my-entity-alias"
+  
+  renewable = true
+  ttl       = "24h"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -79,6 +104,10 @@ The following arguments are supported:
 * `renew_increment` - (Optional) The renew increment. This is specified in seconds
 
 * `metadata` - (Optional) Metadata to be set on this token
+
+* `type` - (Optional) The type of token to create. Can be `service` or `batch`. Service tokens are persisted and support renewal and revocation. Batch tokens are lightweight, non-renewable, and non-revocable. If not specified, defaults to `service`.
+
+* `entity_alias` - (Optional) Name of the entity alias to associate with during token creation. The entity alias must already exist and be associated with an entity. This allows the token to inherit the entity's policies and metadata.
 
 ## Attributes Reference
 
