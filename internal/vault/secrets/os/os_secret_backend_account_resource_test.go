@@ -5,6 +5,7 @@ package os_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -381,19 +382,19 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path                            = vault_mount.test.path
+	mount                           = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount             = vault_os_secret_backend.test.path
+  mount             = vault_os_secret_backend.test.mount
   name              = "%s"
 	address           = "%s"
 	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
-	mount           = vault_os_secret_backend.test.path
+	mount           = vault_os_secret_backend.test.mount
   host            = vault_os_secret_backend_host.test.name
   name            = "%s"
 	username        = "%s"
@@ -414,19 +415,19 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path                            = vault_mount.test.path
+	mount                           = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount             = vault_os_secret_backend.test.path
+  mount             = vault_os_secret_backend.test.mount
   name              = "%s"
 	address           = "127.0.0.1"
 	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
-  mount           = vault_os_secret_backend.test.path
+  mount           = vault_os_secret_backend.test.mount
   host            = vault_os_secret_backend_host.test.name
   name            = "%s"
 	username        = "%s"
@@ -447,19 +448,19 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path                            = vault_mount.test.path
+	mount                           = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount             = vault_os_secret_backend.test.path
+  mount             = vault_os_secret_backend.test.mount
   name              = "%s"
 	address           = "127.0.0.1"
 	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
-  mount    = vault_os_secret_backend.test.path
+  mount    = vault_os_secret_backend.test.mount
   host     = vault_os_secret_backend_host.test.name
   name     = "%s"
 	username = "%s"
@@ -479,19 +480,19 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path                            = vault_mount.test.path
+	mount                           = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount             = vault_os_secret_backend.test.path
+  mount             = vault_os_secret_backend.test.mount
   name              = "%s"
 	address           = "127.0.0.1"
 	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
-  mount             = vault_os_secret_backend.test.path
+  mount             = vault_os_secret_backend.test.mount
   host              = vault_os_secret_backend_host.test.name
   name              = "%s"
 	username          = "%s"
@@ -513,19 +514,19 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path                            = vault_mount.test.path
+	mount                           = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = true
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount             = vault_os_secret_backend.test.path
+  mount             = vault_os_secret_backend.test.mount
   name              = "%s"
 	address           = "127.0.0.1"
 	port              = 2222
 }
 
 resource "vault_os_secret_backend_account" "test" {
-  mount             = vault_os_secret_backend.test.path
+  mount             = vault_os_secret_backend.test.mount
   host              = vault_os_secret_backend_host.test.name
   name              = "%s"
 	username          = "%s"
@@ -534,6 +535,40 @@ resource "vault_os_secret_backend_account" "test" {
 	verify_connection = %t
 }
 `, mount, hostName, accountName, username, verifyConnection)
+}
+
+func TestAccOSSecretBackendAccount_importInvalid(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-os")
+	hostName := acctest.RandomWithPrefix("test-host")
+	accountName := acctest.RandomWithPrefix("test-account")
+	username := acctest.RandomWithPrefix("tf-user")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, username, false),
+			},
+			{
+				ResourceName:      "vault_os_secret_backend_account.test",
+				ImportState:       true,
+				ImportStateId:     "invalid-id-format",
+				ImportStateVerify: false,
+				ExpectError:       regexp.MustCompile("(?s)invalid.*account ID"),
+			},
+			{
+				ResourceName:      "vault_os_secret_backend_account.test",
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s/%s", mount, hostName), // Missing account name
+				ImportStateVerify: false,
+				ExpectError:       regexp.MustCompile("(?s)invalid.*account ID"),
+			},
+		},
+	})
 }
 
 // Made with Bob

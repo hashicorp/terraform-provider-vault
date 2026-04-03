@@ -6,6 +6,7 @@ package os
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -44,7 +46,7 @@ type OSSecretBackendResource struct {
 type OSSecretBackendModel struct {
 	base.BaseModel
 
-	Path types.String `tfsdk:"path"`
+	Mount types.String `tfsdk:"mount"`
 
 	MaxVersions               types.Int64 `tfsdk:"max_versions"`
 	SSHHostKeyTrustOnFirstUse types.Bool  `tfsdk:"ssh_host_key_trust_on_first_use"`
@@ -56,6 +58,10 @@ type OSSecretBackendAPIModel struct {
 	SSHHostKeyTrustOnFirstUse bool  `json:"ssh_host_key_trust_on_first_use,omitempty" mapstructure:"ssh_host_key_trust_on_first_use"`
 }
 
+func (m OSSecretBackendModel) configPath() string {
+	return fmt.Sprintf("%s/config", m.Mount.ValueString())
+}
+
 func (r *OSSecretBackendResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_os_secret_backend"
 }
@@ -63,7 +69,7 @@ func (r *OSSecretBackendResource) Metadata(_ context.Context, req resource.Metad
 func (r *OSSecretBackendResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Path where the OS secrets backend is mounted.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
@@ -88,6 +94,56 @@ func (r *OSSecretBackendResource) Schema(_ context.Context, _ resource.SchemaReq
 		MarkdownDescription: "Manages the configuration of an existing OS Secrets Engine mount in Vault.",
 	}
 	base.MustAddBaseSchema(&resp.Schema)
+}
+
+func (r *OSSecretBackendResource) readBackendFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendModel, diags *diag.Diagnostics) bool {
+	readResp, err := cli.Logical().ReadWithContext(ctx, data.configPath())
+	if err != nil {
+		diags.AddError(errutil.VaultReadErr(err))
+		return false
+	}
+	if readResp == nil {
+		return false
+	}
+
+	var apiModel OSSecretBackendAPIModel
+	err = model.ToAPIModel(readResp.Data, &apiModel)
+	if err != nil {
+		diags.AddError("Unable to translate Vault response data", err.Error())
+		return false
+	}
+
+	data.MaxVersions = types.Int64Value(apiModel.MaxVersions)
+	data.SSHHostKeyTrustOnFirstUse = types.BoolValue(apiModel.SSHHostKeyTrustOnFirstUse)
+
+	return true
+}
+
+func (r *OSSecretBackendResource) buildRequestData(data *OSSecretBackendModel, configuredMaxVersions types.Int64, stateData *OSSecretBackendModel) map[string]interface{} {
+	requestData := make(map[string]interface{})
+
+	if !configuredMaxVersions.IsNull() && !configuredMaxVersions.IsUnknown() {
+		requestData[consts.FieldMaxVersions] = configuredMaxVersions.ValueInt64()
+	} else if stateData != nil && !stateData.MaxVersions.IsNull() && !stateData.MaxVersions.IsUnknown() {
+		requestData[consts.FieldMaxVersions] = stateData.MaxVersions.ValueInt64()
+	}
+
+	requestData[consts.FieldSSHHostKeyTrustOnFirstUse] = data.SSHHostKeyTrustOnFirstUse.ValueBool()
+
+	return requestData
+}
+
+func (r *OSSecretBackendResource) writeBackendToVault(ctx context.Context, cli *api.Client, configPath string, requestData map[string]interface{}, operation string, diags *diag.Diagnostics) bool {
+	_, err := cli.Logical().WriteWithContext(ctx, configPath, requestData)
+	if err != nil {
+		diags.AddError(
+			fmt.Sprintf("Error %s OS secret backend config at %q", operation, configPath),
+			err.Error(),
+		)
+		return false
+	}
+
+	return true
 }
 
 func (r *OSSecretBackendResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -119,53 +175,22 @@ func (r *OSSecretBackendResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	path := data.Path.ValueString()
-	if !ensureOSMountExists(ctx, cli, path, &resp.Diagnostics) {
+	mount := data.Mount.ValueString()
+	if !ensureOSMountExists(ctx, cli, mount, &resp.Diagnostics) {
 		return
 	}
 
-	configPath := fmt.Sprintf("%s/config", path)
+	configPath := data.configPath()
+	requestData := r.buildRequestData(&data, configuredMaxVersions, nil)
 
-	// Build the request data
-	requestData := make(map[string]interface{})
-
-	// Only send max_versions when it is explicitly configured. If omitted,
-	// Vault applies its default on create.
-	if !configuredMaxVersions.IsNull() && !configuredMaxVersions.IsUnknown() {
-		requestData[consts.FieldMaxVersions] = configuredMaxVersions.ValueInt64()
-	}
-
-	requestData[consts.FieldSSHHostKeyTrustOnFirstUse] = data.SSHHostKeyTrustOnFirstUse.ValueBool()
-
-	_, err = cli.Logical().WriteWithContext(ctx, configPath, requestData)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("Error writing OS secret backend config to %q", configPath),
-			err.Error(),
-		)
+	if !r.writeBackendToVault(ctx, cli, configPath, requestData, "writing", &resp.Diagnostics) {
 		return
 	}
 
-	// Read back the configuration
-	readResp, err := cli.Logical().ReadWithContext(ctx, configPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if readResp == nil {
+	if !r.readBackendFromVault(ctx, cli, &data, &resp.Diagnostics) {
 		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
 		return
 	}
-
-	var apiModel OSSecretBackendAPIModel
-	err = model.ToAPIModel(readResp.Data, &apiModel)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
-		return
-	}
-
-	data.MaxVersions = types.Int64Value(apiModel.MaxVersions)
-	data.SSHHostKeyTrustOnFirstUse = types.BoolValue(apiModel.SSHHostKeyTrustOnFirstUse)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -183,37 +208,20 @@ func (r *OSSecretBackendResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	path := data.Path.ValueString()
-	configPath := fmt.Sprintf("%s/config", path)
+	mount := data.Mount.ValueString()
 
-	if !checkOSMountExists(ctx, cli, path, &resp.Diagnostics) {
+	if !checkOSMountExists(ctx, cli, mount, &resp.Diagnostics) {
 		if !resp.Diagnostics.HasError() {
 			resp.State.RemoveResource(ctx)
 		}
 		return
 	}
 
-	readResp, err := cli.Logical().ReadWithContext(ctx, configPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if readResp == nil {
+	if !r.readBackendFromVault(ctx, cli, &data, &resp.Diagnostics) {
 		// Resource was deleted outside Terraform - remove from state
 		resp.State.RemoveResource(ctx)
 		return
 	}
-
-	var apiModel OSSecretBackendAPIModel
-	err = model.ToAPIModel(readResp.Data, &apiModel)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
-		return
-	}
-
-	data.MaxVersions = types.Int64Value(apiModel.MaxVersions)
-
-	data.SSHHostKeyTrustOnFirstUse = types.BoolValue(apiModel.SSHHostKeyTrustOnFirstUse)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -243,56 +251,22 @@ func (r *OSSecretBackendResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	path := data.Path.ValueString()
-	if !ensureOSMountExists(ctx, cli, path, &resp.Diagnostics) {
+	mount := data.Mount.ValueString()
+	if !ensureOSMountExists(ctx, cli, mount, &resp.Diagnostics) {
 		return
 	}
 
-	configPath := fmt.Sprintf("%s/config", path)
+	configPath := data.configPath()
+	requestData := r.buildRequestData(&data, configuredMaxVersions, &stateData)
 
-	// Build the request data
-	requestData := make(map[string]interface{})
-
-	// Preserve the existing max_versions value across updates when it is omitted
-	// from configuration so unrelated changes do not cause Vault to recompute
-	// its server-side default.
-	if !configuredMaxVersions.IsNull() && !configuredMaxVersions.IsUnknown() {
-		requestData[consts.FieldMaxVersions] = configuredMaxVersions.ValueInt64()
-	} else if !stateData.MaxVersions.IsNull() && !stateData.MaxVersions.IsUnknown() {
-		requestData[consts.FieldMaxVersions] = stateData.MaxVersions.ValueInt64()
-	}
-
-	requestData[consts.FieldSSHHostKeyTrustOnFirstUse] = data.SSHHostKeyTrustOnFirstUse.ValueBool()
-
-	_, err = cli.Logical().WriteWithContext(ctx, configPath, requestData)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("Error updating OS secret backend config at %q", configPath),
-			err.Error(),
-		)
+	if !r.writeBackendToVault(ctx, cli, configPath, requestData, "updating", &resp.Diagnostics) {
 		return
 	}
 
-	// Read back the configuration
-	readResp, err := cli.Logical().ReadWithContext(ctx, configPath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if readResp == nil {
+	if !r.readBackendFromVault(ctx, cli, &data, &resp.Diagnostics) {
 		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
 		return
 	}
-
-	var apiModel OSSecretBackendAPIModel
-	err = model.ToAPIModel(readResp.Data, &apiModel)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
-		return
-	}
-
-	data.MaxVersions = types.Int64Value(apiModel.MaxVersions)
-	data.SSHHostKeyTrustOnFirstUse = types.BoolValue(apiModel.SSHHostKeyTrustOnFirstUse)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -301,8 +275,18 @@ func (r *OSSecretBackendResource) Delete(_ context.Context, _ resource.DeleteReq
 }
 
 func (r *OSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Use the built-in helper to set the path attribute from the import ID
-	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldPath), req, resp)
+	mount := req.ID
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
+
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 func ensureOSMountExists(ctx context.Context, cli *api.Client, path string, diags *diag.Diagnostics) bool {

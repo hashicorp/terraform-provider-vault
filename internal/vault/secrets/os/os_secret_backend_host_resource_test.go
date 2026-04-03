@@ -5,6 +5,7 @@ package os_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -228,13 +229,13 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path = vault_mount.test.path
+	mount = vault_mount.test.path
 }
 
 # Note: verify_connection defaults to true in production.
 # For testing without actual SSH connectivity, it can be set to false.
 resource "vault_os_secret_backend_host" "test" {
-	mount           = vault_os_secret_backend.test.path
+	mount           = vault_os_secret_backend.test.mount
 	name            = "%s"
 	address         = "127.0.0.1"
 	port            = 2222
@@ -258,11 +259,11 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path = vault_mount.test.path
+	mount = vault_mount.test.path
 }
 
 resource "vault_os_secret_backend_host" "test" {
-	mount           = vault_os_secret_backend.test.path
+	mount           = vault_os_secret_backend.test.mount
 	name            = "%s"
 	address         = "127.0.0.1"
 	port            = 2222
@@ -287,11 +288,11 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path = vault_mount.test.path
+	mount = vault_mount.test.path
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount   = vault_os_secret_backend.test.path
+  mount   = vault_os_secret_backend.test.mount
   name    = "%s"
 	address = "127.0.0.1"
 	port    = 2222
@@ -309,11 +310,11 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path = vault_mount.test.path
+	mount = vault_mount.test.path
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount             = vault_os_secret_backend.test.path
+  mount             = vault_os_secret_backend.test.mount
   name              = "%s"
 	address           = "127.0.0.1"
   port              = 2222
@@ -338,17 +339,49 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path = vault_mount.test.path
+	mount = vault_mount.test.path
 }
 
 resource "vault_os_secret_backend_host" "test" {
-  mount        = vault_os_secret_backend.test.path
+  mount        = vault_os_secret_backend.test.mount
   name         = "%s"
 	address      = "127.0.0.1"
 	port         = 2222
   ssh_host_key = "%s"
 }
 `, mount, name, sshHostKey)
+}
+
+func TestAccOSSecretBackendHost_importInvalid(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-os")
+	name := acctest.RandomWithPrefix("test-host")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOSSecretBackendHostConfig_basic(mount, name),
+			},
+			{
+				ResourceName:      "vault_os_secret_backend_host.test",
+				ImportState:       true,
+				ImportStateId:     "invalid-id-format",
+				ImportStateVerify: false,
+				ExpectError:       regexp.MustCompile("(?s)invalid.*host ID"),
+			},
+			{
+				ResourceName:      "vault_os_secret_backend_host.test",
+				ImportState:       true,
+				ImportStateId:     mount, // Missing host name
+				ImportStateVerify: false,
+				ExpectError:       regexp.MustCompile("(?s)invalid.*host ID"),
+			},
+		},
+	})
 }
 
 // Made with Bob

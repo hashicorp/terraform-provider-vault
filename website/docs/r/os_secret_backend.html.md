@@ -30,7 +30,7 @@ resource "vault_mount" "os" {
 }
 
 resource "vault_os_secret_backend" "os" {
-  path = vault_mount.os.path
+  mount = vault_mount.os.path
 }
 ```
 
@@ -43,7 +43,7 @@ resource "vault_mount" "os" {
 }
 
 resource "vault_os_secret_backend" "os" {
-  path                             = vault_mount.os.path
+  mount                            = vault_mount.os.path
   max_versions                     = 10
   ssh_host_key_trust_on_first_use  = true
 }
@@ -58,7 +58,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
    *Available only for Vault Enterprise*.
 
-* `path` - (Required) The path where the OS secrets engine is already mounted. Must not begin or end with a `/`.
+* `mount` - (Required) The path where the OS secrets engine is already mounted. Must not begin or end with a `/`.
 
 * `max_versions` - (Optional, Computed) The maximum number of versions to keep. When omitted, Vault applies its server-side default of `10`. If you later remove the field from configuration, Vault retains the current value. Set to `0` to explicitly store zero in Vault.
 
@@ -66,7 +66,7 @@ The following arguments are supported:
 
 ## Import
 
-OS Secret backend can be imported using the `path`, e.g.
+OS Secret backend can be imported using the `mount`, e.g.
 
 ```
 $ terraform import vault_os_secret_backend.os os

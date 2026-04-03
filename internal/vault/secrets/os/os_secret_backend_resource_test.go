@@ -5,6 +5,7 @@ package os_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -34,21 +35,22 @@ func TestAccOSSecretBackend_basic(t *testing.T) {
 			{
 				Config: testAccOSSecretBackendConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "5"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "true"),
 				),
 			},
-			// TODO: Fix import test - currently fails because resource is destroyed between steps
-			// {
-			// 	ResourceName:      resourceName,
-			// 	ImportState:       true,
-			// 	ImportStateVerify: true,
-			// },
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccOSSecretBackendImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+			},
 			{
 				Config: testAccOSSecretBackendConfig_updated(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "10"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "false"),
 				),
@@ -75,13 +77,13 @@ func TestAccOSSecretBackend_pathChange(t *testing.T) {
 			{
 				Config: testAccOSSecretBackendConfig_basic(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 				),
 			},
 			{
 				Config: testAccOSSecretBackendConfig_basic(updatedPath),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, updatedPath),
 				),
 			},
 		},
@@ -105,7 +107,7 @@ func TestAccOSSecretBackend_optionalFields(t *testing.T) {
 			{
 				Config: testAccOSSecretBackendConfig_minimal(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "10"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "false"),
 				),
@@ -113,7 +115,7 @@ func TestAccOSSecretBackend_optionalFields(t *testing.T) {
 			{
 				Config: testAccOSSecretBackendConfig_allFields(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "15"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "true"),
 				),
@@ -121,7 +123,7 @@ func TestAccOSSecretBackend_optionalFields(t *testing.T) {
 			{
 				Config: testAccOSSecretBackendConfig_minimal(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "15"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "false"),
 				),
@@ -147,21 +149,21 @@ func TestAccOSSecretBackend_maxVersionsZero(t *testing.T) {
 			{
 				Config: testAccOSSecretBackendConfig_withMaxVersions(path, 0),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "0"),
 				),
 			},
 			{
 				Config: testAccOSSecretBackendConfig_minimal(path),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "0"),
 				),
 			},
 			{
 				Config: testAccOSSecretBackendConfig_withTOFU(path, true),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, "max_versions", "0"),
 					resource.TestCheckResourceAttr(resourceName, "ssh_host_key_trust_on_first_use", "true"),
 				),
@@ -179,7 +181,7 @@ func testAccOSSecretBackendImportStateIdFunc(resourceName string) resource.Impor
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
 
-		return rs.Primary.Attributes[consts.FieldPath], nil
+		return rs.Primary.Attributes[consts.FieldMount], nil
 	}
 }
 
@@ -193,7 +195,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path                             = vault_mount.test.path
+	mount                            = vault_mount.test.path
   max_versions                     = 5
   ssh_host_key_trust_on_first_use  = true
 }
@@ -210,7 +212,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path                             = vault_mount.test.path
+	mount                            = vault_mount.test.path
   max_versions                     = 10
   ssh_host_key_trust_on_first_use  = false
 }
@@ -227,7 +229,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path = vault_mount.test.path
+	mount = vault_mount.test.path
 }
 `, path)
 }
@@ -242,7 +244,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-  path                             = vault_mount.test.path
+	mount                            = vault_mount.test.path
   max_versions                     = 15
   ssh_host_key_trust_on_first_use  = true
 }
@@ -259,7 +261,7 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path         = vault_mount.test.path
+	mount        = vault_mount.test.path
 	max_versions = %d
 }
 `, path, maxVersions)
@@ -273,8 +275,32 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_os_secret_backend" "test" {
-	path                            = vault_mount.test.path
+	mount                           = vault_mount.test.path
 	ssh_host_key_trust_on_first_use = %t
 }
 `, path, tofu)
+}
+
+func TestAccOSSecretBackend_importInvalid(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-os")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOSSecretBackendConfig_basic(path),
+			},
+			{
+				ResourceName:      "vault_os_secret_backend.test",
+				ImportState:       true,
+				ImportStateId:     "", // Empty import ID
+				ImportStateVerify: false,
+				ExpectError:       regexp.MustCompile("Cannot import non-existent remote object"),
+			},
+		},
+	})
 }

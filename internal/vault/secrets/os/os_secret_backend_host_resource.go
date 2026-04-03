@@ -6,14 +6,17 @@ package os
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -61,6 +64,10 @@ type OSSecretBackendHostAPIModel struct {
 	PasswordPolicy string `json:"password_policy,omitempty" mapstructure:"password_policy"`
 	frameworkrotation.AutomatedRotationAPIModel
 	CustomMetadata map[string]string `json:"custom_metadata,omitempty" mapstructure:"custom_metadata"`
+}
+
+func (m OSSecretBackendHostModel) vaultPath() string {
+	return fmt.Sprintf("%s/hosts/%s", m.Mount.ValueString(), m.Name.ValueString())
 }
 
 func (r *OSSecretBackendHostResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -117,9 +124,7 @@ func (r *OSSecretBackendHostResource) Schema(_ context.Context, _ resource.Schem
 
 // readHostFromVault reads the host configuration from Vault and populates the model
 func (r *OSSecretBackendHostResource) readHostFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendHostModel, diags *diag.Diagnostics) {
-	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/hosts/%s", mount, name)
+	path := data.vaultPath()
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -180,6 +185,58 @@ func (r *OSSecretBackendHostResource) readHostFromVault(ctx context.Context, cli
 	}
 }
 
+func (r *OSSecretBackendHostResource) buildRequestData(ctx context.Context, data *OSSecretBackendHostModel) (map[string]interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	requestData := make(map[string]interface{})
+	requestData[consts.FieldAddress] = data.Address.ValueString()
+
+	if !data.Port.IsNull() && !data.Port.IsUnknown() {
+		requestData[consts.FieldPort] = data.Port.ValueInt64()
+	} else {
+		requestData[consts.FieldPort] = 0
+	}
+	if !data.SSHHostKey.IsNull() && !data.SSHHostKey.IsUnknown() {
+		requestData[consts.FieldSSHHostKey] = data.SSHHostKey.ValueString()
+	} else {
+		requestData[consts.FieldSSHHostKey] = ""
+	}
+	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
+		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
+	} else {
+		requestData[consts.FieldPasswordPolicy] = ""
+	}
+	if rotationDiags := frameworkrotation.PopulateAutomatedRotationRequestData(&data.AutomatedRotationModel, requestData); rotationDiags.HasError() {
+		diags.Append(rotationDiags...)
+		return nil, diags
+	}
+	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
+		var customMetadata map[string]string
+		if mapDiags := data.CustomMetadata.ElementsAs(ctx, &customMetadata, false); mapDiags.HasError() {
+			diags.Append(mapDiags...)
+			return nil, diags
+		}
+		requestData[consts.FieldCustomMetadata] = customMetadata
+	} else {
+		requestData[consts.FieldCustomMetadata] = map[string]string{}
+	}
+
+	return requestData, diags
+}
+
+func (r *OSSecretBackendHostResource) writeHostToVault(ctx context.Context, cli *api.Client, path string, requestData map[string]interface{}, operation string, diags *diag.Diagnostics) bool {
+	_, err := cli.Logical().WriteWithContext(ctx, path, requestData)
+	if err != nil {
+		diags.AddError(
+			fmt.Sprintf("Error %s OS secret backend host at %q", operation, path),
+			err.Error(),
+		)
+		return false
+	}
+
+	return true
+}
+
 func (r *OSSecretBackendHostResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data OSSecretBackendHostModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -203,54 +260,16 @@ func (r *OSSecretBackendHostResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/hosts/%s", mount, name)
-
-	// Build the request data
-	requestData := make(map[string]interface{})
-	requestData[consts.FieldAddress] = data.Address.ValueString()
-
-	if !data.Port.IsNull() && !data.Port.IsUnknown() {
-		requestData[consts.FieldPort] = data.Port.ValueInt64()
-	} else {
-		requestData[consts.FieldPort] = 0
-	}
-	if !data.SSHHostKey.IsNull() && !data.SSHHostKey.IsUnknown() {
-		requestData[consts.FieldSSHHostKey] = data.SSHHostKey.ValueString()
-	} else {
-		requestData[consts.FieldSSHHostKey] = ""
-	}
-	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
-		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
-	} else {
-		requestData[consts.FieldPasswordPolicy] = ""
-	}
-	if diags := frameworkrotation.PopulateAutomatedRotationRequestData(&data.AutomatedRotationModel, requestData); diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
-	}
-	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
-		var customMetadata map[string]string
-		if diags := data.CustomMetadata.ElementsAs(ctx, &customMetadata, false); diags.HasError() {
-			resp.Diagnostics.Append(diags...)
-			return
-		}
-		requestData[consts.FieldCustomMetadata] = customMetadata
-	} else {
-		requestData[consts.FieldCustomMetadata] = map[string]string{}
-	}
-
-	_, err = cli.Logical().WriteWithContext(ctx, path, requestData)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("Error writing OS secret backend host to %q", path),
-			err.Error(),
-		)
+	path := data.vaultPath()
+	requestData, diags := r.buildRequestData(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Set the ID
+	if !r.writeHostToVault(ctx, cli, path, requestData, "writing", &resp.Diagnostics) {
+		return
+	}
 
 	// Read back the configuration
 	r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
@@ -295,50 +314,14 @@ func (r *OSSecretBackendHostResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/hosts/%s", mount, name)
-
-	// Build the request data
-	requestData := make(map[string]interface{})
-	requestData[consts.FieldAddress] = data.Address.ValueString()
-
-	if !data.Port.IsNull() && !data.Port.IsUnknown() {
-		requestData[consts.FieldPort] = data.Port.ValueInt64()
-	} else {
-		requestData[consts.FieldPort] = 0
-	}
-	if !data.SSHHostKey.IsNull() && !data.SSHHostKey.IsUnknown() {
-		requestData[consts.FieldSSHHostKey] = data.SSHHostKey.ValueString()
-	} else {
-		requestData[consts.FieldSSHHostKey] = ""
-	}
-	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
-		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
-	} else {
-		requestData[consts.FieldPasswordPolicy] = ""
-	}
-	if diags := frameworkrotation.PopulateAutomatedRotationRequestData(&data.AutomatedRotationModel, requestData); diags.HasError() {
-		resp.Diagnostics.Append(diags...)
+	path := data.vaultPath()
+	requestData, diags := r.buildRequestData(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
-	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
-		var customMetadata map[string]string
-		if diags := data.CustomMetadata.ElementsAs(ctx, &customMetadata, false); diags.HasError() {
-			resp.Diagnostics.Append(diags...)
-			return
-		}
-		requestData[consts.FieldCustomMetadata] = customMetadata
-	} else {
-		requestData[consts.FieldCustomMetadata] = map[string]string{}
-	}
 
-	_, err = cli.Logical().WriteWithContext(ctx, path, requestData)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("Error updating OS secret backend host at %q", path),
-			err.Error(),
-		)
+	if !r.writeHostToVault(ctx, cli, path, requestData, "updating", &resp.Diagnostics) {
 		return
 	}
 
@@ -364,9 +347,7 @@ func (r *OSSecretBackendHostResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/hosts/%s", mount, name)
+	path := data.vaultPath()
 
 	_, err = cli.Logical().DeleteWithContext(ctx, path)
 	if err != nil && !util.Is404(err) {
@@ -381,26 +362,24 @@ func (r *OSSecretBackendHostResource) ImportState(ctx context.Context, req resou
 	// Parse the ID: {mount}/hosts/{name}
 	mount, name, err := parseHostID(req.ID)
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid import ID", err.Error())
+		resp.Diagnostics.AddError(
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier %q is not valid: %s", req.ID, err.Error()),
+		)
 		return
 	}
 
-	var data OSSecretBackendHostModel
-	data.Mount = types.StringValue(mount)
-	data.Name = types.StringValue(name)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
 	}
-
-	r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Made with Bob

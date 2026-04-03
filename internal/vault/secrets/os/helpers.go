@@ -15,16 +15,6 @@ var (
 	accountIDRe = regexp.MustCompile(`^([^/]+)/hosts/([^/]+)/accounts/([^/]+)$`)
 )
 
-// makeHostID creates ID for host resource
-func makeHostID(mount, name string) string {
-	return fmt.Sprintf("%s/hosts/%s", mount, name)
-}
-
-// makeAccountID creates ID for account resource
-func makeAccountID(mount, host, name string) string {
-	return fmt.Sprintf("%s/hosts/%s/accounts/%s", mount, host, name)
-}
-
 // parseHostID parses host resource ID
 func parseHostID(id string) (mount, name string, err error) {
 	matches := hostIDRe.FindStringSubmatch(id)

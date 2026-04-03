@@ -6,7 +6,9 @@ package os
 import (
 	"context"
 	"fmt"
+	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -14,7 +16,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -44,13 +48,14 @@ type OSSecretBackendAccountResource struct {
 type OSSecretBackendAccountModel struct {
 	base.BaseModel
 
-	Mount            types.String `tfsdk:"mount"`
-	Host             types.String `tfsdk:"host"`
-	Name             types.String `tfsdk:"name"`
-	Username         types.String `tfsdk:"username"`
-	PasswordWO       types.String `tfsdk:"password_wo"`
-	ParentAccountRef types.String `tfsdk:"parent_account_ref"`
-	PasswordPolicy   types.String `tfsdk:"password_policy"`
+	Mount             types.String `tfsdk:"mount"`
+	Host              types.String `tfsdk:"host"`
+	Name              types.String `tfsdk:"name"`
+	Username          types.String `tfsdk:"username"`
+	PasswordWO        types.String `tfsdk:"password_wo"`
+	PasswordWOVersion types.Int64  `tfsdk:"password_wo_version"`
+	ParentAccountRef  types.String `tfsdk:"parent_account_ref"`
+	PasswordPolicy    types.String `tfsdk:"password_policy"`
 	frameworkrotation.AutomatedRotationModel
 	VerifyConnection  types.Bool   `tfsdk:"verify_connection"`
 	CustomMetadata    types.Map    `tfsdk:"custom_metadata"`
@@ -69,6 +74,10 @@ type OSSecretBackendAccountAPIModel struct {
 	CustomMetadata    map[string]string `json:"custom_metadata,omitempty" mapstructure:"custom_metadata"`
 	LastVaultRotation string            `json:"last_vault_rotation,omitempty" mapstructure:"last_vault_rotation"`
 	NextVaultRotation string            `json:"next_vault_rotation,omitempty" mapstructure:"next_vault_rotation"`
+}
+
+func (m OSSecretBackendAccountModel) vaultPath() string {
+	return fmt.Sprintf("%s/hosts/%s/accounts/%s", m.Mount.ValueString(), m.Host.ValueString(), m.Name.ValueString())
 }
 
 func (r *OSSecretBackendAccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -108,6 +117,15 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 				Required:            true,
 				Sensitive:           true,
 				WriteOnly:           true,
+			},
+			consts.FieldPasswordWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "A version counter for the write-only password_wo field. Incrementing this value will trigger an update to the password.",
+				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(
+						path.MatchRoot(consts.FieldPasswordWO),
+					),
+				},
 			},
 			consts.FieldParentAccountRef: schema.StringAttribute{
 				MarkdownDescription: "Reference to a parent account for rotation management.",
@@ -153,10 +171,7 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 // Note: Password is write-only and will not be read back
 // Returns true if the resource was found, false if it was not found (404)
 func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendAccountModel, diags *diag.Diagnostics) bool {
-	mount := data.Mount.ValueString()
-	host := data.Host.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/hosts/%s/accounts/%s", mount, host, name)
+	path := data.vaultPath()
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -232,6 +247,75 @@ func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Contex
 	return true
 }
 
+func (r *OSSecretBackendAccountResource) buildRequestData(ctx context.Context, data *OSSecretBackendAccountModel, password types.String, includePassword bool) (map[string]interface{}, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	requestData := make(map[string]interface{})
+	requestData[consts.FieldUsername] = data.Username.ValueString()
+	if includePassword {
+		requestData[consts.FieldPassword] = password.ValueString()
+	}
+
+	if !data.ParentAccountRef.IsNull() && !data.ParentAccountRef.IsUnknown() {
+		requestData[consts.FieldParentAccountRef] = data.ParentAccountRef.ValueString()
+	} else {
+		requestData[consts.FieldParentAccountRef] = ""
+	}
+	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
+		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
+	} else {
+		requestData[consts.FieldPasswordPolicy] = ""
+	}
+	if rotationDiags := frameworkrotation.PopulateAutomatedRotationRequestData(&data.AutomatedRotationModel, requestData); rotationDiags.HasError() {
+		diags.Append(rotationDiags...)
+		return nil, diags
+	}
+	if !data.VerifyConnection.IsNull() && !data.VerifyConnection.IsUnknown() {
+		requestData[consts.FieldVerifyConnection] = data.VerifyConnection.ValueBool()
+	} else {
+		requestData[consts.FieldVerifyConnection] = true
+	}
+	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
+		var customMetadata map[string]string
+		if mapDiags := data.CustomMetadata.ElementsAs(ctx, &customMetadata, false); mapDiags.HasError() {
+			diags.Append(mapDiags...)
+			return nil, diags
+		}
+		requestData[consts.FieldCustomMetadata] = customMetadata
+	} else {
+		requestData[consts.FieldCustomMetadata] = map[string]string{}
+	}
+
+	return requestData, diags
+}
+
+func (r *OSSecretBackendAccountResource) writeAccountToVault(ctx context.Context, cli *api.Client, path string, requestData map[string]interface{}, operation string, diags *diag.Diagnostics) bool {
+	_, err := cli.Logical().WriteWithContext(ctx, path, requestData)
+	if err != nil {
+		diags.AddError(
+			fmt.Sprintf("Error %s OS secret backend account at %q", operation, path),
+			err.Error(),
+		)
+		return false
+	}
+
+	return true
+}
+
+func passwordWOUpdated(stateVersion, planVersion types.Int64) bool {
+	if stateVersion.IsUnknown() || planVersion.IsUnknown() {
+		return false
+	}
+	if stateVersion.IsNull() != planVersion.IsNull() {
+		return true
+	}
+	if stateVersion.IsNull() {
+		return false
+	}
+
+	return stateVersion.ValueInt64() != planVersion.ValueInt64()
+}
+
 func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data OSSecretBackendAccountModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -261,57 +345,16 @@ func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resourc
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	host := data.Host.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/hosts/%s/accounts/%s", mount, host, name)
-
-	// Build the request data
-	requestData := make(map[string]interface{})
-	requestData[consts.FieldUsername] = data.Username.ValueString()
-	requestData[consts.FieldPassword] = passwordWO.ValueString()
-
-	// Always send optional fields to ensure they can be cleared when removed from config
-	if !data.ParentAccountRef.IsNull() && !data.ParentAccountRef.IsUnknown() {
-		requestData[consts.FieldParentAccountRef] = data.ParentAccountRef.ValueString()
-	} else {
-		requestData[consts.FieldParentAccountRef] = ""
-	}
-	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
-		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
-	} else {
-		requestData[consts.FieldPasswordPolicy] = ""
-	}
-	if diags := frameworkrotation.PopulateAutomatedRotationRequestData(&data.AutomatedRotationModel, requestData); diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
-	}
-	if !data.VerifyConnection.IsNull() && !data.VerifyConnection.IsUnknown() {
-		requestData[consts.FieldVerifyConnection] = data.VerifyConnection.ValueBool()
-	} else {
-		requestData[consts.FieldVerifyConnection] = true
-	}
-	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
-		var customMetadata map[string]string
-		if diags := data.CustomMetadata.ElementsAs(ctx, &customMetadata, false); diags.HasError() {
-			resp.Diagnostics.Append(diags...)
-			return
-		}
-		requestData[consts.FieldCustomMetadata] = customMetadata
-	} else {
-		requestData[consts.FieldCustomMetadata] = map[string]string{}
-	}
-
-	_, err = cli.Logical().WriteWithContext(ctx, path, requestData)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("Error writing OS secret backend account to %q", path),
-			err.Error(),
-		)
+	accountPath := data.vaultPath()
+	requestData, diags := r.buildRequestData(ctx, &data, passwordWO, true)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Set the ID
+	if !r.writeAccountToVault(ctx, cli, accountPath, requestData, "writing", &resp.Diagnostics) {
+		return
+	}
 
 	// Read back the configuration (password will not be read back)
 	found := r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
@@ -321,7 +364,7 @@ func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resourc
 	if !found {
 		resp.Diagnostics.AddError(
 			"Resource not found after creation",
-			fmt.Sprintf("Account %q was not found at %q after creation", name, path),
+			fmt.Sprintf("Account %q was not found at %q after creation", data.Name.ValueString(), accountPath),
 		)
 		return
 	}
@@ -356,6 +399,12 @@ func (r *OSSecretBackendAccountResource) Read(ctx context.Context, req resource.
 }
 
 func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var stateData OSSecretBackendAccountModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	var data OSSecretBackendAccountModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -368,52 +417,30 @@ func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resourc
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	host := data.Host.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/hosts/%s/accounts/%s", mount, host, name)
-
-	// Build the request data
-	requestData := make(map[string]interface{})
-	requestData[consts.FieldUsername] = data.Username.ValueString()
-
-	// Always send optional fields to ensure they can be cleared when removed from config
-	if !data.ParentAccountRef.IsNull() && !data.ParentAccountRef.IsUnknown() {
-		requestData[consts.FieldParentAccountRef] = data.ParentAccountRef.ValueString()
-	} else {
-		requestData[consts.FieldParentAccountRef] = ""
-	}
-	if !data.PasswordPolicy.IsNull() && !data.PasswordPolicy.IsUnknown() {
-		requestData[consts.FieldPasswordPolicy] = data.PasswordPolicy.ValueString()
-	} else {
-		requestData[consts.FieldPasswordPolicy] = ""
-	}
-	if diags := frameworkrotation.PopulateAutomatedRotationRequestData(&data.AutomatedRotationModel, requestData); diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
-	}
-	if !data.VerifyConnection.IsNull() && !data.VerifyConnection.IsUnknown() {
-		requestData[consts.FieldVerifyConnection] = data.VerifyConnection.ValueBool()
-	} else {
-		requestData[consts.FieldVerifyConnection] = true
-	}
-	if !data.CustomMetadata.IsNull() && !data.CustomMetadata.IsUnknown() {
-		var customMetadata map[string]string
-		if diags := data.CustomMetadata.ElementsAs(ctx, &customMetadata, false); diags.HasError() {
-			resp.Diagnostics.Append(diags...)
+	accountPath := data.vaultPath()
+	includePassword := passwordWOUpdated(stateData.PasswordWOVersion, data.PasswordWOVersion)
+	passwordWO := types.StringNull()
+	if includePassword {
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldPasswordWO), &passwordWO)...)
+		if resp.Diagnostics.HasError() {
 			return
 		}
-		requestData[consts.FieldCustomMetadata] = customMetadata
-	} else {
-		requestData[consts.FieldCustomMetadata] = map[string]string{}
+		if passwordWO.IsNull() || passwordWO.IsUnknown() {
+			resp.Diagnostics.AddError(
+				"Missing password_wo",
+				"password_wo must be provided whenever password_wo_version changes.",
+			)
+			return
+		}
 	}
 
-	_, err = cli.Logical().WriteWithContext(ctx, path, requestData)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			fmt.Sprintf("Error updating OS secret backend account at %q", path),
-			err.Error(),
-		)
+	requestData, diags := r.buildRequestData(ctx, &data, passwordWO, includePassword)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !r.writeAccountToVault(ctx, cli, accountPath, requestData, "updating", &resp.Diagnostics) {
 		return
 	}
 
@@ -425,7 +452,7 @@ func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resourc
 	if !found {
 		resp.Diagnostics.AddError(
 			"Resource not found after update",
-			fmt.Sprintf("Account %q was not found at %q after update", name, path),
+			fmt.Sprintf("Account %q was not found at %q after update", data.Name.ValueString(), accountPath),
 		)
 		return
 	}
@@ -446,15 +473,12 @@ func (r *OSSecretBackendAccountResource) Delete(ctx context.Context, req resourc
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	host := data.Host.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/hosts/%s/accounts/%s", mount, host, name)
+	accountPath := data.vaultPath()
 
-	_, err = cli.Logical().DeleteWithContext(ctx, path)
+	_, err = cli.Logical().DeleteWithContext(ctx, accountPath)
 	if err != nil && !util.Is404(err) {
 		resp.Diagnostics.AddError(
-			fmt.Sprintf("Error deleting OS secret backend account at %q", path),
+			fmt.Sprintf("Error deleting OS secret backend account at %q", accountPath),
 			err.Error(),
 		)
 	}
@@ -464,38 +488,29 @@ func (r *OSSecretBackendAccountResource) ImportState(ctx context.Context, req re
 	// Parse the ID: {mount}/hosts/{host}/accounts/{name}
 	mount, host, name, err := parseAccountID(req.ID)
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid import ID", err.Error())
-		return
-	}
-
-	var data OSSecretBackendAccountModel
-	data.Mount = types.StringValue(mount)
-	data.Host = types.StringValue(host)
-	data.Name = types.StringValue(name)
-
-	// Password must be set after import since it's write-only
-	// Set it to a placeholder that will force user to update
-	data.PasswordWO = types.StringValue("IMPORT_PLACEHOLDER_UPDATE_REQUIRED")
-
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	found := r.readAccountFromVault(ctx, cli, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	if !found {
 		resp.Diagnostics.AddError(
-			"Resource not found",
-			fmt.Sprintf("Account %q was not found at %q during import", name, fmt.Sprintf("%s/hosts/%s/accounts/%s", mount, host, name)),
+			"Error parsing import identifier",
+			fmt.Sprintf("The import identifier %q is not valid: %s", req.ID, err.Error()),
 		)
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldHost), host)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+
+	// Password must be set after import since it's write-only
+	// Set it to a placeholder that will force user to update
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPasswordWO), "IMPORT_PLACEHOLDER_UPDATE_REQUIRED")...)
+
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 func normalizeOSRotationTimestamp(value string) string {
