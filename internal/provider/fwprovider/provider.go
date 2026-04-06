@@ -256,7 +256,6 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		keymgmt.NewDistributeKeyResource,
 		keymgmt.NewReplicateKeyResource,
 		alicloud.NewAliCloudSecretBackendResource,
-		keymgmt.NewKeyResource,
 		alicloud.NewAliCloudSecretBackendRoleResource,
 	}, testResources()...)
 }
