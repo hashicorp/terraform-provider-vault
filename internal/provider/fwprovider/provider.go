@@ -14,6 +14,7 @@ import (
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
@@ -254,6 +255,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		keymgmt.NewKeyRotateResource,
 		keymgmt.NewDistributeKeyResource,
 		keymgmt.NewReplicateKeyResource,
+		alicloud.NewAliCloudSecretBackendResource,
+		alicloud.NewAliCloudSecretBackendRoleResource,
 	}, testResources()...)
 }
 
@@ -268,6 +271,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewGCPOAuth2AccessTokenEphemeralResource,
 		ephemeralsecrets.NewAWSAccessCredentialsEphemeralSecretResource,
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
+		alicloud.NewAliCloudAccessCredentialsEphemeralResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
 		cloudfoundry.NewCFAuthLoginEphemeralResource,
