@@ -6,7 +6,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -178,34 +177,7 @@ func TestAccTransformTransformation_TokenizationWithConvergent(t *testing.T) {
 	})
 }
 
-func TestAccTransformTransformation_InvalidConfig(t *testing.T) {
-	t.Parallel()
 
-	path := acctest.RandomWithPrefix("transform")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		Steps: []resource.TestStep{
-			{
-				Config:      transformTransformation_invalidTokenizationFieldConfig(path, "invalid-mapping-on-fpe", "fpe", "default", nil, false),
-				ExpectError: regexp.MustCompile(`mapping_mode.*stores.*convergent.*type.*tokenization`),
-			},
-			{
-				Config:      transformTransformation_invalidTokenizationFieldConfig(path, "invalid-stores-on-fpe", "fpe", "", []string{"store-a"}, false),
-				ExpectError: regexp.MustCompile(`mapping_mode.*stores.*convergent.*type.*tokenization`),
-			},
-			{
-				Config:      transformTransformation_invalidConvergentConfig(path, "invalid-convergent-on-fpe", "fpe", true),
-				ExpectError: regexp.MustCompile(`mapping_mode.*stores.*convergent.*type.*tokenization`),
-			},
-			{
-				Config:      transformTransformation_invalidConvergentConfig(path, "invalid-convergent-on-masking", "masking", true),
-				ExpectError: regexp.MustCompile(`mapping_mode.*stores.*convergent.*type.*tokenization`),
-			},
-		},
-	})
-}
 
 func transformTransformationDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
@@ -292,50 +264,5 @@ resource "vault_transform_transformation" "test" {
 `, path, name, storeName, convergent)
 }
 
-func transformTransformation_invalidTokenizationFieldConfig(path, name, transformationType, mappingMode string, stores []string, convergent bool) string {
-	mappingModeLine := ""
-	if mappingMode != "" {
-		mappingModeLine = fmt.Sprintf("  mapping_mode     = %q\n", mappingMode)
-	}
 
-	storesLine := ""
-	if len(stores) > 0 {
-		storesLine = fmt.Sprintf("  stores           = [%q]\n", stores[0])
-	}
 
-	return fmt.Sprintf(`
-resource "vault_mount" "mount_transform" {
-  path = %q
-  type = "transform"
-}
-
-resource "vault_transform_transformation" "test" {
-  path             = vault_mount.mount_transform.path
-  name             = %q
-  type             = %q
-  template         = "builtin/creditcardnumber"
-  tweak_source     = "internal"
-%s%s  convergent       = %t
-  deletion_allowed = true
-}
-`, path, name, transformationType, mappingModeLine, storesLine, convergent)
-}
-
-func transformTransformation_invalidConvergentConfig(path, name, transformationType string, convergent bool) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "mount_transform" {
-	path = %q
-	type = "transform"
-}
-
-resource "vault_transform_transformation" "test" {
-	path             = vault_mount.mount_transform.path
-	name             = %q
-	type             = %q
-	template         = "builtin/creditcardnumber"
-	tweak_source     = "internal"
-	convergent       = %t
-	deletion_allowed = true
-}
-`, path, name, transformationType, convergent)
-}

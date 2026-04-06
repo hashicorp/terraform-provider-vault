@@ -4,12 +4,10 @@
 package vault
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"strings"
 
-	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -97,12 +95,11 @@ func transformTransformationResource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		Create:        createTransformTransformationResource,
-		Update:        updateTransformTransformationResource,
-		Read:          provider.ReadWrapper(readTransformTransformationResource),
-		Exists:        resourceTransformTransformationExists,
-		Delete:        deleteTransformTransformationResource,
-		CustomizeDiff: validateTransformTransformationConfig,
+		Create: createTransformTransformationResource,
+		Update: updateTransformTransformationResource,
+		Read:   provider.ReadWrapper(readTransformTransformationResource),
+		Exists: resourceTransformTransformationExists,
+		Delete: deleteTransformTransformationResource,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -111,10 +108,6 @@ func transformTransformationResource() *schema.Resource {
 }
 
 func createTransformTransformationResource(d *schema.ResourceData, meta interface{}) error {
-	if err := validateTransformTransformationTypeConstraints(d); err != nil {
-		return err
-	}
-
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -247,10 +240,6 @@ func readTransformTransformationResource(d *schema.ResourceData, meta interface{
 }
 
 func updateTransformTransformationResource(d *schema.ResourceData, meta interface{}) error {
-	if err := validateTransformTransformationTypeConstraints(d); err != nil {
-		return err
-	}
-
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -339,47 +328,4 @@ func getConfiguredValue(d *schema.ResourceData, key string) (interface{}, bool) 
 	}
 
 	return nil, false
-}
-
-func validateTransformTransformationConfig(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
-	return validateTransformTransformationTypeConstraintsFromRawConfig(d.GetRawConfig())
-}
-
-type transformTransformationConfigReader interface {
-	GetRawConfig() cty.Value
-	Get(string) interface{}
-}
-
-func validateTransformTransformationTypeConstraints(r transformTransformationConfigReader) error {
-	return validateTransformTransformationTypeConstraintsFromRawConfig(r.GetRawConfig())
-}
-
-func validateTransformTransformationTypeConstraintsFromRawConfig(rawConfig cty.Value) error {
-	typeValue := strings.TrimSpace(rawConfigAttrString(rawConfig, consts.FieldType))
-	hasMappingMode := rawConfigHasAttr(rawConfig, consts.FieldMappingMode)
-	hasStores := rawConfigHasAttr(rawConfig, consts.FieldStores)
-	hasConvergent := rawConfigHasAttr(rawConfig, consts.FieldConvergent)
-
-	if (hasMappingMode || hasStores || hasConvergent) && typeValue != "tokenization" {
-		return fmt.Errorf("%q, %q, and %q can only be set when %q is %q", consts.FieldMappingMode, consts.FieldStores, consts.FieldConvergent, consts.FieldType, "tokenization")
-	}
-
-	return nil
-}
-
-func rawConfigHasAttr(rawConfig cty.Value, key string) bool {
-	if rawConfig.IsNull() || !rawConfig.Type().IsObjectType() {
-		return false
-	}
-
-	attr := rawConfig.GetAttr(key)
-	return attr.IsKnown() && !attr.IsNull()
-}
-
-func rawConfigAttrString(rawConfig cty.Value, key string) string {
-	if !rawConfigHasAttr(rawConfig, key) {
-		return ""
-	}
-
-	return strings.TrimSpace(fmt.Sprintf("%v", rawConfig.GetAttr(key).AsString()))
 }
