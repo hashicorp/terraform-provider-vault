@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	syncutil "github.com/hashicorp/terraform-provider-vault/internal/sync"
@@ -20,33 +19,64 @@ const (
 	azureSyncType    = "azure-kv"
 )
 
-var azureSyncWriteFields = []string{
-	fieldKeyVaultURI,
-	fieldCloud,
-	consts.FieldGranularity,
-	consts.FieldSecretNameTemplate,
-	consts.FieldCustomTags,
-	consts.FieldClientSecret,
-	consts.FieldClientID,
-	consts.FieldTenantID,
-}
-
-var azureSyncReadFields = []string{
-	fieldKeyVaultURI,
-	fieldCloud,
-	consts.FieldGranularity,
-	consts.FieldSecretNameTemplate,
-	consts.FieldCustomTags,
-	consts.FieldClientID,
-	consts.FieldTenantID,
-}
-
-// These fields are conditionally added to read and write operations when Vault 1.19+ is detected
-var azureSyncFieldsV119 = []string{
+// azureNetworkingFields are the SSRF networking restriction fields added in VaultVersion119.
+// Shared between write and read field lists to avoid duplication.
+var azureNetworkingFields = []string{
 	consts.FieldAllowedIPv4Addresses,
 	consts.FieldAllowedIPv6Addresses,
 	consts.FieldAllowedPorts,
 	consts.FieldDisableStrictNetworking,
+}
+
+func buildAzureSyncWriteFields(meta interface{}) []string {
+	fields := []string{
+		fieldKeyVaultURI,
+		fieldCloud,
+		consts.FieldGranularity,
+		consts.FieldSecretNameTemplate,
+		consts.FieldCustomTags,
+		consts.FieldClientSecret,
+		consts.FieldClientID,
+		consts.FieldTenantID,
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		fields = append(fields, azureNetworkingFields...)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		fields = append(fields,
+			consts.FieldIdentityTokenAudience,
+			consts.FieldIdentityTokenTTL,
+			consts.FieldIdentityTokenKey,
+		)
+	}
+
+	return fields
+}
+
+func buildAzureSyncReadFields(meta interface{}) []string {
+	fields := []string{
+		fieldKeyVaultURI,
+		fieldCloud,
+		consts.FieldGranularity,
+		consts.FieldSecretNameTemplate,
+		consts.FieldCustomTags,
+		consts.FieldClientID,
+		consts.FieldTenantID,
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion119) {
+		fields = append(fields, azureNetworkingFields...)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		fields = append(fields,
+			consts.FieldIdentityTokenTTL,
+		)
+	}
+
+	return fields
 }
 
 // Fields that need TypeSet to List conversion for JSON serialization
@@ -96,6 +126,38 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 				Description: "ID of the target Azure tenant.",
 				ForceNew:    true,
 			},
+			consts.FieldIdentityTokenKeyWO: {
+				Type:        schema.TypeString,
+				WriteOnly:   true,
+				Sensitive:   true,
+				Optional:    true,
+				Description: "The key to use for signing identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_key_wo field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenKeyWO},
+			},
+			consts.FieldIdentityTokenAudienceWO: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				WriteOnly:   true,
+				Sensitive:   true,
+				Description: "The audience claim value for identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenAudienceWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_audience_wo field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenAudienceWO},
+			},
+			consts.FieldIdentityTokenTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL of generated tokens.",
+			},
 			fieldCloud: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -137,32 +199,13 @@ func azureSecretsSyncDestinationResource() *schema.Resource {
 }
 
 func azureSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-
-	// Start with base fields
-	writeFields := append([]string{}, azureSyncWriteFields...)
-	readFields := append([]string{}, azureSyncReadFields...)
-
-	// Check if Vault 1.19+ fields are being used
-	isV119Supported := provider.IsAPISupported(meta, provider.VaultVersion119)
-
-	// Process Vault 1.19+ fields only if version is supported
-	if isV119Supported {
-		writeFields = append(writeFields, azureSyncFieldsV119...)
-		readFields = append(readFields, azureSyncFieldsV119...)
-	}
+	writeFields := buildAzureSyncWriteFields(meta)
+	readFields := buildAzureSyncReadFields(meta)
 	return syncutil.SyncDestinationCreateUpdateWithOptions(ctx, d, meta, azureSyncType, writeFields, readFields, azureTypeSetFields)
 }
 
 func azureSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	// Start with base fields
-	readFields := append([]string{}, azureSyncReadFields...)
-
-	// Add Vault 1.19+ fields if supported
-	isV119Supported := provider.IsAPISupported(meta, provider.VaultVersion119)
-	if isV119Supported {
-		readFields = append(readFields, azureSyncFieldsV119...)
-	}
-
+	readFields := buildAzureSyncReadFields(meta)
 	return syncutil.SyncDestinationRead(ctx, d, meta, azureSyncType, readFields, map[string]string{
 		consts.FieldGranularity: consts.FieldGranularityLevel,
 	})

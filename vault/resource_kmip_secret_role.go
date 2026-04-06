@@ -73,6 +73,11 @@ func kmipSecretRoleResource() *schema.Resource {
 				ForceNew:    true,
 				Description: "Name of the role",
 			},
+			consts.FieldCA: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Name of the ca to use, if absent use legacy ca",
+			},
 			consts.FieldTLSClientKeyType: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -265,6 +270,14 @@ func kmipSecretRoleCreate(d *schema.ResourceData, meta interface{}) error {
 	if e != nil {
 		return e
 	}
+
+	// Check if a named CA is being used (requires Vault 2.0.0+)
+	if ca, ok := d.GetOk(consts.FieldCA); ok && ca.(string) != "" {
+		if !provider.IsAPISupported(meta, provider.VaultVersion200) {
+			return fmt.Errorf("named KMIP CAs require Vault version 2.0.0 or later")
+		}
+	}
+
 	scope := d.Get(consts.FieldScope).(string)
 	role := d.Get(consts.FieldRole).(string)
 
@@ -331,6 +344,16 @@ func kmipSecretRoleUpdate(d *schema.ResourceData, meta interface{}) error {
 	if e != nil {
 		return e
 	}
+
+	// Check if a named CA is being used (requires Vault 2.0.0+)
+	if d.HasChange(consts.FieldCA) {
+		if ca, ok := d.GetOk(consts.FieldCA); ok && ca.(string) != "" {
+			if !provider.IsAPISupported(meta, provider.VaultVersion200) {
+				return fmt.Errorf("named KMIP CAs require Vault version 2.0.0 or later")
+			}
+		}
+	}
+
 	rolePath := d.Id()
 
 	if d.HasChange(consts.FieldPath) {
@@ -378,7 +401,12 @@ func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
-	nonBooleanfields := []string{consts.FieldTLSClientKeyType, consts.FieldTLSClientKeyBits, consts.FieldTLSClientTTL}
+	nonBooleanfields := []string{
+		consts.FieldCA,
+		consts.FieldTLSClientKeyType,
+		consts.FieldTLSClientKeyBits,
+		consts.FieldTLSClientTTL,
+	}
 
 	data := make(map[string]interface{})
 	for _, k := range nonBooleanfields {

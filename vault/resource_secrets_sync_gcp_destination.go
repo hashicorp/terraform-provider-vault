@@ -42,6 +42,15 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 		}...)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		fields = append(fields,
+			consts.FieldIdentityTokenAudience,
+			consts.FieldIdentityTokenTTL,
+			consts.FieldServiceAccountEmail,
+			consts.FieldIdentityTokenKey,
+		)
+	}
+
 	return fields
 }
 
@@ -66,6 +75,13 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 			consts.FieldLocationalKmsKeys,
 			consts.FieldGlobalKmsKey,
 		}...)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		fields = append(fields,
+			consts.FieldIdentityTokenTTL,
+			consts.FieldServiceAccountEmail,
+		)
 	}
 
 	return fields
@@ -99,6 +115,43 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Description: "The target project to manage secrets in.",
+			},
+			consts.FieldIdentityTokenKeyWO: {
+				Type:        schema.TypeString,
+				WriteOnly:   true,
+				Sensitive:   true,
+				Optional:    true,
+				Description: "The key to use for signing identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_key_wo field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenKeyWO},
+			},
+			consts.FieldIdentityTokenAudienceWO: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				WriteOnly:   true,
+				Sensitive:   true,
+				Description: "The audience claim value for identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenAudienceWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_audience_wo field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenAudienceWO},
+			},
+			consts.FieldIdentityTokenTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL of generated tokens.",
+			},
+			consts.FieldServiceAccountEmail: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Service Account to impersonate for workload identity federation.",
 			},
 			consts.FieldAllowedIPv4Addresses: {
 				Type:     schema.TypeSet,

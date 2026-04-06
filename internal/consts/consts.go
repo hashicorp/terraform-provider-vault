@@ -96,6 +96,11 @@ const (
 	FieldAWS                                = "aws"
 	FieldPKCS                               = "pkcs"
 	FieldAzure                              = "azure"
+	FieldGCP                                = "gcp"
+	FieldProject                            = "project"
+	FieldKeyRing                            = "key_ring"
+	FieldCryptoKey                          = "crypto_key"
+	FieldCryptoKeyVersion                   = "crypto_key_version"
 	FieldLibrary                            = "library"
 	FieldKeyLabel                           = "key_label"
 	FieldKeyID                              = "key_id"
@@ -312,6 +317,8 @@ const (
 	FieldPublicKey                          = "public_key"
 	FieldPrivateKey                         = "private_key"
 	FieldPrivateKeyData                     = "private_key_data"
+	FieldRSAPrivateKey                      = "rsa_private_key"
+	FieldClientCertificate                  = "client_certificate"
 	FieldImpersonatedAccount                = "impersonated_account"
 	FieldRoleset                            = "roleset"
 	FieldStaticAccount                      = "static_account"
@@ -399,6 +406,7 @@ const (
 	FieldOtherSans                          = "other_sans"
 	FieldMaxPathLength                      = "max_path_length"
 	FieldExcludeCNFromSans                  = "exclude_cn_from_sans"
+	FieldRemoveRootsFromChain               = "remove_roots_from_chain"
 	FieldPermittedDNSDomains                = "permitted_dns_domains"
 	FieldExcludedDNSDomains                 = "excluded_dns_domains"
 	FieldPermittedIPRanges                  = "permitted_ip_ranges"
@@ -486,12 +494,16 @@ const (
 	FieldSTSEndpoint                        = "sts_endpoint"
 	FieldSTSFallbackEndpoints               = "sts_fallback_endpoints"
 	FieldIdentityTokenAudience              = "identity_token_audience"
+	FieldIdentityTokenAudienceWO            = "identity_token_audience_wo"
+	FieldIdentityTokenAudienceWOVersion     = "identity_token_audience_wo_version"
 	FieldIdentityTokenTTL                   = "identity_token_ttl"
 	FieldRoleArn                            = "role_arn"
 	FieldAccessor                           = "accessor"
 	FieldOptions                            = "options"
 	FieldAllowedManagedKeys                 = "allowed_managed_keys"
 	FieldIdentityTokenKey                   = "identity_token_key"
+	FieldIdentityTokenKeyWO                 = "identity_token_key_wo"
+	FieldIdentityTokenKeyWOVersion          = "identity_token_key_wo_version"
 	FieldCIDRList                           = "cidr_list"
 	FieldSecretID                           = "secret_id"
 	FieldSecretIDWO                         = "secret_id_wo"
@@ -587,6 +599,16 @@ const (
 	FieldSerialNumberSource                 = "serial_number_source"
 	FieldCertMetadata                       = "cert_metadata"
 	FieldTokenType                          = "token_type"
+	FieldKMSName                            = "kms_name"
+	FieldKeyCollection                      = "key_collection"
+	FieldServiceAccountFile                 = "service_account_file"
+	FieldLocation                           = "location"
+	FieldPurpose                            = "purpose"
+	FieldProtection                         = "protection"
+	FieldVersions                           = "versions"
+	FieldReplicaRegions                     = "replica_regions"
+	FieldMinEnabledVersion                  = "min_enabled_version"
+	FieldProvider                           = "provider"
 
 	FieldInput                    = "input"
 	FieldKeyVersion               = "key_version"
@@ -653,6 +675,8 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
+	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
+	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
@@ -687,11 +711,13 @@ const (
 	FieldAllowedUserKeyLengths                = "allowed_user_key_lengths"
 	FieldAlgorithmSigner                      = "algorithm_signer"
 	FieldKeyIDFormat                          = "key_id_format"
+	FieldDistributedClaimAccessToken          = "distributed_claim_access_token"
 	// SSH Secret Backend Key Types
 	SSHKeyTypeCA              = "ca"
 	FieldAllowEmptyPrincipals = "allow_empty_principals"
 
 	// KMIP Secret Role fields
+	FieldCA                        = "ca"
 	FieldOperationActivate         = "operation_activate"
 	FieldOperationAddAttribute     = "operation_add_attribute"
 	FieldOperationAll              = "operation_all"
@@ -827,6 +853,10 @@ const (
 	// EnvVarVaultConfigPath to override where the Vault configuration is in tests.
 	// Note: only used in tests. not used by the provider to read the Vault config.
 	EnvVarVaultConfigPath = "VAULT_CONFIG_PATH"
+	// EnvVarVaultAuthDistributedClaimAccessToken is used to provide an access token to
+	// fetch group memberships for distributed claims. Supported for Azure/Entra ID
+	// with Vault 1.18+.
+	EnvVarVaultAuthDistributedClaimAccessToken = "TERRAFORM_VAULT_AUTH_DISTRIBUTED_CLAIM_ACCESS_TOKEN"
 	/*
 		common mount types
 	*/
@@ -856,6 +886,7 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeKeyMgmt      = "keymgmt"
 
 	/*
 		Vault version constants
@@ -873,8 +904,31 @@ const (
 	VaultVersion1185 = "1.18.5"
 	VaultVersion119  = "1.19.0"
 	VaultVersion1192 = "1.19.2"
+	VaultVersion1194 = "1.19.4"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
+	VaultVersion1215 = "1.21.5"
+	VaultVersion200  = "2.0.0"
+
+	/*
+		CloudFoundry auth backend field names
+	*/
+	FieldCFApiAddr                = "cf_api_addr"
+	FieldCFApiTrustedCertificates = "cf_api_trusted_certificates"
+	FieldIdentityCACertificates   = "identity_ca_certificates"
+	FieldCFInstanceCert           = "cf_instance_cert"
+	FieldCFPasswordWO             = "cf_password_wo"
+	FieldCFTimeout                = "cf_timeout"
+	FieldCFUsername               = "cf_username"
+	FieldLoginMaxSecsNotAfter     = "login_max_seconds_not_after"
+	FieldLoginMaxSecsNotBefore    = "login_max_seconds_not_before"
+	FieldBoundApplicationIDs      = "bound_application_ids"
+	FieldBoundSpaceIDs            = "bound_space_ids"
+	FieldBoundOrganizationIDs     = "bound_organization_ids"
+	FieldBoundInstanceIDs         = "bound_instance_ids"
+	FieldDisableIPMatching        = "disable_ip_matching"
+	FieldAliasMetadata            = "alias_metadata"
+	FieldSigningTime              = "signing_time"
 
 	/*
 		Vault auth methods

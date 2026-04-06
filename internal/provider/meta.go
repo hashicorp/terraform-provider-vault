@@ -49,8 +49,11 @@ var (
 	VaultVersion1185 = version.Must(version.NewSemver(consts.VaultVersion1185))
 	VaultVersion119  = version.Must(version.NewSemver(consts.VaultVersion119))
 	VaultVersion1192 = version.Must(version.NewSemver(consts.VaultVersion1192))
+	VaultVersion1194 = version.Must(version.NewSemver(consts.VaultVersion1194))
 	VaultVersion120  = version.Must(version.NewSemver(consts.VaultVersion120))
 	VaultVersion121  = version.Must(version.NewSemver(consts.VaultVersion121))
+	VaultVersion1215 = version.Must(version.NewSemver(consts.VaultVersion1215))
+	VaultVersion200  = version.Must(version.NewSemver(consts.VaultVersion200))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )
@@ -206,6 +209,7 @@ func (p *ProviderMeta) setClient() error {
 	tlsConfig := &api.TLSConfig{
 		CACert:        GetResourceDataStr(d, consts.FieldCACertFile, api.EnvVaultCACert, ""),
 		CAPath:        GetResourceDataStr(d, consts.FieldCACertDir, api.EnvVaultCAPath, ""),
+		CACertBytes:   []byte(GetResourceDataStr(d, "", api.EnvVaultCACertBytes, "")),
 		Insecure:      GetResourceDataBool(d, consts.FieldSkipTLSVerify, "VAULT_SKIP_VERIFY", false),
 		TLSServerName: GetResourceDataStr(d, consts.FieldTLSServerName, api.EnvVaultTLSServerName, ""),
 	}
