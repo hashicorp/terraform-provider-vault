@@ -873,20 +873,6 @@ func connectionStringResource(config *connectionStringConfig) *schema.Resource {
 		}
 	}
 
-	if config.isCloud {
-		res.Schema["auth_type"] = &schema.Schema{
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "Specify alternative authorization type. (Only 'gcp_iam' is valid currently)",
-		}
-		res.Schema["service_account_json"] = &schema.Schema{
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "A JSON encoded credential for use with IAM authorization",
-			Sensitive:   true,
-		}
-	}
-
 	return res
 }
 
@@ -923,6 +909,11 @@ func postgresConnectionStringResource() *schema.Resource {
 		Optional:    true,
 		Default:     "password",
 		Description: "When set to `scram-sha-256`, passwords will be hashed by Vault before being sent to PostgreSQL.",
+	}
+	r.Schema["use_private_ip"] = &schema.Schema{
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If set, allows connection to a CloudSQL instance using a Private IP. Requires Vault 1.21+.",
 	}
 
 	return r
@@ -1326,6 +1317,12 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := data["self_managed"]; ok {
 			result["self_managed"] = v.(bool)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion121) {
+		if v, ok := data["use_private_ip"]; ok {
+			result["use_private_ip"] = v.(bool)
 		}
 	}
 	return result
@@ -1772,6 +1769,12 @@ func setMongoDBDatabaseConnectionData(d *schema.ResourceData, prefix string, dat
 func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion121) {
+		if v, ok := d.GetOkExists(prefix + "use_private_ip"); ok {
+			data["use_private_ip"] = v.(bool)
+		}
+	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion118) {
 		if v, ok := d.GetOk(prefix + "tls_ca"); ok {
