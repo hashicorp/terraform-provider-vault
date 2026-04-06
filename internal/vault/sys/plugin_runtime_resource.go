@@ -157,22 +157,17 @@ func (r *pluginRuntimeResourceFW) Create(ctx context.Context, req resource.Creat
 	}
 
 	data.ID = types.StringValue(fmt.Sprintf("%s/%s", runType, name))
-
-	// Ensure all optional computed fields are known (set to null if not configured)
-	if data.OCIRuntime.IsUnknown() {
-		data.OCIRuntime = types.StringNull()
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, path)
+	if err != nil {
+		resp.Diagnostics.AddError("Error Reading Plugin Runtime After Create", err.Error())
+		return
 	}
-	if data.CgroupParent.IsUnknown() {
-		data.CgroupParent = types.StringNull()
-	}
-	if data.CPUNanos.IsUnknown() {
-		data.CPUNanos = types.Int64Null()
-	}
-	if data.MemoryBytes.IsUnknown() {
-		data.MemoryBytes = types.Int64Null()
+	if vaultResp == nil || vaultResp.Data == nil {
+		resp.Diagnostics.AddError("Error Reading Plugin Runtime After Create", "Vault returned an empty response after creating the plugin runtime")
+		return
 	}
 
-	// Set the state with the planned values since the API doesn't return all fields
+	r.populateModelFromVaultData(&data, runType, name, vaultResp.Data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -214,32 +209,7 @@ func (r *pluginRuntimeResourceFW) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	// Update type and name from ID
-	data.Type = types.StringValue(runType)
-	data.Name = types.StringValue(name)
-
-	// Read all fields from API response
-	if v, ok := vaultResp.Data["rootless"].(bool); ok {
-		data.Rootless = types.BoolValue(v)
-	}
-
-	// Read optional fields - set to null if not present in response
-	if v, ok := vaultResp.Data["oci_runtime"].(string); ok && v != "" {
-		data.OCIRuntime = types.StringValue(v)
-	} else {
-		data.OCIRuntime = types.StringNull()
-	}
-
-	if v, ok := vaultResp.Data["cgroup_parent"].(string); ok && v != "" {
-		data.CgroupParent = types.StringValue(v)
-	} else {
-		data.CgroupParent = types.StringNull()
-	}
-
-	// Read all optional fields from API - util functions handle type conversion and null values
-	// Note: Vault client may return json.Number type for numeric fields
-	data.CPUNanos = util.Int64ValueOrNull(vaultResp.Data["cpu_nanos"])
-	data.MemoryBytes = util.Int64ValueOrNull(vaultResp.Data["memory_bytes"])
+	r.populateModelFromVaultData(&data, runType, name, vaultResp.Data)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -267,22 +237,17 @@ func (r *pluginRuntimeResourceFW) Update(ctx context.Context, req resource.Updat
 		resp.Diagnostics.AddError("Error Updating Plugin Runtime", err.Error())
 		return
 	}
-
-	// Ensure all optional computed fields are known (set to null if not configured)
-	if data.OCIRuntime.IsUnknown() {
-		data.OCIRuntime = types.StringNull()
+	vaultResp, err := cli.Logical().ReadWithContext(ctx, path)
+	if err != nil {
+		resp.Diagnostics.AddError("Error Reading Plugin Runtime After Update", err.Error())
+		return
 	}
-	if data.CgroupParent.IsUnknown() {
-		data.CgroupParent = types.StringNull()
-	}
-	if data.CPUNanos.IsUnknown() {
-		data.CPUNanos = types.Int64Null()
-	}
-	if data.MemoryBytes.IsUnknown() {
-		data.MemoryBytes = types.Int64Null()
+	if vaultResp == nil || vaultResp.Data == nil {
+		resp.Diagnostics.AddError("Error Reading Plugin Runtime After Update", "Vault returned an empty response after updating the plugin runtime")
+		return
 	}
 
-	// Set the state with the planned values since the API doesn't return all fields
+	r.populateModelFromVaultData(&data, runType, name, vaultResp.Data)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -336,4 +301,29 @@ func (r *pluginRuntimeResourceFW) buildPayload(data pluginRuntimeResourceModel) 
 		payload[fieldMemoryBytes] = data.MemoryBytes.ValueInt64()
 	}
 	return payload
+}
+
+func (r *pluginRuntimeResourceFW) populateModelFromVaultData(data *pluginRuntimeResourceModel, runType, name string, vaultData map[string]interface{}) {
+	data.Type = types.StringValue(runType)
+	data.Name = types.StringValue(name)
+
+	if v, ok := vaultData[fieldRootless].(bool); ok {
+		data.Rootless = types.BoolValue(v)
+	}
+
+	if v, ok := vaultData[fieldOCIRuntime].(string); ok && v != "" {
+		data.OCIRuntime = types.StringValue(v)
+	} else {
+		data.OCIRuntime = types.StringNull()
+	}
+
+	if v, ok := vaultData[fieldCgroupParent].(string); ok && v != "" {
+		data.CgroupParent = types.StringValue(v)
+	} else {
+		data.CgroupParent = types.StringNull()
+	}
+
+	// Vault client can return json.Number for numeric fields.
+	data.CPUNanos = util.Int64ValueOrNull(vaultData[fieldCPUNanos])
+	data.MemoryBytes = util.Int64ValueOrNull(vaultData[fieldMemoryBytes])
 }
