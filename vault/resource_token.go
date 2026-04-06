@@ -159,6 +159,19 @@ func tokenResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldType: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				ForceNew:    true,
+				Description: "The token type. Can be 'batch' or 'service'.",
+			},
+			consts.FieldEntityAlias: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Name of the entity alias to associate with during token creation.",
+			},
 		},
 	}
 }
@@ -223,6 +236,14 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		createRequest.Metadata = d
 	}
 
+	if v, ok := d.GetOk(consts.FieldType); ok {
+		createRequest.Type = v.(string)
+	}
+
+	if v, ok := d.GetOk(consts.FieldEntityAlias); ok {
+		createRequest.EntityAlias = v.(string)
+	}
+
 	if v, ok := d.GetOk(consts.FieldWrappingTTL); ok {
 		wrappingTTL := v.(string)
 
@@ -271,13 +292,24 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
+	// Batch tokens do not have accessors; use Request ID instead
+
+	if accessor == "" && !wrapped && resp.Auth.ClientToken != "" && strings.HasPrefix(resp.Auth.ClientToken, "hvb.") {
+		accessor = resp.RequestID
+		d.Set(consts.FieldType, "batch")
+	}
+
+	if accessor == "" {
+		return fmt.Errorf("Vault returned an empty accessor and no client token")
+	}
+
 	if wrapped {
 		d.Set(consts.FieldWrappedToken, resp.WrapInfo.Token)
 		d.Set(consts.FieldWrappingAccessor, resp.WrapInfo.Accessor)
 	} else {
 		d.Set(consts.FieldClientToken, resp.Auth.ClientToken)
 	}
-
+	// resp
 	d.SetId(accessor)
 
 	return tokenRead(d, meta)
@@ -287,6 +319,12 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
+	}
+
+	// Batch tokens cannot be looked up via API
+	if strings.HasPrefix(d.Id(), "hvb.") || d.Get(consts.FieldType).(string) == "batch" {
+		d.Set(consts.FieldType, "batch")
+		return nil
 	}
 
 	id := d.Get(consts.FieldClientToken).(string)
@@ -342,6 +380,11 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set(consts.FieldMetadata, resp.Data["meta"])
 
+	if tokenType, ok := resp.Data["type"].(string); ok {
+		d.Set(consts.FieldType, tokenType)
+	}
+
+	// Renewal logic
 	if d.Get(consts.FieldRenewable).(bool) && tokenCheckLease(d) {
 		if id == "" {
 			log.Printf("[DEBUG] Lease for token access %q cannot be renewed as it's been encrypted.", accessor)
@@ -380,6 +423,9 @@ func tokenUpdate(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenDelete(d *schema.ResourceData, meta interface{}) error {
+	if strings.HasPrefix(d.Id(), "hvb.") || d.Get(consts.FieldType).(string) == "batch" {
+		return nil
+	}
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
@@ -398,6 +444,9 @@ func tokenDelete(d *schema.ResourceData, meta interface{}) error {
 }
 
 func tokenExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	if strings.HasPrefix(d.Id(), "hvb.") || d.Get(consts.FieldType).(string) == "batch" {
+		return true, nil
+	}
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return false, e
