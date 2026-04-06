@@ -177,8 +177,6 @@ func TestAccTransformTransformation_TokenizationWithConvergent(t *testing.T) {
 	})
 }
 
-
-
 func transformTransformationDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_transform_transformation" {
@@ -263,6 +261,3 @@ resource "vault_transform_transformation" "test" {
 }
 `, path, name, storeName, convergent)
 }
-
-
-
