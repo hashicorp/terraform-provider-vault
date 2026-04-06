@@ -280,17 +280,6 @@ func updateTransformTransformationResource(d *schema.ResourceData, meta interfac
 		data[consts.FieldDeletionAllowed] = d.Get(consts.FieldDeletionAllowed)
 	}
 
-	if raw, ok := d.GetOk(consts.FieldMappingMode); ok {
-		data[consts.FieldMappingMode] = raw
-	}
-	if raw, ok := d.GetOk(consts.FieldStores); ok {
-		data[consts.FieldStores] = raw
-	}
-	if d.HasChange(consts.FieldConvergent) {
-		_, newVal := d.GetChange(consts.FieldConvergent)
-		data[consts.FieldConvergent] = newVal
-	}
-
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return fmt.Errorf("error updating template auth backend role %q: %s", vaultPath, err)
 	}

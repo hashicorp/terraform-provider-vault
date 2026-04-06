@@ -94,8 +94,7 @@ The following arguments are supported:
 * `stores` - (Optional) List of stores to use for tokenization state. 
   Only used when `type` is "tokenization".
   **Note:** This field is immutable and cannot be changed after creation. Changing this value will force recreation of the resource.
-* `convergent` - (Optional) If true, multiple transformations of the same plaintext will 
-  produce the same ciphertext. Only used when `type` is "fpe". Default: `false`
+* `convergent` - (Optional) If true, multiple transformations of the same plaintext will produce the same ciphertext. Only used when `type` is "tokenization". Default: `false`
 
 ## Tutorials
 
