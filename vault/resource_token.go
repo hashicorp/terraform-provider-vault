@@ -292,7 +292,7 @@ func tokenCreate(d *schema.ResourceData, meta interface{}) error {
 		log.Printf("[DEBUG] Created token accessor %q", accessor)
 	}
 
-	// Batch tokens do not have accessors; use client token as ID
+	// Batch tokens do not have accessors; use Request ID instead
 
 	if accessor == "" && !wrapped && resp.Auth.ClientToken != "" && strings.HasPrefix(resp.Auth.ClientToken, "hvb.") {
 		accessor = resp.RequestID
@@ -382,9 +382,6 @@ func tokenRead(d *schema.ResourceData, meta interface{}) error {
 
 	if tokenType, ok := resp.Data["type"].(string); ok {
 		d.Set(consts.FieldType, tokenType)
-	}
-	if entityAlias, ok := resp.Data["entity_alias"].(string); ok {
-		d.Set(consts.FieldEntityAlias, entityAlias)
 	}
 
 	// Renewal logic

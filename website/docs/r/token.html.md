@@ -105,7 +105,7 @@ The following arguments are supported:
 
 * `metadata` - (Optional) Metadata to be set on this token
 
-* `type` - (Optional) The type of token to create. Can be `service` or `batch`. Service tokens are persisted and support renewal and revocation. Batch tokens are lightweight, non-renewable, and non-revocable. If not specified, defaults to `service`.
+* `type` - (Optional) The token type. Can be "batch" or "service". Defaults to the type specified by the role configuration named by role_name. Service tokens are persisted and support renewal and revocation. Batch tokens are lightweight, non-renewable, and non-revocable. 
 
 * `entity_alias` - (Optional) Name of the entity alias to associate with during token creation. The entity alias must already exist and be associated with an entity. This allows the token to inherit the entity's policies and metadata.
 
