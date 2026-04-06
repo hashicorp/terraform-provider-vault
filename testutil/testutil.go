@@ -1057,3 +1057,23 @@ func (r *TestRetryHandler) Handler() http.HandlerFunc {
 		}
 	}
 }
+
+func GetTestAWSSessionToken(t *testing.T) string {
+	return os.Getenv("AWS_SESSION_TOKEN")
+}
+
+func GetTestAzureKMSCreds(t *testing.T) (tenantID, clientID, clientSecret, keyVaultName string) {
+	t.Helper()
+	v := SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
+	return v[0], v[1], v[2], v[3]
+}
+
+func GetTestGCPCredsFile(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS_FILE")
+	return v[0]
+}
+
+func GetTestGCPProject(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_PROJECT")
+	return v[0]
+}
