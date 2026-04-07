@@ -774,7 +774,6 @@ func getHCLogger() hclog.Logger {
 	return logger
 }
 
-
 func getConfiguredResourceDataNamespace(d *schema.ResourceData) (string, bool) {
 	if ns, ok := getRawConfigStringAttribute(d.GetRawConfig(), consts.FieldNamespace); ok {
 		return ns, true
