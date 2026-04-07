@@ -21,8 +21,8 @@ func TestAccPKIExternalCAOrderChallengeDataSource_basic(t *testing.T) {
 	accountName := acctest.RandomWithPrefix("tf-acme-account")
 	identifier := "example.com"
 
-	dataSourceName1 := "data.vault_pki_secret_backend_external_ca_order_challenge.http01"
-	dataSourceName2 := "data.vault_pki_secret_backend_external_ca_order_challenge.dns01"
+	dataSourceName1 := "data.vault_pki_external_ca_secret_backend_order_challenge.http01"
+	dataSourceName2 := "data.vault_pki_external_ca_secret_backend_order_challenge.dns01"
 
 	ca, directoryUrl := setupVaultAndPebble(t)
 
@@ -69,7 +69,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA test"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
@@ -80,10 +80,10 @@ resource "vault_pki_secret_backend_acme_account" "test" {
 EOT
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "test" {
+resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
-  acme_account_name           = vault_pki_secret_backend_acme_account.test.name
+  acme_account_name           = vault_pki_external_ca_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "*.example.com"]
   allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
@@ -92,24 +92,24 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   force                       = "true"
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "test" {
+resource "vault_pki_external_ca_secret_backend_order" "test" {
   mount       = vault_mount.test.path
-  role_name   = vault_pki_secret_backend_external_ca_role.test.name
+  role_name   = vault_pki_external_ca_secret_backend_role.test.name
   identifiers = ["%s"]
 }
 
-data "vault_pki_secret_backend_external_ca_order_challenge" "http01" {
+data "vault_pki_external_ca_secret_backend_order_challenge" "http01" {
   mount          = vault_mount.test.path
-  role_name      = vault_pki_secret_backend_external_ca_role.test.name
-  order_id       = vault_pki_secret_backend_external_ca_order.test.order_id
+  role_name      = vault_pki_external_ca_secret_backend_role.test.name
+  order_id       = vault_pki_external_ca_secret_backend_order.test.order_id
   challenge_type = "http-01"
   identifier     = "%s"
 }
 
-data "vault_pki_secret_backend_external_ca_order_challenge" "dns01" {
+data "vault_pki_external_ca_secret_backend_order_challenge" "dns01" {
   mount          = vault_mount.test.path
-  role_name      = vault_pki_secret_backend_external_ca_role.test.name
-  order_id       = vault_pki_secret_backend_external_ca_order.test.order_id
+  role_name      = vault_pki_external_ca_secret_backend_role.test.name
+  order_id       = vault_pki_external_ca_secret_backend_order.test.order_id
   challenge_type = "dns-01"
   identifier     = "%s"
 }
