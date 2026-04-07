@@ -122,8 +122,9 @@ func PopulateAutomatedRotationModelFromAPI(model *AutomatedRotationModel, apiMod
 }
 
 // PopulateAutomatedRotationRequestData copies the shared automated rotation
-// values into a request payload using explicit empty values to clear removed
-// configuration.
+// values into a request payload. Only sends non-zero values to match SDK v2
+// behavior and avoid conflicts with Vault's rotation field validation.
+// To clear a field, it must be explicitly set to its zero value in the config.
 func PopulateAutomatedRotationRequestData(model *AutomatedRotationModel, requestData map[string]interface{}) diag.Diagnostics {
 	if requestData == nil {
 		return diag.Diagnostics{
@@ -136,15 +137,36 @@ func PopulateAutomatedRotationRequestData(model *AutomatedRotationModel, request
 		}
 	}
 
-	apiModel := &AutomatedRotationAPIModel{}
-	if diags := PopulateAutomatedRotationAPIFromModel(model, apiModel); diags.HasError() {
-		return diags
+	// Only send rotation fields that have non-zero values to avoid conflicts
+	// with Vault's rotation field validation (e.g., rotation_period and
+	// rotation_schedule are mutually exclusive).
+	//
+	// Note: To clear a field that was previously set, the user must explicitly
+	// set it to 0/""/false in their config. Removing it from config will leave
+	// the existing value in Vault unchanged.
+	if !model.RotationPeriod.IsNull() && !model.RotationPeriod.IsUnknown() {
+		period := model.RotationPeriod.ValueInt64()
+		// Always send if explicitly set, even if zero (to clear the field)
+		requestData[consts.FieldRotationPeriod] = period
 	}
 
-	requestData[consts.FieldRotationPeriod] = apiModel.RotationPeriod
-	requestData[consts.FieldRotationSchedule] = apiModel.RotationSchedule
-	requestData[consts.FieldRotationWindow] = apiModel.RotationWindow
-	requestData[consts.FieldDisableAutomatedRotation] = apiModel.DisableAutomatedRotation
+	if !model.RotationSchedule.IsNull() && !model.RotationSchedule.IsUnknown() {
+		schedule := model.RotationSchedule.ValueString()
+		// Always send if explicitly set, even if empty (to clear the field)
+		requestData[consts.FieldRotationSchedule] = schedule
+	}
+
+	if !model.RotationWindow.IsNull() && !model.RotationWindow.IsUnknown() {
+		window := model.RotationWindow.ValueInt64()
+		// Always send if explicitly set, even if zero (to clear the field)
+		requestData[consts.FieldRotationWindow] = window
+	}
+
+	if !model.DisableAutomatedRotation.IsNull() && !model.DisableAutomatedRotation.IsUnknown() {
+		disable := model.DisableAutomatedRotation.ValueBool()
+		// Always send if explicitly set, even if false (to clear the field)
+		requestData[consts.FieldDisableAutomatedRotation] = disable
+	}
 
 	return diag.Diagnostics{}
 }

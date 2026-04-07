@@ -154,11 +154,8 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 				},
 			},
 			consts.FieldNextVaultRotation: schema.StringAttribute{
-				MarkdownDescription: "Timestamp of the next scheduled password rotation by Vault.",
+				MarkdownDescription: "Timestamp of the next scheduled password rotation by Vault. This value may change when rotation configuration is updated.",
 				Computed:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 		MarkdownDescription: "Manages an account on a host in an OS Secrets Engine mount in Vault.",
@@ -221,14 +218,15 @@ func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Contex
 		data.VerifyConnection = types.BoolValue(apiModel.VerifyConnection)
 	}
 
-	// Set computed fields
-	if lastVaultRotation := normalizeOSRotationTimestamp(apiModel.LastVaultRotation); lastVaultRotation != "" {
-		data.LastVaultRotation = types.StringValue(lastVaultRotation)
+	// Set computed fields - use values directly from Vault without normalization
+	if apiModel.LastVaultRotation != "" {
+		data.LastVaultRotation = types.StringValue(apiModel.LastVaultRotation)
 	} else {
 		data.LastVaultRotation = types.StringNull()
 	}
-	if nextVaultRotation := normalizeOSRotationTimestamp(apiModel.NextVaultRotation); nextVaultRotation != "" {
-		data.NextVaultRotation = types.StringValue(nextVaultRotation)
+
+	if apiModel.NextVaultRotation != "" {
+		data.NextVaultRotation = types.StringValue(apiModel.NextVaultRotation)
 	} else {
 		data.NextVaultRotation = types.StringNull()
 	}
@@ -511,14 +509,6 @@ func (r *OSSecretBackendAccountResource) ImportState(ctx context.Context, req re
 		)
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
 	}
-}
-
-func normalizeOSRotationTimestamp(value string) string {
-	if value == "" || value == "n/a" || value == "1970-01-01T00:00:00Z" || value == "0001-01-01T00:00:00Z" {
-		return ""
-	}
-
-	return value
 }
 
 // Made with Bob
