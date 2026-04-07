@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -279,26 +278,10 @@ func UpdateContextWrapper(f schema.UpdateContextFunc, minVersion *version.Versio
 }
 
 func importNamespace(d *schema.ResourceData) error {
-	if ns, ok := getConfiguredResourceDataNamespace(d); ok {
-		// Respect an explicitly configured namespace from config/diff.
-		if err := d.Set(consts.FieldNamespace, ns); err != nil {
-			return fmt.Errorf("failed to set %q from config, err=%w", consts.FieldNamespace, err)
-		}
-		return nil
-	}
-
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
-
-		if v, ok := d.GetOk(consts.FieldNamespace); ok {
-			if cfgNS, ok := v.(string); ok && cfgNS != "" {
-				// Respect an explicitly configured namespace in the Terraform config.
-				return nil
-			}
-		}
-
 		s := d.State()
 		var attemptNamespaceImport bool
-		if s == nil || s.Empty() {
+		if s.Empty() {
 			// state does not yet exist or is empty
 			// import is acceptable
 			attemptNamespaceImport = true
@@ -322,40 +305,4 @@ func importNamespace(d *schema.ResourceData) error {
 	}
 
 	return nil
-}
-
-func getConfiguredResourceDataNamespace(d *schema.ResourceData) (string, bool) {
-	if ns, ok := getRawConfigStringAttribute(d.GetRawConfig(), consts.FieldNamespace); ok {
-		return ns, true
-	}
-
-	if v, ok := d.GetOk(consts.FieldNamespace); ok {
-		if ns, ok := v.(string); ok && ns != "" {
-			return ns, true
-		}
-	}
-
-	return "", false
-}
-
-func getRawConfigStringAttribute(rawConfig cty.Value, attr string) (string, bool) {
-	if rawConfig.IsNull() || !rawConfig.IsKnown() {
-		return "", false
-	}
-
-	rawType := rawConfig.Type()
-	if !rawType.IsObjectType() || !rawType.HasAttribute(attr) {
-		return "", false
-	}
-
-	rawValue := rawConfig.GetAttr(attr)
-	if rawValue.IsNull() || !rawValue.IsKnown() || rawValue.Type() != cty.String {
-		return "", false
-	}
-
-	if value := rawValue.AsString(); value != "" {
-		return value, true
-	}
-
-	return "", false
 }

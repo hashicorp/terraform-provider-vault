@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -771,4 +772,41 @@ func getHCLogger() hclog.Logger {
 		logger.SetLevel(hclog.Error)
 	}
 	return logger
+}
+
+
+func getConfiguredResourceDataNamespace(d *schema.ResourceData) (string, bool) {
+	if ns, ok := getRawConfigStringAttribute(d.GetRawConfig(), consts.FieldNamespace); ok {
+		return ns, true
+	}
+
+	if v, ok := d.GetOk(consts.FieldNamespace); ok {
+		if ns, ok := v.(string); ok && ns != "" {
+			return ns, true
+		}
+	}
+
+	return "", false
+}
+
+func getRawConfigStringAttribute(rawConfig cty.Value, attr string) (string, bool) {
+	if rawConfig.IsNull() || !rawConfig.IsKnown() {
+		return "", false
+	}
+
+	rawType := rawConfig.Type()
+	if !rawType.IsObjectType() || !rawType.HasAttribute(attr) {
+		return "", false
+	}
+
+	rawValue := rawConfig.GetAttr(attr)
+	if rawValue.IsNull() || !rawValue.IsKnown() || rawValue.Type() != cty.String {
+		return "", false
+	}
+
+	if value := rawValue.AsString(); value != "" {
+		return value, true
+	}
+
+	return "", false
 }
