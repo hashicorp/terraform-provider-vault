@@ -168,6 +168,7 @@ resource "vault_auth_backend" "kerberos" {
 resource "vault_kerberos_auth_backend_config" "config" {
   mount               = vault_auth_backend.kerberos.path
   keytab_wo           = "%s"
+  keytab_wo_version   = 1
   service_account     = "%s"
 }
 
@@ -270,6 +271,7 @@ resource "vault_auth_backend" "kerberos" {
 resource "vault_kerberos_auth_backend_config" "config" {
   mount               = vault_auth_backend.kerberos.path
   keytab_wo           = "%s"
+  keytab_wo_version   = 1
   service_account     = "%s"
 }
 
@@ -402,6 +404,7 @@ resource "vault_kerberos_auth_backend_config" "config" {
   namespace           = vault_namespace.test.path
   mount               = vault_auth_backend.kerberos.path
   keytab_wo           = "%s"
+  keytab_wo_version   = 1
   service_account     = "%s"
 }
 
@@ -486,6 +489,7 @@ resource "vault_auth_backend" "kerberos" {
 resource "vault_kerberos_auth_backend_config" "config" {
   mount               = vault_auth_backend.kerberos.path
   keytab_wo           = "%s"
+  keytab_wo_version   = 1
   service_account     = "%s"
 }
 
@@ -569,6 +573,7 @@ resource "vault_auth_backend" "kerberos" {
 resource "vault_kerberos_auth_backend_config" "config" {
   mount               = vault_auth_backend.kerberos.path
   keytab_wo           = "%s"
+  keytab_wo_version   = 1
   service_account     = "%s"
 }
 

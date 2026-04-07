@@ -17,8 +17,8 @@ For more information, see the
 [Vault docs](https://www.vaultproject.io/docs/auth/kerberos).
 
 ~> **Important** The `keytab_wo` field is write-only and is not stored in Terraform state.
-It is only sent to Vault during configuration. See [the main provider documentation](../index.html)
-for more details.
+It is only sent to Vault when the `keytab_wo_version` changes or during initial creation.
+See [the main provider documentation](../index.html) for more details.
 
 ~> **Note** Vault does not support deleting auth backend configurations via the API.
 When this resource is destroyed or replaced (e.g., when changing the `path`), it is 
@@ -36,9 +36,10 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  mount           = vault_auth_backend.kerberos.path
-  keytab_wo       = filebase64("/path/to/vault.keytab")
-  service_account = "vault/localhost@EXAMPLE.COM"
+  mount              = vault_auth_backend.kerberos.path
+  keytab_wo          = filebase64("/path/to/vault.keytab")
+  keytab_wo_version  = 1
+  service_account    = "vault/localhost@EXAMPLE.COM"
 }
 ```
 
@@ -53,6 +54,7 @@ resource "vault_auth_backend" "kerberos" {
 resource "vault_kerberos_auth_backend_config" "config" {
   mount                = vault_auth_backend.kerberos.path
   keytab_wo            = filebase64("/path/to/vault.keytab")
+  keytab_wo_version    = 1
   service_account      = "vault/localhost@EXAMPLE.COM"
   remove_instance_name = true
   add_group_aliases    = true
@@ -73,10 +75,11 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  namespace       = vault_namespace.example.path
-  mount           = vault_auth_backend.kerberos.path
-  keytab_wo       = filebase64("/path/to/vault.keytab")
-  service_account = "vault/localhost@EXAMPLE.COM"
+  namespace         = vault_namespace.example.path
+  mount             = vault_auth_backend.kerberos.path
+  keytab_wo         = filebase64("/path/to/vault.keytab")
+  keytab_wo_version = 1
+  service_account   = "vault/localhost@EXAMPLE.COM"
 }
 ```
 
@@ -95,6 +98,10 @@ The following arguments are supported:
 * `keytab_wo` - (Required) Base64-encoded keytab file content. This is a write-only
   field and is not stored in Terraform state. The keytab must contain an entry
   matching the `service_account`.
+
+* `keytab_wo_version` - (Required) Version identifier for keytab updates. Increment this
+  value to trigger a keytab update in Vault. This allows you to rotate the keytab without
+  forcing resource replacement.
 
 * `service_account` - (Required) The Kerberos service account associated with the 
   keytab entry (e.g., `vault/localhost@EXAMPLE.COM` or `vault_svc`).
