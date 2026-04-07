@@ -779,13 +779,6 @@ func getConfiguredResourceDataNamespace(d *schema.ResourceData) (string, bool) {
 	if ns, ok := getRawConfigStringAttribute(d.GetRawConfig(), consts.FieldNamespace); ok {
 		return ns, true
 	}
-
-	if v, ok := d.GetOk(consts.FieldNamespace); ok {
-		if ns, ok := v.(string); ok && ns != "" {
-			return ns, true
-		}
-	}
-
 	return "", false
 }
 
