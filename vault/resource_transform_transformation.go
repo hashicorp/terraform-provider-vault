@@ -118,20 +118,20 @@ func createTransformTransformationResource(d *schema.ResourceData, meta interfac
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if v, ok := getConfiguredValue(d, consts.FieldAllowedRoles); ok {
+	if v, ok := d.GetOkExists(consts.FieldAllowedRoles); ok {
 		data[consts.FieldAllowedRoles] = v
 	}
-	if v, ok := getConfiguredValue(d, consts.FieldMaskingCharacter); ok {
+	if v, ok := d.GetOkExists(consts.FieldMaskingCharacter); ok {
 		data[consts.FieldMaskingCharacter] = v
 	}
 	data[consts.FieldName] = d.Get(consts.FieldName)
-	if v, ok := getConfiguredValue(d, consts.FieldTemplate); ok {
+	if v, ok := d.GetOkExists(consts.FieldTemplate); ok {
 		data[consts.FieldTemplate] = v
 	}
-	if v, ok := getConfiguredValue(d, consts.FieldTweakSource); ok {
+	if v, ok := d.GetOkExists(consts.FieldTweakSource); ok {
 		data[consts.FieldTweakSource] = v
 	}
-	if v, ok := getConfiguredValue(d, consts.FieldType); ok {
+	if v, ok := d.GetOkExists(consts.FieldType); ok {
 		data[consts.FieldType] = v
 	}
 
@@ -139,13 +139,13 @@ func createTransformTransformationResource(d *schema.ResourceData, meta interfac
 		data[consts.FieldDeletionAllowed] = d.Get(consts.FieldDeletionAllowed)
 	}
 
-	if v, ok := getConfiguredValue(d, consts.FieldMappingMode); ok {
+	if v, ok := d.GetOkExists(consts.FieldMappingMode); ok {
 		data[consts.FieldMappingMode] = v
 	}
-	if v, ok := getConfiguredValue(d, consts.FieldStores); ok {
+	if v, ok := d.GetOkExists(consts.FieldStores); ok {
 		data[consts.FieldStores] = v
 	}
-	if v, ok := getConfiguredValue(d, consts.FieldConvergent); ok {
+	if v, ok := d.GetOkExists(consts.FieldConvergent); ok {
 		data[consts.FieldConvergent] = v
 	}
 
@@ -310,22 +310,4 @@ func resourceTransformTransformationExists(d *schema.ResourceData, meta interfac
 	}
 	log.Printf("[DEBUG] Checked if %q exists", vaultPath)
 	return resp != nil, nil
-}
-
-func getConfiguredValue(d *schema.ResourceData, key string) (interface{}, bool) {
-	rawCfg := d.GetRawConfig()
-	if !rawCfg.IsNull() && rawCfg.Type().IsObjectType() {
-		attr := rawCfg.GetAttr(key)
-		if !attr.IsNull() && attr.IsKnown() {
-			return d.Get(key), true
-		}
-	}
-
-	// Fallback for update paths when only diff information is available.
-	if d.HasChange(key) {
-		_, newVal := d.GetChange(key)
-		return newVal, true
-	}
-
-	return nil, false
 }
