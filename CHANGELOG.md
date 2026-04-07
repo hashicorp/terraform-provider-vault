@@ -1,7 +1,9 @@
 ## Unreleased
 
-IMPROVEMENTS:
+FEATURES:
+* Add new resource `vault_rotation_policy` for managing rotation policies. Requires Vault 2.0.0+. ([#2844](https://github.com/hashicorp/terraform-provider-vault/pull/2844))
 
+IMPROVEMENTS:
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 
 BUGS: 
