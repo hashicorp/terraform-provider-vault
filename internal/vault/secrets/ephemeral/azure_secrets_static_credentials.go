@@ -116,6 +116,10 @@ func (r *AzureStaticCredsEphemeralSecretResource) Open(ctx context.Context, req 
 
 	path := fmt.Sprintf("%s/static-creds/%s", data.Backend.ValueString(), data.Role.ValueString())
 
+	// readData holds query parameters for the Vault API request.
+	// When request_metadata is provided, it's converted to key=value pairs
+	// and passed as the "metadata" query parameter to Vault's ReadWithData API.
+	// This allows filtering or tagging credential requests with custom metadata.
 	var readData map[string][]string
 	if !data.RequestMetadata.IsNull() && !data.RequestMetadata.IsUnknown() {
 		var inMeta map[string]string
