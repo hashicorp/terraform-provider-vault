@@ -51,6 +51,7 @@ type kerberosAuthBackendConfigModel struct {
 	base.BaseModel
 	Mount              types.String `tfsdk:"mount"`
 	KeytabWO           types.String `tfsdk:"keytab_wo"`
+	KeytabWOVersion    types.Int64  `tfsdk:"keytab_wo_version"`
 	ServiceAccount     types.String `tfsdk:"service_account"`
 	RemoveInstanceName types.Bool   `tfsdk:"remove_instance_name"`
 	AddGroupAliases    types.Bool   `tfsdk:"add_group_aliases"`
@@ -89,6 +90,10 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 				Sensitive:   true,
 				Description: "Base64-encoded keytab file content (write-only). Must contain an entry matching service_account.",
 			},
+			consts.FieldKeytabWOVersion: schema.Int64Attribute{
+				Required:    true,
+				Description: "Version identifier for keytab updates. Increment this value to trigger a keytab update.",
+			},
 			consts.FieldServiceAccount: schema.StringAttribute{
 				Required:    true,
 				Description: "The Kerberos service account associated with the keytab entry (e.g., 'vault_svc').",
@@ -108,53 +113,57 @@ func (r *kerberosAuthBackendConfigResource) Schema(_ context.Context, _ resource
 }
 
 func (r *kerberosAuthBackendConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan kerberosAuthBackendConfigModel
 	var config kerberosAuthBackendConfigModel
 
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(r.writeConfig(ctx, &config)...)
+	resp.Diagnostics.Append(r.writeConfig(ctx, &plan, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &config)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *kerberosAuthBackendConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan kerberosAuthBackendConfigModel
 	var config kerberosAuthBackendConfigModel
 
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(r.writeConfig(ctx, &config)...)
+	resp.Diagnostics.Append(r.writeConfig(ctx, &plan, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &config)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 // writeConfig is a reusable helper that writes configuration to Vault and reads it back.
 // Used by both Create and Update operations.
-func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, config *kerberosAuthBackendConfigModel) diag.Diagnostics {
+func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, plan *kerberosAuthBackendConfigModel, config *kerberosAuthBackendConfigModel) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), config.Namespace.ValueString())
+	vaultClient, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		diags.AddError(errutil.ClientConfigureErr(err))
 		return diags
 	}
 
-	mount := strings.Trim(config.Mount.ValueString(), "/")
+	mount := strings.Trim(plan.Mount.ValueString(), "/")
 	configPath := r.configPath(mount)
 
 	// Build the API request
-	vaultRequest, apiDiags := r.getApiModel(config)
+	vaultRequest, apiDiags := r.getApiModel(plan, config)
 	diags.Append(apiDiags...)
 	if diags.HasError() {
 		return diags
@@ -173,7 +182,7 @@ func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, con
 	tflog.Info(ctx, fmt.Sprintf("Kerberos auth backend config successfully written to '%s'", configPath))
 
 	// Read back the configuration
-	found, readDiags := r.read(ctx, config)
+	found, readDiags := r.read(ctx, plan)
 	diags.Append(readDiags...)
 	if diags.HasError() {
 		return diags
@@ -181,7 +190,7 @@ func (r *kerberosAuthBackendConfigResource) writeConfig(ctx context.Context, con
 	if !found {
 		diags.AddError(
 			"Error reading back Kerberos auth backend config after write",
-			fmt.Sprintf("Config at '%s' was not found after successful write", r.configPath(strings.Trim(config.Mount.ValueString(), "/"))),
+			fmt.Sprintf("Config at '%s' was not found after successful write", r.configPath(strings.Trim(plan.Mount.ValueString(), "/"))),
 		)
 		return diags
 	}
@@ -318,14 +327,14 @@ func (r *kerberosAuthBackendConfigResource) mountFromPath(path string) (string, 
 }
 
 // getApiModel builds the Vault API request map from the Terraform data model.
-func (r *kerberosAuthBackendConfigResource) getApiModel(config *kerberosAuthBackendConfigModel) (map[string]any, diag.Diagnostics) {
+func (r *kerberosAuthBackendConfigResource) getApiModel(plan *kerberosAuthBackendConfigModel, config *kerberosAuthBackendConfigModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	vaultRequest := map[string]any{
 		consts.FieldKeytab:             config.KeytabWO.ValueString(),
-		consts.FieldServiceAccount:     config.ServiceAccount.ValueString(),
-		consts.FieldRemoveInstanceName: config.RemoveInstanceName.ValueBool(),
-		consts.FieldAddGroupAliases:    config.AddGroupAliases.ValueBool(),
+		consts.FieldServiceAccount:     plan.ServiceAccount.ValueString(),
+		consts.FieldRemoveInstanceName: plan.RemoveInstanceName.ValueBool(),
+		consts.FieldAddGroupAliases:    plan.AddGroupAliases.ValueBool(),
 	}
 
 	return vaultRequest, diags

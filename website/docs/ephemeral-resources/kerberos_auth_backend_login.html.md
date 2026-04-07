@@ -32,9 +32,10 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  mount           = vault_auth_backend.kerberos.path
-  keytab          = filebase64("/path/to/vault.keytab")
-  service_account = "vault/localhost@EXAMPLE.COM"
+  mount             = vault_auth_backend.kerberos.path
+  keytab_wo         = filebase64("/path/to/vault.keytab")
+  keytab_wo_version = 1
+  service_account   = "vault/localhost@EXAMPLE.COM"
 }
 
 resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
@@ -108,10 +109,11 @@ resource "vault_auth_backend" "kerberos" {
 }
 
 resource "vault_kerberos_auth_backend_config" "config" {
-  namespace       = vault_namespace.app.path
-  mount           = vault_auth_backend.kerberos.path
-  keytab          = filebase64("/path/to/vault.keytab")
-  service_account = "vault/localhost@EXAMPLE.COM"
+  namespace         = vault_namespace.app.path
+  mount             = vault_auth_backend.kerberos.path
+  keytab_wo         = filebase64("/path/to/vault.keytab")
+  keytab_wo_version = 1
+  service_account   = "vault/localhost@EXAMPLE.COM"
 }
 
 resource "vault_kerberos_auth_backend_ldap_config" "ldap" {
