@@ -18,10 +18,8 @@ Provides a resource to manage Rotation Policies.
 resource "vault_rotation_policy" "example" {
   name = "database-admin-retry-policy"
 
-  policy = jsonencode({
-    max_retries_per_cycle = 6
-    max_retry_cycles      = 3
-  })
+  max_retries_per_cycle = 6
+  max_retry_cycles      = 3
 }
 ```
 
@@ -36,7 +34,9 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the rotation policy.
 
-* `policy` - (Required) A non-empty JSON policy document string. Vault validates policy JSON and semantics.
+* `max_retries_per_cycle` - (Required) Maximum retries per cycle for this rotation policy.
+
+* `max_retry_cycles` - (Required) Maximum retry cycles for this rotation policy.
 
 ## Attributes Reference
 

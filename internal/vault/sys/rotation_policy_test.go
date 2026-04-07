@@ -20,9 +20,11 @@ import (
 func TestAccRotationPolicy(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-rotation-policy")
 	resourceName := "vault_rotation_policy.test"
-	policy := `{"max_retries_per_cycle":1,"max_retry_cycles":3}`
-	updatedPolicy := `{"max_retries_per_cycle":2,"max_retry_cycles":5}`
-	updatedConfig := testAccRotationPolicyConfig(policyName, updatedPolicy)
+	maxRetriesPerCycle := 1
+	maxRetryCycles := 3
+	updatedMaxRetriesPerCycle := 2
+	updatedMaxRetryCycles := 5
+	updatedConfig := testAccRotationPolicyConfig(policyName, updatedMaxRetriesPerCycle, updatedMaxRetryCycles)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -33,17 +35,19 @@ func TestAccRotationPolicy(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRotationPolicyConfig(policyName, policy),
+				Config: testAccRotationPolicyConfig(policyName, maxRetriesPerCycle, maxRetryCycles),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicy, policy),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetriesPerCycle, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryCycles, "3"),
 				),
 			},
 			{
 				Config: updatedConfig,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicy, updatedPolicy),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetriesPerCycle, "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryCycles, "5"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
@@ -55,9 +59,11 @@ func TestAccRotationPolicyNS(t *testing.T) {
 	ns := acctest.RandomWithPrefix("ns")
 	policyName := acctest.RandomWithPrefix("test-rotation-policy")
 	resourceName := "vault_rotation_policy.test"
-	policy := `{"max_retries_per_cycle":1,"max_retry_cycles":3}`
-	updatedPolicy := `{"max_retries_per_cycle":2,"max_retry_cycles":5}`
-	updatedConfig := testAccRotationPolicyConfigNS(ns, policyName, updatedPolicy)
+	maxRetriesPerCycle := 1
+	maxRetryCycles := 3
+	updatedMaxRetriesPerCycle := 2
+	updatedMaxRetryCycles := 5
+	updatedConfig := testAccRotationPolicyConfigNS(ns, policyName, updatedMaxRetriesPerCycle, updatedMaxRetryCycles)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -68,11 +74,12 @@ func TestAccRotationPolicyNS(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccRotationPolicyConfigNS(ns, policyName, policy),
+				Config: testAccRotationPolicyConfigNS(ns, policyName, maxRetriesPerCycle, maxRetryCycles),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicy, policy),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetriesPerCycle, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryCycles, "3"),
 				),
 			},
 			{
@@ -80,7 +87,8 @@ func TestAccRotationPolicyNS(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ns),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldPolicy, updatedPolicy),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetriesPerCycle, "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxRetryCycles, "5"),
 				),
 			},
 			testutil.GetImportTestStepNS(t, ns, resourceName, updatedConfig),
@@ -89,7 +97,7 @@ func TestAccRotationPolicyNS(t *testing.T) {
 	})
 }
 
-func TestAccRotationPolicy_EmptyPolicyValidation(t *testing.T) {
+func TestAccRotationPolicy_MissingFieldValidation(t *testing.T) {
 	policyName := acctest.RandomWithPrefix("test-rotation-policy")
 
 	resource.Test(t, resource.TestCase{
@@ -101,47 +109,24 @@ func TestAccRotationPolicy_EmptyPolicyValidation(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccRotationPolicyConfig(policyName, ""),
-				ExpectError: regexp.MustCompile(`must not be empty|at least 1`),
+				Config:      testAccRotationPolicyConfigMissingField(policyName),
+				ExpectError: regexp.MustCompile(`max_retry_cycles`),
 			},
 		},
 	})
 }
 
-func TestAccRotationPolicy_JSONEncode(t *testing.T) {
-	policyName := acctest.RandomWithPrefix("test-rotation-policy")
-	resourceName := "vault_rotation_policy.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccRotationPolicyConfigJSONEncode(policyName),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, policyName),
-					resource.TestMatchResourceAttr(resourceName, consts.FieldPolicy, regexp.MustCompile(`"max_retries_per_cycle":3`)),
-					resource.TestMatchResourceAttr(resourceName, consts.FieldPolicy, regexp.MustCompile(`"max_retry_cycles":5`)),
-				),
-			},
-		},
-	})
-}
-
-func testAccRotationPolicyConfig(policyName, policy string) string {
+func testAccRotationPolicyConfig(policyName string, maxRetriesPerCycle, maxRetryCycles int) string {
 	return fmt.Sprintf(`
 resource "vault_rotation_policy" "test" {
   name = %q
-  policy = %q
+  max_retries_per_cycle = %d
+  max_retry_cycles      = %d
 }
-`, policyName, policy)
+`, policyName, maxRetriesPerCycle, maxRetryCycles)
 }
 
-func testAccRotationPolicyConfigNS(ns, policyName, policy string) string {
+func testAccRotationPolicyConfigNS(ns, policyName string, maxRetriesPerCycle, maxRetryCycles int) string {
 	return fmt.Sprintf(`
 resource "vault_namespace" "ns1" {
     path = %q
@@ -150,19 +135,17 @@ resource "vault_namespace" "ns1" {
 resource "vault_rotation_policy" "test" {
   namespace = vault_namespace.ns1.path
   name = %q
-  policy = %q
+  max_retries_per_cycle = %d
+  max_retry_cycles      = %d
 }
-`, ns, policyName, policy)
+`, ns, policyName, maxRetriesPerCycle, maxRetryCycles)
 }
 
-func testAccRotationPolicyConfigJSONEncode(policyName string) string {
+func testAccRotationPolicyConfigMissingField(policyName string) string {
 	return fmt.Sprintf(`
 resource "vault_rotation_policy" "test" {
-	name = %q
-	policy = jsonencode({
-		max_retries_per_cycle = 3
-		max_retry_cycles      = 5
-	})
+  name = %q
+  max_retries_per_cycle = 3
 }
 `, policyName)
 }

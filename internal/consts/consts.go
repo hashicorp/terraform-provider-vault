@@ -599,6 +599,8 @@ const (
 	FieldSerialNumberSource                 = "serial_number_source"
 	FieldCertMetadata                       = "cert_metadata"
 	FieldTokenType                          = "token_type"
+	FieldMaxRetriesPerCycle                 = "max_retries_per_cycle"
+	FieldMaxRetryCycles                     = "max_retry_cycles"
 
 	FieldInput                    = "input"
 	FieldKeyVersion               = "key_version"

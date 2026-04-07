@@ -5,22 +5,19 @@ package sys
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -45,8 +42,14 @@ type RotationPolicyModel struct {
 	base.BaseModelLegacy
 
 	// fields specific to this resource
-	Name   types.String `tfsdk:"name"`
-	Policy types.String `tfsdk:"policy"`
+	Name               types.String `tfsdk:"name"`
+	MaxRetriesPerCycle types.Int64  `tfsdk:"max_retries_per_cycle"`
+	MaxRetryCycles     types.Int64  `tfsdk:"max_retry_cycles"`
+}
+
+type RotationPolicyAPIModel struct {
+	MaxRetriesPerCycle int `json:"max_retries_per_cycle" mapstructure:"max_retries_per_cycle"`
+	MaxRetryCycles     int `json:"max_retry_cycles" mapstructure:"max_retry_cycles"`
 }
 
 // Metadata defines the resource name as it would appear in Terraform configurations.
@@ -65,12 +68,13 @@ func (r *RotationPolicyResource) Schema(ctx context.Context, req resource.Schema
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			consts.FieldPolicy: schema.StringAttribute{
+			consts.FieldMaxRetriesPerCycle: schema.Int64Attribute{
 				Required:            true,
-				MarkdownDescription: "A JSON rotation policy document. Must be non-empty. See Vault documentation for policy semantics.",
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
+				MarkdownDescription: "Maximum retries per cycle for this rotation policy.",
+			},
+			consts.FieldMaxRetryCycles: schema.Int64Attribute{
+				Required:            true,
+				MarkdownDescription: "Maximum retry cycles for this rotation policy.",
 			},
 		},
 		MarkdownDescription: "Provides a resource to manage Rotation Policies.",
@@ -92,8 +96,13 @@ func (r *RotationPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	if strings.TrimSpace(data.Policy.ValueString()) == "" {
-		resp.Diagnostics.AddError("Invalid rotation policy", "The policy field must not be empty.")
+	if data.MaxRetriesPerCycle.IsNull() {
+		resp.Diagnostics.AddError("Invalid "+consts.FieldMaxRetriesPerCycle, "The field must not be empty.")
+		return
+	}
+
+	if data.MaxRetryCycles.IsNull() {
+		resp.Diagnostics.AddError("Invalid "+consts.FieldMaxRetryCycles, "The field must not be empty.")
 		return
 	}
 
@@ -104,7 +113,8 @@ func (r *RotationPolicyResource) Create(ctx context.Context, req resource.Create
 	}
 
 	vaultRequest := map[string]interface{}{
-		consts.FieldPolicy: data.Policy.ValueString(),
+		consts.FieldMaxRetriesPerCycle: data.MaxRetriesPerCycle.ValueInt64(),
+		consts.FieldMaxRetryCycles:     data.MaxRetryCycles.ValueInt64(),
 	}
 
 	path := r.path(data.Name.ValueString())
@@ -149,7 +159,8 @@ func (r *RotationPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	policy, err := extractRotationPolicy(policyResp.Data)
+	var apiModel RotationPolicyAPIModel
+	err = model.ToAPIModel(policyResp.Data, &apiModel)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
 		return
@@ -157,7 +168,8 @@ func (r *RotationPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 
 	data.Name = types.StringValue(name)
 	data.ID = types.StringValue(name)
-	data.Policy = types.StringValue(policy)
+	data.MaxRetriesPerCycle = types.Int64Value(int64(apiModel.MaxRetriesPerCycle))
+	data.MaxRetryCycles = types.Int64Value(int64(apiModel.MaxRetryCycles))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -174,8 +186,13 @@ func (r *RotationPolicyResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	if strings.TrimSpace(data.Policy.ValueString()) == "" {
-		resp.Diagnostics.AddError("Invalid rotation policy", "The policy field must not be empty.")
+	if data.MaxRetriesPerCycle.IsNull() {
+		resp.Diagnostics.AddError("Invalid "+consts.FieldMaxRetriesPerCycle, "The field must not be empty.")
+		return
+	}
+
+	if data.MaxRetryCycles.IsNull() {
+		resp.Diagnostics.AddError("Invalid "+consts.FieldMaxRetryCycles, "The field must not be empty.")
 		return
 	}
 
@@ -186,7 +203,8 @@ func (r *RotationPolicyResource) Update(ctx context.Context, req resource.Update
 	}
 
 	vaultRequest := map[string]interface{}{
-		consts.FieldPolicy: data.Policy.ValueString(),
+		consts.FieldMaxRetriesPerCycle: data.MaxRetriesPerCycle.ValueInt64(),
+		consts.FieldMaxRetryCycles:     data.MaxRetryCycles.ValueInt64(),
 	}
 
 	path := r.path(data.Name.ValueString())
@@ -243,26 +261,4 @@ func (r *RotationPolicyResource) isSupported(diags *diag.Diagnostics) bool {
 	}
 
 	return true
-}
-
-func extractRotationPolicy(data map[string]interface{}) (string, error) {
-	if raw, ok := data[consts.FieldPolicy]; ok {
-		switch v := raw.(type) {
-		case string:
-			return v, nil
-		default:
-			buf, err := json.Marshal(v)
-			if err != nil {
-				return "", err
-			}
-			return string(buf), nil
-		}
-	}
-
-	buf, err := json.Marshal(data)
-	if err != nil {
-		return "", err
-	}
-
-	return string(buf), nil
 }
