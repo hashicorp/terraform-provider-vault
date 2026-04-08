@@ -174,17 +174,7 @@ func (r *ControlGroupConfigResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	if maxTTL == "" {
-		data.MaxTTL = types.StringNull()
-	} else {
-		// Preserve the user's original format if it's semantically equivalent to what Vault returned.
-		// This prevents unnecessary diffs when users specify "2h" but Vault returns "7200".
-		if v, ok := preserveExistingMaxTTL(data.MaxTTL, maxTTL); ok {
-			data.MaxTTL = types.StringValue(v)
-		} else {
-			data.MaxTTL = types.StringValue(maxTTL)
-		}
-	}
+	setMaxTTLInModel(&data.MaxTTL, maxTTL)
 
 	data.ID = types.StringValue(controlGroupPath)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -297,18 +287,24 @@ func (r *ControlGroupConfigResource) readIntoModel(ctx context.Context, vaultCli
 		return err
 	}
 
-	if maxTTL == "" {
-		data.MaxTTL = types.StringNull()
+	setMaxTTLInModel(&data.MaxTTL, maxTTL)
+	return nil
+}
+
+// setMaxTTLInModel sets the max_ttl value in the model, preserving the user's original format
+// if it's semantically equivalent to what Vault returned. This prevents unnecessary diffs
+// when users specify "2h" but Vault returns "7200".
+func setMaxTTLInModel(modelMaxTTL *types.String, normalizedFromAPI string) {
+	if normalizedFromAPI == "" {
+		*modelMaxTTL = types.StringNull()
 	} else {
 		// Preserve the user's original format if semantically equivalent
-		if v, ok := preserveExistingMaxTTL(data.MaxTTL, maxTTL); ok {
-			data.MaxTTL = types.StringValue(v)
+		if v, ok := preserveExistingMaxTTL(*modelMaxTTL, normalizedFromAPI); ok {
+			*modelMaxTTL = types.StringValue(v)
 		} else {
-			data.MaxTTL = types.StringValue(maxTTL)
+			*modelMaxTTL = types.StringValue(normalizedFromAPI)
 		}
 	}
-
-	return nil
 }
 
 // toWriteRequest converts the Terraform model to a Vault API request payload.
