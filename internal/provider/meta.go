@@ -483,12 +483,12 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	case string:
 		ns = v
 	case *schema.ResourceData:
-		if value, ok := v.GetOk(consts.FieldNamespace); ok {
-			ns = value.(string)
+		if v, ok := v.GetOk(consts.FieldNamespace); ok {
+			ns = v.(string)
 		}
 	case *schema.ResourceDiff:
-		if value, ok := v.GetOk(consts.FieldNamespace); ok {
-			ns = value.(string)
+		if v, ok := v.GetOk(consts.FieldNamespace); ok {
+			ns = v.(string)
 		}
 	case *terraform.InstanceState:
 		ns = v.Attributes[consts.FieldNamespace]
