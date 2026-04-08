@@ -137,13 +137,15 @@ func PopulateAutomatedRotationRequestData(model *AutomatedRotationModel, request
 		}
 	}
 
-	// Only send rotation fields that have non-zero values to avoid conflicts
+	// Only send rotation fields that have non-null values to avoid conflicts
 	// with Vault's rotation field validation (e.g., rotation_period and
 	// rotation_schedule are mutually exclusive).
 	//
-	// Note: To clear a field that was previously set, the user must explicitly
-	// set it to 0/""/false in their config. Removing it from config will leave
-	// the existing value in Vault unchanged.
+	// Note: Vault's rotation manager does not support clearing rotation fields
+	// once they are set. Removing rotation fields from configuration will not
+	// clear them in Vault - the existing rotation configuration will be retained.
+	// The rotation fields are marked as Computed to prevent drift detection in
+	// this scenario.
 	if !model.RotationPeriod.IsNull() && !model.RotationPeriod.IsUnknown() {
 		period := model.RotationPeriod.ValueInt64()
 		// Always send if explicitly set, even if zero (to clear the field)
@@ -175,18 +177,22 @@ func automatedRotationSchema() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		consts.FieldRotationPeriod: schema.Int64Attribute{
 			Optional:            true,
+			Computed:            true,
 			MarkdownDescription: "How often to rotate passwords, in seconds. Mutually exclusive with rotation_schedule.",
 		},
 		consts.FieldRotationSchedule: schema.StringAttribute{
 			Optional:            true,
+			Computed:            true,
 			MarkdownDescription: "Cron schedule for password rotation. Mutually exclusive with rotation_period.",
 		},
 		consts.FieldRotationWindow: schema.Int64Attribute{
 			Optional:            true,
+			Computed:            true,
 			MarkdownDescription: "Window of time for password rotation, in seconds.",
 		},
 		consts.FieldDisableAutomatedRotation: schema.BoolAttribute{
 			Optional:            true,
+			Computed:            true,
 			MarkdownDescription: "Disable automated password rotation.",
 		},
 	}
