@@ -287,3 +287,192 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
 }
 `, path, connectionUri, username, password, name, testAccRabbitMQSecretBackendRoleTags_updated)
 }
+
+func TestAccRabbitMQSecretBackendRole_multipleVhostsAndTopics(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	name := acctest.RandomWithPrefix("tf-test-rabbitmq")
+	resourceName := "vault_rabbitmq_secret_backend_role.test"
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccRabbitMQSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRabbitMQSecretBackendRoleConfig_multipleVhostsAndTopics(name, backend, connectionUri, username, password),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "backend", backend),
+					resource.TestCheckResourceAttr(resourceName, "tags", "management"),
+					// Verify we have 11 vhost blocks
+					resource.TestCheckResourceAttr(resourceName, "vhost.#", "11"),
+					// Check that specific vhosts are present (TypeSet doesn't guarantee order)
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vhost.*", map[string]string{
+						"host":      "cosmos",
+						"read":      "^toto$",
+						"write":     "^toto$",
+						"configure": "^toto$",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vhost.*", map[string]string{
+						"host":      "customer",
+						"read":      "^toto$",
+						"write":     "^toto$",
+						"configure": "^toto$",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vhost.*", map[string]string{
+						"host":      "ship",
+						"read":      "^toto$",
+						"write":     "^toto$",
+						"configure": "^toto$",
+					}),
+					// Verify we have 3 vhost_topic blocks
+					resource.TestCheckResourceAttr(resourceName, "vhost_topic.#", "3"),
+					// Check vhost_topic hosts are present
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vhost_topic.*", map[string]string{
+						"host": "/",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vhost_topic.*", map[string]string{
+						"host": "cosmos",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "vhost_topic.*", map[string]string{
+						"host": "customers",
+					}),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccRabbitMQSecretBackendRoleConfig_multipleVhostsAndTopics(name, path, connectionUri, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_rabbitmq_secret_backend" "test" {
+  path = "%s"
+  description = "test description"
+  default_lease_ttl_seconds = 3600
+  max_lease_ttl_seconds = 86400
+  connection_uri = "%s"
+  username = "%s"
+  password = "%s"
+}
+
+resource "vault_rabbitmq_secret_backend_role" "test" {
+  backend = vault_rabbitmq_secret_backend.test.path
+  name = "%s"
+  tags = "management"
+  
+  vhost {
+    host      = "cosmos"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "customer"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "demand"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "ei"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "es"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "leg"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "mulan"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "mulan_test"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "op-t"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "pub"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost {
+    host      = "ship"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
+  
+  vhost_topic {
+    host = "/"
+    vhost {
+      topic = "amq.topic"
+      read  = ".*"
+      write = ".*"
+    }
+  }
+
+  vhost_topic {
+    host = "cosmos"
+    vhost {
+      topic = "amq.topic"
+      read  = "^cosmos.*"
+      write = "^cosmos.*"
+    }
+    vhost {
+      topic = "amq.direct"
+      read  = ".*"
+      write = ""
+    }
+  }
+
+  vhost_topic {
+    host = "customers"
+    vhost {
+      topic = "customer.events"
+      read  = ".*"
+      write = "^customer\\..*"
+    }
+  }
+}
+`, path, connectionUri, username, password, name)
+}
