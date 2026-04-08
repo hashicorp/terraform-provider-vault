@@ -498,6 +498,9 @@ const (
 	FieldIdentityTokenAudienceWOVersion     = "identity_token_audience_wo_version"
 	FieldIdentityTokenTTL                   = "identity_token_ttl"
 	FieldRoleArn                            = "role_arn"
+	FieldInlinePolicies                     = "inline_policies"
+	FieldRemotePolicies                     = "remote_policies"
+	FieldPolicyDocument                     = "policy_document"
 	FieldAccessor                           = "accessor"
 	FieldOptions                            = "options"
 	FieldAllowedManagedKeys                 = "allowed_managed_keys"
@@ -894,6 +897,7 @@ const (
 	MountTypeTransit      = "transit"
 	MountTypeOS           = "os"
 	MountTypeKeyMgmt      = "keymgmt"
+	MountTypeAliCloud     = "alicloud"
 
 	/*
 		Vault version constants
