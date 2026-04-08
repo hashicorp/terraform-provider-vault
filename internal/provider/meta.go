@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -484,19 +483,12 @@ func GetClient(i interface{}, meta interface{}) (*api.Client, error) {
 	case string:
 		ns = v
 	case *schema.ResourceData:
-		if configuredNS, ok := getConfiguredResourceDataNamespace(v); ok {
-			ns = configuredNS
-		} else if value, ok := v.GetOk(consts.FieldNamespace); ok {
+		if value, ok := v.GetOk(consts.FieldNamespace); ok {
 			ns = value.(string)
 		}
 	case *schema.ResourceDiff:
-		if configuredNS, ok := getRawConfigStringAttribute(v.GetRawConfig(), consts.FieldNamespace); ok {
-			ns = configuredNS
-		}
-		if ns == "" {
-			if value, ok := v.GetOk(consts.FieldNamespace); ok {
-				ns = value.(string)
-			}
+		if value, ok := v.GetOk(consts.FieldNamespace); ok {
+			ns = value.(string)
 		}
 	case *terraform.InstanceState:
 		ns = v.Attributes[consts.FieldNamespace]
@@ -772,33 +764,4 @@ func getHCLogger() hclog.Logger {
 		logger.SetLevel(hclog.Error)
 	}
 	return logger
-}
-
-func getConfiguredResourceDataNamespace(d *schema.ResourceData) (string, bool) {
-	if ns, ok := getRawConfigStringAttribute(d.GetRawConfig(), consts.FieldNamespace); ok {
-		return ns, true
-	}
-	return "", false
-}
-
-func getRawConfigStringAttribute(rawConfig cty.Value, attr string) (string, bool) {
-	if rawConfig.IsNull() || !rawConfig.IsKnown() {
-		return "", false
-	}
-
-	rawType := rawConfig.Type()
-	if !rawType.IsObjectType() || !rawType.HasAttribute(attr) {
-		return "", false
-	}
-
-	rawValue := rawConfig.GetAttr(attr)
-	if rawValue.IsNull() || !rawValue.IsKnown() || rawValue.Type() != cty.String {
-		return "", false
-	}
-
-	if value := rawValue.AsString(); value != "" {
-		return value, true
-	}
-
-	return "", false
 }
