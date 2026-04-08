@@ -1429,7 +1429,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password", password),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "elastic-policy"),
 					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
@@ -1451,7 +1451,7 @@ func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.url", connURL),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password", password),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure", "true"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.insecure_tls", "true"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username_template", "test"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.tls_server_name", "test"),
 				),
@@ -2207,12 +2207,13 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+	password_policy = "elastic-policy"
 
   elasticsearch {
     url = "%s"
     username = "%s"
     password = "%s"
-	insecure = true
+		insecure_tls = true
 	username_template = %q
 	tls_server_name = "test"
   }
