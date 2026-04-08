@@ -169,6 +169,9 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 // Returns true if the resource was found, false if it was not found (404)
 func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendAccountModel, diags *diag.Diagnostics) bool {
 	path := data.vaultPath()
+	tflog.Debug(ctx, "Reading OS backend account", map[string]any{
+		"path": path,
+	})
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -176,6 +179,9 @@ func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Contex
 		return false
 	}
 	if readResp == nil {
+		tflog.Warn(ctx, "OS backend account not found, removing from state", map[string]any{
+			"path": path,
+		})
 		// Resource not found (404)
 		return false
 	}
@@ -202,12 +208,10 @@ func (r *OSSecretBackendAccountResource) readAccountFromVault(ctx context.Contex
 	} else {
 		data.PasswordPolicy = types.StringNull()
 	}
-	rotationModel := frameworkrotation.AutomatedRotationModel{
-		RotationPeriod:           data.RotationPeriod,
-		RotationSchedule:         data.RotationSchedule,
-		RotationWindow:           data.RotationWindow,
-		DisableAutomatedRotation: data.DisableAutomatedRotation,
-	}
+
+	// Populate rotation fields from API response, following SDKv2 pattern
+	// PopulateAutomatedRotationModelFromAPI will set fields to null if API returns zero/empty values
+	rotationModel := frameworkrotation.AutomatedRotationModel{}
 	rotationAPIModel := frameworkrotation.AutomatedRotationAPIModel(apiModel.AutomatedRotationAPIModel)
 	diags.Append(frameworkrotation.PopulateAutomatedRotationModelFromAPI(&rotationModel, &rotationAPIModel)...)
 	if diags.HasError() {
@@ -288,6 +292,9 @@ func (r *OSSecretBackendAccountResource) buildRequestData(ctx context.Context, d
 }
 
 func (r *OSSecretBackendAccountResource) writeAccountToVault(ctx context.Context, cli *api.Client, path string, requestData map[string]interface{}, operation string, diags *diag.Diagnostics) bool {
+	tflog.Debug(ctx, fmt.Sprintf("OS backend account %s", operation), map[string]any{
+		"path": path,
+	})
 	_, err := cli.Logical().WriteWithContext(ctx, path, requestData)
 	if err != nil {
 		diags.AddError(
@@ -472,6 +479,9 @@ func (r *OSSecretBackendAccountResource) Delete(ctx context.Context, req resourc
 	}
 
 	accountPath := data.vaultPath()
+	tflog.Debug(ctx, "Deleting OS backend account", map[string]any{
+		"path": accountPath,
+	})
 
 	_, err = cli.Logical().DeleteWithContext(ctx, accountPath)
 	if err != nil && !util.Is404(err) {

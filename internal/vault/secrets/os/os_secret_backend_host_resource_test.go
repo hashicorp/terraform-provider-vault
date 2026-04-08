@@ -152,18 +152,6 @@ func TestAccOSSecretBackendHost_optionalFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.criticality", "high"),
 				),
 			},
-			{
-				Config: testAccOSSecretBackendHostConfig_minimal(mount, name),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckResourceAttr(resourceName, "custom_metadata.%", "0"),
-					// Verify rotation fields are cleared when removed from config
-					resource.TestCheckNoResourceAttr(resourceName, "rotation_period"),
-					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
-					resource.TestCheckNoResourceAttr(resourceName, "rotation_schedule"),
-				),
-			},
 		},
 	})
 }

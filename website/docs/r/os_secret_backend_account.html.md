@@ -36,18 +36,18 @@ resource "vault_mount" "os" {
 }
 
 resource "vault_os_secret_backend" "os" {
-  path = vault_mount.os.path
+  mount = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "server" {
-  mount   = vault_os_secret_backend.os.path
+  mount   = vault_os_secret_backend.os.mount
   name    = "web-server"
   address = "192.168.1.100"
   port    = 22
 }
 
 resource "vault_os_secret_backend_account" "admin" {
-  mount    = vault_os_secret_backend.os.path
+  mount    = vault_os_secret_backend.os.mount
   host     = vault_os_secret_backend_host.server.name
   name     = "admin-account"
   username = "admin"
@@ -64,18 +64,18 @@ resource "vault_mount" "os" {
 }
 
 resource "vault_os_secret_backend" "os" {
-  path = vault_mount.os.path
+  mount = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "database" {
-  mount   = vault_os_secret_backend.os.path
+  mount   = vault_os_secret_backend.os.mount
   name    = "db-server"
   address = "10.0.1.50"
   port    = 22
 }
 
 resource "vault_os_secret_backend_account" "dbadmin" {
-  mount           = vault_os_secret_backend.os.path
+  mount           = vault_os_secret_backend.os.mount
   host            = vault_os_secret_backend_host.database.name
   name            = "dbadmin"
   username        = "postgres"
@@ -94,18 +94,18 @@ resource "vault_mount" "os" {
 }
 
 resource "vault_os_secret_backend" "os" {
-  path = vault_mount.os.path
+  mount = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "app_server" {
-  mount   = vault_os_secret_backend.os.path
+  mount   = vault_os_secret_backend.os.mount
   name    = "app-01"
   address = "192.168.1.200"
   port    = 22
 }
 
 resource "vault_os_secret_backend_account" "service" {
-  mount             = vault_os_secret_backend.os.path
+  mount             = vault_os_secret_backend.os.mount
   host              = vault_os_secret_backend_host.app_server.name
   name              = "service-account"
   username          = "appuser"

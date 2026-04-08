@@ -123,24 +123,31 @@ func (r *OSSecretBackendHostResource) Schema(_ context.Context, _ resource.Schem
 }
 
 // readHostFromVault reads the host configuration from Vault and populates the model
-func (r *OSSecretBackendHostResource) readHostFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendHostModel, diags *diag.Diagnostics) {
+// Returns true if the resource was found, false if it was not found (404)
+func (r *OSSecretBackendHostResource) readHostFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendHostModel, diags *diag.Diagnostics) bool {
 	path := data.vaultPath()
+	tflog.Debug(ctx, "Reading OS backend host", map[string]any{
+		"path": path,
+	})
 
 	readResp, err := cli.Logical().ReadWithContext(ctx, path)
 	if err != nil {
 		diags.AddError(errutil.VaultReadErr(err))
-		return
+		return false
 	}
 	if readResp == nil {
-		diags.AddError(errutil.VaultReadResponseNil())
-		return
+		tflog.Warn(ctx, "OS backend host not found, removing from state", map[string]any{
+			"path": path,
+		})
+		// Resource not found (404)
+		return false
 	}
 
 	var apiModel OSSecretBackendHostAPIModel
 	err = model.ToAPIModel(readResp.Data, &apiModel)
 	if err != nil {
 		diags.AddError("Unable to translate Vault response data", err.Error())
-		return
+		return false
 	}
 
 	// Map values back to Terraform model
@@ -160,16 +167,14 @@ func (r *OSSecretBackendHostResource) readHostFromVault(ctx context.Context, cli
 	} else {
 		data.PasswordPolicy = types.StringNull()
 	}
-	rotationModel := frameworkrotation.AutomatedRotationModel{
-		RotationPeriod:           data.RotationPeriod,
-		RotationSchedule:         data.RotationSchedule,
-		RotationWindow:           data.RotationWindow,
-		DisableAutomatedRotation: data.DisableAutomatedRotation,
-	}
+
+	// Populate rotation fields from API response, following SDKv2 pattern
+	// PopulateAutomatedRotationModelFromAPI will set fields to null if API returns zero/empty values
+	rotationModel := frameworkrotation.AutomatedRotationModel{}
 	rotationAPIModel := frameworkrotation.AutomatedRotationAPIModel(apiModel.AutomatedRotationAPIModel)
 	diags.Append(frameworkrotation.PopulateAutomatedRotationModelFromAPI(&rotationModel, &rotationAPIModel)...)
 	if diags.HasError() {
-		return
+		return false
 	}
 	data.AutomatedRotationModel = rotationModel
 
@@ -183,6 +188,8 @@ func (r *OSSecretBackendHostResource) readHostFromVault(ctx context.Context, cli
 	} else {
 		data.CustomMetadata = types.MapNull(types.StringType)
 	}
+
+	return true
 }
 
 func (r *OSSecretBackendHostResource) buildRequestData(ctx context.Context, data *OSSecretBackendHostModel) (map[string]interface{}, diag.Diagnostics) {
@@ -225,6 +232,9 @@ func (r *OSSecretBackendHostResource) buildRequestData(ctx context.Context, data
 }
 
 func (r *OSSecretBackendHostResource) writeHostToVault(ctx context.Context, cli *api.Client, path string, requestData map[string]interface{}, operation string, diags *diag.Diagnostics) bool {
+	tflog.Debug(ctx, fmt.Sprintf("OS backend host %s", operation), map[string]any{
+		"path": path,
+	})
 	_, err := cli.Logical().WriteWithContext(ctx, path, requestData)
 	if err != nil {
 		diags.AddError(
@@ -272,8 +282,15 @@ func (r *OSSecretBackendHostResource) Create(ctx context.Context, req resource.C
 	}
 
 	// Read back the configuration
-	r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
+	found := r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		resp.Diagnostics.AddError(
+			"Resource not found after creation",
+			fmt.Sprintf("Host %q was not found at %q after creation", data.Name.ValueString(), path),
+		)
 		return
 	}
 
@@ -293,8 +310,13 @@ func (r *OSSecretBackendHostResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
+	found := r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		// Resource was deleted outside Terraform - remove from state
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -326,8 +348,15 @@ func (r *OSSecretBackendHostResource) Update(ctx context.Context, req resource.U
 	}
 
 	// Read back the configuration
-	r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
+	found := r.readHostFromVault(ctx, cli, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		resp.Diagnostics.AddError(
+			"Resource not found after update",
+			fmt.Sprintf("Host %q was not found at %q after update", data.Name.ValueString(), path),
+		)
 		return
 	}
 
@@ -348,6 +377,9 @@ func (r *OSSecretBackendHostResource) Delete(ctx context.Context, req resource.D
 	}
 
 	path := data.vaultPath()
+	tflog.Debug(ctx, "Deleting OS backend host", map[string]any{
+		"path": path,
+	})
 
 	_, err = cli.Logical().DeleteWithContext(ctx, path)
 	if err != nil && !util.Is404(err) {

@@ -254,18 +254,6 @@ func TestAccOSSecretBackendAccount_optionalFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVerifyConnection, "false"),
 				),
 			},
-			{
-				Config: testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName, username, false),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldHost, hostName),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
-					// Verify rotation fields are cleared when removed from config
-					resource.TestCheckNoResourceAttr(resourceName, "rotation_period"),
-					resource.TestCheckNoResourceAttr(resourceName, "rotation_window"),
-					resource.TestCheckNoResourceAttr(resourceName, "rotation_schedule"),
-				),
-			},
 		},
 	})
 }

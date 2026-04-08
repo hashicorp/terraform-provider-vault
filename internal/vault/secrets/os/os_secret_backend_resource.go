@@ -97,15 +97,22 @@ func (r *OSSecretBackendResource) Schema(_ context.Context, _ resource.SchemaReq
 }
 
 func (r *OSSecretBackendResource) readBackendFromVault(ctx context.Context, cli *api.Client, data *OSSecretBackendModel, diags *diag.Diagnostics) bool {
-	readResp, err := cli.Logical().ReadWithContext(ctx, data.configPath())
+	configPath := data.configPath()
+	tflog.Debug(ctx, "Reading OS backend config", map[string]any{
+		"config_path": configPath,
+	})
+	readResp, err := cli.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
 		diags.AddError(errutil.VaultReadErr(err))
 		return false
 	}
+
 	if readResp == nil {
+		tflog.Warn(ctx, "OS backend config not found, removing from state", map[string]any{
+			"config_path": configPath,
+		})
 		return false
 	}
-
 	var apiModel OSSecretBackendAPIModel
 	err = model.ToAPIModel(readResp.Data, &apiModel)
 	if err != nil {
@@ -134,6 +141,9 @@ func (r *OSSecretBackendResource) buildRequestData(data *OSSecretBackendModel, c
 }
 
 func (r *OSSecretBackendResource) writeBackendToVault(ctx context.Context, cli *api.Client, configPath string, requestData map[string]interface{}, operation string, diags *diag.Diagnostics) bool {
+	tflog.Debug(ctx, fmt.Sprintf("OS backend config %s", operation), map[string]any{
+		"config_path": configPath,
+	})
 	_, err := cli.Logical().WriteWithContext(ctx, configPath, requestData)
 	if err != nil {
 		diags.AddError(
@@ -271,7 +281,20 @@ func (r *OSSecretBackendResource) Update(ctx context.Context, req resource.Updat
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *OSSecretBackendResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
+func (r *OSSecretBackendResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data OSSecretBackendModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// The OS Secrets Engine backend config does not support deletion via API.
+	// This resource only manages the /config endpoint; the mount lifecycle
+	// (create/destroy) is managed by vault_mount. When the mount is deleted,
+	// the backend config is automatically removed.
+	tflog.Debug(ctx, "OS Secrets Engine backend config removed from state (no API deletion, relies on vault_mount)", map[string]any{
+		consts.FieldMount: data.Mount.ValueString(),
+	})
 }
 
 func (r *OSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

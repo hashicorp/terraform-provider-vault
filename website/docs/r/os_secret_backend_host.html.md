@@ -30,11 +30,11 @@ resource "vault_mount" "os" {
 }
 
 resource "vault_os_secret_backend" "os" {
-  path = vault_mount.os.path
+  mount = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "example" {
-  mount   = vault_os_secret_backend.os.path
+  mount   = vault_os_secret_backend.os.mount
   name    = "web-server-01"
   address = "192.168.1.100"
   port    = 22
@@ -50,11 +50,11 @@ resource "vault_mount" "os" {
 }
 
 resource "vault_os_secret_backend" "os" {
-  path = vault_mount.os.path
+  mount = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "production" {
-  mount             = vault_os_secret_backend.os.path
+  mount             = vault_os_secret_backend.os.mount
   name              = "prod-db-01"
   address           = "10.0.1.50"
   port              = 2222
@@ -78,11 +78,11 @@ resource "vault_mount" "os" {
 }
 
 resource "vault_os_secret_backend" "os" {
-  path = vault_mount.os.path
+  mount = vault_mount.os.path
 }
 
 resource "vault_os_secret_backend_host" "secure" {
-  mount        = vault_os_secret_backend.os.path
+  mount        = vault_os_secret_backend.os.mount
   name         = "secure-host"
   address      = "192.168.1.200"
   port         = 22
