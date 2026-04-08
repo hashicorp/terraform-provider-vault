@@ -56,12 +56,6 @@ type ControlGroupConfigModel struct {
 	MaxTTL types.String `tfsdk:"max_ttl"`
 }
 
-// ControlGroupConfigAPIModel represents the API request/response structure.
-// MaxTTL is typed as 'any' to handle both string and numeric responses from Vault.
-type ControlGroupConfigAPIModel struct {
-	MaxTTL any `json:"max_ttl,omitempty" mapstructure:"max_ttl,omitempty"`
-}
-
 // durationOrSecondsValidator validates that max_ttl can be parsed as either
 // a duration string (e.g., "2h", "30m") or as seconds (e.g., "7200").
 type durationOrSecondsValidator struct{}
@@ -338,20 +332,14 @@ func toWriteRequest(data *ControlGroupConfigModel) (map[string]interface{}, erro
 }
 
 // extractMaxTTL extracts and normalizes the max_ttl value from Vault's API response.
-// Vault may return max_ttl as either a string or a number, so we handle both cases.
+// Vault returns max_ttl as a numeric value in seconds.
 func extractMaxTTL(data map[string]interface{}) (string, error) {
 	v, ok := data[consts.FieldMaxTTL]
 	if !ok || v == nil {
 		return "", nil
 	}
 
-	// Try to handle as string first (most common case)
-	s, ok := v.(string)
-	if ok {
-		return normalizeMaxTTL(s)
-	}
-
-	// Fall back to converting any other type to string (handles numeric responses)
+	// Vault returns max_ttl as a number (seconds), convert to string
 	return normalizeMaxTTL(fmt.Sprintf("%v", v))
 }
 
