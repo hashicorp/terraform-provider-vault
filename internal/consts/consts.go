@@ -525,6 +525,7 @@ const (
 	FieldSecretIDWO                         = "secret_id_wo"
 	FieldSecretIDWOVersion                  = "secret_id_wo_version"
 	FieldSecretWO                           = "secret_wo"
+	FieldSecretWOVersion                    = "secret_wo_version"
 	FieldUnregisteredUserPolicies           = "unregistered_user_policies"
 	FieldDialTimeout                        = "dial_timeout"
 	FieldReadTimeout                        = "read_timeout"

@@ -214,6 +214,7 @@ resource "vault_radius_auth_backend" "test" {
   mount        = vault_auth_backend.test.path
   host         = %q
   secret_wo    = %q
+  secret_wo_version = 1
   dial_timeout = 30
   read_timeout = 30
 }
@@ -310,6 +311,7 @@ resource "vault_radius_auth_backend" "test" {
 	mount        = vault_auth_backend.test.path
 	host         = %q
 	secret_wo    = %q
+    secret_wo_version = 1
 	dial_timeout = 30
 	read_timeout = 30
 }
