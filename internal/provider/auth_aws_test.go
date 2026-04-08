@@ -4,13 +4,17 @@
 package provider
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -649,4 +653,513 @@ func TestAuthLoginAWS_Login(t *testing.T) {
 			testAuthLogin(t, tt)
 		})
 	}
+}
+
+// TestSignAWSLogin_RegionHandling tests that signAWSLogin properly handles region
+// configuration from various sources, especially when using generic auth_login.
+// This test addresses issue #2766 where the AWS SDK requires a region to be set.
+//
+// The test verifies that:
+// 1. Explicit sts_region parameter takes highest priority
+// 2. AWS_REGION environment variable is used when no explicit parameter
+// 3. AWS_DEFAULT_REGION is used as fallback
+// 4. awsutil.GetRegion() provides us-east-1 as last resort default
+func TestSignAWSLogin_RegionHandling(t *testing.T) {
+	tests := []struct {
+		name       string
+		parameters map[string]interface{}
+		envVars    map[string]string
+	}{
+		{
+			name: "region-from-sts_region-parameter",
+			parameters: map[string]interface{}{
+				"role":       "test-role",
+				"sts_region": "eu-west-1",
+			},
+		},
+		{
+			name: "region-from-AWS_REGION-env",
+			parameters: map[string]interface{}{
+				"role": "test-role",
+			},
+			envVars: map[string]string{
+				envVarAWSRegion: "us-west-2",
+			},
+		},
+		{
+			name: "region-from-AWS_DEFAULT_REGION-env",
+			parameters: map[string]interface{}{
+				"role": "test-role",
+			},
+			envVars: map[string]string{
+				envVarAWSDefaultRegion: "ap-southeast-1",
+			},
+		},
+		{
+			name: "sts_region-parameter-takes-precedence",
+			parameters: map[string]interface{}{
+				"role":       "test-role",
+				"sts_region": "eu-central-1",
+			},
+			envVars: map[string]string{
+				envVarAWSRegion: "us-east-1",
+			},
+		},
+		{
+			name: "fallback-to-us-east-1-when-no-region-configured",
+			parameters: map[string]interface{}{
+				"role": "test-role",
+			},
+			// No environment variables set - should default to us-east-1
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set environment variables if specified
+			for k, v := range tt.envVars {
+				t.Setenv(k, v)
+			}
+			// Call signAWSLogin
+			err := signAWSLogin(tt.parameters, hclog.NewNullLogger())
+
+			// The key validation: we should NEVER get a "Missing Region" error
+			// This was the bug in issue #2766
+			if err != nil && containsString(err.Error(), "Missing Region") {
+				t.Errorf("signAWSLogin() got 'Missing Region' error which should have been fixed: %v", err)
+			}
+		})
+	}
+}
+
+// Helper function to check if a string contains a substring
+func containsString(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))
+}
+
+func stringContains(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+func TestGenerateLoginData_IncludesAuthorizationHeader(t *testing.T) {
+	awsConfig := &aws.Config{
+		Region: "us-east-1",
+		Credentials: aws.NewCredentialsCache(
+			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+				return aws.Credentials{
+					AccessKeyID:     "test-access-key",
+					SecretAccessKey: "test-secret-key",
+					SessionToken:    "test-session-token",
+					Source:          "unit-test",
+				}, nil
+			}),
+		),
+	}
+
+	loginData, err := generateLoginData(context.Background(), awsConfig, "localhost", "")
+	if err != nil {
+		t.Fatalf("generateLoginData() error = %v", err)
+	}
+
+	if got := loginData[consts.FieldIAMHttpRequestMethod]; got != http.MethodPost {
+		t.Fatalf("generateLoginData() method = %v, want %v", got, http.MethodPost)
+	}
+
+	requestURL, ok := loginData[consts.FieldIAMRequestURL].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request URL has unexpected type %T", loginData[consts.FieldIAMRequestURL])
+	}
+	decodedURL, err := base64.StdEncoding.DecodeString(requestURL)
+	if err != nil {
+		t.Fatalf("DecodeString(requestURL) error = %v", err)
+	}
+	if !strings.Contains(string(decodedURL), "sts.us-east-1.amazonaws.com") {
+		t.Fatalf("generateLoginData() URL = %q, want regional STS endpoint", string(decodedURL))
+	}
+
+	body, ok := loginData[consts.FieldIAMRequestBody].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request body has unexpected type %T", loginData[consts.FieldIAMRequestBody])
+	}
+	decodedBody, err := base64.StdEncoding.DecodeString(body)
+	if err != nil {
+		t.Fatalf("DecodeString(requestBody) error = %v", err)
+	}
+	if string(decodedBody) != stsGetCallerIdentityBody {
+		t.Fatalf("generateLoginData() body = %q, want %q", string(decodedBody), stsGetCallerIdentityBody)
+	}
+
+	headers := decodeAWSLoginHeaders(t, loginData)
+	authorization := headers.Get("Authorization")
+	if authorization == "" {
+		t.Fatal("generateLoginData() did not include Authorization header")
+	}
+	if !strings.Contains(authorization, "/us-east-1/sts/aws4_request") {
+		t.Fatalf("Authorization header = %q, want credential scope containing region", authorization)
+	}
+	if got := headers.Get("X-Vault-AWS-IAM-Server-ID"); got != "localhost" {
+		t.Fatalf("X-Vault-AWS-IAM-Server-ID = %q, want %q", got, "localhost")
+	}
+	if got := headers.Get("X-Amz-Security-Token"); got != "test-session-token" {
+		t.Fatalf("X-Amz-Security-Token = %q, want %q", got, "test-session-token")
+	}
+	if got := headers.Get("Host"); got != "sts.us-east-1.amazonaws.com" {
+		t.Fatalf("Host header = %q, want %q", got, "sts.us-east-1.amazonaws.com")
+	}
+	if got := headers.Get("Content-Type"); got != stsContentType {
+		t.Fatalf("Content-Type = %q, want %q", got, stsContentType)
+	}
+}
+
+func TestGenerateLoginData_RequiresCredentials(t *testing.T) {
+	tests := []struct {
+		name      string
+		awsConfig *aws.Config
+	}{
+		{
+			name:      "nil config",
+			awsConfig: nil,
+		},
+		{
+			name:      "nil credentials",
+			awsConfig: &aws.Config{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			loginData, err := generateLoginData(context.Background(), tt.awsConfig, "", "")
+			if err == nil {
+				t.Fatal("generateLoginData() error = nil, want error")
+			}
+			if err.Error() != "AWS credentials are not configured" {
+				t.Fatalf("generateLoginData() error = %q, want %q", err.Error(), "AWS credentials are not configured")
+			}
+			if loginData != nil {
+				t.Fatalf("generateLoginData() loginData = %#v, want nil", loginData)
+			}
+		})
+	}
+}
+
+func TestGenerateLoginData_CredentialRetrievalError(t *testing.T) {
+	wantErr := errors.New("credential provider failed")
+	awsConfig := &aws.Config{
+		Region: "us-east-1",
+		Credentials: aws.NewCredentialsCache(
+			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+				return aws.Credentials{}, wantErr
+			}),
+		),
+	}
+
+	loginData, err := generateLoginData(context.Background(), awsConfig, "", "")
+	if err == nil {
+		t.Fatal("generateLoginData() error = nil, want error")
+	}
+
+	if !strings.Contains(err.Error(), "failed to retrieve AWS credentials:") {
+		t.Fatalf("generateLoginData() error = %q, want wrapped credential retrieval prefix", err.Error())
+	}
+	if !strings.Contains(err.Error(), wantErr.Error()) {
+		t.Fatalf("generateLoginData() error = %q, want underlying credential provider error %q", err.Error(), wantErr.Error())
+	}
+
+	if loginData != nil {
+		t.Fatalf("generateLoginData() loginData = %#v, want nil", loginData)
+	}
+}
+
+func TestGenerateLoginData_DefaultsRegionWhenEmpty(t *testing.T) {
+	awsConfig := &aws.Config{
+		Credentials: aws.NewCredentialsCache(
+			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+				return aws.Credentials{
+					AccessKeyID:     "test-access-key",
+					SecretAccessKey: "test-secret-key",
+					Source:          "unit-test",
+				}, nil
+			}),
+		),
+	}
+
+	loginData, err := generateLoginData(context.Background(), awsConfig, "", "")
+	if err != nil {
+		t.Fatalf("generateLoginData() error = %v", err)
+	}
+
+	requestURL, ok := loginData[consts.FieldIAMRequestURL].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request URL has unexpected type %T", loginData[consts.FieldIAMRequestURL])
+	}
+
+	decodedURL, err := base64.StdEncoding.DecodeString(requestURL)
+	if err != nil {
+		t.Fatalf("DecodeString(requestURL) error = %v", err)
+	}
+
+	wantHost := fmt.Sprintf("sts.%s.amazonaws.com", awsutil.DefaultRegion)
+	if !strings.Contains(string(decodedURL), wantHost) {
+		t.Fatalf("generateLoginData() URL = %q, want default regional STS endpoint %q", string(decodedURL), wantHost)
+	}
+
+	headers := decodeAWSLoginHeaders(t, loginData)
+	authorization := headers.Get("Authorization")
+	wantScope := fmt.Sprintf("/%s/sts/aws4_request", awsutil.DefaultRegion)
+	if !strings.Contains(authorization, wantScope) {
+		t.Fatalf("Authorization header = %q, want credential scope containing default region %q", authorization, wantScope)
+	}
+	if got := headers.Get("Host"); got != wantHost {
+		t.Fatalf("Host header = %q, want %q", got, wantHost)
+	}
+}
+
+func TestGenerateLoginData_UsesCustomSTSEndpoint(t *testing.T) {
+	awsConfig := &aws.Config{
+		Region: "us-east-1",
+		Credentials: aws.NewCredentialsCache(
+			aws.CredentialsProviderFunc(func(ctx context.Context) (aws.Credentials, error) {
+				return aws.Credentials{
+					AccessKeyID:     "test-access-key",
+					SecretAccessKey: "test-secret-key",
+					Source:          "unit-test",
+				}, nil
+			}),
+		),
+	}
+
+	loginData, err := generateLoginData(context.Background(), awsConfig, "", "https://sts.custom.endpoint.example.com/custom")
+	if err != nil {
+		t.Fatalf("generateLoginData() error = %v", err)
+	}
+
+	requestURL, ok := loginData[consts.FieldIAMRequestURL].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request URL has unexpected type %T", loginData[consts.FieldIAMRequestURL])
+	}
+	decodedURL, err := base64.StdEncoding.DecodeString(requestURL)
+	if err != nil {
+		t.Fatalf("DecodeString(requestURL) error = %v", err)
+	}
+	if string(decodedURL) != "https://sts.custom.endpoint.example.com/custom" {
+		t.Fatalf("generateLoginData() URL = %q, want custom STS endpoint", string(decodedURL))
+	}
+
+	headers := decodeAWSLoginHeaders(t, loginData)
+	authorization := headers.Get("Authorization")
+	if !strings.Contains(authorization, "/us-east-1/sts/aws4_request") {
+		t.Fatalf("Authorization header = %q, want credential scope containing configured region", authorization)
+	}
+	if got := headers.Get("Host"); got != "sts.custom.endpoint.example.com" {
+		t.Fatalf("Host header = %q, want custom endpoint host", got)
+	}
+}
+
+func TestSignAWSLogin_UsesCustomSTSEndpoint(t *testing.T) {
+	parameters := map[string]interface{}{
+		consts.FieldAWSAccessKeyID:     "test-access-key",
+		consts.FieldAWSSecretAccessKey: "test-secret-key",
+		"sts_region":                   "us-east-1",
+		consts.FieldAWSSTSEndpoint:     "https://sts.custom.endpoint.example.com/custom",
+	}
+
+	if err := signAWSLogin(parameters, hclog.NewNullLogger()); err != nil {
+		t.Fatalf("signAWSLogin() error = %v", err)
+	}
+
+	requestURL, ok := parameters[consts.FieldIAMRequestURL].(string)
+	if !ok {
+		t.Fatalf("signAWSLogin() request URL has unexpected type %T", parameters[consts.FieldIAMRequestURL])
+	}
+
+	decodedURL, err := base64.StdEncoding.DecodeString(requestURL)
+	if err != nil {
+		t.Fatalf("DecodeString(requestURL) error = %v", err)
+	}
+	if string(decodedURL) != "https://sts.custom.endpoint.example.com/custom" {
+		t.Fatalf("signAWSLogin() URL = %q, want custom STS endpoint", string(decodedURL))
+	}
+
+	headers := decodeAWSLoginHeaders(t, parameters)
+	if got := headers.Get("Host"); got != "sts.custom.endpoint.example.com" {
+		t.Fatalf("Host header = %q, want custom endpoint host", got)
+	}
+	authorization := headers.Get("Authorization")
+	if !strings.Contains(authorization, "/us-east-1/sts/aws4_request") {
+		t.Fatalf("Authorization header = %q, want credential scope containing configured region", authorization)
+	}
+}
+
+func TestResolveSTSSigningEndpoint(t *testing.T) {
+	tests := []struct {
+		name         string
+		region       string
+		endpointURL  string
+		wantEndpoint stsSigningEndpoint
+		wantErr      string
+	}{
+		{
+			name:        "default regional endpoint",
+			region:      "us-east-1",
+			endpointURL: "",
+			wantEndpoint: stsSigningEndpoint{
+				requestURL:    "https://sts.us-east-1.amazonaws.com",
+				signingName:   stsSigningName,
+				signingRegion: "us-east-1",
+			},
+		},
+		{
+			name:        "custom endpoint",
+			region:      "us-gov-west-1",
+			endpointURL: "https://sts.vpce.example.internal/custom",
+			wantEndpoint: stsSigningEndpoint{
+				requestURL:    "https://sts.vpce.example.internal/custom",
+				signingName:   stsSigningName,
+				signingRegion: "us-gov-west-1",
+			},
+		},
+		{
+			name:        "invalid custom endpoint",
+			region:      "us-east-1",
+			endpointURL: "://bad-url",
+			wantErr:     "failed to parse custom STS endpoint URL:",
+		},
+		{
+			name:        "missing scheme custom endpoint",
+			region:      "us-east-1",
+			endpointURL: "sts.internal.example.com",
+			wantErr:     "invalid custom STS endpoint URL",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := resolveSTSSigningEndpoint(tt.region, tt.endpointURL)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatal("resolveSTSSigningEndpoint() error = nil, want error")
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("resolveSTSSigningEndpoint() error = %q, want substring %q", err.Error(), tt.wantErr)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("resolveSTSSigningEndpoint() error = %v", err)
+			}
+			if got != tt.wantEndpoint {
+				t.Fatalf("resolveSTSSigningEndpoint() = %#v, want %#v", got, tt.wantEndpoint)
+			}
+		})
+	}
+}
+
+func TestBuildSignedGetCallerIdentityRequest(t *testing.T) {
+	credentials := aws.Credentials{
+		AccessKeyID:     "test-access-key",
+		SecretAccessKey: "test-secret-key",
+		SessionToken:    "test-session-token",
+		Source:          "unit-test",
+	}
+
+	tests := []struct {
+		name              string
+		endpoint          stsSigningEndpoint
+		region            string
+		headerValue       string
+		wantHost          string
+		wantSigningRegion string
+		wantSigningName   string
+		wantHeaderValue   string
+	}{
+		{
+			name: "uses endpoint signing values",
+			endpoint: stsSigningEndpoint{
+				requestURL:    "https://sts.custom.endpoint.example.com/custom",
+				signingName:   "execute-api",
+				signingRegion: "us-gov-west-1",
+			},
+			region:            "us-east-1",
+			headerValue:       "localhost",
+			wantHost:          "sts.custom.endpoint.example.com",
+			wantSigningRegion: "us-gov-west-1",
+			wantSigningName:   "execute-api",
+			wantHeaderValue:   "localhost",
+		},
+		{
+			name: "falls back to function inputs",
+			endpoint: stsSigningEndpoint{
+				requestURL: "https://sts.us-west-2.amazonaws.com",
+			},
+			region:            "us-west-2",
+			wantHost:          "sts.us-west-2.amazonaws.com",
+			wantSigningRegion: "us-west-2",
+			wantSigningName:   stsSigningName,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, body, err := buildSignedGetCallerIdentityRequest(context.Background(), credentials, tt.endpoint, tt.region, tt.headerValue)
+			if err != nil {
+				t.Fatalf("buildSignedGetCallerIdentityRequest() error = %v", err)
+			}
+
+			if req.Method != http.MethodPost {
+				t.Fatalf("request method = %q, want %q", req.Method, http.MethodPost)
+			}
+			if req.URL.String() != tt.endpoint.requestURL {
+				t.Fatalf("request URL = %q, want %q", req.URL.String(), tt.endpoint.requestURL)
+			}
+			if body != stsGetCallerIdentityBody {
+				t.Fatalf("request body = %q, want %q", body, stsGetCallerIdentityBody)
+			}
+			if got := req.Header.Get("Content-Type"); got != stsContentType {
+				t.Fatalf("Content-Type = %q, want %q", got, stsContentType)
+			}
+			if got := req.Header.Get("X-Vault-AWS-IAM-Server-ID"); got != tt.wantHeaderValue {
+				t.Fatalf("X-Vault-AWS-IAM-Server-ID = %q, want %q", got, tt.wantHeaderValue)
+			}
+			if got := req.Header.Get("X-Amz-Security-Token"); got != credentials.SessionToken {
+				t.Fatalf("X-Amz-Security-Token = %q, want %q", got, credentials.SessionToken)
+			}
+			if got := req.URL.Host; got != tt.wantHost {
+				t.Fatalf("request URL host = %q, want %q", got, tt.wantHost)
+			}
+
+			authorization := req.Header.Get("Authorization")
+			wantScope := fmt.Sprintf("/%s/%s/aws4_request", tt.wantSigningRegion, tt.wantSigningName)
+			if !strings.Contains(authorization, wantScope) {
+				t.Fatalf("Authorization = %q, want credential scope containing %q", authorization, wantScope)
+			}
+		})
+	}
+}
+
+func decodeAWSLoginHeaders(t *testing.T, loginData map[string]interface{}) http.Header {
+	t.Helper()
+
+	encodedHeaders, ok := loginData[consts.FieldIAMRequestHeaders].(string)
+	if !ok {
+		t.Fatalf("generateLoginData() request headers have unexpected type %T", loginData[consts.FieldIAMRequestHeaders])
+	}
+
+	decodedHeaders, err := base64.StdEncoding.DecodeString(encodedHeaders)
+	if err != nil {
+		t.Fatalf("DecodeString(requestHeaders) error = %v", err)
+	}
+
+	var headers http.Header
+	if err := json.Unmarshal(decodedHeaders, &headers); err != nil {
+		t.Fatalf("json.Unmarshal(requestHeaders) error = %v", err)
+	}
+
+	return headers
 }

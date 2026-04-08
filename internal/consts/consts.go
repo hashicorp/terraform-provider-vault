@@ -498,6 +498,9 @@ const (
 	FieldIdentityTokenAudienceWOVersion     = "identity_token_audience_wo_version"
 	FieldIdentityTokenTTL                   = "identity_token_ttl"
 	FieldRoleArn                            = "role_arn"
+	FieldInlinePolicies                     = "inline_policies"
+	FieldRemotePolicies                     = "remote_policies"
+	FieldPolicyDocument                     = "policy_document"
 	FieldAccessor                           = "accessor"
 	FieldOptions                            = "options"
 	FieldAllowedManagedKeys                 = "allowed_managed_keys"
@@ -599,6 +602,16 @@ const (
 	FieldSerialNumberSource                 = "serial_number_source"
 	FieldCertMetadata                       = "cert_metadata"
 	FieldTokenType                          = "token_type"
+	FieldKMSName                            = "kms_name"
+	FieldKeyCollection                      = "key_collection"
+	FieldServiceAccountFile                 = "service_account_file"
+	FieldLocation                           = "location"
+	FieldPurpose                            = "purpose"
+	FieldProtection                         = "protection"
+	FieldVersions                           = "versions"
+	FieldReplicaRegions                     = "replica_regions"
+	FieldMinEnabledVersion                  = "min_enabled_version"
+	FieldProvider                           = "provider"
 
 	FieldInput                    = "input"
 	FieldKeyVersion               = "key_version"
@@ -876,6 +889,8 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeKeyMgmt      = "keymgmt"
+	MountTypeAliCloud     = "alicloud"
 
 	/*
 		Vault version constants
