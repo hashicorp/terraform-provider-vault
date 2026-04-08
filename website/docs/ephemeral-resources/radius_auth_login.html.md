@@ -28,10 +28,11 @@ resource "vault_auth_backend" "radius" {
 }
 
 resource "vault_radius_auth_backend" "radius" {
-  mount     = vault_auth_backend.radius.path
-  host      = "radius.example.com"
-  port      = 1812
-  secret_wo = "my-radius-shared-secret"
+  mount             = vault_auth_backend.radius.path
+  host              = "radius.example.com"
+  port              = 1812
+  secret_wo         = "my-radius-shared-secret"
+  secret_wo_version = 1
 }
 
 ephemeral "vault_radius_auth_login" "test" {
@@ -60,10 +61,11 @@ resource "vault_auth_backend" "custom" {
 }
 
 resource "vault_radius_auth_backend" "custom" {
-  mount     = vault_auth_backend.custom.path
-  host      = "radius.company.com"
-  port      = 1812
-  secret_wo = "shared-secret"
+  mount             = vault_auth_backend.custom.path
+  host              = "radius.company.com"
+  port              = 1812
+  secret_wo         = "shared-secret"
+  secret_wo_version = 1
 }
 
 ephemeral "vault_radius_auth_login" "app" {
@@ -87,10 +89,11 @@ resource "vault_auth_backend" "radius" {
 }
 
 resource "vault_radius_auth_backend" "radius" {
-  mount     = vault_auth_backend.radius.path
-  host      = "radius.example.com"
-  port      = 1812
-  secret_wo = "shared-secret"
+  mount             = vault_auth_backend.radius.path
+  host              = "radius.example.com"
+  port              = 1812
+  secret_wo         = "shared-secret"
+  secret_wo_version = 1
 }
 
 ephemeral "vault_radius_auth_login" "admin" {

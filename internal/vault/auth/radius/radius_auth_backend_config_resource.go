@@ -55,6 +55,7 @@ type RadiusAuthBackendModel struct {
 	Host                     types.String `tfsdk:"host"`
 	Port                     types.Int64  `tfsdk:"port"`
 	SecretWO                 types.String `tfsdk:"secret_wo"`
+	SecretWOVersion          types.Int64  `tfsdk:"secret_wo_version"`
 	UnregisteredUserPolicies types.Set    `tfsdk:"unregistered_user_policies"`
 	DialTimeout              types.Int64  `tfsdk:"dial_timeout"`
 	ReadTimeout              types.Int64  `tfsdk:"read_timeout"`
@@ -107,6 +108,12 @@ func (r *RadiusAuthBackendConfigResource) Schema(ctx context.Context, req resour
 				Required:            true,
 				WriteOnly:           true,
 				Sensitive:           true,
+			},
+			consts.FieldSecretWOVersion: schema.Int64Attribute{
+				Required: true,
+				MarkdownDescription: "Version counter for the write-only `secret_wo` field. " +
+					"Since write-only values are not stored in state, Terraform cannot detect when the secret changes. " +
+					"Increment this value whenever you update `secret_wo` so Terraform detects the change and applies an update.",
 			},
 			consts.FieldUnregisteredUserPolicies: schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -206,20 +213,20 @@ func (r *RadiusAuthBackendConfigResource) Read(ctx context.Context, req resource
 
 // Update is called during the terraform apply command.
 func (r *RadiusAuthBackendConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data RadiusAuthBackendModel
+	var plan RadiusAuthBackendModel
 
 	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(r.upsertConfig(ctx, &data, req.Config, errutil.VaultUpdateErr)...)
+	resp.Diagnostics.Append(r.upsertConfig(ctx, &plan, req.Config, errutil.VaultUpdateErr)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 // upsertConfig reads the write-only secret from config, writes the RADIUS
@@ -376,7 +383,7 @@ func (r *RadiusAuthBackendConfigResource) readSecretFromConfig(ctx context.Conte
 }
 
 // getApiModel builds the Vault API request map from the Terraform data model.
-// Note: secret is write-only so it is never part of the plan and must be passed separately.
+// Note: secret is write-only so it is never part of the plan and must be passed from config for each write.
 func (r *RadiusAuthBackendConfigResource) getApiModel(ctx context.Context, data *RadiusAuthBackendModel, secret string) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 

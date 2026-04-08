@@ -22,9 +22,10 @@ resource "vault_auth_backend" "radius" {
 }
 
 resource "vault_radius_auth_backend" "example" {
-  mount     = vault_auth_backend.radius.path
-  host      = "radius.example.com"
-  secret_wo = "supersecretpassword"
+  mount             = vault_auth_backend.radius.path
+  host              = "radius.example.com"
+  secret_wo         = "supersecretpassword"
+  secret_wo_version = 1
 }
 ```
 
@@ -41,6 +42,7 @@ resource "vault_radius_auth_backend" "example" {
   host                       = "radius.example.com"
   port                       = 1812
   secret_wo                  = "supersecretpassword"
+  secret_wo_version          = 1
   unregistered_user_policies = ["default", "guest"]
   dial_timeout               = 10
   read_timeout               = 10
@@ -67,7 +69,12 @@ The following arguments are supported:
   qualified domain name or an IP address.
 
 * `secret_wo` - (Required) The RADIUS shared secret. This is a write-only field 
-  and will not be read back from Vault or stored in state.
+  and will not be read back from Vault or stored in state. To rotate the secret,
+  update this value and increment `secret_wo_version`.
+
+* `secret_wo_version` - (Required) Version counter for the write-only
+  `secret_wo` field. Increment this value whenever `secret_wo` changes so
+  Terraform detects the write-only change and applies an update.
 
 * `mount` - (Required) Path of the enabled RADIUS auth backend mount to configure.
 
