@@ -6,6 +6,7 @@ package config_test
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
@@ -119,6 +120,30 @@ func TestAccControlGroupConfigResourceNamespace(t *testing.T) {
 			},
 			testutil.GetImportTestStepNS(t, ns, resourceName, configNS, consts.FieldMaxTTL),
 			testutil.GetImportTestStepNSCleanup(t, configNS),
+		},
+	})
+}
+
+func TestAccControlGroupConfigResourceInvalidFormat(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccControlGroupConfig("invalid-time-format"),
+				ExpectError: regexp.MustCompile("Invalid duration string"),
+			},
+			{
+				Config:      testAccControlGroupConfig("24x"),
+				ExpectError: regexp.MustCompile("Invalid duration string"),
+			},
+			{
+				Config:      testAccControlGroupConfig("not-a-duration"),
+				ExpectError: regexp.MustCompile("Invalid duration string"),
+			},
 		},
 	})
 }
