@@ -48,6 +48,7 @@ const (
 	FieldPasswordPolicy                     = "password_policy"
 	FieldLength                             = "length"
 	FieldInsecureTLS                        = "insecure_tls"
+	FieldInsecure                           = "insecure"
 	FieldURL                                = "url"
 	FieldUserAttr                           = "userattr"
 	FieldUserDN                             = "userdn"
