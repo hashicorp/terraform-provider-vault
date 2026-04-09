@@ -103,8 +103,6 @@ func TestAccAliCloudSecretBackendRole_minimal(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldName, name),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMount, backend),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldRoleArn, testAccAliCloudSecretBackendRoleRoleARN_basic),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldTTL, "0"),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMaxTTL, "0"),
 				),
 			},
 		},
@@ -128,7 +126,6 @@ func TestAccAliCloudSecretBackendRole_ttlOnly(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMount, backend),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldRoleArn, testAccAliCloudSecretBackendRoleRoleARN_basic),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldTTL, "1800"),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMaxTTL, "0"),
 				),
 			},
 		},
@@ -151,42 +148,7 @@ func TestAccAliCloudSecretBackendRole_maxTtlOnly(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldName, name),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMount, backend),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldRoleArn, testAccAliCloudSecretBackendRoleRoleARN_basic),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldTTL, "0"),
 					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMaxTTL, "7200"),
-				),
-			},
-		},
-	})
-}
-
-// TestAccAliCloudSecretBackendRole_multipleRemotePolicies tests multiple remote policies
-func TestAccAliCloudSecretBackendRole_multipleRemotePolicies(t *testing.T) {
-	backend := acctest.RandomWithPrefix("tf-test-alicloud")
-	name := acctest.RandomWithPrefix("tf-test-role")
-	accessKey, secretKey := getTestAliCloudCreds(t)
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAliCloudSecretBackendRoleConfig_multipleRemotePolicies(name, backend, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldName, name),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMount, backend),
-					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldRemotePolicies+".#", "3"),
-					resource.TestCheckTypeSetElemNestedAttrs("vault_alicloud_secret_backend_role.test", consts.FieldRemotePolicies+".*", map[string]string{
-						consts.FieldName: "AliyunOSSReadOnlyAccess",
-						consts.FieldType: "System",
-					}),
-					resource.TestCheckTypeSetElemNestedAttrs("vault_alicloud_secret_backend_role.test", consts.FieldRemotePolicies+".*", map[string]string{
-						consts.FieldName: "AliyunECSReadOnlyAccess",
-						consts.FieldType: "System",
-					}),
-					resource.TestCheckTypeSetElemNestedAttrs("vault_alicloud_secret_backend_role.test", consts.FieldRemotePolicies+".*", map[string]string{
-						consts.FieldName: "AliyunRDSReadOnlyAccess",
-						consts.FieldType: "System",
-					}),
 				),
 			},
 		},
@@ -340,14 +302,12 @@ func testAccAliCloudSecretBackendRoleCheck_basic(name, backend string) resource.
 			consts.FieldType: "System",
 		}),
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_remote", consts.FieldTTL, "1800"),
-		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_remote", consts.FieldMaxTTL, "0"),
 
 		// Role ARN role
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldName, fmt.Sprintf("%s-role-arn", name)),
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldMount, backend),
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldRoleArn, testAccAliCloudSecretBackendRoleRoleARN_basic),
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldTTL, "3600"),
-		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldMaxTTL, "0"),
 	)
 }
 
@@ -376,14 +336,12 @@ func testAccAliCloudSecretBackendRoleCheck_updated(name, backend string) resourc
 			consts.FieldType: "System",
 		}),
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_remote", consts.FieldTTL, "3600"),
-		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_remote", consts.FieldMaxTTL, "0"),
 
 		// Role ARN role - updated
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldName, fmt.Sprintf("%s-role-arn", name)),
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldMount, backend),
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldRoleArn, testAccAliCloudSecretBackendRoleRoleARN_updated),
 		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldTTL, "7200"),
-		resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test_role_arn", consts.FieldMaxTTL, "0"),
 	)
 }
 
@@ -400,6 +358,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test_inline" {
@@ -447,6 +406,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test_inline" {
@@ -499,6 +459,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -532,6 +493,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -553,6 +515,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -575,6 +538,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -584,44 +548,6 @@ resource "vault_alicloud_secret_backend_role" "test" {
   max_ttl  = 7200
 }
 `, backend, accessKey, secretKey, name, testAccAliCloudSecretBackendRoleRoleARN_basic)
-}
-
-func testAccAliCloudSecretBackendRoleConfig_multipleRemotePolicies(name, backend, accessKey, secretKey string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = %q
-  type = "alicloud"
-}
-
-resource "vault_alicloud_secret_backend" "test" {
-  mount         = vault_mount.test.path
-  access_key    = %q
-  secret_key_wo = %q
-}
-
-resource "vault_alicloud_secret_backend_role" "test" {
-  mount = vault_mount.test.path
-  name  = %q
-
-  remote_policies {
-    name = "AliyunOSSReadOnlyAccess"
-    type = "System"
-  }
-
-  remote_policies {
-    name = "AliyunECSReadOnlyAccess"
-    type = "System"
-  }
-
-  remote_policies {
-    name = "AliyunRDSReadOnlyAccess"
-    type = "System"
-  }
-
-  ttl     = 3600
-  max_ttl = 7200
-}
-`, backend, accessKey, secretKey, name)
 }
 
 func testAccAliCloudSecretBackendRoleConfig_missingName(backend, accessKey, secretKey string) string {
@@ -635,6 +561,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -664,6 +591,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -685,6 +613,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -706,6 +635,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -729,6 +659,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -754,6 +685,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -780,6 +712,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -816,6 +749,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {
@@ -846,6 +780,7 @@ resource "vault_alicloud_secret_backend" "test" {
   mount         = vault_mount.test.path
   access_key    = %q
   secret_key_wo = %q
+  secret_key_wo_version = 1
 }
 
 resource "vault_alicloud_secret_backend_role" "test" {

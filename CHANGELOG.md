@@ -15,6 +15,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_alicloud_secret_backend`: Add `secret_key_wo_version` field to enable Terraform change detection for the write-only `secret_key_wo` field. Incrementing the version triggers an update that sends the new secret key to Vault, enabling secret key rotation without storing sensitive values in state. ([#2874](https://github.com/hashicorp/terraform-provider-vault/pull/2874))
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 * Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
 
