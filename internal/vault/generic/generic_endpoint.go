@@ -39,7 +39,7 @@ type GenericEndpointEphemeralModel struct {
 	base.BaseModelEphemeral
 
 	// fields specific to this resource
-	Path          types.String `tfsdk:"path"`
+	Mount         types.String `tfsdk:"mount"`
 	DataJSON      types.String `tfsdk:"data_json"`
 	WriteFields   types.List   `tfsdk:"write_fields"`
 	WriteDataJSON types.String `tfsdk:"write_data_json"`
@@ -53,7 +53,7 @@ type GenericEndpointEphemeralModel struct {
 func (r *GenericEndpointEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldPath: schema.StringAttribute{
+			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Full path to the Vault endpoint that will be written",
 				Required:            true,
 			},
@@ -63,18 +63,20 @@ func (r *GenericEndpointEphemeralResource) Schema(_ context.Context, _ ephemeral
 				Sensitive:           true,
 			},
 			consts.FieldWriteFields: schema.ListAttribute{
-				MarkdownDescription: "Top-level fields returned by write to persist in state",
+				MarkdownDescription: "Top-level fields returned by the write operation to extract and expose via write_data/write_data_json",
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
 			consts.FieldWriteDataJSON: schema.StringAttribute{
 				MarkdownDescription: "JSON data returned by write operation",
 				Computed:            true,
+				Sensitive:           true,
 			},
 			consts.FieldWriteData: schema.MapAttribute{
 				MarkdownDescription: "Map of strings returned by write operation",
 				ElementType:         types.StringType,
 				Computed:            true,
+				Sensitive:           true,
 			},
 			consts.FieldPathWrapTTL: schema.StringAttribute{
 				MarkdownDescription: "The TTL for the wrapped response.",
@@ -99,7 +101,12 @@ func addToWriteData(writeData map[string]interface{}, writeDataMap map[string]st
 	if vs, ok := value.(string); ok {
 		writeDataMap[field] = vs
 	} else {
-		vBytes, _ := json.Marshal(value)
+		vBytes, err := json.Marshal(value)
+		if err != nil {
+			// Fallback to a generic string representation if JSON marshalling fails.
+			writeDataMap[field] = fmt.Sprintf("%v", value)
+			return
+		}
 		writeDataMap[field] = string(vBytes)
 	}
 }
@@ -114,7 +121,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 		return
 	}
 
-	c, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
@@ -131,19 +138,29 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 		return
 	}
 
-	path := data.Path.ValueString()
+	path := data.Mount.ValueString()
+
+	// Use a per-request client when wrap TTL is provided to avoid mutating the shared client.
+	vc := vaultClient
 
 	// Set wrap TTL if provided
 	if !data.PathWrapTTL.IsNull() && !data.PathWrapTTL.IsUnknown() {
-		c.SetWrappingLookupFunc(func(operation, path string) string {
+		vc, err = vaultClient.Clone()
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Configuring Vault Client",
+				fmt.Sprintf("error cloning Vault client for wrapping configuration: %s", err),
+			)
+			return
+		}
+
+		vc.SetWrappingLookupFunc(func(operation, path string) string {
 			return data.PathWrapTTL.ValueString()
 		})
-		// Clean up so subsequent operations aren't accidentally wrapped
-		defer c.SetWrappingLookupFunc(nil)
 	}
 
 	// Write to Vault using WriteWithContext which properly handles POST for auth endpoints
-	response, err := c.Logical().WriteWithContext(ctx, path, requestData)
+	response, err := vc.Logical().WriteWithContext(ctx, path, requestData)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Writing to Vault",
@@ -182,7 +199,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 		}
 	}
 
-	if response != nil && (response.Data != nil || wrapMap != nil || authMap != nil || response.LeaseDuration != 0 || response.LeaseID != "") {
+	if response != nil {
 		// Get write_fields list
 		var writeFields []string
 		if !data.WriteFields.IsNull() && !data.WriteFields.IsUnknown() {
@@ -192,6 +209,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			}
 		}
 
+		foundFields := make(map[string]bool)
 		for _, writeField := range writeFields {
 			// 1) Check response.Data first - this is the primary data payload returned by most Vault endpoints.
 			// It is always checked first for any write_field requested by the user.
@@ -199,6 +217,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			if response.Data != nil {
 				if v, ok := response.Data[writeField]; ok {
 					addToWriteData(writeData, writeDataMap, writeField, v)
+					foundFields[writeField] = true
 					continue
 				}
 			}
@@ -209,6 +228,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			// (token, ttl, creation_time, etc.) as a single JSON object.
 			if writeField == "wrap_info" && wrapMap != nil {
 				addToWriteData(writeData, writeDataMap, writeField, wrapMap)
+				foundFields[writeField] = true
 				continue
 			}
 
@@ -219,6 +239,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			if wrapMap != nil {
 				if v, ok := wrapMap[writeField]; ok {
 					addToWriteData(writeData, writeDataMap, writeField, v)
+					foundFields[writeField] = true
 					continue
 				}
 			}
@@ -229,6 +250,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			// as a complete JSON object (client_token, accessor, policies, metadata, etc.).
 			if writeField == "auth" && authMap != nil {
 				addToWriteData(writeData, writeDataMap, writeField, authMap)
+				foundFields[writeField] = true
 				continue
 			}
 
@@ -239,6 +261,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			if authMap != nil {
 				if v, ok := authMap[writeField]; ok {
 					addToWriteData(writeData, writeDataMap, writeField, v)
+					foundFields[writeField] = true
 					continue
 				}
 
@@ -247,6 +270,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 				if writeField == "token" {
 					if v, ok := authMap["client_token"]; ok {
 						addToWriteData(writeData, writeDataMap, writeField, v)
+						foundFields[writeField] = true
 						continue
 					}
 				}
@@ -263,8 +287,17 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			}
 			if v, ok := topLevel[writeField]; ok {
 				addToWriteData(writeData, writeDataMap, writeField, v)
+				foundFields[writeField] = true
 				continue
 			}
+
+			// Field was not found in any location - add a warning
+			resp.Diagnostics.AddWarning(
+				"Write field not found",
+				fmt.Sprintf("The requested write_field %q was not found in the response from %s. "+
+					"Available locations checked: response.Data, wrap_info, auth, and top-level fields (lease_duration, lease_id, renewable).",
+					writeField, path),
+			)
 		}
 
 		jsonData, err := json.Marshal(writeData)
@@ -277,6 +310,19 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 		}
 		data.WriteDataJSON = types.StringValue(string(jsonData))
 	} else {
+		// Check if write_fields was specified
+		if !data.WriteFields.IsNull() && !data.WriteFields.IsUnknown() {
+			var writeFields []string
+			resp.Diagnostics.Append(data.WriteFields.ElementsAs(ctx, &writeFields, false)...)
+			if !resp.Diagnostics.HasError() && len(writeFields) > 0 {
+				resp.Diagnostics.AddWarning(
+					"No Response Data Available",
+					fmt.Sprintf("write_fields was specified but the endpoint %q returned no response data to extract. "+
+						"The write operation may have succeeded, but no data is available to populate write_data or write_data_json. "+
+						"This can occur when the endpoint does not return any data in its response.", path),
+				)
+			}
+		}
 		data.WriteDataJSON = types.StringValue("null")
 	}
 

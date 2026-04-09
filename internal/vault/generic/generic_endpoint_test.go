@@ -9,9 +9,14 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
@@ -79,15 +84,26 @@ func TestAccGenericEndpointEphemeral(t *testing.T) {
 //
 // This test creates a wrapped token with path_wrap_ttl set and verifies that wrap_info fields
 // (token, ttl, creation_time, etc.) are successfully extracted from the response.WrapInfo structure.
+// Uses the Echo Provider to verify ephemeral resource outputs.
 func TestAccGenericEndpointEphemeral_wrapInfo(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGenericEndpointEphemeral_wrapInfoConfig(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify wrap_info fields are extracted from response.WrapInfo
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("token"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("ttl"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("creation_time"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("wrapped_accessor"), knownvalue.NotNull()),
+				},
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -138,9 +154,16 @@ func TestAccGenericEndpointEphemeral_wrapInfoSpecialField(t *testing.T) {
 			acctestutil.TestAccPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGenericEndpointEphemeral_wrapInfoSpecialFieldConfig(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify the entire wrap_info object is extracted as a JSON string
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("wrap_info"), knownvalue.NotNull()),
+				},
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -163,8 +186,11 @@ func TestAccGenericEndpointEphemeral_authSpecialField(t *testing.T) {
 			acctestutil.TestAccPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
 		Steps: []resource.TestStep{
-			// Step 1: Create infrastructure
+			// Step 1: Create infrastructure only
 			{
 				Config: testAccGenericEndpointEphemeral_infraConfig(mount, username, password),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -173,9 +199,22 @@ func TestAccGenericEndpointEphemeral_authSpecialField(t *testing.T) {
 					},
 				},
 			},
-			// Step 2: Add ephemeral resource with "auth" special field
+			// Step 2: Add the ephemeral login resource and verify outputs.
 			{
 				Config: testAccGenericEndpointEphemeral_authSpecialFieldConfig(mount, username, password),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify the entire auth object is extracted as a JSON string
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("auth"), knownvalue.NotNull()),
+				},
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 3: Remove the ephemeral login resource before test cleanup.
+			{
+				Config: testAccGenericEndpointEphemeral_infraConfig(mount, username, password),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -198,8 +237,11 @@ func TestAccGenericEndpointEphemeral_tokenAlias(t *testing.T) {
 			acctestutil.TestAccPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
 		Steps: []resource.TestStep{
-			// Step 1: Create infrastructure
+			// Step 1: Create infrastructure only
 			{
 				Config: testAccGenericEndpointEphemeral_infraConfig(mount, username, password),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -208,9 +250,22 @@ func TestAccGenericEndpointEphemeral_tokenAlias(t *testing.T) {
 					},
 				},
 			},
-			// Step 2: Add ephemeral resource with "token" alias
+			// Step 2: Add the ephemeral login resource and verify outputs.
 			{
 				Config: testAccGenericEndpointEphemeral_tokenAliasConfig(mount, username, password),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify the token field is extracted using the alias
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("token"), knownvalue.NotNull()),
+				},
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 3: Remove the ephemeral login resource before test cleanup.
+			{
+				Config: testAccGenericEndpointEphemeral_infraConfig(mount, username, password),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -229,9 +284,17 @@ func TestAccGenericEndpointEphemeral_topLevelFields(t *testing.T) {
 			acctestutil.TestAccPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGenericEndpointEphemeral_topLevelFieldsConfig(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify top-level fields are extracted
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("lease_duration"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("lease_id"), knownvalue.NotNull()),
+				},
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -250,9 +313,17 @@ func TestAccGenericEndpointEphemeral_extractFromData(t *testing.T) {
 			acctestutil.TestAccPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGenericEndpointEphemeral_extractFromDataConfig(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify fields from response.Data are extracted
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("accessor"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("policies"), knownvalue.NotNull()),
+				},
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -271,9 +342,16 @@ func TestAccGenericEndpointEphemeral_complexTypes(t *testing.T) {
 			acctestutil.TestAccPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testAccGenericEndpointEphemeral_complexTypesConfig(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify complex types (arrays) are properly extracted and JSON-encoded
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("policies"), knownvalue.NotNull()),
+				},
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -286,7 +364,7 @@ func TestAccGenericEndpointEphemeral_complexTypes(t *testing.T) {
 
 // Helper functions for ephemeral resource tests
 
-// testAccGenericEndpointEphemeral_infraConfig creates the userpass auth backend and user
+// testAccGenericEndpointEphemeral_infraConfig creates the userpass auth backend and user.
 func testAccGenericEndpointEphemeral_infraConfig(mount, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
@@ -305,7 +383,44 @@ resource "vault_generic_endpoint" "user" {
 `, mount, mount, username, password)
 }
 
-// testAccGenericEndpointEphemeral_loginConfig adds the ephemeral vault_generic_endpoint resource
+// testAccGenericEndpointEphemeral_infraWithPolicyConfig creates the auth backend,
+// policy, and persistent user using the same structure as the Terraform example config.
+func testAccGenericEndpointEphemeral_infraWithPolicyConfig(mount, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "userpass" {
+  type = "userpass"
+  path = "%s"
+}
+
+resource "vault_policy" "token_operations" {
+  name = "token-operations"
+
+  policy = <<EOT
+path "auth/token/create" {
+  capabilities = ["create", "update", "sudo"]
+}
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+path "auth/token/renew-self" {
+  capabilities = ["update"]
+}
+EOT
+}
+
+resource "vault_generic_endpoint" "user" {
+  path                 = "auth/${vault_auth_backend.userpass.path}/users/%s"
+  ignore_absent_fields = true
+  data_json = jsonencode({
+    password = "%s"
+    policies = ["default", vault_policy.token_operations.name]
+  })
+}
+`, mount, username, password)
+}
+
+// testAccGenericEndpointEphemeral_loginConfig adds the ephemeral login resource
+// on top of the persistent backend/user infrastructure.
 func testAccGenericEndpointEphemeral_loginConfig(mount, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
@@ -313,25 +428,42 @@ resource "vault_auth_backend" "userpass" {
   path = "%s"
 }
 
+resource "vault_policy" "token_operations" {
+  name = "token-operations"
+
+  policy = <<EOT
+path "auth/token/create" {
+  capabilities = ["create", "update", "sudo"]
+}
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+path "auth/token/renew-self" {
+  capabilities = ["update"]
+}
+EOT
+}
+
 resource "vault_generic_endpoint" "user" {
-  depends_on           = [vault_auth_backend.userpass]
-  path                 = "auth/%s/users/%s"
+  path                 = "auth/${vault_auth_backend.userpass.path}/users/%s"
   ignore_absent_fields = true
   data_json = jsonencode({
     password = "%s"
+    policies = ["default", vault_policy.token_operations.name]
   })
 }
 
 ephemeral "vault_generic_endpoint" "u1_token" {
-  path      = "auth/%s/login/%s"
-  data_json = jsonencode({ password = "%s" })
+  mount_id     = vault_generic_endpoint.user.id
+  mount        = "auth/${vault_auth_backend.userpass.path}/login/%s"
+  data_json    = jsonencode({ password = "%s" })
   write_fields = ["token", "accessor"]
 }
-`, mount, mount, username, password, mount, username, password)
+`, mount, username, password, username, password)
 }
 
-// testAccGenericEndpointEphemeral_withTokenUseConfig extends the config with a provider alias
-// authenticated via the ephemeral token
+// testAccGenericEndpointEphemeral_withTokenUseConfig recreates the same persistent
+// infra, logs in ephemerally, and verifies the token with a provider alias.
 func testAccGenericEndpointEphemeral_withTokenUseConfig(mount, username, password string) string {
 	vaultAddr := os.Getenv("VAULT_ADDR")
 	if vaultAddr == "" {
@@ -344,42 +476,57 @@ resource "vault_auth_backend" "userpass" {
   path = "%s"
 }
 
+resource "vault_policy" "token_operations" {
+  name = "token-operations"
+
+  policy = <<EOT
+path "auth/token/create" {
+  capabilities = ["create", "update", "sudo"]
+}
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+path "auth/token/renew-self" {
+  capabilities = ["update"]
+}
+EOT
+}
+
 resource "vault_generic_endpoint" "user" {
-  depends_on           = [vault_auth_backend.userpass]
-  path                 = "auth/%s/users/%s"
+  path                 = "auth/${vault_auth_backend.userpass.path}/users/%s"
   ignore_absent_fields = true
   data_json = jsonencode({
     password = "%s"
+    policies = ["default", vault_policy.token_operations.name]
   })
 }
 
 ephemeral "vault_generic_endpoint" "u1_token" {
-  path      = "auth/%s/login/%s"
-  data_json = jsonencode({ password = "%s" })
+  mount_id     = vault_generic_endpoint.user.id
+  mount        = "auth/${vault_auth_backend.userpass.path}/login/%s"
+  data_json    = jsonencode({ password = "%s" })
   write_fields = ["token", "accessor"]
 }
 
-# Echo provider: authenticated with the ephemeral token
 provider "vault" {
-  alias            = "echo_test"
-  address          = "%s"
-  token            = ephemeral.vault_generic_endpoint.u1_token.write_data["token"]
-  skip_child_token = true
+  alias   = "ephemeral_test"
+  address = "%s"
+  token   = ephemeral.vault_generic_endpoint.u1_token.write_data["token"]
 }
 
-# Verify the token works by looking up self
 data "vault_generic_secret" "token_check" {
-  provider = vault.echo_test
+  provider = vault.ephemeral_test
   path     = "auth/token/lookup-self"
 }
-`, mount, mount, username, password, mount, username, password, vaultAddr)
+`, mount, username, password, username, password, vaultAddr)
 }
 
 // testAccGenericEndpointEphemeral_wrapInfoConfig creates a wrapped token and extracts wrap_info fields
+// Uses Echo Provider to verify the extracted fields are available
 func testAccGenericEndpointEphemeral_wrapInfoConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "wrapped_token" {
-  path      = "auth/token/create"
+  mount     = "auth/token/create"
   data_json = jsonencode({
     policies = ["default"]
     ttl      = "1h"
@@ -387,6 +534,12 @@ ephemeral "vault_generic_endpoint" "wrapped_token" {
   path_wrap_ttl = "300s"
   write_fields = ["token", "ttl", "creation_time", "wrapped_accessor"]
 }
+
+provider "echo" {
+  data = ephemeral.vault_generic_endpoint.wrapped_token.write_data
+}
+
+resource "echo" "test" {}
 `
 }
 
@@ -394,7 +547,7 @@ ephemeral "vault_generic_endpoint" "wrapped_token" {
 func testAccGenericEndpointEphemeral_invalidJSONConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "test" {
-  path = "auth/token/create"
+  mount = "auth/token/create"
   data_json = "{invalid json"
 }
 `
@@ -404,7 +557,7 @@ ephemeral "vault_generic_endpoint" "test" {
 func testAccGenericEndpointEphemeral_invalidPathConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "test" {
-  path = "nonexistent/invalid/path"
+  mount = "nonexistent/invalid/path"
   data_json = jsonencode({})
 }
 `
@@ -414,7 +567,7 @@ ephemeral "vault_generic_endpoint" "test" {
 func testAccGenericEndpointEphemeral_wrapInfoSpecialFieldConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "wrapped_token" {
-  path      = "auth/token/create"
+  mount     = "auth/token/create"
   data_json = jsonencode({
     policies = ["default"]
     ttl      = "1h"
@@ -422,6 +575,12 @@ ephemeral "vault_generic_endpoint" "wrapped_token" {
   path_wrap_ttl = "300s"
   write_fields = ["wrap_info"]
 }
+
+provider "echo" {
+  data = ephemeral.vault_generic_endpoint.wrapped_token.write_data
+}
+
+resource "echo" "test" {}
 `
 }
 
@@ -429,63 +588,81 @@ ephemeral "vault_generic_endpoint" "wrapped_token" {
 func testAccGenericEndpointEphemeral_authSpecialFieldConfig(mount, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
-  type = "userpass"
-  path = "%s"
+	 type = "userpass"
+	 path = "%s"
 }
 
 resource "vault_generic_endpoint" "user" {
-  depends_on           = [vault_auth_backend.userpass]
-  path                 = "auth/%s/users/%s"
-  ignore_absent_fields = true
-  data_json = jsonencode({
-    password = "%s"
-  })
+	 path                 = "auth/${vault_auth_backend.userpass.path}/users/%s"
+	 ignore_absent_fields = true
+	 data_json = jsonencode({
+	   password = "%s"
+	 })
 }
 
 ephemeral "vault_generic_endpoint" "u1_token" {
-  path      = "auth/%s/login/%s"
-  data_json = jsonencode({ password = "%s" })
-  write_fields = ["auth"]
+	 mount_id     = vault_generic_endpoint.user.id
+	 mount        = "auth/${vault_auth_backend.userpass.path}/login/%s"
+	 data_json    = jsonencode({ password = "%s" })
+	 write_fields = ["auth"]
 }
-`, mount, mount, username, password, mount, username, password)
+
+provider "echo" {
+	 data = ephemeral.vault_generic_endpoint.u1_token.write_data
+}
+
+resource "echo" "test" {}
+`, mount, username, password, username, password)
 }
 
 // testAccGenericEndpointEphemeral_tokenAliasConfig tests "token" alias for "client_token"
 func testAccGenericEndpointEphemeral_tokenAliasConfig(mount, username, password string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
-  type = "userpass"
-  path = "%s"
+	 type = "userpass"
+	 path = "%s"
 }
 
 resource "vault_generic_endpoint" "user" {
-  depends_on           = [vault_auth_backend.userpass]
-  path                 = "auth/%s/users/%s"
-  ignore_absent_fields = true
-  data_json = jsonencode({
-    password = "%s"
-  })
+	 path                 = "auth/${vault_auth_backend.userpass.path}/users/%s"
+	 ignore_absent_fields = true
+	 data_json = jsonencode({
+	   password = "%s"
+	 })
 }
 
 ephemeral "vault_generic_endpoint" "u1_token" {
-  path      = "auth/%s/login/%s"
-  data_json = jsonencode({ password = "%s" })
-  write_fields = ["token"]
+	 mount_id     = vault_generic_endpoint.user.id
+	 mount        = "auth/${vault_auth_backend.userpass.path}/login/%s"
+	 data_json    = jsonencode({ password = "%s" })
+	 write_fields = ["token"]
 }
-`, mount, mount, username, password, mount, username, password)
+
+provider "echo" {
+	 data = ephemeral.vault_generic_endpoint.u1_token.write_data
+}
+
+resource "echo" "test" {}
+`, mount, username, password, username, password)
 }
 
 // testAccGenericEndpointEphemeral_topLevelFieldsConfig tests extraction of top-level response fields
 func testAccGenericEndpointEphemeral_topLevelFieldsConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "token" {
-  path      = "auth/token/create"
+  mount     = "auth/token/create"
   data_json = jsonencode({
     policies = ["default"]
     ttl      = "1h"
   })
   write_fields = ["lease_duration", "lease_id"]
 }
+
+provider "echo" {
+  data = ephemeral.vault_generic_endpoint.token.write_data
+}
+
+resource "echo" "test" {}
 `
 }
 
@@ -493,13 +670,19 @@ ephemeral "vault_generic_endpoint" "token" {
 func testAccGenericEndpointEphemeral_extractFromDataConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "token" {
-  path      = "auth/token/create"
+  mount     = "auth/token/create"
   data_json = jsonencode({
     policies = ["default"]
     ttl      = "1h"
   })
-  write_fields = ["policies", "ttl"]
+  write_fields = ["accessor", "policies"]
 }
+
+provider "echo" {
+  data = ephemeral.vault_generic_endpoint.token.write_data
+}
+
+resource "echo" "test" {}
 `
 }
 
@@ -507,12 +690,18 @@ ephemeral "vault_generic_endpoint" "token" {
 func testAccGenericEndpointEphemeral_complexTypesConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "token" {
-  path      = "auth/token/create"
+  mount     = "auth/token/create"
   data_json = jsonencode({
     policies = ["default", "policy1", "policy2"]
     ttl      = "1h"
   })
   write_fields = ["policies"]
 }
+
+provider "echo" {
+  data = ephemeral.vault_generic_endpoint.token.write_data
+}
+
+resource "echo" "test" {}
 `
 }
