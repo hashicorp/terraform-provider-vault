@@ -21,16 +21,14 @@ resource "vault_auth_backend" "userpass" {
 }
 
 resource "vault_userpass_auth_backend_user" "user" {
-  mount       = vault_auth_backend.userpass.path
-  username    = "example-user"
-  password_wo = "initial-password"
+  mount                = vault_auth_backend.userpass.path
+  username             = "example-user"
+  password_wo          = "initial-password"
+  password_wo_version  = 1
 
   token_policies = ["default", "dev"]
   token_ttl      = 3600
   token_max_ttl  = 7200
-  token_num_uses = 0
-  token_period   = 0
-  token_no_default_policy = false
 }
 ```
 
@@ -38,9 +36,10 @@ resource "vault_userpass_auth_backend_user" "user" {
 
 ```hcl
 resource "vault_userpass_auth_backend_user" "user_with_hash" {
-  mount         = vault_auth_backend.userpass.path
-  username      = "example-user-hash"
-  password_hash = "$2a$10$V1HAj0oLIhJtqkj3w0zGx.fjMxmVnY2m0sI4GTiD6W69eCi7epTzW"
+  mount                     = vault_auth_backend.userpass.path
+  username                  = "example-user-hash"
+  password_hash_wo          = "$2a$10$V1HAj0oLIhJtqkj3w0zGx.fjMxmVnY2m0sI4GTiD6W69eCi7epTzW"
+  password_hash_wo_version  = 1
 
   token_policies = ["default", "dev"]
   token_ttl      = 3600
@@ -72,20 +71,20 @@ resource "vault_userpass_auth_backend_user" "user_namespaced" {
 ### Invalid Configuration Examples (Do Not Apply)
 
 ```hcl
-# Invalid: both password_wo and password_hash are set.
+# Invalid: both password_wo and password_hash_wo are set.
 # Exactly one of these fields must be provided.
 # resource "vault_userpass_auth_backend_user" "invalid_both" {
 #   mount         = vault_auth_backend.userpass.path
 #   username      = "invalid-both"
 #   password_wo   = "plain-password"
-#   password_hash = "$2a$10$7EqJtq98hPqEX7fNZaFWoOHiW6m7jzF3sQ6Y8bK1J0Y9mXw1lK5W2"
+#   password_hash_wo = "$2a$10$7EqJtq98hPqEX7fNZaFWoOHiW6m7jzF3sQ6Y8bK1J0Y9mXw1lK5W2"
 # }
 
-# Invalid: password_hash must be a valid bcrypt hash.
+# Invalid: password_hash_wo must be a valid bcrypt hash.
 # resource "vault_userpass_auth_backend_user" "invalid_hash" {
 #   mount         = vault_auth_backend.userpass.path
 #   username      = "invalid-hash"
-#   password_hash = "not-bcrypt"
+#   password_hash_wo = "not-bcrypt"
 # }
 ```
 
@@ -105,10 +104,17 @@ The following arguments are supported:
 * `password_wo` - (Optional, Sensitive, Write-only) Password for this user.
   This value is never read back from Vault or stored in Terraform state.
 
-* `password_hash` - (Optional, Sensitive, Write-only) Pre-hashed password for this user in bcrypt format.
-  Mutually exclusive with `password_wo`. Available in Vault 1.17 and later.
+* `password_wo_version` - (Optional) Version counter for the `password_wo` field.
+  Since write-only values are not stored in state, Terraform cannot detect when the password changes.
+  Increment this value whenever you update `password_wo` to ensure the new password is sent to Vault.
+  Must be used with `password_wo`.
 
-Exactly one of `password_wo` or `password_hash` must be specified.
+* `password_hash_wo` - (Optional, Sensitive, Write-only) Pre-hashed password for this user in bcrypt format.Mutually exclusive with `password_wo`. Available in Vault 1.17 and later.
+
+* `password_hash_wo_version` - (Optional) Version counter for the `password_hash_wo` field.
+  Since write-only values are not stored in state, Terraform cannot detect when the password hash changes. Increment this value whenever you update `password_hash_wo` to ensure the new password hash is sent to Vault.Must be used with `password_hash_wo`.
+
+Exactly one of `password_wo` or `password_hash_wo` must be specified.
 
 
 ### Token Settings
@@ -149,7 +155,10 @@ For more information on token settings, see the [Token Fields documentation](/do
 
 * `alias_metadata` - (Optional) A map of string to string that will be set as metadata on
   the identity alias. **Note:** This field is only supported in Vault Enterprise 1.21.0 and above.
-  If configured for vault ent version lesser than 1.21.0, this field will be ignored, even though the value is persisted in the state file.
+  On Vault Enterprise versions prior to 1.21.0, Vault does not round-trip `alias_metadata`
+  (it is silently dropped on write and absent on read). To avoid refresh drift and
+  "provider produced inconsistent result" errors, the provider intentionally preserves the
+  configured value in Terraform state even when Vault doesn't return it.
   *Available only for Vault Enterprise*.
 
 ## Import

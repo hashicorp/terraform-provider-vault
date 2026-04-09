@@ -101,7 +101,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `mount` - (Optional) The mount path for the Userpass auth engine in Vault.
+* `mount` - (Required) The mount path for the Userpass auth engine in Vault.
   Defaults to `userpass`.
 
 * `mount_id` - (Optional) An opaque value used to defer provisioning of the
@@ -127,44 +127,3 @@ In addition to the arguments above, the following attributes are exported:
 * `lease_duration` - The lease duration of the client token in seconds.
 
 * `renewable` - Whether the client token is renewable.
-
-### Token Settings
-
-For more information on token settings, see the [Token Fields documentation](/docs/providers/vault/index.html#token-fields).
-
-* `token_ttl` - (Optional) The incremental lifetime for generated tokens in seconds. 
-  Its current value will be referenced at renewal time.
-
-* `token_max_ttl` - (Optional) The maximum lifetime for generated tokens in seconds. 
-  Its current value will be referenced at renewal time.
-
-* `token_period` - (Optional) The maximum allowed period value when a periodic token is requested from this role.
-
-* `token_policies` - (Optional) List of policies to encode onto generated tokens. Depending 
-  on the auth method, this list may be supplemented by user/group/other values.
-
-* `token_bound_cidrs` - (Optional) List of CIDR blocks; if set, specifies blocks of IP 
-  addresses which can authenticate successfully, and ties the resulting token to these blocks 
-  as well.
-
-* `token_explicit_max_ttl` - (Optional) If set, will encode an explicit max TTL onto the token 
-  in seconds. This is a hard cap even if `token_ttl` and `token_max_ttl` would otherwise allow 
-  a renewal.
-
-* `token_no_default_policy` - (Optional) If set, the default policy will not be set on 
-  generated tokens; otherwise it will be added to the policies set in `token_policies`.
-
-* `token_num_uses` - (Optional) The maximum number of times a generated token may be used 
-  (within its lifetime); 0 means unlimited. If you require the token to have the ability to 
-  create child tokens, you will need to set this value to 0.
-
-* `token_type` - (Optional) The type of token that should be generated. Can be `service`,
-  `batch`, or `default` to use the mount's tuned default (which unless changed will be
-  `service` tokens). For token store roles, there are two additional possibilities:
-  `default-service` and `default-batch` which specify the type to return unless the client
-  requests a different type at generation time.
-
-* `alias_metadata` - (Optional) A map of string to string that will be set as metadata on
-  the identity alias. **Note:** This field is only supported in Vault Enterprise 1.21.0 and above.
-  If configured for vault ent version lesser than 1.21.0, this field will be ignored, even though the value is persisted in the state file.
-  *Available only for Vault Enterprise*.
