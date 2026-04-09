@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -51,10 +52,12 @@ type UserpassAuthUserResource struct {
 type UserpassAuthUserModel struct {
 	token.TokenModel
 
-	Mount          types.String `tfsdk:"mount"`
-	Username       types.String `tfsdk:"username"`
-	PasswordWO     types.String `tfsdk:"password_wo"`
-	PasswordHashWO types.String `tfsdk:"password_hash_wo"`
+	Mount                 types.String `tfsdk:"mount"`
+	Username              types.String `tfsdk:"username"`
+	PasswordWO            types.String `tfsdk:"password_wo"`
+	PasswordWOVersion     types.Int64  `tfsdk:"password_wo_version"`
+	PasswordHashWO        types.String `tfsdk:"password_hash_wo"`
+	PasswordHashWOVersion types.Int64  `tfsdk:"password_hash_wo_version"`
 }
 
 type UserpassAuthUserAPIModel struct {
@@ -89,8 +92,18 @@ func (r *UserpassAuthUserResource) Schema(_ context.Context, _ resource.SchemaRe
 				Sensitive:           true,
 				WriteOnly:           true,
 				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(consts.FieldPasswordHashWO)),
 					stringvalidator.ExactlyOneOf(path.MatchRelative().AtParent().AtName(consts.FieldPasswordHashWO)),
+				},
+			},
+			consts.FieldPasswordWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version counter for the write-only `password_wo` field. " +
+					"Since write-only values are not stored in state, Terraform cannot detect when the password changes. " +
+					"Increment this value whenever you update `password_wo` to ensure the new password is sent to Vault.",
+				Optional: true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName(consts.FieldPasswordWO)),
+					int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName(consts.FieldPasswordHashWO)),
+					int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName(consts.FieldPasswordHashWOVersion)),
 				},
 			},
 			consts.FieldPasswordHashWO: schema.StringAttribute{
@@ -99,9 +112,19 @@ func (r *UserpassAuthUserResource) Schema(_ context.Context, _ resource.SchemaRe
 				Sensitive:           true,
 				WriteOnly:           true,
 				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRelative().AtParent().AtName(consts.FieldPasswordWO)),
 					stringvalidator.ExactlyOneOf(path.MatchRelative().AtParent().AtName(consts.FieldPasswordWO)),
 					stringvalidator.RegexMatches(bcryptHashRegexp, "must be a bcrypt hash"),
+				},
+			},
+			consts.FieldPasswordHashWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version counter for the write-only `password_hash_wo` field. " +
+					"Since write-only values are not stored in state, Terraform cannot detect when the password hash changes. " +
+					"Increment this value whenever you update `password_hash_wo` to ensure the new password hash is sent to Vault.",
+				Optional: true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRelative().AtParent().AtName(consts.FieldPasswordHashWO)),
+					int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName(consts.FieldPasswordWO)),
+					int64validator.ConflictsWith(path.MatchRelative().AtParent().AtName(consts.FieldPasswordWOVersion)),
 				},
 			},
 		},
@@ -116,6 +139,15 @@ func (r *UserpassAuthUserResource) Create(ctx context.Context, req resource.Crea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Read version fields from config to ensure they're stored in state
+	var configData UserpassAuthUserModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.PasswordWOVersion = configData.PasswordWOVersion
+	data.PasswordHashWOVersion = configData.PasswordHashWOVersion
 
 	resp.Diagnostics.Append(r.upsertUser(ctx, &data, req.Config, errutil.VaultCreateErr)...)
 	if resp.Diagnostics.HasError() {
@@ -163,6 +195,15 @@ func (r *UserpassAuthUserResource) Update(ctx context.Context, req resource.Upda
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	// Read version fields from config to ensure they're stored in state
+	var configData UserpassAuthUserModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &configData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.PasswordWOVersion = configData.PasswordWOVersion
+	data.PasswordHashWOVersion = configData.PasswordHashWOVersion
 
 	resp.Diagnostics.Append(r.upsertUser(ctx, &data, req.Config, errutil.VaultUpdateErr)...)
 	if resp.Diagnostics.HasError() {
@@ -271,7 +312,7 @@ func (r *UserpassAuthUserResource) upsertUser(ctx context.Context, data *Userpas
 		return diags
 	}
 
-	if err := r.updatePasswordAndPoliciesEndpoints(ctx, vaultClient, data, passwordWO.ValueString()); err != nil {
+	if err := r.updatePasswordAndPoliciesEndpoints(ctx, vaultClient, data, passwordWO.ValueString(), passwordHashWO.ValueString()); err != nil {
 		diags.AddError(writeErr(err))
 		return diags
 	}
@@ -344,11 +385,18 @@ func (r *UserpassAuthUserResource) getAPIModel(ctx context.Context, data *Userpa
 }
 
 // updatePasswordAndPoliciesEndpoints writes legacy compatibility endpoints when needed.
-func (r *UserpassAuthUserResource) updatePasswordAndPoliciesEndpoints(ctx context.Context, vaultClient *api.Client, data *UserpassAuthUserModel, password string) error {
+func (r *UserpassAuthUserResource) updatePasswordAndPoliciesEndpoints(ctx context.Context, vaultClient *api.Client, data *UserpassAuthUserModel, password, passwordHash string) error {
 	if password != "" {
 		_, err := vaultClient.Logical().WriteWithContext(ctx, r.userPath(data.Mount.ValueString(), data.Username.ValueString(), "password"), map[string]any{"password": password})
 		if err != nil && !util.Is404(err) {
 			return fmt.Errorf("failed writing user password endpoint: %w", err)
+		}
+	}
+
+	if passwordHash != "" {
+		_, err := vaultClient.Logical().WriteWithContext(ctx, r.userPath(data.Mount.ValueString(), data.Username.ValueString(), "password"), map[string]any{"password_hash": passwordHash})
+		if err != nil && !util.Is404(err) {
+			return fmt.Errorf("failed writing user password_hash endpoint: %w", err)
 		}
 	}
 
@@ -367,7 +415,7 @@ func (r *UserpassAuthUserResource) updatePasswordAndPoliciesEndpoints(ctx contex
 
 	sort.Strings(policies)
 	payload := map[string]any{
-		"policies": strings.Join(policies, ","),
+		"token_policies": policies,
 	}
 
 	_, err := vaultClient.Logical().WriteWithContext(ctx, r.userPath(data.Mount.ValueString(), data.Username.ValueString(), "policies"), payload)
@@ -394,7 +442,7 @@ func (r *UserpassAuthUserResource) populateDataModelFromAPI(ctx context.Context,
 	}
 
 	// Save the current alias_metadata value before PopulateTokenModelFromAPI
-	// overwrites it. On Vault versions prior to 1.21, the CF auth plugin does
+	// overwrites it. On Vault versions prior to 1.21, the Userpass auth does
 	// not support alias_metadata: it is silently dropped on write and absent
 	// on read. Restoring the value preserves plan/state consistency and avoids
 	// a "provider produced inconsistent result" error.
@@ -407,8 +455,6 @@ func (r *UserpassAuthUserResource) populateDataModelFromAPI(ctx context.Context,
 	if !r.supportsAliasMetadata() {
 		data.TokenModel.AliasMetadata = savedAliasMetadata
 	}
-	//data.Mount = types.StringValue(data.Mount.ValueString())
-	//data.Username = types.StringValue(data.Username.ValueString())
 
 	return nil
 }

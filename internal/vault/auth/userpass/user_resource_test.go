@@ -21,7 +21,12 @@ import (
 
 const testAccUserpassAuthBackendUserResourceAddress = "vault_userpass_auth_backend_user.test"
 
-var testAccUserpassAuthBackendUserImportIgnore = []string{consts.FieldPasswordWO, consts.FieldPasswordHashWO}
+var testAccUserpassAuthBackendUserImportIgnore = []string{
+	consts.FieldPasswordWO,
+	consts.FieldPasswordHashWO,
+	consts.FieldPasswordWOVersion,
+	consts.FieldPasswordHashWOVersion,
+}
 
 func TestAccUserpassAuthBackendUser(t *testing.T) {
 	mount := acctest.RandomWithPrefix("userpass-mount")
@@ -139,6 +144,80 @@ func TestAccUserpassAuthBackendUser_passwordWO(t *testing.T) {
 	})
 }
 
+func TestAccUserpassAuthBackendUser_passwordWOVersion(t *testing.T) {
+	mount := acctest.RandomWithPrefix("userpass-mount")
+	username := acctest.RandomWithPrefix("userpass-user")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccUserpassAuthBackendUserConfigPasswordWithVersion(mount, username, "initial-password", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldUsername, username),
+					resource.TestCheckNoResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordWO),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordWOVersion, "1"),
+					testCheckUserpassLoginPassword(testAccUserpassAuthBackendUserResourceAddress, "initial-password"),
+				),
+				ConfigPlanChecks: testAccUserpassAuthBackendUserEmptyPlanChecks(),
+			},
+			{
+				Config: testAccUserpassAuthBackendUserConfigPasswordWithVersion(mount, username, "updated-password", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordWO),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordWOVersion, "2"),
+					testCheckUserpassLoginPassword(testAccUserpassAuthBackendUserResourceAddress, "updated-password"),
+				),
+				ConfigPlanChecks: testAccUserpassAuthBackendUserEmptyPlanChecks(),
+			},
+			testAccUserpassAuthBackendUserImportStep(mount, username),
+		},
+	})
+}
+
+func TestAccUserpassAuthBackendUser_passwordHashWOVersion(t *testing.T) {
+	mount := acctest.RandomWithPrefix("userpass-mount")
+	username := acctest.RandomWithPrefix("userpass-user")
+
+	// bcrypt hash for "initial-password"
+	initialHash := "$2a$10$V1HAj0oLIhJtqkj3w0zGx.fjMxmVnY2m0sI4GTiD6W69eCi7epTzW"
+	// bcrypt hash for "updated-password"
+	updatedHash := "$2a$10$8K1p/a0dL1LH6Mqi/2HYiuyRdvEyavS1pBpCOgEKQVqfhU7wOLCRC"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion117)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccUserpassAuthBackendUserConfigHashWithVersion(mount, username, initialHash, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldUsername, username),
+					resource.TestCheckNoResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordHashWO),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordHashWOVersion, "1"),
+				),
+				ConfigPlanChecks: testAccUserpassAuthBackendUserEmptyPlanChecks(),
+			},
+			{
+				Config: testAccUserpassAuthBackendUserConfigHashWithVersion(mount, username, updatedHash, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordHashWO),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordHashWOVersion, "2"),
+				),
+				ConfigPlanChecks: testAccUserpassAuthBackendUserEmptyPlanChecks(),
+			},
+			testAccUserpassAuthBackendUserImportStep(mount, username),
+		},
+	})
+}
+
 func TestAccUserpassAuthBackendUser_passwordHashValidator(t *testing.T) {
 	mount := acctest.RandomWithPrefix("userpass-mount")
 	username := acctest.RandomWithPrefix("userpass-user")
@@ -170,7 +249,7 @@ func TestAccUserpassAuthBackendUser_bothCredentialsSet(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccUserpassAuthBackendUserConfigBothCredentials(mount, username),
-				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination.*(password_hash_wo.*cannot be specified when .*password_wo|password_wo.*cannot be specified when .*password_hash_wo)`),
+				ExpectError: regexp.MustCompile(`(?s)Invalid Attribute Combination.*one \(and only one\) of.*\[password_(wo|hash_wo)`),
 			},
 		},
 	})
@@ -213,6 +292,34 @@ func TestAccUserpassAuthBackendUser_updatePasswordAndPolicies(t *testing.T) {
 				),
 				ConfigPlanChecks: testAccUserpassAuthBackendUserEmptyPlanChecks(),
 			},
+		},
+	})
+}
+
+func TestAccUserpassAuthBackendUser_aliasMetadata(t *testing.T) {
+	mount := acctest.RandomWithPrefix("userpass-mount")
+	username := acctest.RandomWithPrefix("userpass-user")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccUserpassAuthBackendUserConfigAliasMetadata(mount, username, "initial-password"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldAliasMetadata+".%", "2"),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldAliasMetadata+".team", "platform"),
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldAliasMetadata+".env", "dev"),
+				),
+				ConfigPlanChecks: testAccUserpassAuthBackendUserEmptyPlanChecks(),
+			},
+			testAccUserpassAuthBackendUserImportStep(mount, username),
 		},
 	})
 }
@@ -365,28 +472,6 @@ resource "vault_userpass_auth_backend_user" "test" {
 `, namespace, mount, username, password)
 }
 
-func testAccUserpassAuthBackendUserConfigTokenZeroValues(mount, username, password string) string {
-	return fmt.Sprintf(`
-resource "vault_auth_backend" "userpass" {
-  type = "userpass"
-  path = %q
-}
-
-resource "vault_userpass_auth_backend_user" "test" {
-	mount                   = vault_auth_backend.userpass.path
-	username                = %q
-	password_wo             = %q
-	token_no_default_policy = false
-	token_num_uses          = 0
-	token_period            = 0
-	alias_metadata = {
-	  team = "platform"
-	  env  = "dev"
-	}
-}
-`, mount, username, password)
-}
-
 func testAccUserpassAuthBackendUserConfigBothCredentials(mount, username string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
@@ -422,4 +507,56 @@ resource "vault_userpass_auth_backend_user" "test" {
 	token_policies = [%s]
 }
 `, mount, username, password, strings.Join(quotedPolicies, ", "))
+}
+
+func testAccUserpassAuthBackendUserConfigPasswordWithVersion(mount, username, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "userpass" {
+  type = "userpass"
+  path = %q
+}
+
+resource "vault_userpass_auth_backend_user" "test" {
+	mount                = vault_auth_backend.userpass.path
+	username             = %q
+	password_wo          = %q
+	password_wo_version  = %d
+}
+`, mount, username, password, version)
+}
+
+func testAccUserpassAuthBackendUserConfigHashWithVersion(mount, username, passwordHash string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "userpass" {
+  type = "userpass"
+  path = %q
+}
+
+resource "vault_userpass_auth_backend_user" "test" {
+	mount                     = vault_auth_backend.userpass.path
+	username                  = %q
+	password_hash_wo          = %q
+	password_hash_wo_version  = %d
+}
+`, mount, username, passwordHash, version)
+}
+
+func testAccUserpassAuthBackendUserConfigAliasMetadata(mount, username, password string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "userpass" {
+  type = "userpass"
+  path = %q
+}
+
+resource "vault_userpass_auth_backend_user" "test" {
+	mount                = vault_auth_backend.userpass.path
+	username             = %q
+	password_wo          = %q
+	password_wo_version  = 1
+	alias_metadata = {
+		team = "platform"
+		env  = "dev"
+	}
+}
+`, mount, username, password)
 }
