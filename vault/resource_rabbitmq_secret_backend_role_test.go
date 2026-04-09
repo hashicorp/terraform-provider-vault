@@ -366,12 +366,12 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   tags = "management"
   
   vhost {
-    host      = "cosmos"
+    host      = "demand"
     read      = "^toto$"
     write     = "^toto$"
     configure = "^toto$"
   }
-  
+
   vhost {
     host      = "customer"
     read      = "^toto$"
@@ -380,14 +380,14 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
   }
   
   vhost {
-    host      = "demand"
+    host      = "ei"
     read      = "^toto$"
     write     = "^toto$"
     configure = "^toto$"
   }
-  
+
   vhost {
-    host      = "ei"
+    host      = "cosmos"
     read      = "^toto$"
     write     = "^toto$"
     configure = "^toto$"
@@ -413,6 +413,13 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
     write     = "^toto$"
     configure = "^toto$"
   }
+
+  vhost {
+    host      = "ship"
+    read      = "^toto$"
+    write     = "^toto$"
+    configure = "^toto$"
+  }
   
   vhost {
     host      = "mulan_test"
@@ -434,12 +441,14 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
     write     = "^toto$"
     configure = "^toto$"
   }
-  
-  vhost {
-    host      = "ship"
-    read      = "^toto$"
-    write     = "^toto$"
-    configure = "^toto$"
+
+  vhost_topic {
+    host = "customers"
+    vhost {
+      topic = "customer.events"
+      read  = ".*"
+      write = "^customer\\..*"
+    }
   }
   
   vhost_topic {
@@ -465,14 +474,6 @@ resource "vault_rabbitmq_secret_backend_role" "test" {
     }
   }
 
-  vhost_topic {
-    host = "customers"
-    vhost {
-      topic = "customer.events"
-      read  = ".*"
-      write = "^customer\\..*"
-    }
-  }
 }
 `, path, connectionUri, username, password, name)
 }
