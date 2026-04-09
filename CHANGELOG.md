@@ -1,5 +1,9 @@
 ## Unreleased
 
+BREAKING CHANGES:
+
+* Renamed all Vault 2.0 pki-external-ca resources from version 5.8.0 to a common prefix of `vault_pki_external_ca_`. ([#2838](https://github.com/hashicorp/terraform-provider-vault/pull/2838))
+
 FEATURES:
 
 * **New Resources**: Add support for Vault Key Management secrets engine with resources for managing KMS providers (AWS KMS, Azure Key Vault, GCP Cloud KMS), cryptographic keys, key distribution, replication, and rotation (Vault Enterprise). ([#2802](https://github.com/hashicorp/terraform-provider-vault/pull/2802))
