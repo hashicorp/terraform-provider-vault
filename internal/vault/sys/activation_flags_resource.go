@@ -6,6 +6,7 @@ package sys
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"net/url"
 	"strings"
@@ -133,7 +134,10 @@ func (r *ActivationFlagsResource) Read(ctx context.Context, req resource.ReadReq
 			return
 		}
 
-		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddError(
+			"Failed to read activation flags",
+			fmt.Sprintf("Vault returned no data for %q; this singleton system endpoint may be unavailable or unsupported", activationFlagsPath),
+		)
 		return
 	}
 
@@ -173,11 +177,13 @@ func (r *ActivationFlagsResource) Update(ctx context.Context, req resource.Updat
 }
 
 // Delete is called during terraform destroy
-func (r *ActivationFlagsResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *ActivationFlagsResource) Delete(ctx context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.Diagnostics.AddWarning(
 		"Activation flags remain enabled in Vault",
 		"The public Vault API exposes activation but not deactivation for activation flags. Terraform will remove this resource from state, but it cannot disable flags that were previously activated.",
 	)
+
+	resp.State.RemoveResource(ctx)
 }
 
 func getDesiredActivatedFlags(ctx context.Context, data ActivationFlagsModel, diagnostics *diag.Diagnostics) ([]string, bool) {
@@ -202,6 +208,7 @@ func readActivationFlagsState(ctx context.Context, cli *api.Client, data *Activa
 	}
 
 	if vaultResp == nil {
+		diagnostics.AddError(errutil.VaultReadResponseNil())
 		return false
 	}
 
@@ -213,6 +220,8 @@ func readActivationFlagsState(ctx context.Context, cli *api.Client, data *Activa
 		)
 		return false
 	}
+
+	sort.Strings(flags)
 
 	flagsList, diags := types.ListValueFrom(ctx, types.StringType, flags)
 	diagnostics.Append(diags...)
@@ -254,15 +263,6 @@ func reconcileActivatedFlags(ctx context.Context, cli *api.Client, desiredFlags 
 	}
 
 	return nil
-}
-
-func readCurrentActivatedFlags(ctx context.Context, cli *api.Client) ([]string, error) {
-	flagsState, err := readActivationFlags(ctx, cli)
-	if err != nil {
-		return nil, err
-	}
-
-	return flagsState.Activated, nil
 }
 
 func readActivationFlags(ctx context.Context, cli *api.Client) (*activationFlagsState, error) {

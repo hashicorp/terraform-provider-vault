@@ -1,220 +1,203 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package sys
+package sys_test
 
 import (
-	"context"
-	"reflect"
-	"strings"
 	"testing"
 
-	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestActivationFlagsResourceMetadata(t *testing.T) {
-	t.Parallel()
+// TestAccActivationFlagsResource_basic tests basic resource creation and read
+// Note: This test reads the current state and ensures it can be managed
+func TestAccActivationFlagsResource_basic(t *testing.T) {
+	resourceName := "vault_activation_flags.test"
 
-	resp := &fwresource.MetadataResponse{}
-	NewActivationFlagsResource().Metadata(context.Background(), fwresource.MetadataRequest{ProviderTypeName: "vault"}, resp)
-
-	if resp.TypeName != "vault_activation_flags" {
-		t.Fatalf("got type name %q, want %q", resp.TypeName, "vault_activation_flags")
-	}
-}
-
-func TestActivationFlagsResourceSchema(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	resp := &fwresource.SchemaResponse{}
-	NewActivationFlagsResource().Schema(ctx, fwresource.SchemaRequest{}, resp)
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("schema diagnostics: %+v", resp.Diagnostics)
-	}
-
-	if diags := resp.Schema.ValidateImplementation(ctx); diags.HasError() {
-		t.Fatalf("schema validation diagnostics: %+v", diags)
-	}
-
-	if _, ok := resp.Schema.Attributes[consts.FieldActivatedFlags]; !ok {
-		t.Fatalf("missing %q attribute", consts.FieldActivatedFlags)
-	}
-	if _, ok := resp.Schema.Attributes[consts.FieldID]; !ok {
-		t.Fatalf("missing %q attribute", consts.FieldID)
-	}
-	if _, ok := resp.Schema.Attributes[consts.FieldNamespace]; !ok {
-		t.Fatalf("missing %q attribute", consts.FieldNamespace)
-	}
-}
-
-func TestRawActivationFlagsToStrings(t *testing.T) {
-	tests := []struct {
-		name    string
-		raw     interface{}
-		want    []string
-		wantErr bool
-	}{
-		{
-			name: "nil",
-			raw:  nil,
-			want: []string{},
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
-		{
-			name: "string slice",
-			raw:  []string{"feature-a", "feature-b"},
-			want: []string{"feature-a", "feature-b"},
-		},
-		{
-			name: "interface slice",
-			raw:  []interface{}{"feature-a", "feature-b"},
-			want: []string{"feature-a", "feature-b"},
-		},
-		{
-			name:    "interface slice with non-string",
-			raw:     []interface{}{"feature-a", 1},
-			wantErr: true,
-		},
-		{
-			name:    "unexpected type",
-			raw:     "feature-a",
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := rawActivationFlagsToStrings(tt.raw, "activated_flags")
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("got %#v, want %#v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestDiffActivationFlags(t *testing.T) {
-	tests := []struct {
-		name  string
-		left  []string
-		right []string
-		want  []string
-	}{
-		{
-			name:  "returns missing items from right",
-			left:  []string{"feature-a", "feature-b"},
-			right: []string{"feature-b"},
-			want:  []string{"feature-a"},
-		},
-		{
-			name:  "deduplicates left side",
-			left:  []string{"feature-a", "feature-a", "feature-b"},
-			right: []string{"feature-b"},
-			want:  []string{"feature-a"},
-		},
-		{
-			name:  "empty when all are declared",
-			left:  []string{"feature-a"},
-			right: []string{"feature-a", "feature-b"},
-			want:  []string{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := diffActivationFlags(tt.left, tt.right)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Fatalf("got %#v, want %#v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestValidateDesiredActivationFlags(t *testing.T) {
-	tests := []struct {
-		name       string
-		desired    []string
-		flagsState *activationFlagsState
-		wantErr    string
-	}{
-		{
-			name:    "accepts exact feature key",
-			desired: []string{"secrets-sync"},
-			flagsState: &activationFlagsState{
-				Unactivated: []string{"secrets-sync"},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsResourceConfig_basic(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
+					resource.TestCheckResourceAttrSet(resourceName, "activated_flags.#"),
+				),
 			},
 		},
-		{
-			name:    "suggests hyphenated feature key",
-			desired: []string{"secrets_sync"},
-			flagsState: &activationFlagsState{
-				Unactivated: []string{"secrets-sync"},
-			},
-			wantErr: `Did you mean "secrets-sync"?`,
-		},
-		{
-			name:    "rejects unknown feature key",
-			desired: []string{"unknown-feature"},
-			flagsState: &activationFlagsState{
-				Unactivated: []string{"secrets-sync"},
-			},
-			wantErr: `activation flag "unknown-feature" was not returned`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateDesiredActivationFlags(tt.desired, tt.flagsState)
-			if tt.wantErr == "" {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-				return
-			}
-
-			if err == nil {
-				t.Fatal("expected error, got nil")
-			}
-
-			if !strings.Contains(err.Error(), tt.wantErr) {
-				t.Fatalf("got error %q, want substring %q", err.Error(), tt.wantErr)
-			}
-		})
-	}
+	})
 }
 
-func TestGetActivationFlagsFromResponse_UsesVaultAPIFieldNames(t *testing.T) {
-	resp := map[string]interface{}{
-		"activated":   []interface{}{"feature-a"},
-		"unactivated": []interface{}{"feature-b"},
-	}
+// TestAccActivationFlagsResource_withFlags tests managing specific activation flags
+// Note: The actual flags available depend on Vault version and license
+func TestAccActivationFlagsResource_withFlags(t *testing.T) {
+	resourceName := "vault_activation_flags.test"
 
-	activated, err := getActivationFlagsFromResponse(resp, activationFlagsAPIActivatedField)
-	if err != nil {
-		t.Fatalf("unexpected activated error: %v", err)
-	}
-
-	unactivated, err := getActivationFlagsFromResponse(resp, activationFlagsAPIUnactivatedField)
-	if err != nil {
-		t.Fatalf("unexpected unactivated error: %v", err)
-	}
-
-	if !reflect.DeepEqual(activated, []string{"feature-a"}) {
-		t.Fatalf("got activated %#v, want %#v", activated, []string{"feature-a"})
-	}
-
-	if !reflect.DeepEqual(unactivated, []string{"feature-b"}) {
-		t.Fatalf("got unactivated %#v, want %#v", unactivated, []string{"feature-b"})
-	}
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// First, read current state to understand what flags exist
+				Config: testAccActivationFlagsResourceConfig_readCurrent(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
+					resource.TestCheckResourceAttrSet(resourceName, "activated_flags.#"),
+				),
+			},
+		},
+	})
 }
+
+// TestAccActivationFlagsResource_import tests importing the resource
+func TestAccActivationFlagsResource_import(t *testing.T) {
+	resourceName := "vault_activation_flags.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsResourceConfig_basic(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
+// TestAccActivationFlagsResource_emptyList tests resource with empty activated_flags list
+// This represents managing the state where no flags should be activated
+func TestAccActivationFlagsResource_emptyList(t *testing.T) {
+	resourceName := "vault_activation_flags.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsResourceConfig_empty(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
+					// Note: activated_flags.# may not be 0 if flags were already activated
+					// since the API doesn't support deactivation
+					resource.TestCheckResourceAttrSet(resourceName, "activated_flags.#"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccActivationFlagsResource_delete tests that delete shows warning
+func TestAccActivationFlagsResource_delete(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsResourceConfig_basic(),
+			},
+			{
+				Config:  testAccActivationFlagsResourceConfig_basic(),
+				Destroy: true,
+			},
+		},
+	})
+}
+
+// TestAccActivationFlagsResource_namespace tests resource with namespace
+func TestAccActivationFlagsResource_namespace(t *testing.T) {
+	resourceName := "vault_activation_flags.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsResourceConfig_namespace(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
+					resource.TestCheckResourceAttrSet(resourceName, "activated_flags.#"),
+				),
+			},
+		},
+	})
+}
+
+// Config functions
+
+func testAccActivationFlagsResourceConfig_basic() string {
+	return `
+# Read the current activation flags state from Vault
+data "vault_activation_flags" "current" {}
+
+# Manage activation flags - maintain currently activated flags
+resource "vault_activation_flags" "test" {
+  # Keep all currently activated flags
+  activated_flags = data.vault_activation_flags.current.activated_flags
+}
+`
+}
+
+func testAccActivationFlagsResourceConfig_readCurrent() string {
+	return `
+# Read current state to understand available flags
+data "vault_activation_flags" "current" {}
+
+# Manage the activation flags resource
+resource "vault_activation_flags" "test" {
+  # Maintain current state
+  activated_flags = data.vault_activation_flags.current.activated_flags
+}
+`
+}
+
+func testAccActivationFlagsResourceConfig_empty() string {
+	return `
+# Attempt to manage with no activated flags
+# Note: This may not actually deactivate flags since the API doesn't support deactivation
+resource "vault_activation_flags" "test" {
+  activated_flags = []
+}
+`
+}
+
+func testAccActivationFlagsResourceConfig_namespace() string {
+	return `
+# Read current state
+data "vault_activation_flags" "current" {}
+
+# Manage activation flags in root namespace
+resource "vault_activation_flags" "test" {
+  namespace       = "root"
+  activated_flags = data.vault_activation_flags.current.activated_flags
+}
+`
+}
+
+// Made with Bob

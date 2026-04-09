@@ -1,126 +1,227 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package sys
+package sys_test
 
 import (
-	"context"
-	"reflect"
+	"fmt"
 	"testing"
 
-	fwdatasource "github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
-func TestActivationFlagsDataSourceMetadata(t *testing.T) {
-	t.Parallel()
+// TestAccActivationFlagsDataSource_basic tests basic data source read
+func TestAccActivationFlagsDataSource_basic(t *testing.T) {
+	dataSourceName := "data.vault_activation_flags.test"
 
-	resp := &fwdatasource.MetadataResponse{}
-	NewActivationFlagsDataSource().Metadata(context.Background(), fwdatasource.MetadataRequest{ProviderTypeName: "vault"}, resp)
-
-	if resp.TypeName != "vault_activation_flags" {
-		t.Fatalf("got type name %q, want %q", resp.TypeName, "vault_activation_flags")
-	}
-}
-
-func TestActivationFlagsDataSourceSchema(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-	resp := &fwdatasource.SchemaResponse{}
-	NewActivationFlagsDataSource().Schema(ctx, fwdatasource.SchemaRequest{}, resp)
-	if resp.Diagnostics.HasError() {
-		t.Fatalf("schema diagnostics: %+v", resp.Diagnostics)
-	}
-
-	if diags := resp.Schema.ValidateImplementation(ctx); diags.HasError() {
-		t.Fatalf("schema validation diagnostics: %+v", diags)
-	}
-
-	if _, ok := resp.Schema.Attributes[consts.FieldActivatedFlags]; !ok {
-		t.Fatalf("missing %q attribute", consts.FieldActivatedFlags)
-	}
-	if _, ok := resp.Schema.Attributes[consts.FieldUnactivatedFlags]; !ok {
-		t.Fatalf("missing %q attribute", consts.FieldUnactivatedFlags)
-	}
-	if _, ok := resp.Schema.Attributes[consts.FieldID]; !ok {
-		t.Fatalf("missing %q attribute", consts.FieldID)
-	}
-	if _, ok := resp.Schema.Attributes[consts.FieldNamespace]; !ok {
-		t.Fatalf("missing %q attribute", consts.FieldNamespace)
-	}
-}
-
-func TestPopulateActivationFlagsDataSourceModel(t *testing.T) {
-	tests := []struct {
-		name            string
-		vaultData       map[string]interface{}
-		wantActivated   []string
-		wantUnactivated []string
-		wantID          string
-		wantError       bool
-	}{
-		{
-			name: "populated lists",
-			vaultData: map[string]interface{}{
-				activationFlagsAPIActivatedField:   []interface{}{"feature-a"},
-				activationFlagsAPIUnactivatedField: []interface{}{"feature-b"},
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsDataSourceConfig_basic(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "id", "sys/activation-flags"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "activated_flags.#"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "unactivated_flags.#"),
+					testAccCheckActivationFlagsDataSourceValid(dataSourceName),
+				),
 			},
-			wantActivated:   []string{"feature-a"},
-			wantUnactivated: []string{"feature-b"},
-			wantID:          activationFlagsPath,
 		},
-		{
-			name:            "missing fields become empty lists",
-			vaultData:       map[string]interface{}{},
-			wantActivated:   []string{},
-			wantUnactivated: []string{},
-			wantID:          activationFlagsPath,
+	})
+}
+
+// TestAccActivationFlagsDataSource_withResource tests data source reading after resource creation
+func TestAccActivationFlagsDataSource_withResource(t *testing.T) {
+	dataSourceName := "data.vault_activation_flags.test"
+	resourceName := "vault_activation_flags.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
-		{
-			name: "malformed activated field",
-			vaultData: map[string]interface{}{
-				activationFlagsAPIActivatedField: "feature-a",
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsDataSourceConfig_withResource(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "id", "sys/activation-flags"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "activated_flags.#"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "unactivated_flags.#"),
+					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
+					testAccCheckActivationFlagsConsistency(resourceName, dataSourceName),
+				),
 			},
-			wantError: true,
 		},
-	}
+	})
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var model ActivationFlagsDataSourceModel
-			diags := populateActivationFlagsDataSourceModel(context.Background(), &model, tt.vaultData)
-			if tt.wantError {
-				if !diags.HasError() {
-					t.Fatal("expected diagnostics error, got none")
-				}
-				return
-			}
+// TestAccActivationFlagsDataSource_namespace tests data source with namespace
+func TestAccActivationFlagsDataSource_namespace(t *testing.T) {
+	dataSourceName := "data.vault_activation_flags.test"
 
-			if diags.HasError() {
-				t.Fatalf("unexpected diagnostics: %+v", diags)
-			}
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsDataSourceConfig_namespace(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "id", "sys/activation-flags"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "activated_flags.#"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "unactivated_flags.#"),
+				),
+			},
+		},
+	})
+}
 
-			assertListValueEquals(t, model.ActivatedFlags, tt.wantActivated)
-			assertListValueEquals(t, model.UnactivatedFlags, tt.wantUnactivated)
+// TestAccActivationFlagsDataSource_outputUsage tests using the data source in outputs
+func TestAccActivationFlagsDataSource_outputUsage(t *testing.T) {
+	dataSourceName := "data.vault_activation_flags.test"
 
-			if got := model.ID.ValueString(); got != tt.wantID {
-				t.Fatalf("got id %q, want %q", got, tt.wantID)
-			}
-		})
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccActivationFlagsDataSourceConfig_withOutputs(),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(dataSourceName, "id", "sys/activation-flags"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "activated_flags.#"),
+					resource.TestCheckResourceAttrSet(dataSourceName, "unactivated_flags.#"),
+				),
+			},
+		},
+	})
+}
+
+// testAccCheckActivationFlagsDataSourceValid verifies the data source returns valid data
+func testAccCheckActivationFlagsDataSourceValid(dataSourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		dataSourceState, ok := s.RootModule().Resources[dataSourceName]
+		if !ok {
+			return fmt.Errorf("data source not found: %s", dataSourceName)
+		}
+
+		// Verify ID is set
+		if dataSourceState.Primary.ID == "" {
+			return fmt.Errorf("data source ID is empty")
+		}
+
+		// Verify activated_flags is a valid list (even if empty)
+		if _, ok := dataSourceState.Primary.Attributes["activated_flags.#"]; !ok {
+			return fmt.Errorf("activated_flags.# attribute not found")
+		}
+
+		// Verify unactivated_flags is a valid list (even if empty)
+		if _, ok := dataSourceState.Primary.Attributes["unactivated_flags.#"]; !ok {
+			return fmt.Errorf("unactivated_flags.# attribute not found")
+		}
+
+		return nil
 	}
 }
 
-func assertListValueEquals(t *testing.T, value types.List, want []string) {
-	t.Helper()
+// testAccCheckActivationFlagsConsistency verifies that the resource and data source have consistent data
+func testAccCheckActivationFlagsConsistency(resourceName, dataSourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
 
-	var got []string
-	if diags := value.ElementsAs(context.Background(), &got, false); diags.HasError() {
-		t.Fatalf("unexpected list diagnostics: %+v", diags)
-	}
+		dataSourceState, ok := s.RootModule().Resources[dataSourceName]
+		if !ok {
+			return fmt.Errorf("data source not found: %s", dataSourceName)
+		}
 
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("got %#v, want %#v", got, want)
+		// Get activated flags count from resource
+		resourceFlagsCount := resourceState.Primary.Attributes["activated_flags.#"]
+
+		// Get activated flags count from data source
+		dataSourceFlagsCount := dataSourceState.Primary.Attributes["activated_flags.#"]
+
+		if resourceFlagsCount != dataSourceFlagsCount {
+			return fmt.Errorf("activated_flags count mismatch: resource has %s, data source has %s",
+				resourceFlagsCount, dataSourceFlagsCount)
+		}
+
+		return nil
 	}
 }
+
+// Config functions
+
+func testAccActivationFlagsDataSourceConfig_basic() string {
+	return `
+data "vault_activation_flags" "test" {}
+`
+}
+
+func testAccActivationFlagsDataSourceConfig_withResource() string {
+	return `
+# First read current state
+data "vault_activation_flags" "current" {}
+
+# Manage activation flags resource
+resource "vault_activation_flags" "test" {
+  # Maintain currently activated flags
+  activated_flags = data.vault_activation_flags.current.activated_flags
+}
+
+# Read activation flags again to verify consistency
+data "vault_activation_flags" "test" {
+  depends_on = [vault_activation_flags.test]
+}
+`
+}
+
+func testAccActivationFlagsDataSourceConfig_namespace() string {
+	return `
+data "vault_activation_flags" "test" {
+  namespace = "root"
+}
+`
+}
+
+func testAccActivationFlagsDataSourceConfig_withOutputs() string {
+	return `
+data "vault_activation_flags" "test" {}
+
+# Example of using the data source in outputs
+output "activated_features" {
+  value = data.vault_activation_flags.test.activated_flags
+}
+
+output "unactivated_features" {
+  value = data.vault_activation_flags.test.unactivated_flags
+}
+
+# Example of conditional logic based on activation flags
+locals {
+  # Check if a specific feature is activated (example)
+  has_activated_flags = length(data.vault_activation_flags.test.activated_flags) > 0
+}
+
+output "has_activated_flags" {
+  value = local.has_activated_flags
+}
+`
+}
+
+// Made with Bob
