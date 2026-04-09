@@ -125,7 +125,7 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls", "false"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.insecure", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_bundle", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_json", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "4"),
@@ -177,7 +177,7 @@ func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.tls", "false"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.insecure", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_bundle", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.pem_json", ""),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.protocol_version", "4"),
@@ -385,7 +385,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 						resource.TestCheckResourceAttr(resourceName, "couchbase.0.hosts.#", "1"),
 						resource.TestCheckTypeSetElemAttr(resourceName, "couchbase.0.hosts.*", host),
 						resource.TestCheckResourceAttr(resourceName, "couchbase.0.tls", "false"),
-						resource.TestCheckResourceAttr(resourceName, "couchbase.0.insecure", "false"),
+						resource.TestCheckResourceAttr(resourceName, "couchbase.0.insecure_tls", "false"),
 						resource.TestCheckResourceAttr(resourceName, "couchbase.0.base64_pem", ""),
 					)...,
 				),
@@ -404,7 +404,7 @@ func TestAccDatabaseSecretBackendConnection_couchbase(t *testing.T) {
 						resource.TestCheckResourceAttr(resourceName, "couchbase.0.hosts.#", "1"),
 						resource.TestCheckTypeSetElemAttr(resourceName, "couchbase.0.hosts.*", hostTLS),
 						resource.TestCheckResourceAttr(resourceName, "couchbase.0.tls", "true"),
-						resource.TestCheckResourceAttr(resourceName, "couchbase.0.insecure", "true"),
+						resource.TestCheckResourceAttr(resourceName, "couchbase.0.insecure_tls", "true"),
 						resource.TestCheckResourceAttr(resourceName, "couchbase.0.base64_pem", host1Base64PEM),
 					)...,
 				),
@@ -452,7 +452,7 @@ func TestAccDatabaseSecretBackendConnection_influxdb(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "influxdb.0.username", username),
 					resource.TestCheckResourceAttr(resourceName, "influxdb.0.password", password),
 					resource.TestCheckResourceAttr(resourceName, "influxdb.0.tls", "false"),
-					resource.TestCheckResourceAttr(resourceName, "influxdb.0.insecure", "false"),
+					resource.TestCheckResourceAttr(resourceName, "influxdb.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(resourceName, "influxdb.0.pem_bundle", ""),
 					resource.TestCheckResourceAttr(resourceName, "influxdb.0.pem_json", ""),
 					resource.TestCheckResourceAttr(resourceName, "influxdb.0.connect_timeout", "5"),
@@ -1606,7 +1606,7 @@ func TestAccDatabaseSecretBackendConnection_redis(t *testing.T) {
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.username", username),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
-					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure", "false"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
 					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redis-policy"),
 					testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 				),
@@ -1678,7 +1678,7 @@ func TestAccDatabaseSecretBackendConnection_redis_externalPlugin(t *testing.T) {
 		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.username", username),
 		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.password", password),
 		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.tls", "false"),
-		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure", "false"),
+		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "redis.0.insecure_tls", "false"),
 		resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, consts.FieldPasswordPolicy, "redis-policy"),
 		testAccCheckSkipStaticRoleImportRotation(testDefaultDatabaseSecretBackendResource, "false"),
 	}
@@ -1990,7 +1990,7 @@ resource "vault_database_secret_backend_connection" "test" {
 		config += `
     tls                = true
     tls_server_name    = "!!invalid!!"
-    insecure       = true`
+    insecure_tls       = true`
 	case "local_datacenter":
 		config += `
     local_datacenter   = ""`
@@ -2038,7 +2038,7 @@ resource "vault_database_secret_backend_connection" "test" {
     socket_keep_alive  = 30
     consistency        = "LOCAL_QUORUM"
     username_template  = "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"
-    insecure       = true
+    insecure_tls       = true
     connect_timeout    = 30
   }
 }
@@ -2071,7 +2071,7 @@ resource "vault_database_secret_backend_connection" "test" {
     socket_keep_alive  = 30
     consistency        = "LOCAL_QUORUM"
     username_template  = "vault_{{.RoleName}}_{{.DisplayName}}_{{random 10}}"
-    insecure       = false
+    insecure_tls       = false
     connect_timeout    = 30
   }
 }
@@ -2138,7 +2138,7 @@ func testAccDatabaseSecretBackendConnectionConfig_couchbase(name, path, host1, u
 	if base64PEM != "" {
 		tlsConfig = fmt.Sprintf(`
     tls          = true
-    insecure = true
+    insecure_tls = true
     base64_pem   = "%s"
 `, base64PEM)
 	}
@@ -2213,7 +2213,7 @@ resource "vault_database_secret_backend_connection" "test" {
     url = "%s"
     username = "%s"
     password = "%s"
-		insecure= true
+	insecure = true
 	username_template = %q
 	tls_server_name = "test"
   }
