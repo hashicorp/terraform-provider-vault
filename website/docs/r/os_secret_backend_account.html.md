@@ -47,11 +47,12 @@ resource "vault_os_secret_backend_host" "server" {
 }
 
 resource "vault_os_secret_backend_account" "admin" {
-  mount    = vault_os_secret_backend.os.mount
-  host     = vault_os_secret_backend_host.server.name
-  name     = "admin-account"
-  username = "admin"
-  password_wo = "initial-secure-password-123"
+  mount              = vault_os_secret_backend.os.mount
+  host               = vault_os_secret_backend_host.server.name
+  name               = "admin-account"
+  username           = "admin"
+  password_wo        = "initial-secure-password-123"
+  password_wo_version = 1
 }
 ```
 
@@ -75,13 +76,14 @@ resource "vault_os_secret_backend_host" "database" {
 }
 
 resource "vault_os_secret_backend_account" "dbadmin" {
-  mount           = vault_os_secret_backend.os.mount
-  host            = vault_os_secret_backend_host.database.name
-  name            = "dbadmin"
-  username        = "postgres"
-  password_wo       = "initial-password-456"
-  rotation_period   = 86400
-  verify_connection = false
+  mount              = vault_os_secret_backend.os.mount
+  host               = vault_os_secret_backend_host.database.name
+  name               = "dbadmin"
+  username           = "postgres"
+  password_wo        = "initial-password-456"
+  password_wo_version = 1
+  rotation_period    = 86400
+  verify_connection  = false
 }
 ```
 
@@ -105,13 +107,14 @@ resource "vault_os_secret_backend_host" "app_server" {
 }
 
 resource "vault_os_secret_backend_account" "service" {
-  mount             = vault_os_secret_backend.os.mount
-  host              = vault_os_secret_backend_host.app_server.name
-  name              = "service-account"
-  username          = "appuser"
-  password_wo       = var.initial_password
-  rotation_schedule = "0 3 * * 0"  # Rotate every Sunday at 3 AM
-  rotation_window   = 3600
+  mount              = vault_os_secret_backend.os.mount
+  host               = vault_os_secret_backend_host.app_server.name
+  name               = "service-account"
+  username           = "appuser"
+  password_wo        = var.initial_password
+  password_wo_version = 1
+  rotation_schedule  = "0 3 * * 0"  # Rotate every Sunday at 3 AM
+  rotation_window    = 3600
 }
 ```
 
@@ -133,6 +136,8 @@ The following arguments are supported:
 * `username` - (Required) The username of the operating system account on the remote host.
 
 * `password_wo` - (Required, Sensitive, Write-only) The initial password for the account. This field is write-only and will not be read back from Vault.
+
+* `password_wo_version` - (Optional) Version number to track password changes. Increment this value when you need to update the password. This helps Terraform detect when the write-only password field has changed.
 
 * `parent_account_ref` - (Optional) Reference to a parent account that manages rotation for this account.
 
