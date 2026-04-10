@@ -347,6 +347,7 @@ const (
 	FieldDisableCheckInEnforcement          = "disable_check_in_enforcement"
 	FieldSkipChildToken                     = "skip_child_token"
 	FieldTokenPolicies                      = "token_policies"
+	FieldIdentityPolicies                   = "identity_policies"
 	FieldManagedKeyName                     = "managed_key_name"
 	FieldManagedKeyID                       = "managed_key_id"
 	FieldIssuerRef                          = "issuer_ref"
@@ -678,8 +679,6 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
-	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
-	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
@@ -819,6 +818,16 @@ const (
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
 	FieldBindPassWO                 = "bindpass_wo"
 	FieldBindPassWOVersion          = "bindpass_wo_version"
+	FieldKeytab                     = "keytab"
+	FieldKeytabWO                   = "keytab_wo"
+	FieldKeytabWOVersion            = "keytab_wo_version"
+	FieldClientTLSKeyWO             = "client_tls_key_wo"
+	FieldClientTLSKeyWOVersion      = "client_tls_key_wo_version"
+	FieldClientTLSCertWO            = "client_tls_cert_wo"
+	FieldClientTLSCertWOVersion     = "client_tls_cert_wo_version"
+	FieldAddGroupAliases            = "add_group_aliases"
+	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
+	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
 
 	/*
 		common environment variables
