@@ -48,6 +48,7 @@ const (
 	FieldPasswordPolicy                     = "password_policy"
 	FieldLength                             = "length"
 	FieldInsecureTLS                        = "insecure_tls"
+	FieldInsecure                           = "insecure"
 	FieldURL                                = "url"
 	FieldUserAttr                           = "userattr"
 	FieldUserDN                             = "userdn"
@@ -502,6 +503,9 @@ const (
 	FieldIdentityTokenAudienceWOVersion     = "identity_token_audience_wo_version"
 	FieldIdentityTokenTTL                   = "identity_token_ttl"
 	FieldRoleArn                            = "role_arn"
+	FieldInlinePolicies                     = "inline_policies"
+	FieldRemotePolicies                     = "remote_policies"
+	FieldPolicyDocument                     = "policy_document"
 	FieldAccessor                           = "accessor"
 	FieldOptions                            = "options"
 	FieldAllowedManagedKeys                 = "allowed_managed_keys"
@@ -603,6 +607,16 @@ const (
 	FieldSerialNumberSource                 = "serial_number_source"
 	FieldCertMetadata                       = "cert_metadata"
 	FieldTokenType                          = "token_type"
+	FieldKMSName                            = "kms_name"
+	FieldKeyCollection                      = "key_collection"
+	FieldServiceAccountFile                 = "service_account_file"
+	FieldLocation                           = "location"
+	FieldPurpose                            = "purpose"
+	FieldProtection                         = "protection"
+	FieldVersions                           = "versions"
+	FieldReplicaRegions                     = "replica_regions"
+	FieldMinEnabledVersion                  = "min_enabled_version"
+	FieldProvider                           = "provider"
 
 	FieldInput                    = "input"
 	FieldKeyVersion               = "key_version"
@@ -785,6 +799,8 @@ const (
 	FieldAzureEndpoint             = "azure_endpoint"
 	FieldAzureClientID             = "azure_client_id"
 	FieldAzureAuthMode             = "azure_auth_mode"
+	FieldSelfManaged               = "self_managed"
+	FieldRotationPolicy            = "rotation_policy"
 
 	/*
 		ephemeral resource constants and write-only attributes
@@ -880,6 +896,8 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeKeyMgmt      = "keymgmt"
+	MountTypeAliCloud     = "alicloud"
 
 	/*
 		Vault version constants
@@ -900,6 +918,7 @@ const (
 	VaultVersion1194 = "1.19.4"
 	VaultVersion120  = "1.20.0"
 	VaultVersion121  = "1.21.0"
+	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
 
 	/*
