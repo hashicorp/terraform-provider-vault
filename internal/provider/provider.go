@@ -278,17 +278,6 @@ func UpdateContextWrapper(f schema.UpdateContextFunc, minVersion *version.Versio
 }
 
 func importNamespace(d *schema.ResourceData) error {
-	rawConfig := d.GetRawConfig()
-	if !rawConfig.IsNull() && rawConfig.IsKnown() {
-		rawType := rawConfig.Type()
-		if rawType.IsObjectType() && rawType.HasAttribute(consts.FieldNamespace) {
-			rawNS := rawConfig.GetAttr(consts.FieldNamespace)
-			if !rawNS.IsNull() && rawNS.IsKnown() && rawNS.AsString() != "" {
-				return nil
-			}
-		}
-	}
-
 	if v, ok := d.GetOk(consts.FieldNamespace); ok && v.(string) != "" {
 		return nil
 	}
