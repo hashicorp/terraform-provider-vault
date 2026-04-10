@@ -119,7 +119,7 @@ func pkiSecretBackendConfigCMPV2Write(ctx context.Context, d *schema.ResourceDat
 		}
 	}
 
-	log.Printf("[DEBUG] Updating CMPv2 config on PKI secret backend %q:\n%v", backend, data)
+	log.Printf("[DEBUG] Updating CMPv2 config on PKI secret backend %q", backend)
 	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error updating CMPv2 config for PKI secret backend %q: %s", backend, err)
