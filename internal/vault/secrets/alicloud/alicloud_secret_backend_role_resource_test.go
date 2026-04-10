@@ -155,6 +155,40 @@ func TestAccAliCloudSecretBackendRole_maxTtlOnly(t *testing.T) {
 	})
 }
 
+func TestAccAliCloudSecretBackendRole_importState(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-alicloud")
+	name := acctest.RandomWithPrefix("tf-test-role")
+	accessKey, secretKey := getTestAliCloudCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAliCloudSecretBackendRoleConfig_minimal(name, backend, accessKey, secretKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldMount, backend),
+					resource.TestCheckResourceAttr("vault_alicloud_secret_backend_role.test", consts.FieldRoleArn, testAccAliCloudSecretBackendRoleRoleARN_basic),
+				),
+			},
+			{
+				ResourceName:                         "vault_alicloud_secret_backend_role.test",
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateIdFunc:                    testAccAliCloudSecretBackendRoleImportStateIdFunc("vault_alicloud_secret_backend_role.test"),
+			},
+			{
+				ResourceName:  "vault_alicloud_secret_backend_role.test",
+				ImportState:   true,
+				ImportStateId: fmt.Sprintf("%s/role/%s.", backend, name),
+				ExpectError:   regexp.MustCompile(`Invalid Import ID`),
+			},
+		},
+	})
+}
+
 // TestAccAliCloudSecretBackendRole_validation groups single-step role validation tests.
 func TestAccAliCloudSecretBackendRole_validation(t *testing.T) {
 	accessKey, secretKey := getTestAliCloudCreds(t)
