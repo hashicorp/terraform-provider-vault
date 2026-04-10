@@ -258,6 +258,18 @@ func TestAuthLoginAWS_GetConfigStringField_Negative(t *testing.T) {
 			},
 			field: consts.FieldAWSRoleARN,
 		},
+		{
+			name: "non-string-field-in-auth-block",
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginAWS: []interface{}{
+					map[string]interface{}{
+						consts.FieldRole:       "alice",
+						consts.FieldAWSRoleARN: true,
+					},
+				},
+			},
+			field: consts.FieldAWSRoleARN,
+		},
 	}
 
 	for _, tt := range tests {

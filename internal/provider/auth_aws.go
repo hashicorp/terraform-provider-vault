@@ -147,6 +147,10 @@ var _ AuthLogin = (*AuthLoginAWS)(nil)
 // Requires configuration provided by SchemaLoginAWS.
 type AuthLoginAWS struct {
 	AuthLoginCommon
+	// These fields preserve whether aws_role_arn came from explicit Terraform
+	// config instead of env/default expansion in AuthLoginCommon.params.
+	// The login flow uses that provenance to decide when a second manual
+	// AssumeRole is intended and when it should be skipped.
 	awsRoleARNExplicit   bool
 	awsRoleARNFromConfig string
 }
@@ -174,6 +178,13 @@ func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) (AuthLogin
 // getConfigStringField reads the raw provider configuration so we can tell
 // whether a value was explicitly set in Terraform rather than inherited from
 // environment-based defaults in l.params.
+//
+// This is needed because AuthLoginCommon expands env-backed defaults into
+// l.params before auth_login_aws decides whether to perform an extra manual
+// STS AssumeRole call. For web identity flows such as IRSA, treating an
+// env-derived AWS_ROLE_ARN the same as an explicitly configured aws_role_arn
+// can trigger an unintended second AssumeRole after the AWS SDK has already
+// resolved credentials through web identity.
 func (l *AuthLoginAWS) getConfigStringField(d *schema.ResourceData, field string) (string, bool) {
 	v, diags := d.GetRawConfigAt(cty.Path{
 		cty.GetAttrStep{Name: l.authField},
