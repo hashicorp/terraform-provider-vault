@@ -7,22 +7,18 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/hashicorp/vault/api"
 )
 
 const (
@@ -47,39 +43,16 @@ type ControlGroupConfigResource struct {
 }
 
 // ControlGroupConfigModel represents the Terraform state/plan model for control group configuration.
-// It extends BaseModelLegacy which provides common fields like ID and Namespace.
+// It extends BaseModel which provides common fields like Namespace.
 type ControlGroupConfigModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
+
+	// ID is a computed field for the resource identifier
+	ID types.String `tfsdk:"id"`
 
 	// MaxTTL is the maximum time-to-live for control group wrapping tokens.
 	// Can be specified as duration string (e.g., "2h") or seconds (e.g., "7200").
 	MaxTTL types.String `tfsdk:"max_ttl"`
-}
-
-// durationOrSecondsValidator validates that max_ttl can be parsed as either
-// a duration string (e.g., "2h", "30m") or as seconds (e.g., "7200").
-type durationOrSecondsValidator struct{}
-
-func (v durationOrSecondsValidator) Description(_ context.Context) string {
-	return "Invalid duration string"
-}
-
-func (v durationOrSecondsValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-// ValidateString performs validation on the max_ttl attribute during plan phase.
-// This ensures users get immediate feedback if they provide an invalid duration format.
-func (v durationOrSecondsValidator) ValidateString(ctx context.Context, request validator.StringRequest, response *validator.StringResponse) {
-	// Skip validation for null or unknown values (computed values during plan)
-	if request.ConfigValue.IsNull() || request.ConfigValue.IsUnknown() {
-		return
-	}
-
-	// Attempt to normalize the value - this will fail if it's not a valid duration
-	if _, err := normalizeMaxTTL(request.ConfigValue.ValueString()); err != nil {
-		response.Diagnostics.AddError(v.Description(ctx), fmt.Sprintf("Failed to parse value as a duration string or seconds, err=%s", err))
-	}
 }
 
 func (r *ControlGroupConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -88,66 +61,32 @@ func (r *ControlGroupConfigResource) Metadata(_ context.Context, req resource.Me
 
 func (r *ControlGroupConfigResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages the singleton control group configuration. Requires Vault Enterprise 1.10.0 or later.",
 		Attributes: map[string]schema.Attribute{
-			consts.FieldMaxTTL: schema.StringAttribute{
-				Optional:            true,
-				MarkdownDescription: "The maximum ttl for a control group wrapping token. This can be provided in seconds or duration (for example, 2h). Requires Vault Enterprise 1.10.0 or later.",
-				Validators: []validator.String{
-					durationOrSecondsValidator{},
+			consts.FieldID: schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The resource ID.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			consts.FieldMaxTTL: schema.StringAttribute{
+				Required:            true,
+				MarkdownDescription: "The maximum ttl for a control group wrapping token. This can be provided in seconds or duration (for example, 2h).",
 			},
 		},
 	}
 
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 func (r *ControlGroupConfigResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data ControlGroupConfigModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if !r.featureSupported(resp.Diagnostics.AddError) {
-		return
-	}
-
-	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	vaultRequest, err := toWriteRequest(&data)
-	if err != nil {
-		resp.Diagnostics.AddError("Invalid max_ttl", err.Error())
-		return
-	}
-
-	if _, err := vaultClient.Logical().WriteWithContext(ctx, controlGroupPath, vaultRequest); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
-		return
-	}
-
-	if err := r.readIntoModel(ctx, vaultClient, &data); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-
-	data.ID = types.StringValue(controlGroupPath)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	r.createOrUpdate(ctx, req, resp, true)
 }
 
 func (r *ControlGroupConfigResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data ControlGroupConfigModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if !r.featureSupported(resp.Diagnostics.AddError) {
 		return
 	}
 
@@ -181,50 +120,100 @@ func (r *ControlGroupConfigResource) Read(ctx context.Context, req resource.Read
 }
 
 func (r *ControlGroupConfigResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	r.createOrUpdate(ctx, req, resp, false)
+}
+
+// createOrUpdate is a shared helper function for Create and Update operations.
+// The isCreate parameter determines which error message to use for write failures.
+func (r *ControlGroupConfigResource) createOrUpdate(ctx context.Context, req interface{}, resp interface{}, isCreate bool) {
 	var data ControlGroupConfigModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
+
+	// Type assert to get the correct request/response types
+	var createReq resource.CreateRequest
+	var createResp *resource.CreateResponse
+	var updateReq resource.UpdateRequest
+	var updateResp *resource.UpdateResponse
+
+	if isCreate {
+		createReq = req.(resource.CreateRequest)
+		createResp = resp.(*resource.CreateResponse)
+		createResp.Diagnostics.Append(createReq.Plan.Get(ctx, &data)...)
+		if createResp.Diagnostics.HasError() {
+			return
+		}
+	} else {
+		updateReq = req.(resource.UpdateRequest)
+		updateResp = resp.(*resource.UpdateResponse)
+		updateResp.Diagnostics.Append(updateReq.Plan.Get(ctx, &data)...)
+		if updateResp.Diagnostics.HasError() {
+			return
+		}
 	}
 
-	if !r.featureSupported(resp.Diagnostics.AddError) {
-		return
+	addError := func(summary string, detail string) {
+		if isCreate {
+			createResp.Diagnostics.AddError(summary, detail)
+		} else {
+			updateResp.Diagnostics.AddError(summary, detail)
+		}
 	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		addError(errutil.ClientConfigureErr(err))
 		return
 	}
 
 	vaultRequest, err := toWriteRequest(&data)
 	if err != nil {
-		resp.Diagnostics.AddError("Invalid max_ttl", err.Error())
+		addError("Invalid max_ttl", err.Error())
 		return
 	}
 
 	if _, err := vaultClient.Logical().WriteWithContext(ctx, controlGroupPath, vaultRequest); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
+		if isCreate {
+			addError(errutil.VaultCreateErr(err))
+		} else {
+			addError(errutil.VaultUpdateErr(err))
+		}
 		return
 	}
 
-	if err := r.readIntoModel(ctx, vaultClient, &data); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-
+	// Set the ID before calling Read
 	data.ID = types.StringValue(controlGroupPath)
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+
+	// Set state first so Read can access it
+	if isCreate {
+		createResp.Diagnostics.Append(createResp.State.Set(ctx, &data)...)
+		if createResp.Diagnostics.HasError() {
+			return
+		}
+
+		// Use Read to refresh the state from Vault
+		readReq := resource.ReadRequest{State: createResp.State}
+		readResp := &resource.ReadResponse{State: createResp.State, Diagnostics: createResp.Diagnostics}
+		r.Read(ctx, readReq, readResp)
+		createResp.Diagnostics = readResp.Diagnostics
+		createResp.State = readResp.State
+	} else {
+		updateResp.Diagnostics.Append(updateResp.State.Set(ctx, &data)...)
+		if updateResp.Diagnostics.HasError() {
+			return
+		}
+
+		// Use Read to refresh the state from Vault
+		readReq := resource.ReadRequest{State: updateResp.State}
+		readResp := &resource.ReadResponse{State: updateResp.State, Diagnostics: updateResp.Diagnostics}
+		r.Read(ctx, readReq, readResp)
+		updateResp.Diagnostics = readResp.Diagnostics
+		updateResp.State = readResp.State
+	}
 }
 
 func (r *ControlGroupConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data ControlGroupConfigModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if !r.featureSupported(resp.Diagnostics.AddError) {
 		return
 	}
 
@@ -249,66 +238,59 @@ func (r *ControlGroupConfigResource) ImportState(ctx context.Context, request re
 		id = controlGroupPath
 	}
 
-	// Validate that the import ID matches the expected path (with or without leading slash)
-	if id != controlGroupPath && id != "/"+controlGroupPath {
+	// Get namespace from environment variable if set
+	var data ControlGroupConfigModel
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		data.Namespace = types.StringValue(ns)
+	}
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		response.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	secret, err := vaultClient.Logical().ReadWithContext(ctx, controlGroupPath)
+	if err != nil {
+		response.Diagnostics.AddError(errutil.VaultReadErr(err))
+		return
+	}
+	if secret == nil {
 		response.Diagnostics.AddError(
-			"Invalid import ID",
-			fmt.Sprintf("Unexpected import identifier %q, expected %q", request.ID, controlGroupPath),
+			"Resource Not Found",
+			"Control group configuration not found in Vault",
 		)
 		return
 	}
 
-	// Set the resource ID in state
-	response.Diagnostics.Append(response.State.SetAttribute(ctx, path.Root(consts.FieldID), controlGroupPath)...)
-
-	// Support namespace-aware imports via environment variable
-	// This allows importing resources from specific Vault namespaces
-	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
-		response.Diagnostics.Append(
-			response.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
-		)
-	}
-}
-
-// readIntoModel is a helper function that reads the control group configuration from Vault
-// and populates the Terraform model. This is used after Create/Update operations to ensure
-// the state reflects what was actually stored in Vault.
-func (r *ControlGroupConfigResource) readIntoModel(ctx context.Context, vaultClient *api.Client, data *ControlGroupConfigModel) error {
-	secret, err := vaultClient.Logical().ReadWithContext(ctx, controlGroupPath)
-	if err != nil {
-		return err
-	}
-	if secret == nil {
-		return fmt.Errorf("control group configuration not found")
-	}
-
+	// Extract and normalize the max_ttl value from Vault's response
 	maxTTL, err := extractMaxTTL(secret.Data)
 	if err != nil {
-		return err
+		response.Diagnostics.AddError("Unable to parse Vault response data", err.Error())
+		return
 	}
 
 	setMaxTTLInModel(&data.MaxTTL, maxTTL)
-	return nil
+
+	response.Diagnostics.Append(response.State.Set(ctx, &data)...)
 }
 
 // setMaxTTLInModel sets the max_ttl value in the model, preserving the user's original format
-// if it's semantically equivalent to what Vault returned. This prevents unnecessary diffs
-// when users specify "2h" but Vault returns "7200".
-func setMaxTTLInModel(modelMaxTTL *types.String, normalizedFromAPI string) {
-	if normalizedFromAPI == "" {
+// if it matches what Vault returned. This prevents unnecessary diffs.
+func setMaxTTLInModel(modelMaxTTL *types.String, fromAPI string) {
+	if fromAPI == "" {
 		*modelMaxTTL = types.StringNull()
 	} else {
-		// Preserve the user's original format if semantically equivalent
-		if v, ok := preserveExistingMaxTTL(*modelMaxTTL, normalizedFromAPI); ok {
+		// Preserve the user's original format if it matches
+		if v, ok := preserveExistingMaxTTL(*modelMaxTTL, fromAPI); ok {
 			*modelMaxTTL = types.StringValue(v)
 		} else {
-			*modelMaxTTL = types.StringValue(normalizedFromAPI)
+			*modelMaxTTL = types.StringValue(fromAPI)
 		}
 	}
 }
 
 // toWriteRequest converts the Terraform model to a Vault API request payload.
-// It normalizes the max_ttl value to seconds for consistency with Vault's API.
 func toWriteRequest(data *ControlGroupConfigModel) (map[string]interface{}, error) {
 	request := map[string]interface{}{}
 
@@ -317,48 +299,29 @@ func toWriteRequest(data *ControlGroupConfigModel) (map[string]interface{}, erro
 		return request, nil
 	}
 
-	// Normalize the max_ttl to seconds (e.g., "2h" becomes "7200")
-	maxTTL, err := normalizeMaxTTL(data.MaxTTL.ValueString())
-	if err != nil {
-		return nil, err
-	}
-
-	request[consts.FieldMaxTTL] = maxTTL
+	// Pass the max_ttl value directly to Vault (accepts both duration strings and seconds)
+	request[consts.FieldMaxTTL] = data.MaxTTL.ValueString()
 	return request, nil
 }
 
-// extractMaxTTL extracts and normalizes the max_ttl value from Vault's API response.
-// Vault returns max_ttl as a numeric value in seconds.
+// extractMaxTTL extracts the max_ttl value from Vault's API response.
+// Vault can return max_ttl as either a string or numeric value.
 func extractMaxTTL(data map[string]interface{}) (string, error) {
 	v, ok := data[consts.FieldMaxTTL]
 	if !ok || v == nil {
 		return "", nil
 	}
 
-	// Vault returns max_ttl as a number (seconds), convert to string
-	return normalizeMaxTTL(fmt.Sprintf("%v", v))
-}
-
-// normalizeMaxTTL converts a duration string or seconds value to a normalized seconds string.
-// Examples: "2h" -> "7200", "30m" -> "1800", "7200" -> "7200"
-// This ensures consistent comparison and storage regardless of input format.
-func normalizeMaxTTL(v string) (string, error) {
-	// ParseDurationSecond handles both duration strings ("2h") and plain seconds ("7200")
-	d, err := parseutil.ParseDurationSecond(strings.TrimSpace(v))
-	if err != nil {
-		return "", err
-	}
-
-	// Convert to seconds as a string for consistent representation
-	return strconv.FormatInt(int64(d/time.Second), 10), nil
+	// Convert to string - handles both string and numeric responses
+	return fmt.Sprintf("%v", v), nil
 }
 
 // preserveExistingMaxTTL attempts to preserve the user's original max_ttl format
 // if it's semantically equivalent to what Vault returned. This prevents unnecessary
-// plan diffs when a user specifies "2h" but Vault returns "7200".
+// plan diffs when users specify "2h" but Vault returns "7200".
 //
-// Returns: (originalValue, true) if formats are equivalent, ("", false) otherwise.
-func preserveExistingMaxTTL(existing types.String, normalizedFromAPI string) (string, bool) {
+// Returns: (originalValue, true) if values are equivalent, ("", false) otherwise.
+func preserveExistingMaxTTL(existing types.String, fromAPI string) (string, bool) {
 	// Can't preserve if there's no existing value
 	if existing.IsNull() || existing.IsUnknown() {
 		return "", false
@@ -369,52 +332,19 @@ func preserveExistingMaxTTL(existing types.String, normalizedFromAPI string) (st
 		return "", false
 	}
 
-	// Normalize the existing value to compare with API response
-	existingNormalized, err := normalizeMaxTTL(existingRaw)
-	if err != nil {
-		return "", false
+	// If values match exactly, preserve the user's original format
+	if existingRaw == fromAPI {
+		return existingRaw, true
 	}
 
-	// If both normalize to the same value, preserve the user's original format
-	if existingNormalized == normalizedFromAPI {
+	// Try to parse both values as durations to compare semantically
+	existingDuration, err1 := parseutil.ParseDurationSecond(existingRaw)
+	apiDuration, err2 := parseutil.ParseDurationSecond(fromAPI)
+
+	// If both parse successfully and are equal, preserve the user's format
+	if err1 == nil && err2 == nil && existingDuration == apiDuration {
 		return existingRaw, true
 	}
 
 	return "", false
-}
-
-// featureSupported checks if the Vault server supports control group configuration.
-// This feature requires Vault Enterprise 1.10.0 or later.
-// The function takes an error callback to allow flexible error reporting across different contexts.
-func (r *ControlGroupConfigResource) featureSupported(addError func(summary string, detail string)) bool {
-	// Ensure provider metadata is available for version checks
-	if r.Meta() == nil {
-		addError("Provider Not Configured", "Provider metadata is unavailable for control group feature checks.")
-		return false
-	}
-
-	// Check if Vault version is 1.10.0 or later
-	if !provider.IsAPISupported(r.Meta(), provider.VaultVersion110) {
-		currentVersion := "unknown"
-		if v := r.Meta().GetVaultVersion(); v != nil {
-			currentVersion = v.String()
-		}
-
-		addError(
-			"Feature Not Supported",
-			"Control group configuration requires Vault version 1.10.0 or later. Current Vault version: "+currentVersion,
-		)
-		return false
-	}
-
-	// Check if Vault is Enterprise edition (control groups are an Enterprise feature)
-	if !provider.IsEnterpriseSupported(r.Meta()) {
-		addError(
-			"Feature Not Supported",
-			"Control group configuration requires Vault Enterprise.",
-		)
-		return false
-	}
-
-	return true
 }

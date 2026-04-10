@@ -6,7 +6,7 @@ package config_test
 import (
 	"context"
 	"fmt"
-	"regexp"
+	"os"
 	"testing"
 
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccControlGroupConfigResourceSchema(t *testing.T) {
@@ -48,12 +47,12 @@ func TestAccControlGroupConfigResourceSchema(t *testing.T) {
 		t.Fatalf("schema attribute %q has unexpected type: %T", consts.FieldMaxTTL, maxTTLAttr)
 	}
 
-	if !maxTTLStringAttr.Optional {
-		t.Fatalf("schema attribute %q must be optional", consts.FieldMaxTTL)
+	if !maxTTLStringAttr.Required {
+		t.Fatalf("schema attribute %q must be required", consts.FieldMaxTTL)
 	}
 
 	if maxTTLStringAttr.Computed {
-		t.Fatalf("schema attribute %q must not be computed when default is empty", consts.FieldMaxTTL)
+		t.Fatalf("schema attribute %q must not be computed", consts.FieldMaxTTL)
 	}
 }
 
@@ -89,7 +88,13 @@ func TestAccControlGroupConfigResource(t *testing.T) {
 					},
 				},
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMaxTTL),
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateId:           "sys/config/control-group",
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldMaxTTL},
+			},
 		},
 	})
 }
@@ -118,31 +123,23 @@ func TestAccControlGroupConfigResourceNamespace(t *testing.T) {
 					},
 				},
 			},
-			testutil.GetImportTestStepNS(t, ns, resourceName, configNS, consts.FieldMaxTTL),
-			testutil.GetImportTestStepNSCleanup(t, configNS),
-		},
-	})
-}
-
-func TestAccControlGroupConfigResourceInvalidFormat(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
 			{
-				Config:      testAccControlGroupConfig("invalid-time-format"),
-				ExpectError: regexp.MustCompile("Invalid duration string"),
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateId:                        "sys/config/control-group",
+				ImportStateVerify:                    true,
+				ImportStateVerifyIgnore:              []string{consts.FieldMaxTTL},
+				ImportStateVerifyIdentifierAttribute: consts.FieldNamespace,
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
+				},
 			},
 			{
-				Config:      testAccControlGroupConfig("24x"),
-				ExpectError: regexp.MustCompile("Invalid duration string"),
-			},
-			{
-				Config:      testAccControlGroupConfig("not-a-duration"),
-				ExpectError: regexp.MustCompile("Invalid duration string"),
+				Config: configNS,
+				Check:  resource.ComposeTestCheckFunc(),
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
 			},
 		},
 	})
