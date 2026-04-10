@@ -1,9 +1,14 @@
 ## Unreleased
 
+BREAKING CHANGES:
+
+* Renamed all Vault 2.0 pki-external-ca resources from version 5.8.0 to a common prefix of `vault_pki_external_ca_`. ([#2838](https://github.com/hashicorp/terraform-provider-vault/pull/2838))
+
 FEATURES:
 
 * **New Resources**: Add support for Vault Key Management secrets engine with resources for managing KMS providers (AWS KMS, Azure Key Vault, GCP Cloud KMS), cryptographic keys, key distribution, replication, and rotation (Vault Enterprise). ([#2802](https://github.com/hashicorp/terraform-provider-vault/pull/2802))
 * **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858))
+* **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 
 IMPROVEMENTS:
 
