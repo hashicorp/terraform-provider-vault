@@ -199,6 +199,9 @@ func (r *UserpassAuthLoginEphemeralResource) Open(ctx context.Context, req ephem
 		resp.Private.SetKey(ctx, userpassPrivateDataKey, privateDataJSON)
 	}
 
+	// Clear sensitive input fields before setting the result to prevent exposure
+	data.Password = types.StringNull()
+
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
