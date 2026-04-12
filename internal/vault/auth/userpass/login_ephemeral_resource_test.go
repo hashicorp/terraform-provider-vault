@@ -52,7 +52,9 @@ func testAccUserpassAuthLoginStateChecks() []statecheck.StateCheck {
 		statecheck.ExpectKnownValue(
 			"echo.test_userpass",
 			tfjsonpath.New("data").AtMapKey(consts.FieldPolicies),
-			knownvalue.NotNull(),
+			knownvalue.ListExact([]knownvalue.Check{
+				knownvalue.StringExact("default"),
+			}),
 		),
 	}
 }
