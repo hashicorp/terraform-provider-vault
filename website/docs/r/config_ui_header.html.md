@@ -107,8 +107,8 @@ The following arguments are supported:
 * `name` - (Required, Forces new resource) The name of the custom header (e.g., "Content-Security-Policy", "X-Frame-Options").
   Changing this will recreate the resource.
 
-* `values` - (Required) A list of values for the header. At least one value is required.
-  Multiple values can be provided for headers that support them.
+* `values` - (Required) A set of values for the header. At least one value is required.
+  Multiple values can be provided for headers that support them. Because this argument uses set semantics, value order is not preserved and duplicate values are removed.
 
 ~> **Important** This resource must be called from the **root namespace**. UI header configuration is a global setting that applies to the entire Vault cluster.
 
@@ -189,7 +189,7 @@ you should:
 ### Multiple Values
 
 Some HTTP headers support multiple values (e.g., CORS headers). This resource allows you
-to specify multiple values in the `values` list. The order of values is preserved.
+to specify multiple values in the `values` collection. 
 
 ### Security Considerations
 

@@ -8,20 +8,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -45,19 +43,7 @@ type ConfigUIHeaderModel struct {
 	Values types.Set    `tfsdk:"values"`
 }
 
-// ConfigUIHeaderAPIModel describes the Vault API data model for write operations.
-type ConfigUIHeaderAPIModel struct {
-	Values []string `json:"values" mapstructure:"values"`
-}
-
-// ConfigUIHeaderReadAPIModel describes the Vault API data model for read operations
-// with multivalue=true parameter.
-type ConfigUIHeaderReadAPIModel struct {
-	Values []string `json:"values" mapstructure:"values"`
-}
-
 // Metadata defines the resource name as it would appear in Terraform configurations
-//
 // https://developer.hashicorp.com/terraform/plugin/framework/resources#metadata-method
 func (r *ConfigUIHeaderResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_config_ui_header"
@@ -65,7 +51,6 @@ func (r *ConfigUIHeaderResource) Metadata(_ context.Context, req resource.Metada
 
 // Schema defines this resource's schema which is the data that is available in
 // the resource's configuration, plan, and state
-//
 // https://developer.hashicorp.com/terraform/plugin/framework/resources#schema-method
 func (r *ConfigUIHeaderResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
@@ -76,38 +61,18 @@ func (r *ConfigUIHeaderResource) Schema(ctx context.Context, req resource.Schema
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
 			},
 			consts.FieldValues: schema.SetAttribute{
 				ElementType:         types.StringType,
 				MarkdownDescription: "Set of values for the header. At least one value is required. Duplicates are automatically ignored.",
 				Required:            true,
-				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-				},
 			},
 		},
 		MarkdownDescription: "Manages custom response headers returned from the Vault UI. This resource requires `sudo` capability and must be called from the root namespace. **Warning:** Setting `Content-Security-Policy` will override Vault's secure default CSP.",
 	}
 }
 
-// checkVaultVersion validates that the Vault version supports UI headers (1.16.0+)
-func (r *ConfigUIHeaderResource) checkVaultVersion(resp *resource.ReadResponse) bool {
-	if !r.Meta().IsAPISupported(provider.VaultVersion116) {
-		resp.Diagnostics.AddError(
-			"Feature Not Supported",
-			"Custom UI headers require Vault version 1.16.0 or later. "+
-				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
-		)
-		return false
-	}
-	return true
-}
-
 // Create is called during the terraform apply command.
-//
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/create
 func (r *ConfigUIHeaderResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data ConfigUIHeaderModel
@@ -119,78 +84,16 @@ func (r *ConfigUIHeaderResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// Check if Vault version supports UI headers (requires 1.16.0+)
-	readResp := &resource.ReadResponse{Diagnostics: resp.Diagnostics}
-	if !r.checkVaultVersion(readResp) {
-		resp.Diagnostics = readResp.Diagnostics
-		return
-	}
-
-	client, err := client.GetClient(ctx, r.Meta(), "")
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	name := data.Name.ValueString()
-
-	// Convert values list to string slice
-	var values []string
-	resp.Diagnostics.Append(data.Values.ElementsAs(ctx, &values, false)...)
+	resp.Diagnostics.Append(r.writeHeader(ctx, data, errutil.VaultCreateErr, "creating")...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	vaultRequest := map[string]interface{}{
-		consts.FieldValues: values,
-	}
-
-	path := r.path(name)
-	// vault returns a nil response on success
-	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
-	if err != nil {
-		// Provide helpful error message for sudo capability requirement
-		if strings.Contains(err.Error(), "permission denied") {
-			resp.Diagnostics.AddError(
-				"Permission Denied",
-				fmt.Sprintf("Error creating UI header %q: %s\n\n"+
-					"This operation requires the 'sudo' capability. "+
-					"Ensure your Vault policy includes:\n"+
-					"path \"sys/config/ui/headers/*\" {\n"+
-					"  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\", \"sudo\"]\n"+
-					"}",
-					name, err),
-			)
-		} else {
-			resp.Diagnostics.AddError(
-				errutil.VaultCreateErr(err),
-			)
-		}
-		return
-	}
-
-	// Set the state first so Read can access it
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Read back from Vault to update state with fresh data
-	readReq := resource.ReadRequest{
-		State: resp.State,
-	}
-	readResp = &resource.ReadResponse{
-		State:       resp.State,
-		Diagnostics: resp.Diagnostics,
-	}
-	r.Read(ctx, readReq, readResp)
-	resp.Diagnostics = readResp.Diagnostics
-	resp.State = readResp.State
 }
 
 // Read is called during the terraform apply, terraform plan, and terraform
 // refresh commands.
-//
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/read
 func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data ConfigUIHeaderModel
@@ -201,12 +104,7 @@ func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	// Check if Vault version supports UI headers (requires 1.16.0+)
-	if !r.checkVaultVersion(resp) {
-		return
-	}
-
-	vaultClient, err := client.GetClient(ctx, r.Meta(), "")
+	vaultClient, err := r.getRootNamespaceClient(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
@@ -233,25 +131,44 @@ func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequ
 
 	// Extract values from response
 	if valuesRaw, ok := headerResp.Data[consts.FieldValues]; ok {
-		if valuesInterface, ok := valuesRaw.([]interface{}); ok {
-			values := make([]string, len(valuesInterface))
-			for i, val := range valuesInterface {
-				values[i] = val.(string)
+		var values []string
+
+		switch valuesTyped := valuesRaw.(type) {
+		case []interface{}:
+			values = make([]string, len(valuesTyped))
+			for i, val := range valuesTyped {
+				strVal, ok := val.(string)
+				if !ok {
+					resp.Diagnostics.AddError(
+						"Unexpected Vault Response",
+						fmt.Sprintf("Expected %q to contain only string values, but element %d had type %T.", consts.FieldValues, i, val),
+					)
+					return
+				}
+				values[i] = strVal
 			}
-			valuesSet, diags := types.SetValueFrom(ctx, types.StringType, values)
-			resp.Diagnostics.Append(diags...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-			data.Values = valuesSet
+		case []string:
+			values = valuesTyped
+		default:
+			resp.Diagnostics.AddError(
+				"Unexpected Vault Response",
+				fmt.Sprintf("Expected %q to be a list of strings, but got %T.", consts.FieldValues, valuesRaw),
+			)
+			return
 		}
+
+		valuesSet, diags := types.SetValueFrom(ctx, types.StringType, values)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		data.Values = valuesSet
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Update is called during the terraform apply command
-//
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/update
 func (r *ConfigUIHeaderResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data ConfigUIHeaderModel
@@ -263,76 +180,15 @@ func (r *ConfigUIHeaderResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	// Check if Vault version supports UI headers (requires 1.16.0+)
-	readResp := &resource.ReadResponse{Diagnostics: resp.Diagnostics}
-	if !r.checkVaultVersion(readResp) {
-		resp.Diagnostics = readResp.Diagnostics
-		return
-	}
-
-	client, err := client.GetClient(ctx, r.Meta(), "")
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	// Convert values list to string slice
-	var values []string
-	resp.Diagnostics.Append(data.Values.ElementsAs(ctx, &values, false)...)
+	resp.Diagnostics.Append(r.writeHeader(ctx, data, errutil.VaultUpdateErr, "updating")...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	vaultRequest := map[string]interface{}{
-		consts.FieldValues: values,
-	}
-
-	name := data.Name.ValueString()
-	path := r.path(name)
-	// vault returns a nil response on success
-	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
-	if err != nil {
-		// Provide helpful error message for sudo capability requirement
-		if strings.Contains(err.Error(), "permission denied") {
-			resp.Diagnostics.AddError(
-				"Permission Denied",
-				fmt.Sprintf("Error updating UI header %q: %s\n\n"+
-					"This operation requires the 'sudo' capability. "+
-					"Ensure your Vault policy includes:\n"+
-					"path \"sys/config/ui/headers/*\" {\n"+
-					"  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\", \"sudo\"]\n"+
-					"}",
-					name, err),
-			)
-		} else {
-			resp.Diagnostics.AddError(
-				errutil.VaultUpdateErr(err),
-			)
-		}
-		return
-	}
-
-	// Set the state first so Read can access it
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Read back from Vault to update state with fresh data
-	readReq := resource.ReadRequest{
-		State: resp.State,
-	}
-	readResp = &resource.ReadResponse{
-		State:       resp.State,
-		Diagnostics: resp.Diagnostics,
-	}
-	r.Read(ctx, readReq, readResp)
-	resp.Diagnostics = readResp.Diagnostics
-	resp.State = readResp.State
 }
 
 // Delete is called during the terraform apply command
-//
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/delete
 func (r *ConfigUIHeaderResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data ConfigUIHeaderModel
@@ -344,14 +200,7 @@ func (r *ConfigUIHeaderResource) Delete(ctx context.Context, req resource.Delete
 		return
 	}
 
-	// Check if Vault version supports UI headers (requires 1.16.0+)
-	readResp := &resource.ReadResponse{Diagnostics: resp.Diagnostics}
-	if !r.checkVaultVersion(readResp) {
-		resp.Diagnostics = readResp.Diagnostics
-		return
-	}
-
-	client, err := client.GetClient(ctx, r.Meta(), "")
+	client, err := r.getRootNamespaceClient(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
@@ -385,10 +234,79 @@ func (r *ConfigUIHeaderResource) Delete(ctx context.Context, req resource.Delete
 	// the resource from state if there are no other errors.
 }
 
+func (r *ConfigUIHeaderResource) writeHeader(
+	ctx context.Context,
+	data ConfigUIHeaderModel,
+	vaultErr func(error) (string, string),
+	operation string,
+) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	client, err := r.getRootNamespaceClient(ctx)
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return diags
+	}
+
+	name := data.Name.ValueString()
+
+	var values []string
+	diags.Append(data.Values.ElementsAs(ctx, &values, false)...)
+	if diags.HasError() {
+		return diags
+	}
+
+	vaultRequest := map[string]interface{}{
+		consts.FieldValues: values,
+	}
+
+	path := r.path(name)
+	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
+	if err != nil {
+		if strings.Contains(err.Error(), "permission denied") {
+			diags.AddError(
+				"Permission Denied",
+				fmt.Sprintf("Error %s UI header %q: %s\n\n"+
+					"This operation requires the 'sudo' capability. "+
+					"Ensure your Vault policy includes:\n"+
+					"path \"sys/config/ui/headers/*\" {\n"+
+					"  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\", \"sudo\"]\n"+
+					"}",
+					operation, name, err),
+			)
+		} else {
+			title, detail := vaultErr(err)
+			diags.AddError(title, detail)
+		}
+	}
+
+	return diags
+}
+
 // ImportState implements the import functionality for this resource
 func (r *ConfigUIHeaderResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// Directly map the import ID to the "name" attribute in the schema
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), req.ID)...)
+}
+
+// getRootNamespaceClient returns a Vault client configured for the root namespace.
+// UI header configuration is a global setting that must be managed from the root namespace.
+func (r *ConfigUIHeaderResource) getRootNamespaceClient(ctx context.Context) (*api.Client, error) {
+	baseClient, err := client.GetClient(ctx, r.Meta(), "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Clone the client to avoid modifying the shared client
+	rootClient, err := baseClient.Clone()
+	if err != nil {
+		return nil, err
+	}
+
+	// Clear any namespace to ensure we're operating in the root namespace
+	rootClient.ClearNamespace()
+
+	return rootClient, nil
 }
 
 func (r *ConfigUIHeaderResource) path(name string) string {

@@ -5,17 +5,14 @@ package config_test
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	// "github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // TestAccConfigUIHeader tests basic resource creation and import
@@ -35,7 +32,7 @@ func TestAccConfigUIHeader(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "value1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldValues+".*", "value1"),
 				),
 			},
 			{
@@ -66,7 +63,7 @@ func TestAccConfigUIHeader_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "initial"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldValues+".*", "initial"),
 				),
 			},
 			// Verify import works
@@ -82,7 +79,7 @@ func TestAccConfigUIHeader_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "updated"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldValues+".*", "updated"),
 				),
 			},
 			// Verify import still works after update
@@ -99,9 +96,9 @@ func TestAccConfigUIHeader_update(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, headerName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "3"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".0", "value1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".1", "value2"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".2", "value3"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldValues+".*", "value1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldValues+".*", "value2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldValues+".*", "value3"),
 				),
 			},
 			// Verify import works with multiple values
@@ -116,23 +113,45 @@ func TestAccConfigUIHeader_update(t *testing.T) {
 	})
 }
 
-// Helper function to check if a value exists in the values set
-func testAccCheckUIHeaderValuesContain(resourceName, expectedValue string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", resourceName)
-		}
+// TestAccConfigUIHeader_contentSecurityPolicy tests CSP header configuration
+// This test validates the warning in the documentation about CSP overriding Vault's default
+func TestAccConfigUIHeader_contentSecurityPolicy(t *testing.T) {
+	resourceName := "vault_config_ui_header.csp"
+	cspValue := "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
 
-		// Check if the expected value exists in any of the values
-		for key, value := range rs.Primary.Attributes {
-			if regexp.MustCompile(`^values\.\d+$`).MatchString(key) && value == expectedValue {
-				return nil
-			}
-		}
-
-		return fmt.Errorf("expected value %q not found in values set", expectedValue)
-	}
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccConfigUIHeaderConfig_csp(cspValue),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "Content-Security-Policy"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldValues+".*", cspValue),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateId:                        "Content-Security-Policy",
+				ImportStateVerifyIdentifierAttribute: consts.FieldName,
+			},
+			// Test updating CSP to a more restrictive policy
+			{
+				Config: testAccConfigUIHeaderConfig_csp("default-src 'self'"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "Content-Security-Policy"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldValues+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldValues+".*", "default-src 'self'"),
+				),
+			},
+		},
+	})
 }
 
 // Helper function to generate test configuration
@@ -150,11 +169,11 @@ resource "vault_config_ui_header" "test" {
 }`, name, valuesStr)
 }
 
-// Helper function to generate test configuration with empty values
-func testAccConfigUIHeaderConfig_emptyValues(name string) string {
+// Helper function to generate CSP test configuration
+func testAccConfigUIHeaderConfig_csp(cspValue string) string {
 	return fmt.Sprintf(`
-resource "vault_config_ui_header" "test" {
-  name = %q
-  values = []
-}`, name)
+resource "vault_config_ui_header" "csp" {
+  name = "Content-Security-Policy"
+  values = [%q]
+}`, cspValue)
 }
