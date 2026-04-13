@@ -263,6 +263,7 @@ const (
 	FieldProviderConfig                     = "provider_config"
 	FieldNamespaceInState                   = "namespace_in_state"
 	FieldIdentityGroupIDs                   = "identity_group_ids"
+	FieldEntityAlias                        = "entity_alias"
 	FieldIdentityEntityIDs                  = "identity_entity_ids"
 	FieldWrappingAccessor                   = "wrapping_accessor"
 	FieldRoleName                           = "role_name"
