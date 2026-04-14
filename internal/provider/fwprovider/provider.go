@@ -241,6 +241,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
 		sys.NewPasswordPolicyResource,
+		sys.NewRotationPolicyResource,
 		sysconfig.NewQuotaConfigResource,
 		sys.NewPluginRuntimeResource,
 		config.NewSysConfigCORSResource,

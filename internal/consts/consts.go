@@ -607,6 +607,8 @@ const (
 	FieldSerialNumberSource                 = "serial_number_source"
 	FieldCertMetadata                       = "cert_metadata"
 	FieldTokenType                          = "token_type"
+	FieldMaxRetriesPerCycle                 = "max_retries_per_cycle"
+	FieldMaxRetryCycles                     = "max_retry_cycles"
 	FieldKMSName                            = "kms_name"
 	FieldKeyCollection                      = "key_collection"
 	FieldServiceAccountFile                 = "service_account_file"
