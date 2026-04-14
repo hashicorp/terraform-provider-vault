@@ -19,11 +19,12 @@ import (
 
 func tokenResource() *schema.Resource {
 	return &schema.Resource{
-		Create: tokenCreate,
-		Read:   provider.ReadWrapper(tokenRead),
-		Update: tokenUpdate,
-		Delete: tokenDelete,
-		Exists: tokenExists,
+		DeprecationMessage: "The vault_token resource is maintained for legacy persistence; for better security and batch token support, use the ephemeral vault_token resource instead.",
+		Create:             tokenCreate,
+		Read:               provider.ReadWrapper(tokenRead),
+		Update:             tokenUpdate,
+		Delete:             tokenDelete,
+		Exists:             tokenExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
