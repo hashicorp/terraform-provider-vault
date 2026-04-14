@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
+	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 )
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
@@ -240,6 +241,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffesec.NewSpiffeSecretBackendRoleResource,
 		sys.NewPasswordPolicyResource,
 		sys.NewRotationPolicyResource,
+		sysconfig.NewQuotaConfigResource,
+		sys.NewPluginRuntimeResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
@@ -290,5 +293,6 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
+		sys.NewPluginRuntimesDataSource,
 	}
 }
