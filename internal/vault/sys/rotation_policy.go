@@ -6,13 +6,16 @@ package sys
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
@@ -21,8 +24,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ resource.ResourceWithConfigure = &RotationPolicyResource{}
+// Ensure the implementation satisfies the resource.ResourceWithImportState interface
+var _ resource.ResourceWithImportState = &RotationPolicyResource{}
 
 // NewRotationPolicyResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider.
@@ -33,13 +36,12 @@ func NewRotationPolicyResource() resource.Resource {
 // RotationPolicyResource implements the methods that define this resource.
 type RotationPolicyResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 // RotationPolicyModel describes the Terraform resource data model.
 type RotationPolicyModel struct {
 	// common fields to all migrated resources
-	base.BaseModelLegacy
+	base.BaseModel
 
 	// fields specific to this resource
 	Name               types.String `tfsdk:"name"`
@@ -80,7 +82,7 @@ func (r *RotationPolicyResource) Schema(ctx context.Context, req resource.Schema
 		MarkdownDescription: "Provides a resource to manage Rotation Policies.",
 	}
 
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // Create is called during the terraform apply command.
@@ -124,7 +126,6 @@ func (r *RotationPolicyResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	data.ID = types.StringValue(data.Name.ValueString())
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -147,7 +148,7 @@ func (r *RotationPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	name := data.ID.ValueString()
+	name := data.Name.ValueString()
 	path := r.path(name)
 	policyResp, err := client.Logical().ReadWithContext(ctx, path)
 	if err != nil {
@@ -167,7 +168,6 @@ func (r *RotationPolicyResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	data.Name = types.StringValue(name)
-	data.ID = types.StringValue(name)
 	data.MaxRetriesPerCycle = types.Int64Value(int64(apiModel.MaxRetriesPerCycle))
 	data.MaxRetryCycles = types.Int64Value(int64(apiModel.MaxRetryCycles))
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -214,8 +214,23 @@ func (r *RotationPolicyResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	data.ID = types.StringValue(data.Name.ValueString())
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *RotationPolicyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldName), req, resp)
+
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(
+			resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
+		)
+	}
 }
 
 // Delete is called during the terraform apply command.
