@@ -13,6 +13,7 @@ FEATURES:
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 
 IMPROVEMENTS:
+
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 * Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
 
