@@ -4,6 +4,7 @@
 package sys_test
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -85,8 +86,6 @@ func TestAccActivationFlagsResource_import(t *testing.T) {
 // TestAccActivationFlagsResource_emptyList tests resource with empty activated_flags list
 // This represents managing the state where no flags should be activated
 func TestAccActivationFlagsResource_emptyList(t *testing.T) {
-	resourceName := "vault_activation_flags.test"
-
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
@@ -95,13 +94,8 @@ func TestAccActivationFlagsResource_emptyList(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccActivationFlagsResourceConfig_empty(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
-					// Note: activated_flags.# may not be 0 if flags were already activated
-					// since the API doesn't support deactivation
-					resource.TestCheckResourceAttrSet(resourceName, "activated_flags.#"),
-				),
+				Config:      testAccActivationFlagsResourceConfig_empty(),
+				ExpectError: regexp.MustCompile(`does not support deactivation`),
 			},
 		},
 	})

@@ -5,6 +5,7 @@ package sys
 
 import (
 	"context"
+	"sort"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -122,6 +123,9 @@ func populateActivationFlagsDataSourceModel(ctx context.Context, data *Activatio
 		)
 		return diagnostics
 	}
+
+	sort.Strings(activatedFlags)
+	sort.Strings(unactivatedFlags)
 
 	data.ActivatedFlags, diagnostics = listValueFromStrings(ctx, activatedFlags, diagnostics)
 	if diagnostics.HasError() {
