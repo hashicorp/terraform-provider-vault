@@ -60,12 +60,6 @@ type ControlGroupConfigModel struct {
 	MaxTTL types.String `tfsdk:"max_ttl"`
 }
 
-// ControlGroupConfigAPIModel represents the API request/response structure.
-// MaxTTL is typed as 'any' to handle both string and numeric responses from Vault.
-type ControlGroupConfigAPIModel struct {
-	MaxTTL any `json:"max_ttl,omitempty" mapstructure:"max_ttl,omitempty"`
-}
-
 // durationOrSecondsValidator validates that max_ttl can be parsed as either
 // a duration string (e.g., "2h", "30m") or as seconds (e.g., "7200").
 type durationOrSecondsValidator struct{}

@@ -20,8 +20,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
-	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
+	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -32,7 +32,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
-	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 )
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
