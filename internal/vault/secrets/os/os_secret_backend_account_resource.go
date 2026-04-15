@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -16,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
@@ -48,14 +46,13 @@ type OSSecretBackendAccountResource struct {
 type OSSecretBackendAccountModel struct {
 	base.BaseModel
 
-	Mount             types.String `tfsdk:"mount"`
-	Host              types.String `tfsdk:"host"`
-	Name              types.String `tfsdk:"name"`
-	Username          types.String `tfsdk:"username"`
-	PasswordWO        types.String `tfsdk:"password_wo"`
-	PasswordWOVersion types.Int64  `tfsdk:"password_wo_version"`
-	ParentAccountRef  types.String `tfsdk:"parent_account_ref"`
-	PasswordPolicy    types.String `tfsdk:"password_policy"`
+	Mount            types.String `tfsdk:"mount"`
+	Host             types.String `tfsdk:"host"`
+	Name             types.String `tfsdk:"name"`
+	Username         types.String `tfsdk:"username"`
+	PasswordWO       types.String `tfsdk:"password_wo"`
+	ParentAccountRef types.String `tfsdk:"parent_account_ref"`
+	PasswordPolicy   types.String `tfsdk:"password_policy"`
 	frameworkrotation.AutomatedRotationModel
 	VerifyConnection  types.Bool   `tfsdk:"verify_connection"`
 	CustomMetadata    types.Map    `tfsdk:"custom_metadata"`
@@ -113,18 +110,14 @@ func (r *OSSecretBackendAccountResource) Schema(_ context.Context, _ resource.Sc
 				Required:            true,
 			},
 			consts.FieldPasswordWO: schema.StringAttribute{
-				MarkdownDescription: "Password for the account. This is write-only and will not be read back from Vault.",
-				Required:            true,
-				Sensitive:           true,
-				WriteOnly:           true,
-			},
-			consts.FieldPasswordWOVersion: schema.Int64Attribute{
-				MarkdownDescription: "A version counter for the write-only password_wo field. Incrementing this value will trigger an update to the password.",
-				Optional:            true,
-				Validators: []validator.Int64{
-					int64validator.AlsoRequires(
-						path.MatchRoot(consts.FieldPasswordWO),
-					),
+				MarkdownDescription: `Password for the account. This is write-only, will not be read back from Vault,
+	and can only be set during resource creation. To update the password after creation, use the Vault CLI
+	or API to call the reset endpoint directly.`,
+				Required:  true,
+				Sensitive: true,
+				WriteOnly: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldParentAccountRef: schema.StringAttribute{
@@ -307,20 +300,6 @@ func (r *OSSecretBackendAccountResource) writeAccountToVault(ctx context.Context
 	return true
 }
 
-func passwordWOUpdated(stateVersion, planVersion types.Int64) bool {
-	if stateVersion.IsUnknown() || planVersion.IsUnknown() {
-		return false
-	}
-	if stateVersion.IsNull() != planVersion.IsNull() {
-		return true
-	}
-	if stateVersion.IsNull() {
-		return false
-	}
-
-	return stateVersion.ValueInt64() != planVersion.ValueInt64()
-}
-
 func (r *OSSecretBackendAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data OSSecretBackendAccountModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -404,12 +383,6 @@ func (r *OSSecretBackendAccountResource) Read(ctx context.Context, req resource.
 }
 
 func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var stateData OSSecretBackendAccountModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
 	var data OSSecretBackendAccountModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -423,23 +396,9 @@ func (r *OSSecretBackendAccountResource) Update(ctx context.Context, req resourc
 	}
 
 	accountPath := data.vaultPath()
-	includePassword := passwordWOUpdated(stateData.PasswordWOVersion, data.PasswordWOVersion)
-	passwordWO := types.StringNull()
-	if includePassword {
-		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldPasswordWO), &passwordWO)...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		if passwordWO.IsNull() || passwordWO.IsUnknown() {
-			resp.Diagnostics.AddError(
-				"Missing password_wo",
-				"password_wo must be provided whenever password_wo_version changes.",
-			)
-			return
-		}
-	}
 
-	requestData, diags := r.buildRequestData(ctx, &data, passwordWO, includePassword)
+	// Build request data without password (password is create-only)
+	requestData, diags := r.buildRequestData(ctx, &data, types.StringNull(), false)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
