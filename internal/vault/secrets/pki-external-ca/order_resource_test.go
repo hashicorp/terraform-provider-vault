@@ -36,7 +36,7 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			acctestutil.PreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 			ca, directoryUrl = setupVaultAndPebble(t)
 		},
@@ -108,19 +108,21 @@ func setupVaultAndPebble(t *testing.T) (string, string) {
 	require.NoError(t, err)
 
 	f := filters.NewArgs()
-	f.Add("name", "pebble")
+	f.Add("ancestor", "ghcr.io/letsencrypt/pebble:2.8.0")
 
 	containers, err := dockerAPI.ContainerList(t.Context(), container.ListOptions{Filters: f})
 	require.NoError(t, err)
 
-	exactMatchName := "/pebble"
-
 	var id string
-	// 4. Iterate through the results to find the exact match
 	for _, c := range containers {
-		for _, name := range c.Names {
-			if name == exactMatchName {
-				id = c.ID
+		if c.NetworkSettings != nil {
+			for _, netConfig := range c.NetworkSettings.Networks {
+				// Loop through all aliases on this specific network
+				for _, alias := range netConfig.Aliases {
+					if alias == "pebble" {
+						id = c.ID
+					}
+				}
 			}
 		}
 	}
