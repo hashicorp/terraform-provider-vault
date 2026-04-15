@@ -24,13 +24,14 @@ func TestAccPKIExternalCAOrderChallengeDataSource_basic(t *testing.T) {
 	dataSourceName1 := "data.vault_pki_external_ca_secret_backend_order_challenge.http01"
 	dataSourceName2 := "data.vault_pki_external_ca_secret_backend_order_challenge.dns01"
 
-	ca, directoryUrl := setupVaultAndPebble(t)
+	var ca, directoryUrl string
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			ca, directoryUrl = setupVaultAndPebble(t)
 		},
 		Steps: []resource.TestStep{
 			{

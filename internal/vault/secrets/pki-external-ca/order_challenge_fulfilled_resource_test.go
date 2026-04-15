@@ -28,7 +28,7 @@ func TestAccPKIExternalCAOrderChallengeFulfilledResource_basic(t *testing.T) {
 
 	resourceName := "vault_pki_external_ca_secret_backend_order_challenge_fulfilled.test"
 
-	ca, directoryUrl := setupVaultAndPebble(t)
+	var ca, directoryUrl string
 
 	resource.Test(t, resource.TestCase{
 		ExternalProviders: map[string]resource.ExternalProvider{
@@ -41,6 +41,7 @@ func TestAccPKIExternalCAOrderChallengeFulfilledResource_basic(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			ca, directoryUrl = setupVaultAndPebble(t)
 		},
 		Steps: []resource.TestStep{
 			{

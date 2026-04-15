@@ -22,13 +22,14 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 	resourceType := "vault_pki_external_ca_secret_backend_acme_account"
 	resourceName := resourceType + ".test"
 
-	ca, directoryUrl := setupVaultAndPebble(t)
+	var ca, directoryUrl string
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			ca, directoryUrl = setupVaultAndPebble(t)
 		},
 		Steps: []resource.TestStep{
 			{
