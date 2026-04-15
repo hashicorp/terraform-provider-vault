@@ -46,6 +46,7 @@ resource "vault_transform_transformation" "tokenization" {
   mapping_mode  = "default"
   stores        = ["my-store"]
   allowed_roles = ["payments"]
+  convergent = true
 }
 ```
 
@@ -63,7 +64,6 @@ resource "vault_transform_transformation" "convergent_fpe" {
   type          = "fpe"
   template      = "builtin/creditcardnumber"
   tweak_source  = "internal"
-  convergent    = true
   allowed_roles = ["payments"]
 }
 ```
