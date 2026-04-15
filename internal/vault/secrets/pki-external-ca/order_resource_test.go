@@ -4,11 +4,15 @@
 package pki_external_ca_test
 
 import (
+	"archive/tar"
 	"crypto/x509/pkix"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -16,8 +20,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
 
@@ -98,9 +102,40 @@ func setupVaultAndPebble(t *testing.T) (string, string) {
 		*/
 	}
 
-	ca, port, _ := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions())
-	directoryUrl := fmt.Sprintf("https://localhost:%d/dir", port)
-	return ca, directoryUrl
+	dockerAPI, err := docker.NewDockerAPI()
+	require.NoError(t, err)
+
+	f := filters.NewArgs()
+	f.Add("name", "pebble")
+
+	containers, err := dockerAPI.ContainerList(t.Context(), container.ListOptions{Filters: f})
+	require.NoError(t, err)
+
+	exactMatchName := "/pebble"
+
+	var id string
+	// 4. Iterate through the results to find the exact match
+	for _, c := range containers {
+		for _, name := range c.Names {
+			if name == exactMatchName {
+				id = c.ID
+			}
+		}
+	}
+	require.NotEmpty(t, id)
+
+	rdr, _, err := dockerAPI.CopyFromContainer(t.Context(), id, "test/certs/pebble.minica.pem")
+	require.NoError(t, err)
+	defer rdr.Close()
+
+	tr := tar.NewReader(rdr)
+	_, err = tr.Next()
+	require.NoError(t, err)
+
+	pebbleCa, err := io.ReadAll(tr)
+	require.NoError(t, err)
+
+	return string(pebbleCa), "https://pebble:14000/dir"
 }
 
 func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
