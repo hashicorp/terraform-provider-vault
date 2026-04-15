@@ -254,6 +254,7 @@ jobs:
           --health-retries 30
       pebble:
         image: ghcr.io/letsencrypt/pebble:2.8.0
+        options: --add-host=host.docker.internal:host-gateway
         ports:
           - 14000:14000
     steps:
