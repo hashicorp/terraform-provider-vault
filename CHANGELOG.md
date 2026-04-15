@@ -17,14 +17,7 @@ IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 * Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
-
-BUGS:
-* `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
-* `vault_pki_external_ca_secret_backend_acme_account`: Provide eab_kid and eab_key values through the ACME account creation request. ([#2851]https://github.com/hashicorp/terraform-provider-vault/pull/2852)
-* `provider/auth_login`: Fix "Missing Region" error when using generic `auth_login` block for AWS authentication without explicit `sts_region` parameter. The provider now properly resolves AWS region from environment variables (`AWS_REGION`, `AWS_DEFAULT_REGION`) and EC2 instance metadata service (IMDS), consistent with `auth_login_aws` behavior. ([#2786](https://github.com/hashicorp/terraform-provider-vault/issues/2786))
-* `provider/auth_aws`: Fix `auth_login_aws` for Vault AWS auth backends configured with `use_sts_region_from_client = true` by generating a standard SigV4-signed `GetCallerIdentity` request with an `Authorization` header, and added support for custom STS endpoints. ([#2841](https://github.com/hashicorp/terraform-provider-vault/pull/2841))
-* `resource_database_secret_backend_connection` : Fixes a regression issue for `resource_database_secret_backend_connection` for elasticsearch. Reverted the field name from insecure_tls to insecure.
-* `vault_rabbitmq_secret_backend_role`: Fixed spurious diff issue for `vhost` and `vhost_topic` fields by changing field type from TypeList to TypeSet. ([#2872](https://github.com/hashicorp/terraform-provider-vault/pull/2872))
+* `vault_transform_transformation`: Added `mapping_mode`, `stores` and `convergent` fields to the resource. ([#2820] https://github.com/hashicorp/terraform-provider-vault/pull/2820/)
 
 BUGS:
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
