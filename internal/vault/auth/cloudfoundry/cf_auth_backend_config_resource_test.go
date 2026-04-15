@@ -113,6 +113,8 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFUsername, params.username),
 					// Write-only field must never be stored in state.
 					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFPasswordWO),
+					// Version field should be stored in state
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFPasswordWOVersion, "1"),
 					// Computed fields must be populated with Vault's defaults even when
 					// not explicitly set in config.
 					resource.TestCheckResourceAttr(resourceAddress, consts.FieldLoginMaxSecsNotBefore, "300"),
@@ -222,7 +224,7 @@ func TestAccCFAuthBackendConfig(t *testing.T) {
 				ImportStateIdFunc:                    testAccCFAuthBackendConfigImportStateIdFunc(resourceAddress),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{consts.FieldCFPasswordWO},
+				ImportStateVerifyIgnore:              []string{consts.FieldCFPasswordWO, consts.FieldCFPasswordWOVersion},
 			},
 			// Step 7: Destroy the config resource (keep the mount).
 			{
@@ -357,6 +359,64 @@ func TestAccCFAuthBackendConfigInvalid(t *testing.T) {
 	})
 }
 
+// TestAccCFAuthBackendConfigPasswordVersionTracking tests that the cf_password_wo_version
+// field correctly triggers password updates when incremented.
+func TestAccCFAuthBackendConfigPasswordVersionTracking(t *testing.T) {
+	mount := acctest.RandomWithPrefix("cf-mount")
+	resourceAddress := "vault_cf_auth_backend_config.test"
+
+	params := cfTestParamsFromEnv(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create with write-only password (version 1)
+			{
+				Config: testAccCFAuthBackendConfigPasswordVersion(mount, params, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFPasswordWOVersion, "1"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFPasswordWO),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 2: Update password by incrementing version to 2
+			{
+				Config: testAccCFAuthBackendConfigPasswordVersion(mount, params, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFPasswordWOVersion, "2"),
+					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCFPasswordWO),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 3: Keep version at 2 - should not trigger password update
+			{
+				Config: testAccCFAuthBackendConfigPasswordVersion(mount, params, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFPasswordWOVersion, "2"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 func testAccCFAuthBackendConfigInvalidAPIAddr(mount string, p cfTestParams) string {
 	return fmt.Sprintf(`
 %s
@@ -367,6 +427,7 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "not-a-valid-url"
   cf_username              = "%s"
   cf_password_wo           = "%s"
+  cf_password_wo_version   = 1
 }
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.username, p.password)
 }
@@ -380,6 +441,7 @@ resource "vault_cf_auth_backend_config" "test" {
   identity_ca_certificates = ["%s"]
   cf_api_addr              = "%s"
   cf_password_wo           = "%s"
+  cf_password_wo_version   = 1
 }
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.password)
 }
@@ -406,6 +468,7 @@ resource "vault_cf_auth_backend_config" "test" {
   identity_ca_certificates = ["%s"]
   cf_username              = "%s"
   cf_password_wo           = "%s"
+  cf_password_wo_version   = 1
 }
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.username, p.password)
 }
@@ -421,6 +484,7 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "%s"
   cf_username              = "%s"
   cf_password_wo           = "%s"
+  cf_password_wo_version   = 1
 }
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password)
 }
@@ -456,6 +520,8 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "%s"
   cf_username              = "%s"
   cf_password_wo           = "%s"
+  cf_password_wo_version       = 1
+
 }
 `, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password)
 }
@@ -471,6 +537,7 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr                  = "%s"
   cf_username                  = "%s"
   cf_password_wo               = "%s"
+  cf_password_wo_version       = 1
   cf_api_trusted_certificates  = ["%s"]
   login_max_seconds_not_before = 60
   login_max_seconds_not_after  = 30
@@ -492,6 +559,7 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr                  = "%s"
   cf_username                  = "%s"
   cf_password_wo               = "%s"
+  cf_password_wo_version       = 1
   cf_api_trusted_certificates  = ["%s"]
   login_max_seconds_not_before = 60
   login_max_seconds_not_after  = 30
@@ -512,6 +580,7 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr                  = "%s"
   cf_username                  = "%s"
   cf_password_wo               = "%s"
+  cf_password_wo_version       = 1
   login_max_seconds_not_before = 120
   login_max_seconds_not_after  = 60
   cf_timeout                   = 30
@@ -540,6 +609,7 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr              = "%s"
   cf_username              = "%s"
   cf_password_wo           = "%s"
+  cf_password_wo_version   = 1
 }
 `, ns, mount, escapeHCL(p.ca), p.apiAddr, p.username, p.password)
 }
@@ -556,6 +626,7 @@ resource "vault_cf_auth_backend_config" "test" {
   cf_api_addr                 = "%s"
   cf_username                 = "%s"
   cf_password_wo              = "%s"
+  cf_password_wo_version      = 1
   cf_api_trusted_certificates = ["%s", "%s"]
 }
 `, testAccCFAuthBackendConfigMountOnly(mount),
@@ -567,4 +638,20 @@ resource "vault_cf_auth_backend_config" "test" {
 // escapeHCL escapes newlines in a PEM certificate for embedding in HCL strings.
 func escapeHCL(s string) string {
 	return strings.ReplaceAll(s, "\n", "\\n")
+}
+
+// testAccCFAuthBackendConfigPasswordVersion creates a config with a specific password version
+func testAccCFAuthBackendConfigPasswordVersion(mount string, p cfTestParams, version int) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_cf_auth_backend_config" "test" {
+  mount                    = vault_auth_backend.cf.path
+  identity_ca_certificates = ["%s"]
+  cf_api_addr              = "%s"
+  cf_username              = "%s"
+  cf_password_wo           = "%s"
+  cf_password_wo_version   = %d
+}
+`, testAccCFAuthBackendConfigMountOnly(mount), escapeHCL(p.ca), p.apiAddr, p.username, p.password, version)
 }
