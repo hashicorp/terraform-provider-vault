@@ -29,7 +29,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault#namespace).
    *Available only for Vault Enterprise*.
 
-* `max_ttl` - (Optional) The maximum TTL for a control group wrapping token. This value can be specified as a duration string (e.g., "24h", "1h30m") or as an integer number of seconds (e.g., "86400").
+* `max_ttl` - (Required) The maximum TTL for a control group wrapping token. This value can be specified as a duration string (e.g., "24h", "1h30m") or as an integer number of seconds (e.g., "86400").
 
 ## Attributes Reference
 
