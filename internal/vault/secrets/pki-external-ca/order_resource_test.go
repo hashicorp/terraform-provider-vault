@@ -113,20 +113,8 @@ func setupVaultAndPebble(t *testing.T) (string, string) {
 	containers, err := dockerAPI.ContainerList(t.Context(), container.ListOptions{Filters: f})
 	require.NoError(t, err)
 
-	var id string
-	for _, c := range containers {
-		if c.NetworkSettings != nil {
-			for _, netConfig := range c.NetworkSettings.Networks {
-				// Loop through all aliases on this specific network
-				for _, alias := range netConfig.Aliases {
-					if alias == "pebble" {
-						id = c.ID
-					}
-				}
-			}
-		}
-	}
-	require.NotEmpty(t, id)
+	require.Len(t, containers, 1)
+	id := containers[0].ID
 
 	rdr, _, err := dockerAPI.CopyFromContainer(t.Context(), id, "test/certs/pebble.minica.pem")
 	require.NoError(t, err)
