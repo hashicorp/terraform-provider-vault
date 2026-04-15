@@ -50,24 +50,6 @@ resource "vault_transform_transformation" "tokenization" {
 }
 ```
 
-### FPE with Convergent Encryption
-
-```hcl
-resource "vault_mount" "transform" {
-  path = "transform"
-  type = "transform"
-}
-
-resource "vault_transform_transformation" "convergent_fpe" {
-  path          = vault_mount.transform.path
-  name          = "ccn-convergent"
-  type          = "fpe"
-  template      = "builtin/creditcardnumber"
-  tweak_source  = "internal"
-  allowed_roles = ["payments"]
-}
-```
-
 ## Argument Reference
 
 The following arguments are supported:
