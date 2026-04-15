@@ -175,6 +175,7 @@ jobs:
           VAULT_LOCAL_CONFIG: |
             {"plugin_directory": "/vault/plugins"}
         options: >-
+          --cap-add=SETFCAP
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
           --health-timeout 5s
