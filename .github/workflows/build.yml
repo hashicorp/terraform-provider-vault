@@ -176,6 +176,7 @@ jobs:
             {"plugin_directory": "/vault/plugins"}
         options: >-
           --cap-add IPC_LOCK
+          --cap-add CAP_SETFCAP
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
           --health-timeout 5s
