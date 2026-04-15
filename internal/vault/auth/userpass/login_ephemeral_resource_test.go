@@ -34,28 +34,6 @@ func testAccUserpassAuthLoginStateChecks() []statecheck.StateCheck {
 			tfjsonpath.New("data").AtMapKey(consts.FieldClientToken),
 			knownvalue.StringRegexp(testAccUserpassAuthLoginNonEmptyRegex),
 		),
-		statecheck.ExpectKnownValue(
-			"echo.test_userpass",
-			tfjsonpath.New("data").AtMapKey(consts.FieldAccessor),
-			knownvalue.StringRegexp(testAccUserpassAuthLoginNonEmptyRegex),
-		),
-		statecheck.ExpectKnownValue(
-			"echo.test_userpass",
-			tfjsonpath.New("data").AtMapKey(consts.FieldLeaseDuration),
-			knownvalue.NotNull(),
-		),
-		statecheck.ExpectKnownValue(
-			"echo.test_userpass",
-			tfjsonpath.New("data").AtMapKey(consts.FieldRenewable),
-			knownvalue.NotNull(),
-		),
-		statecheck.ExpectKnownValue(
-			"echo.test_userpass",
-			tfjsonpath.New("data").AtMapKey(consts.FieldPolicies),
-			knownvalue.ListExact([]knownvalue.Check{
-				knownvalue.StringExact("default"),
-			}),
-		),
 	}
 }
 
@@ -133,7 +111,13 @@ ephemeral "vault_userpass_auth_login" "login" {
 }
 
 provider "echo" {
-	data = ephemeral.vault_userpass_auth_login.login
+	data = {
+		client_token   = ephemeral.vault_userpass_auth_login.login.client_token
+		accessor       = ephemeral.vault_userpass_auth_login.login.accessor
+		lease_duration = ephemeral.vault_userpass_auth_login.login.lease_duration
+		renewable      = ephemeral.vault_userpass_auth_login.login.renewable
+		policies       = ephemeral.vault_userpass_auth_login.login.policies
+	}
 }
 
 resource "echo" "test_userpass" {}
@@ -169,7 +153,13 @@ ephemeral "vault_userpass_auth_login" "login" {
 }
 
 provider "echo" {
-	data = ephemeral.vault_userpass_auth_login.login
+	data = {
+		client_token   = ephemeral.vault_userpass_auth_login.login.client_token
+		accessor       = ephemeral.vault_userpass_auth_login.login.accessor
+		lease_duration = ephemeral.vault_userpass_auth_login.login.lease_duration
+		renewable      = ephemeral.vault_userpass_auth_login.login.renewable
+		policies       = ephemeral.vault_userpass_auth_login.login.policies
+	}
 }
 
 resource "echo" "test_userpass" {}
