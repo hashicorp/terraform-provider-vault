@@ -12,10 +12,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/vault/api"
+
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestResourceGenericSecret(t *testing.T) {
@@ -171,10 +172,10 @@ resource "vault_mount" "v1" {
 }
 
 resource "vault_generic_secret" "test" {
-	path = "${vault_mount.v1.path}/%s"
-	data_json = <<EOT
+    path = "${vault_mount.v1.path}/%s"
+    data_json = <<EOT
 {
-	"zip": "zap"
+    "zip": "zap"
 }
 EOT
 }`, mount, name)
