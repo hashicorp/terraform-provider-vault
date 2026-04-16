@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -139,14 +140,14 @@ func createTransformTransformationResource(d *schema.ResourceData, meta interfac
 		data[consts.FieldDeletionAllowed] = d.Get(consts.FieldDeletionAllowed)
 	}
 
-	if v, ok := d.GetOkExists(consts.FieldMappingMode); ok {
+	if v, ok := d.GetOk(consts.FieldMappingMode); ok {
 		data[consts.FieldMappingMode] = v
 	}
-	if v, ok := d.GetOkExists(consts.FieldStores); ok {
+	if v, ok := d.GetOk(consts.FieldStores); ok {
 		data[consts.FieldStores] = v
 	}
-	if v, ok := d.GetOkExists(consts.FieldConvergent); ok {
-		data[consts.FieldConvergent] = v
+	if raw, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldConvergent)); !raw.IsNull() {
+		data[consts.FieldConvergent] = d.Get(consts.FieldConvergent)
 	}
 
 	log.Printf("[DEBUG] Writing %q", vaultPath)
