@@ -322,14 +322,12 @@ jobs:
             ${{ runner.os }}-golang-
 
       - name: Register OS plugin in Vault
-        if: ${{ steps.os_plugin.outputs.downloaded == 'true' }}
-        env:
-          VAULT_ADDR: "http://localhost:8200"
-          VAULT_TOKEN: "root"
+        if: ${{ steps.os_plugin.outputs.downloaded == 'true' && contains(matrix.image, '-ent') }}
         run: |
-          # Register the plugin in Vault's catalog with version
+          # Register the plugin in Vault's catalog with version (enterprise only)
           # Vault will automatically calculate and verify the SHA256
-          vault plugin register \
+          docker exec $(docker ps -qf "ancestor=hashicorp/${{ matrix.image }}") \
+            vault plugin register \
             -version="v0.1.0+ent" \
             secret \
             vault-plugin-secrets-os
