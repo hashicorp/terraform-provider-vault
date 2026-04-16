@@ -27,6 +27,20 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+// supportedAuthTypes defines the list of valid authentication methods for UI default auth.
+// This list is shared between default_auth_type and backup_auth_types validators to ensure consistency.
+var supportedAuthTypes = []string{
+	"github",
+	"jwt",
+	"ldap",
+	"oidc",
+	"okta",
+	"radius",
+	"saml",
+	"token",
+	"userpass",
+}
+
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
 var _ resource.ResourceWithConfigure = &ConfigUIDefaultAuthResource{}
 
@@ -96,17 +110,7 @@ func (r *ConfigUIDefaultAuthResource) Schema(ctx context.Context, req resource.S
 				MarkdownDescription: "The default authentication method. Uses `OneOf` validator to ensure only valid auth methods are accepted: github, jwt, ldap, oidc, okta, radius, saml, token, userpass.",
 				Required:            true,
 				Validators: []validator.String{
-					stringvalidator.OneOf(
-						"github",
-						"jwt",
-						"ldap",
-						"oidc",
-						"okta",
-						"radius",
-						"saml",
-						"token",
-						"userpass",
-					),
+					stringvalidator.OneOf(supportedAuthTypes...),
 				},
 			},
 			consts.FieldBackupAuthTypes: schema.ListAttribute{
@@ -115,17 +119,7 @@ func (r *ConfigUIDefaultAuthResource) Schema(ctx context.Context, req resource.S
 				Optional:            true,
 				Validators: []validator.List{
 					listvalidator.ValueStringsAre(
-						stringvalidator.OneOf(
-							"github",
-							"jwt",
-							"ldap",
-							"oidc",
-							"okta",
-							"radius",
-							"saml",
-							"token",
-							"userpass",
-						),
+						stringvalidator.OneOf(supportedAuthTypes...),
 					),
 				},
 			},
@@ -182,16 +176,21 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 		consts.FieldDefaultAuthType: data.DefaultAuthType.ValueString(),
 	}
 
-	// Always include namespace_path
-	// Normalize: empty string or "root" becomes "root/" for the API
+	// Always include namespace_path.
+	// Canonicalize configured values by trimming trailing slashes and
+	// treating "", "root", and "root/" as the root namespace.
 	namespacePath := ""
 	if !data.NamespacePath.IsNull() && !data.NamespacePath.IsUnknown() {
-		namespacePath = data.NamespacePath.ValueString()
+		namespacePath = strings.TrimRight(data.NamespacePath.ValueString(), "/")
 	}
-	if namespacePath == "" || namespacePath == "root" {
-		namespacePath = "root/"
+	if namespacePath == "root" {
+		namespacePath = ""
 	}
-	vaultRequest[consts.FieldNamespacePath] = namespacePath
+	if namespacePath == "" {
+		vaultRequest[consts.FieldNamespacePath] = "root"
+	} else {
+		vaultRequest[consts.FieldNamespacePath] = namespacePath
+	}
 
 	// Add backup_auth_types if provided
 	if !data.BackupAuthTypes.IsNull() && !data.BackupAuthTypes.IsUnknown() {
@@ -228,13 +227,21 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
+	// Read back from Vault to get the canonical values
+	// This ensures state matches what Vault actually stored
+	readResp := resource.ReadResponse{
+		State: resp.State,
+	}
+
 	r.Read(ctx, resource.ReadRequest{
 		State:        resp.State,
 		ProviderMeta: req.ProviderMeta,
-	}, &resource.ReadResponse{
-		State:       resp.State,
-		Diagnostics: resp.Diagnostics,
-	})
+	}, &readResp)
+
+	resp.Diagnostics.Append(readResp.Diagnostics...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Read is called during the terraform apply, terraform plan, and terraform
@@ -283,16 +290,19 @@ func (r *ConfigUIDefaultAuthResource) Read(ctx context.Context, req resource.Rea
 
 	data.DefaultAuthType = types.StringValue(readResp.DefaultAuthType)
 
-	// Handle namespace_path - normalize "root/" to empty string to match Terraform config
+	// Handle namespace_path - canonicalize API response to match config
 	if namespacePath, ok := configResp.Data[consts.FieldNamespacePath].(string); ok {
-		// Normalize root namespace to empty string
-		if namespacePath == "root/" {
-			namespacePath = ""
+		// Trim trailing slashes
+		namespacePath = strings.TrimRight(namespacePath, "/")
+		// For root namespace ("" or "root"), only set if it was explicitly configured
+		if namespacePath == "" || namespacePath == "root" {
+			// Only set if the config explicitly had namespace_path
+			if !data.NamespacePath.IsNull() {
+				data.NamespacePath = types.StringNull()
+			}
+			// Otherwise leave it unset (null) to match the config
 		} else {
-			namespacePath = strings.TrimSuffix(namespacePath, "/")
-		}
-		// Only set if not empty or if it was explicitly set in config
-		if namespacePath != "" || !data.NamespacePath.IsNull() {
+			// For non-root namespaces, always set the value
 			data.NamespacePath = types.StringValue(namespacePath)
 		}
 	}
@@ -355,16 +365,21 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 		consts.FieldDefaultAuthType: data.DefaultAuthType.ValueString(),
 	}
 
-	// Always include namespace_path
-	// Normalize: empty string or "root" becomes "root/" for the API
+	// Always include namespace_path.
+	// Canonicalize configured values by trimming trailing slashes and
+	// treating "", "root", and "root/" as the root namespace.
 	namespacePath := ""
 	if !data.NamespacePath.IsNull() && !data.NamespacePath.IsUnknown() {
-		namespacePath = data.NamespacePath.ValueString()
+		namespacePath = strings.TrimRight(data.NamespacePath.ValueString(), "/")
 	}
-	if namespacePath == "" || namespacePath == "root" {
-		namespacePath = "root/"
+	if namespacePath == "root" {
+		namespacePath = ""
 	}
-	vaultRequest[consts.FieldNamespacePath] = namespacePath
+	if namespacePath == "" {
+		vaultRequest[consts.FieldNamespacePath] = "root"
+	} else {
+		vaultRequest[consts.FieldNamespacePath] = namespacePath
+	}
 
 	// Add backup_auth_types if provided
 	if !data.BackupAuthTypes.IsNull() && !data.BackupAuthTypes.IsUnknown() {
@@ -401,13 +416,21 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
+	// Read back from Vault to get the canonical values
+	// This ensures state matches what Vault actually stored
+	readResp := resource.ReadResponse{
+		State: resp.State,
+	}
+
 	r.Read(ctx, resource.ReadRequest{
 		State:        resp.State,
 		ProviderMeta: req.ProviderMeta,
-	}, &resource.ReadResponse{
-		State:       resp.State,
-		Diagnostics: resp.Diagnostics,
-	})
+	}, &readResp)
+
+	resp.Diagnostics.Append(readResp.Diagnostics...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Delete is called during the terraform apply command

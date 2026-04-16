@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"github.com/hashicorp/vault/api"
 )
 
 func TestAccConfigUIDefaultAuth(t *testing.T) {
@@ -170,13 +169,14 @@ func TestAccConfigUIDefaultAuthConfigNotFound(t *testing.T) {
 	})
 }
 
-// testAccConfigUIDefaultAuthDelete is a test helper that deletes a config via the Vault API
+// testAccConfigUIDefaultAuthDelete deletes a config via the provider's configured client
 func testAccConfigUIDefaultAuthDelete(name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		client, err := api.NewClient(api.DefaultConfig())
+		client, err := provider.GetClient("", acctestutil.TestProvider.Meta())
 		if err != nil {
 			return err
 		}
+
 		path := fmt.Sprintf("sys/config/ui/login/default-auth/%s", name)
 		_, err = client.Logical().Delete(path)
 		return err
