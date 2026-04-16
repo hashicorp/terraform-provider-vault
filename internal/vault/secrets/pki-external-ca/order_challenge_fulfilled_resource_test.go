@@ -24,7 +24,7 @@ func TestAccPKIExternalCAOrderChallengeFulfilledResource_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	roleName := acctest.RandomWithPrefix("tf-role")
 	accountName := acctest.RandomWithPrefix("tf-acme-account")
-	identifier := "example.com"
+	identifier := "host.docker.internal"
 
 	resourceName := "vault_pki_external_ca_secret_backend_order_challenge_fulfilled.test"
 
@@ -77,7 +77,7 @@ resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
-  email_contacts = ["test@example.com"]
+  email_contacts = ["test@host.docker.internal"]
   key_type       = "ec-256"
   trusted_ca     = <<EOT
 %s
@@ -88,7 +88,7 @@ resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
   acme_account_name           = vault_pki_external_ca_secret_backend_acme_account.test.name
-  allowed_domains             = ["example.com", "*.example.com"]
+  allowed_domains             = ["host.docker.internal"]
   allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
   csr_generate_key_type       = "ec-256"
