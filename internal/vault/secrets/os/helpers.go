@@ -9,10 +9,19 @@ import (
 )
 
 var (
+	// namePattern matches valid Vault names using the same pattern as framework.GenericNameRegex
+	// Pattern: \w(?:(?:[\w-.]+)?\w)?
+	// - Must start with a word character (letter, digit, or underscore)
+	// - Optionally can have middle characters (word chars, hyphens, dots) followed by ending word char
+	// - Single character names are valid (the entire optional group can be omitted)
+	// - No leading/trailing hyphens or dots allowed
+	// Uses non-capturing groups (?:...) to avoid extra capture groups in regex matches
+	namePattern = `\w(?:(?:[\w-.]+)?\w)?`
+
 	// hostIDRe matches: {mount}/hosts/{name}
-	hostIDRe = regexp.MustCompile(`^([^/]+)/hosts/([^/]+)$`)
+	hostIDRe = regexp.MustCompile(`^(` + namePattern + `)/hosts/(` + namePattern + `)$`)
 	// accountIDRe matches: {mount}/hosts/{host}/accounts/{name}
-	accountIDRe = regexp.MustCompile(`^([^/]+)/hosts/([^/]+)/accounts/([^/]+)$`)
+	accountIDRe = regexp.MustCompile(`^(` + namePattern + `)/hosts/(` + namePattern + `)/accounts/(` + namePattern + `)$`)
 )
 
 // parseHostID parses host resource ID

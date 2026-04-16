@@ -466,10 +466,6 @@ func (r *OSSecretBackendAccountResource) ImportState(ctx context.Context, req re
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldHost), host)...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 
-	// Password must be set after import since it's write-only
-	// Set it to a placeholder that will force user to update
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPasswordWO), "IMPORT_PLACEHOLDER_UPDATE_REQUIRED")...)
-
 	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
 	if ns != "" {
 		tflog.Info(ctx,
