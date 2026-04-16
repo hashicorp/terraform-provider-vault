@@ -113,7 +113,7 @@ func TestResourceGenericSecretNSImportConfigNamespacePrecedence(t *testing.T) {
 			},
 			{
 				PreConfig: func() {
-					t.Setenv(consts.EnvVarVaultNamespaceImport, nsEnv)
+					t.Setenv(consts.EnvVarVaultNamespaceImport, nsConfig)
 
 					client, err := testProvider.Meta().(*provider.ProviderMeta).GetNSClient(nsConfig)
 					if err != nil {
