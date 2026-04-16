@@ -62,7 +62,7 @@ func SetupPebbleAcmeServerWithOption(t *testing.T, options *PebbleOptions) (stri
 		ContainerName: "pebble",
 		Ports:         []string{"14000/tcp", "15000/tcp"}, // 14000 is the ACME service, 15000 is a mgmt interface
 		LogConsumer: func(s string) {
-			// t.Log(s)
+			t.Log(s)
 		},
 		ExtraHosts:  []string{"host.docker.internal:host-gateway"},
 		Env:         []string{"PEBBLE_WFE_NONCEREJECT=" + strconv.Itoa(int(options.RejectNoncePercentage))},
