@@ -1,25 +1,25 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_pki_secret_backend_external_ca_role resource"
-sidebar_current: "docs-vault-resource-pki-secret-backend-external-ca-role"
+page_title: "Vault: vault_pki_external_ca_secret_backend_role resource"
+sidebar_current: "docs-vault-resource-pki-external-ca-secret-backend-role"
 description: |-
   Manages PKI External CA roles for certificate issuance via ACME.
 ---
 
-# vault\_pki\_secret\_backend\_external\_ca\_role
+# vault\_pki\_external\_ca\_secret\_backend\_role
 
 Manages PKI External CA roles for certificate issuance via ACME. This resource defines the configuration for obtaining certificates from external Certificate Authorities through the ACME protocol.
 
 ## Example Usage
 
 ```hcl
-resource "vault_mount" "pki" {
-  path = "pki"
-  type = "pki"
+resource "vault_mount" "pki-external-ca" {
+  path = "pki-external-ca"
+  type = "pki-external-ca"
 }
 
-resource "vault_pki_secret_backend_acme_account" "example" {
-  mount         = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_acme_account" "example" {
+  mount         = vault_mount.pki-external-ca.path
   name          = "my-acme-account"
   directory_url = "https://acme-v02.api.letsencrypt.org/directory"
   email_contacts = [
@@ -27,10 +27,10 @@ resource "vault_pki_secret_backend_acme_account" "example" {
   ]
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "example" {
-  mount            = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_role" "example" {
+  mount            = vault_mount.pki-external-ca.path
   name             = "example-role"
-  acme_account_name = vault_pki_secret_backend_acme_account.example.name
+  acme_account_name = vault_pki_external_ca_secret_backend_acme_account.example.name
   
   allowed_domains = [
     "example.com",
@@ -53,10 +53,10 @@ resource "vault_pki_secret_backend_external_ca_role" "example" {
 ## Example Usage with Identity Templates
 
 ```hcl
-resource "vault_pki_secret_backend_external_ca_role" "templated" {
-  mount             = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_role" "templated" {
+  mount             = vault_mount.pki-external-ca.path
   name              = "user-role"
-  acme_account_name = vault_pki_secret_backend_acme_account.example.name
+  acme_account_name = vault_pki_external_ca_secret_backend_acme_account.example.name
   
   allowed_domains = [
     "{{identity.entity.aliases.auth_userpass_xxxxx.name}}.example.com"
@@ -123,4 +123,4 @@ In addition to the fields above, the following attributes are exported:
 PKI External CA roles can be imported using the format `<mount>/role/<name>`, e.g.
 
 ```
-$ terraform import vault_pki_secret_backend_external_ca_role.example pki/role/example-role
+$ terraform import vault_pki_external_ca_secret_backend_role.example pki-external-ca/role/example-role
