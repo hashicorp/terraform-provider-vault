@@ -25,6 +25,7 @@ BUGS:
 * `provider/auth_aws`: Fix `auth_login_aws` for Vault AWS auth backends configured with `use_sts_region_from_client = true` by generating a standard SigV4-signed `GetCallerIdentity` request with an `Authorization` header, and added support for custom STS endpoints. ([#2841](https://github.com/hashicorp/terraform-provider-vault/pull/2841))
 * `resource_database_secret_backend_connection` : Fixes a regression issue for `resource_database_secret_backend_connection` for elasticsearch. Reverted the field name from insecure_tls to insecure.
 * `vault_rabbitmq_secret_backend_role`: Fixed spurious diff issue for `vhost` and `vhost_topic` fields by changing field type from TypeList to TypeSet. ([#2872](https://github.com/hashicorp/terraform-provider-vault/pull/2872))
+* `provider/auth_aws`: Fix `auth_login_aws` to avoid an unintended second STS `AssumeRole` call during web identity credential flows, while preserving manual role assumption for explicitly configured or env-derived `aws_role_arn` values in non-web-identity setups.([#2850](https://github.com/hashicorp/terraform-provider-vault/pull/2850))
 
 ## 5.8.0 (March 12, 2026)
 
