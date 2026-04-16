@@ -177,16 +177,13 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 	}
 
 	// Always include namespace_path.
-	// Canonicalize configured values by trimming trailing slashes and
-	// treating "", "root", and "root/" as the root namespace.
+	// Normalize: trim trailing slashes, but preserve distinction between "" and "root"
 	namespacePath := ""
 	if !data.NamespacePath.IsNull() && !data.NamespacePath.IsUnknown() {
 		namespacePath = strings.TrimRight(data.NamespacePath.ValueString(), "/")
 	}
-	if namespacePath == "root" {
-		namespacePath = ""
-	}
-	if namespacePath == "" {
+	// Send "root" to API for both "" and "root" (API requirement)
+	if namespacePath == "" || namespacePath == "root" {
 		vaultRequest[consts.FieldNamespacePath] = "root"
 	} else {
 		vaultRequest[consts.FieldNamespacePath] = namespacePath
@@ -242,6 +239,8 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// Propagate the updated state from Read back to the response
+	resp.State = readResp.State
 }
 
 // Read is called during the terraform apply, terraform plan, and terraform
@@ -290,17 +289,24 @@ func (r *ConfigUIDefaultAuthResource) Read(ctx context.Context, req resource.Rea
 
 	data.DefaultAuthType = types.StringValue(readResp.DefaultAuthType)
 
-	// Handle namespace_path - canonicalize API response to match config
+	// Handle namespace_path - normalize API response to match user's intent
+	// API returns "root/" for root namespace
+	// We normalize to either "" or "root" based on what user configured
 	if namespacePath, ok := configResp.Data[consts.FieldNamespacePath].(string); ok {
-		// Trim trailing slashes
 		namespacePath = strings.TrimRight(namespacePath, "/")
-		// For root namespace ("" or "root"), only set if it was explicitly configured
-		if namespacePath == "" || namespacePath == "root" {
-			// Only set if the config explicitly had namespace_path
+		// For root namespace from API
+		if namespacePath == "root" || namespacePath == "" {
+			// Check what user originally configured
 			if !data.NamespacePath.IsNull() {
-				data.NamespacePath = types.StringNull()
+				configValue := strings.TrimRight(data.NamespacePath.ValueString(), "/")
+				// Preserve user's choice: "" stays "", "root" stays "root"
+				if configValue == "" {
+					data.NamespacePath = types.StringValue("")
+				} else {
+					data.NamespacePath = types.StringValue("root")
+				}
 			}
-			// Otherwise leave it unset (null) to match the config
+			// If user didn't configure namespace_path, leave it null to match config
 		} else {
 			// For non-root namespaces, always set the value
 			data.NamespacePath = types.StringValue(namespacePath)
@@ -366,16 +372,13 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 	}
 
 	// Always include namespace_path.
-	// Canonicalize configured values by trimming trailing slashes and
-	// treating "", "root", and "root/" as the root namespace.
+	// Normalize: trim trailing slashes, but preserve distinction between "" and "root"
 	namespacePath := ""
 	if !data.NamespacePath.IsNull() && !data.NamespacePath.IsUnknown() {
 		namespacePath = strings.TrimRight(data.NamespacePath.ValueString(), "/")
 	}
-	if namespacePath == "root" {
-		namespacePath = ""
-	}
-	if namespacePath == "" {
+	// Send "root" to API for both "" and "root" (API requirement)
+	if namespacePath == "" || namespacePath == "root" {
 		vaultRequest[consts.FieldNamespacePath] = "root"
 	} else {
 		vaultRequest[consts.FieldNamespacePath] = namespacePath
@@ -431,6 +434,8 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// Propagate the updated state from Read back to the response
+	resp.State = readResp.State
 }
 
 // Delete is called during the terraform apply command
