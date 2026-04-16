@@ -493,7 +493,7 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_multiIssuerInternal(path, issuerName, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					append(internalChecks)...,
+					internalChecks...,
 				),
 			},
 			{
@@ -572,7 +572,7 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					append(checks)...,
+					checks...,
 				),
 			},
 		},
