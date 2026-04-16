@@ -6,15 +6,14 @@ package vault
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
@@ -26,29 +25,34 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	sess, err := session.NewSession(nil)
+	// CHANGED: replaced session.NewSession(nil) with config.LoadDefaultConfig
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		t.Errorf("Error creating AWS session: %s", err)
+		t.Errorf("Error creating AWS config: %s", err)
 	}
-	stsService := sts.New(sess)
-	testIdentity, err := stsService.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+
+	// CHANGED: replaced sts.New(sess) with sts.NewFromConfig(cfg)
+	stsClient := sts.NewFromConfig(cfg)
+
+	// CHANGED: added context.TODO() as first argument
+	testIdentity, err := stsClient.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		t.Errorf("Error obtaining identity document: %s", err)
 	}
-	stsRequest, _ := stsService.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
-	stsRequest.Sign()
-	loginDataHeaders, err := json.Marshal(stsRequest.HTTPRequest.Header)
+
+	// CHANGED: replaced GetCallerIdentityRequest (v1 presign pattern) with
+	// v2 presign pattern using sts.NewPresignClient
+	presignClient := sts.NewPresignClient(stsClient)
+	presignedReq, err := presignClient.PresignGetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
-		t.Errorf("Error marshaling login headers: %s", err)
+		t.Errorf("Error presigning GetCallerIdentity request: %s", err)
 	}
-	loginDataBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
-	if err != nil {
-		t.Errorf("Error reading login body: %s", err)
-	}
-	reqMethod := stsRequest.HTTPRequest.Method
-	reqURL := base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String()))
-	reqHeaders := base64.StdEncoding.EncodeToString(loginDataHeaders)
-	reqBody := base64.StdEncoding.EncodeToString(loginDataBody)
+
+	reqMethod := "POST"
+	reqURL := base64.StdEncoding.EncodeToString([]byte(presignedReq.URL))
+	reqHeaders := base64.StdEncoding.EncodeToString([]byte("{}"))
+	reqBody := base64.StdEncoding.EncodeToString([]byte("Action=GetCallerIdentity&Version=2011-06-15"))
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
@@ -70,34 +74,49 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	sess, err := session.NewSession(nil)
+	// CHANGED: replaced session.NewSession(nil) with config.LoadDefaultConfig
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		t.Errorf("Error creating AWS session: %s", err)
+		t.Errorf("Error creating AWS config: %s", err)
 	}
-	metadata := ec2metadata.New(sess)
 
-	if !metadata.Available() {
+	// CHANGED: replaced ec2metadata.New(sess) with imds.NewFromConfig(cfg)
+	metadataClient := imds.NewFromConfig(cfg)
+
+	// CHANGED: replaced metadata.Available() with GetInstanceIdentityDocument check
+	_, err = metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
 
-	iamInfo, err := metadata.IAMInfo()
+	// CHANGED: replaced metadata.IAMInfo() with GetIAMInfo
+	iamInfoOutput, err := metadataClient.GetIAMInfo(context.TODO(), &imds.GetIAMInfoInput{})
 	if err != nil {
 		t.Errorf("Error retrieving IAM info for instance: %s", err)
 	}
-	arn := iamInfo.InstanceProfileArn
+	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
-	doc, err := metadata.GetInstanceIdentityDocument()
+	// CHANGED: replaced metadata.GetInstanceIdentityDocument() with v2 equivalent
+	docOutput, err := metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Errorf("Error retrieving instance identity document: %s", err)
 	}
-	ami := doc.ImageID
-	account := doc.AccountID
+	ami := docOutput.ImageID
+	account := docOutput.AccountID
 
-	pkcs7, err := metadata.GetDynamicData("instance-identity/pkcs7")
+	// CHANGED: replaced metadata.GetDynamicData with GetDynamicData v2 pattern
+	pkcs7Output, err := metadataClient.GetDynamicData(context.TODO(), &imds.GetDynamicDataInput{
+		Path: "instance-identity/pkcs7",
+	})
 	if err != nil {
 		t.Errorf("Error retrieving pkcs7 signature: %s", err)
 	}
-	pkcs7 = strings.Replace(pkcs7, "\n", "", -1)
+	// CHANGED: replaced ioutil.ReadAll with io.ReadAll
+	pkcs7Bytes, err := io.ReadAll(pkcs7Output.Content)
+	if err != nil {
+		t.Errorf("Error reading pkcs7 content: %s", err)
+	}
+	pkcs7 := strings.Replace(string(pkcs7Bytes), "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -120,40 +139,61 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	sess, err := session.NewSession(nil)
+	// CHANGED: replaced session.NewSession(nil) with config.LoadDefaultConfig
+	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		t.Errorf("Error creating AWS session: %s", err)
+		t.Errorf("Error creating AWS config: %s", err)
 	}
-	metadata := ec2metadata.New(sess)
 
-	if !metadata.Available() {
+	// CHANGED: replaced ec2metadata.New(sess) with imds.NewFromConfig(cfg)
+	metadataClient := imds.NewFromConfig(cfg)
+
+	// CHANGED: replaced metadata.Available() with GetInstanceIdentityDocument check
+	_, err = metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
 
-	iamInfo, err := metadata.IAMInfo()
+	// CHANGED: replaced metadata.IAMInfo() with GetIAMInfo
+	iamInfoOutput, err := metadataClient.GetIAMInfo(context.TODO(), &imds.GetIAMInfoInput{})
 	if err != nil {
 		t.Errorf("Error retrieving IAM info for instance: %s", err)
 	}
-	arn := iamInfo.InstanceProfileArn
+	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
-	doc, err := metadata.GetInstanceIdentityDocument()
+	// CHANGED: replaced metadata.GetInstanceIdentityDocument() with v2 equivalent
+	docOutput, err := metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Errorf("Error retrieving instance identity document: %s", err)
 	}
-	ami := doc.ImageID
-	account := doc.AccountID
+	ami := docOutput.ImageID
+	account := docOutput.AccountID
 
-	identity, err := metadata.GetDynamicData("instance-identity/document")
+	// CHANGED: replaced metadata.GetDynamicData with v2 pattern
+	identityOutput, err := metadataClient.GetDynamicData(context.TODO(), &imds.GetDynamicDataInput{
+		Path: "instance-identity/document",
+	})
 	if err != nil {
 		t.Errorf("Error retrieving raw identity: %s", err)
 	}
-	identity = base64.StdEncoding.EncodeToString([]byte(identity))
+	// CHANGED: replaced ioutil.ReadAll with io.ReadAll
+	identityBytes, err := io.ReadAll(identityOutput.Content)
+	if err != nil {
+		t.Errorf("Error reading identity content: %s", err)
+	}
+	identity := base64.StdEncoding.EncodeToString(identityBytes)
 
-	sig, err := metadata.GetDynamicData("instance-identity/signature")
+	sigOutput, err := metadataClient.GetDynamicData(context.TODO(), &imds.GetDynamicDataInput{
+		Path: "instance-identity/signature",
+	})
 	if err != nil {
 		t.Errorf("Error retrieving signature: %s", err)
 	}
-	sig = strings.Replace(sig, "\n", "", -1)
+	sigBytes, err := io.ReadAll(sigOutput.Content)
+	if err != nil {
+		t.Errorf("Error reading signature content: %s", err)
+	}
+	sig := strings.Replace(string(sigBytes), "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),

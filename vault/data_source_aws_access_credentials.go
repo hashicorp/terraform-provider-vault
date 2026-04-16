@@ -4,16 +4,17 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -23,22 +24,10 @@ import (
 )
 
 const (
-	// sequentialSuccessesRequired is the number of times the test of an eventually consistent
-	// credential must succeed before we return it for use.
 	sequentialSuccessesRequired = 5
-
-	// sequentialSuccessTimeLimit is how long we'll wait for eventually consistent AWS creds
-	// to propagate before giving up. In real life, we've seen it take up to 15 seconds, so
-	// this is ample and if it's unsuccessful there's something else wrong.
-	sequentialSuccessTimeLimit = time.Minute
-
-	// retryTimeOut is how long we'll wait before timing out when we're retrying credentials.
-	// This corresponds to Vault's default 30-second request timeout.
-	retryTimeOut = 30 * time.Second
-
-	// propagationBuffer is the added buffer of time we'll wait after N sequential successes
-	// before returning credentials for use.
-	propagationBuffer = 5 * time.Second
+	sequentialSuccessTimeLimit  = time.Minute
+	retryTimeOut                = 30 * time.Second
+	propagationBuffer           = 5 * time.Second
 )
 
 func awsAccessCredentialsDataSource() *schema.Resource {
@@ -85,39 +74,33 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Description: "AWS access key ID read from Vault.",
 				Sensitive:   true,
 			},
-
 			"secret_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS secret key read from Vault.",
 				Sensitive:   true,
 			},
-
 			"security_token": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS security token read from Vault. (Only returned if type is 'sts').",
 				Sensitive:   true,
 			},
-
 			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Lease identifier assigned by vault.",
 			},
-
 			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds relative to the time in lease_start_time.",
 			},
-
 			"lease_start_time": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Time at which the lease was read, using the clock of the system where Terraform was running",
 			},
-
 			consts.FieldLeaseRenewable: {
 				Type:        schema.TypeBool,
 				Computed:    true,
@@ -144,7 +127,6 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	path := backend + "/" + credType + "/" + role
 
 	arn := d.Get("role_arn").(string)
-	// If the ARN is empty and only one is specified in the role definition, this should work without issue
 	data := map[string][]string{
 		"role_arn": {arn},
 	}
@@ -180,45 +162,43 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set(consts.FieldLeaseRenewable, secret.Renewable)
 
-	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
-		HTTPClient:  cleanhttp.DefaultClient(),
+	// CHANGED: replaced aws.Config + session.NewSession with config.LoadDefaultConfig
+	optFns := []func(*config.LoadOptions) error{
+		config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(accessKey, secretKey, securityToken),
+		),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
 	}
 
 	region := d.Get("region").(string)
 	if region != "" {
-		awsConfig.Region = &region
+		optFns = append(optFns, config.WithRegion(region))
 	}
 
-	sess, err := session.NewSession(awsConfig)
+	cfg, err := config.LoadDefaultConfig(context.TODO(), optFns...)
 	if err != nil {
-		return fmt.Errorf("error creating AWS session: %s", err)
+		return fmt.Errorf("error creating AWS config: %s", err)
 	}
 
-	iamconn := iam.New(sess)
-	stsconn := sts.New(sess)
+	// CHANGED: replaced iam.New(sess) and sts.New(sess) with NewFromConfig
+	iamconn := iam.NewFromConfig(cfg)
+	stsconn := sts.NewFromConfig(cfg)
 
-	// Different types of AWS credentials have different behavior around consistency.
-	// See https://www.vaultproject.io/docs/secrets/aws/index.html#usage for more.
 	if credType == "sts" {
-		// STS credentials are immediately consistent. Let's ensure they're working.
 		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
-		if _, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
+		// CHANGED: added context.TODO() as first argument
+		if _, err := stsconn.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{}); err != nil {
 			return err
 		}
 		return nil
 	}
 
-	// Other types of credentials are eventually consistent. Let's check credential
-	// validity and slow down to give credentials time to propagate before we return
-	// them. We'll wait for at least 5 sequential successes before giving creds back
-	// to the user.
 	sequentialSuccesses := 0
 
-	// validateCreds is a retry function, which will be retried until it succeeds.
 	validateCreds := func() *retry.RetryError {
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
-		if _, err := iamconn.GetUser(nil); err != nil && isAWSAuthError(err) {
+		// CHANGED: added context.TODO() as first argument
+		if _, err := iamconn.GetUser(context.TODO(), nil); err != nil && isAWSAuthError(err) {
 			sequentialSuccesses = 0
 			log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
 			return retry.RetryableError(err)
@@ -246,12 +226,13 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	return nil
 }
 
+// CHANGED: replaced awserr.Error pattern with smithy.APIError + errors.As
 func isAWSAuthError(err error) bool {
-	awsErr, ok := err.(awserr.Error)
-	if !ok {
+	var apiErr smithy.APIError
+	if !errors.As(err, &apiErr) {
 		return false
 	}
-	switch awsErr.Code() {
+	switch apiErr.ErrorCode() {
 	case "AccessDenied":
 		return true
 	case "ValidationError":
