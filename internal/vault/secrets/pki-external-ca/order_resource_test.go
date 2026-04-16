@@ -63,7 +63,7 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIExternalCAOrderImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"expires", "last_update", "next_work_date", "order_status"},
+				ImportStateVerifyIgnore:              []string{"expires", "last_update", "next_work_date", "order_status", "challenges"},
 			},
 		},
 	})
@@ -185,7 +185,7 @@ func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIExternalCAOrderImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"csr", "expires", "last_update", "next_work_date", "order_status"},
+				ImportStateVerifyIgnore:              []string{"csr", "expires", "last_update", "next_work_date", "order_status", "challenges"},
 			},
 		},
 	})
