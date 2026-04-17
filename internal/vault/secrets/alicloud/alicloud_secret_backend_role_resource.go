@@ -32,7 +32,9 @@ import (
 
 const rolesAffix = "role"
 
-var roleIDRegex = regexp.MustCompile(`^(.+)/` + rolesAffix + `/(.+)$`)
+// Match import IDs in the form <mount>/role/<name>, where <name> follows
+// Vault SDK framework.GenericNameRegex("name"): (?P<name>\w(([\w-.]+)?\w)?)
+var roleIDRegex = regexp.MustCompile(`^(.+)/` + rolesAffix + `/(\w(?:[\w-.]*\w)?)$`)
 
 // Ensure the implementation satisfies the expected interfaces
 var _ resource.ResourceWithConfigure = &AliCloudSecretBackendRoleResource{}
