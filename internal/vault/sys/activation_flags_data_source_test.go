@@ -43,18 +43,18 @@ func TestAccActivationFlagsDataSource_basic(t *testing.T) {
 func TestAccActivationFlagsDataSource_withResource(t *testing.T) {
 	dataSourceName := "data.vault_activation_flags.test"
 	resourceName := "vault_activation_flags.test"
-	activatedFlags := testAccReadCurrentActivatedFlags(t)
-	unactivatedFlags := testAccReadCurrentUnactivatedFlags(t)
-	if len(unactivatedFlags) == 0 {
-		t.Skip("Vault has no unactivated flags; resource-driven activation update path is not applicable")
-	}
-
-	desiredFlags := append(append([]string{}, activatedFlags...), unactivatedFlags[0])
+	var desiredFlags []string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
+			activatedFlags := testAccReadCurrentActivatedFlags(t)
+			unactivatedFlags := testAccReadCurrentUnactivatedFlags(t)
+			if len(unactivatedFlags) == 0 {
+				t.Skip("Vault has no unactivated flags; resource-driven activation update path is not applicable")
+			}
+			desiredFlags = append(append([]string{}, activatedFlags...), unactivatedFlags[0])
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{

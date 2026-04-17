@@ -22,12 +22,13 @@ import (
 // Note: This test reads the current state and ensures it can be managed
 func TestAccActivationFlagsResource_basic(t *testing.T) {
 	resourceName := "vault_activation_flags.test"
-	activatedFlags := testAccReadCurrentActivatedFlags(t)
+	var activatedFlags []string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
+			activatedFlags = testAccReadCurrentActivatedFlags(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -45,18 +46,16 @@ func TestAccActivationFlagsResource_basic(t *testing.T) {
 // TestAccActivationFlagsResource_omitsAlreadyActiveFlag verifies the resource
 // fails when configuration omits a flag that is already active in Vault.
 func TestAccActivationFlagsResource_omitsAlreadyActiveFlag(t *testing.T) {
-	acctestutil.TestAccPreCheck(t)
-	acctestutil.TestEntPreCheck(t)
-
-	activatedFlags := testAccReadCurrentActivatedFlags(t)
-	if len(activatedFlags) == 0 {
-		t.Skip("Vault has no activated flags; omission error path is not applicable")
-	}
+	var activatedFlags []string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
+			activatedFlags = testAccReadCurrentActivatedFlags(t)
+			if len(activatedFlags) == 0 {
+				t.Skip("Vault has no activated flags; omission error path is not applicable")
+			}
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -192,12 +191,13 @@ func TestAccActivationFlagsResource_delete(t *testing.T) {
 // TestAccActivationFlagsResource_namespace tests resource with namespace
 func TestAccActivationFlagsResource_namespace(t *testing.T) {
 	resourceName := "vault_activation_flags.test"
-	activatedFlags := testAccReadCurrentActivatedFlags(t)
+	var activatedFlags []string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
+			activatedFlags = testAccReadCurrentActivatedFlags(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
