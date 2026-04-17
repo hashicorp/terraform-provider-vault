@@ -22,7 +22,9 @@ For more information on managing external plugins, please refer to the Vault
 
 ## Example Usage
 
-Register a standard plugin
+### Register a CE plugin
+
+The `sha256` is required to register a CE plugin.
 
 ```hcl
 resource "vault_plugin" "jwt" {
