@@ -26,8 +26,7 @@ func TestAccActivationFlagsResource_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
+			testAccActivationFlagsEntPreCheck(t)
 			activatedFlags = testAccReadCurrentActivatedFlags(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -46,17 +45,14 @@ func TestAccActivationFlagsResource_basic(t *testing.T) {
 // TestAccActivationFlagsResource_omitsAlreadyActiveFlag verifies the resource
 // fails when configuration omits a flag that is already active in Vault.
 func TestAccActivationFlagsResource_omitsAlreadyActiveFlag(t *testing.T) {
-	var activatedFlags []string
+	testAccActivationFlagsEntPreCheck(t)
+
+	activatedFlags := testAccReadCurrentActivatedFlags(t)
+	if len(activatedFlags) == 0 {
+		t.Skip("Vault has no activated flags; omission error path is not applicable")
+	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			activatedFlags = testAccReadCurrentActivatedFlags(t)
-			if len(activatedFlags) == 0 {
-				t.Skip("Vault has no activated flags; omission error path is not applicable")
-			}
-		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -72,8 +68,7 @@ func TestAccActivationFlagsResource_omitsAlreadyActiveFlag(t *testing.T) {
 func TestAccActivationFlagsResource_unknownFlagName(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
+			testAccActivationFlagsEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -91,8 +86,7 @@ func TestAccActivationFlagsResource_import(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
+			testAccActivationFlagsEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -110,6 +104,11 @@ func TestAccActivationFlagsResource_import(t *testing.T) {
 func testAccReadCurrentActivatedFlags(t *testing.T) []string {
 	t.Helper()
 	return testAccReadCurrentActivationFlagsField(t, "activated")
+}
+
+func testAccActivationFlagsEntPreCheck(t *testing.T) {
+	t.Helper()
+	acctestutil.TestEntPreCheck(t)
 }
 
 func testAccReadCurrentUnactivatedFlags(t *testing.T) []string {
@@ -172,8 +171,7 @@ func testAccCheckActivationFlagsEqual(resourceName string, expected []string) re
 func TestAccActivationFlagsResource_delete(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
+			testAccActivationFlagsEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -195,8 +193,7 @@ func TestAccActivationFlagsResource_namespace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
+			testAccActivationFlagsEntPreCheck(t)
 			activatedFlags = testAccReadCurrentActivatedFlags(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
