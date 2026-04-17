@@ -6,7 +6,6 @@ package sys
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	"net/url"
 	"strings"
@@ -14,6 +13,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/vault/api"
 
@@ -51,9 +52,10 @@ type ActivationFlagsResource struct {
 
 // ActivationFlagsModel describes the Terraform resource data model
 type ActivationFlagsModel struct {
-	base.BaseModelLegacy
+	base.BaseModel
 
-	ActivatedFlags types.List `tfsdk:"activated_flags"`
+	ID             types.String `tfsdk:"id"`
+	ActivatedFlags types.Set    `tfsdk:"activated_flags"`
 }
 
 type activationFlagsState struct {
@@ -70,8 +72,14 @@ func (r *ActivationFlagsResource) Metadata(_ context.Context, req resource.Metad
 func (r *ActivationFlagsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldActivatedFlags: schema.ListAttribute{
-				Optional:            true,
+			consts.FieldID: schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			consts.FieldActivatedFlags: schema.SetAttribute{
+				Required:            true,
 				ElementType:         types.StringType,
 				MarkdownDescription: "Full set of feature flags that should be activated. Because Vault exposes activation but not public deactivation for activation flags, any flags already activated in Vault must also be declared here.",
 			},
@@ -79,7 +87,7 @@ func (r *ActivationFlagsResource) Schema(_ context.Context, _ resource.SchemaReq
 		MarkdownDescription: "Manages activation flags in Vault. This is a singleton resource - only one instance should exist per Vault cluster.",
 	}
 
-	base.MustAddLegacyBaseSchema(&resp.Schema)
+	base.MustAddBaseSchema(&resp.Schema)
 }
 
 // Create is called during terraform apply
@@ -130,14 +138,6 @@ func (r *ActivationFlagsResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	if !readActivationFlagsState(ctx, cli, &data, &resp.Diagnostics) {
-		if resp.Diagnostics.HasError() {
-			return
-		}
-
-		resp.Diagnostics.AddError(
-			"Failed to read activation flags",
-			fmt.Sprintf("Vault returned no data for %q; this singleton system endpoint may be unavailable or unsupported", activationFlagsPath),
-		)
 		return
 	}
 
@@ -221,15 +221,13 @@ func readActivationFlagsState(ctx context.Context, cli *api.Client, data *Activa
 		return false
 	}
 
-	sort.Strings(flags)
-
-	flagsList, diags := types.ListValueFrom(ctx, types.StringType, flags)
+	flagsSet, diags := types.SetValueFrom(ctx, types.StringType, flags)
 	diagnostics.Append(diags...)
 	if diagnostics.HasError() {
 		return false
 	}
 
-	data.ActivatedFlags = flagsList
+	data.ActivatedFlags = flagsSet
 	data.ID = types.StringValue(activationFlagsID)
 
 	return true
@@ -272,7 +270,8 @@ func readActivationFlags(ctx context.Context, cli *api.Client) (*activationFlags
 	}
 
 	if vaultResp == nil {
-		return &activationFlagsState{}, nil
+		title, detail := errutil.VaultReadResponseNil()
+		return nil, fmt.Errorf("%s: %s", title, detail)
 	}
 
 	activated, err := getActivationFlagsFromResponse(vaultResp.Data, activationFlagsAPIActivatedField)

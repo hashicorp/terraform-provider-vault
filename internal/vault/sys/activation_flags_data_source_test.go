@@ -5,6 +5,7 @@ package sys_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -42,6 +43,13 @@ func TestAccActivationFlagsDataSource_basic(t *testing.T) {
 func TestAccActivationFlagsDataSource_withResource(t *testing.T) {
 	dataSourceName := "data.vault_activation_flags.test"
 	resourceName := "vault_activation_flags.test"
+	activatedFlags := testAccReadCurrentActivatedFlags(t)
+	unactivatedFlags := testAccReadCurrentUnactivatedFlags(t)
+	if len(unactivatedFlags) == 0 {
+		t.Skip("Vault has no unactivated flags; resource-driven activation update path is not applicable")
+	}
+
+	desiredFlags := append(append([]string{}, activatedFlags...), unactivatedFlags[0])
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -51,13 +59,13 @@ func TestAccActivationFlagsDataSource_withResource(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccActivationFlagsDataSourceConfig_withResource(),
+				Config: testAccActivationFlagsDataSourceConfig_withResourceExplicit(desiredFlags),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "id", "sys/activation-flags"),
-					resource.TestCheckResourceAttrSet(dataSourceName, "activated_flags.#"),
+					testAccCheckActivationFlagsSetEqual(dataSourceName, desiredFlags),
 					resource.TestCheckResourceAttrSet(dataSourceName, "unactivated_flags.#"),
 					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
-					testAccCheckActivationFlagsConsistency(resourceName, dataSourceName),
+					testAccCheckActivationFlagsEqual(resourceName, desiredFlags),
 				),
 			},
 		},
@@ -165,6 +173,18 @@ func testAccCheckActivationFlagsConsistency(resourceName, dataSourceName string)
 	}
 }
 
+func testAccCheckActivationFlagsSetEqual(resourceName string, expected []string) resource.TestCheckFunc {
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "activated_flags.#", fmt.Sprintf("%d", len(expected))),
+	}
+
+	for _, flag := range expected {
+		checks = append(checks, resource.TestCheckTypeSetElemAttr(resourceName, "activated_flags.*", flag))
+	}
+
+	return resource.ComposeTestCheckFunc(checks...)
+}
+
 // Config functions
 
 func testAccActivationFlagsDataSourceConfig_basic() string {
@@ -189,6 +209,23 @@ data "vault_activation_flags" "test" {
   depends_on = [vault_activation_flags.test]
 }
 `
+}
+
+func testAccActivationFlagsDataSourceConfig_withResourceExplicit(flags []string) string {
+	quotedFlags := make([]string, 0, len(flags))
+	for _, flag := range flags {
+		quotedFlags = append(quotedFlags, fmt.Sprintf("%q", flag))
+	}
+
+	return fmt.Sprintf(`
+resource "vault_activation_flags" "test" {
+  activated_flags = [%s]
+}
+
+data "vault_activation_flags" "test" {
+  depends_on = [vault_activation_flags.test]
+}
+`, strings.Join(quotedFlags, ", "))
 }
 
 func testAccActivationFlagsDataSourceConfig_namespace() string {

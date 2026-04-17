@@ -36,8 +36,8 @@ type ActivationFlagsDataSourceModel struct {
 	base.BaseModel
 
 	ID               types.String `tfsdk:"id"`
-	ActivatedFlags   types.List   `tfsdk:"activated_flags"`
-	UnactivatedFlags types.List   `tfsdk:"unactivated_flags"`
+	ActivatedFlags   types.Set    `tfsdk:"activated_flags"`
+	UnactivatedFlags types.Set    `tfsdk:"unactivated_flags"`
 }
 
 // Metadata defines the data source name
@@ -49,12 +49,12 @@ func (d *ActivationFlagsDataSource) Metadata(_ context.Context, req datasource.M
 func (d *ActivationFlagsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldActivatedFlags: schema.ListAttribute{
+			consts.FieldActivatedFlags: schema.SetAttribute{
 				Computed:            true,
 				ElementType:         types.StringType,
 				MarkdownDescription: "List of activated feature flags.",
 			},
-			consts.FieldUnactivatedFlags: schema.ListAttribute{
+			consts.FieldUnactivatedFlags: schema.SetAttribute{
 				Computed:            true,
 				ElementType:         types.StringType,
 				MarkdownDescription: "List of unactivated feature flags.",
@@ -127,12 +127,12 @@ func populateActivationFlagsDataSourceModel(ctx context.Context, data *Activatio
 	sort.Strings(activatedFlags)
 	sort.Strings(unactivatedFlags)
 
-	data.ActivatedFlags, diagnostics = listValueFromStrings(ctx, activatedFlags, diagnostics)
+	data.ActivatedFlags, diagnostics = setValueFromStrings(ctx, activatedFlags, diagnostics)
 	if diagnostics.HasError() {
 		return diagnostics
 	}
 
-	data.UnactivatedFlags, diagnostics = listValueFromStrings(ctx, unactivatedFlags, diagnostics)
+	data.UnactivatedFlags, diagnostics = setValueFromStrings(ctx, unactivatedFlags, diagnostics)
 	if diagnostics.HasError() {
 		return diagnostics
 	}
@@ -156,8 +156,8 @@ func decodeActivationFlagsResponse(vaultData map[string]interface{}) ([]string, 
 	return activatedFlags, unactivatedFlags, nil
 }
 
-func listValueFromStrings(ctx context.Context, values []string, diagnostics diag.Diagnostics) (types.List, diag.Diagnostics) {
-	listValue, diags := types.ListValueFrom(ctx, types.StringType, values)
+func setValueFromStrings(ctx context.Context, values []string, diagnostics diag.Diagnostics) (types.Set, diag.Diagnostics) {
+	setValue, diags := types.SetValueFrom(ctx, types.StringType, values)
 	diagnostics.Append(diags...)
-	return listValue, diagnostics
+	return setValue, diagnostics
 }
