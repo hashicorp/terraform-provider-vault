@@ -145,7 +145,6 @@ IMPROVEMENTS:
 * `vault_database_secret_mount`: Added `plugin_version`,`skip_static_role_import_rotation` and `password_policy` fields to allow configuration at the resource level([#2748](https://github.com/hashicorp/terraform-provider-vault/pull/2748))
 
 * Add support for `local_secret_ids` which may only be set at role creation. On updates the provider will send the original creation value to Vault to avoid unintentionally attempting to modify this immutable setting.The provider now surfaces Vault's native immutability error when an update attempts to change `local_secret_ids`.([#2723](https://github.com/hashicorp/terraform-provider-vault/pull/2723))
-* Add support for Enterprise Plugins in `vault_plugin` resource. ([#2707](https://github.com/hashicorp/terraform-provider-vault/pull/2707))
 
 
 BUGS:
