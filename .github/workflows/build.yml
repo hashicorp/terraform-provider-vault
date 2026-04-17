@@ -306,6 +306,7 @@ jobs:
           mkdir -p "${DIR}"
           unzip "${ZIP}" -d "${DIR}"
           rm "${ZIP}"
+          chmod -R a+rX "${DIR}"
           
           # Set output to indicate successful download
           echo "downloaded=true" >> "${GITHUB_OUTPUT}"
