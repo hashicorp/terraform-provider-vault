@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -24,58 +26,58 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 	resourceName := "vault_ssh_secret_backend_role.test_role"
 
 	commonCheckFuncs := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "name", name),
-		resource.TestCheckResourceAttr(resourceName, "backend", backend),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 	}
 
 	initialCheckFuncs := append(commonCheckFuncs,
-		resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_host_certificates", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_user_certificates", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allow_user_key_ids", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_critical_options", ""),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains", ""),
-		resource.TestCheckResourceAttr(resourceName, "allowed_extensions", ""),
-		resource.TestCheckResourceAttr(resourceName, "default_extensions.%", "0"),
-		resource.TestCheckResourceAttr(resourceName, "default_critical_options.%", "0"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_users_template", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_users", ""),
-		resource.TestCheckResourceAttr(resourceName, "default_user", ""),
-		resource.TestCheckResourceAttr(resourceName, "key_id_format", ""),
-		resource.TestCheckResourceAttr(resourceName, "key_type", "ca"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config_lengths.%", "0"),
-		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "default"),
-		resource.TestCheckResourceAttr(resourceName, "max_ttl", "0"),
-		resource.TestCheckResourceAttr(resourceName, "ttl", "0"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowBareDomains, "false"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowHostCertificates, "false"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowSubdomains, "false"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserCertificates, "true"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserKeyIDs, "false"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedCriticalOptions, ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedDomains, ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedExtensions, ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultExtensions+".%", "0"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultCriticalOptions+".%", "0"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUsersTemplate, "false"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUsers, ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultUser, ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyIDFormat, ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ca"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+"_lengths.%", "0"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithmSigner, "default"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "0"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "0"),
 		// 30s is the default value vault uese.
 		// https://developer.hashicorp.com/vault/api-docs/secret/ssh#not_before_duration
-		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "30"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "false"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldNotBeforeDuration, "30"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedDomainsTemplate, "false"),
 	)
 
 	updateCheckFuncs := append(commonCheckFuncs,
-		resource.TestCheckResourceAttr(resourceName, "allow_bare_domains", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allow_host_certificates", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allow_subdomains", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allow_user_certificates", "false"),
-		resource.TestCheckResourceAttr(resourceName, "allow_user_key_ids", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_critical_options", "foo,bar"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains", "example.com,foo.com"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_extensions", "ext1,ext2"),
-		resource.TestCheckResourceAttr(resourceName, "default_extensions.ext1", ""),
-		resource.TestCheckResourceAttr(resourceName, "default_critical_options.opt1", ""),
-		resource.TestCheckResourceAttr(resourceName, "allowed_users_template", "true"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_users", "usr1,usr2"),
-		resource.TestCheckResourceAttr(resourceName, "default_user", "usr"),
-		resource.TestCheckResourceAttr(resourceName, "key_id_format", "{{role_name}}-test"),
-		resource.TestCheckResourceAttr(resourceName, "key_type", "ca"),
-		resource.TestCheckResourceAttr(resourceName, "algorithm_signer", "rsa-sha2-256"),
-		resource.TestCheckResourceAttr(resourceName, "max_ttl", "86400"),
-		resource.TestCheckResourceAttr(resourceName, "ttl", "43200"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowBareDomains, "true"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowHostCertificates, "true"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowSubdomains, "true"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserCertificates, "false"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserKeyIDs, "true"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedCriticalOptions, "foo,bar"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedDomains, "example.com,foo.com"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedExtensions, "ext1,ext2"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultExtensions+".ext1", ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultCriticalOptions+".opt1", ""),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUsersTemplate, "true"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUsers, "usr1,usr2"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultUser, "usr"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyIDFormat, "{{role_name}}-test"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ca"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithmSigner, "rsa-sha2-256"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "86400"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "43200"),
 		// 50m (3000 seconds)
-		resource.TestCheckResourceAttr(resourceName, "not_before_duration", "3000"),
-		resource.TestCheckResourceAttr(resourceName, "allowed_domains_template", "true"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldNotBeforeDuration, "3000"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedDomainsTemplate, "true"),
 	)
 
 	getCheckFuncs := func(isUpdate bool) resource.TestCheckFunc {
@@ -108,18 +110,18 @@ func TestAccSSHSecretBackendRole(t *testing.T) {
 					name, backend, true, extraFields),
 				Check: resource.ComposeTestCheckFunc(
 					getCheckFuncs(true),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.#", "2"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.type", "rsa"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.#", "3"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.0", "2048"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.1", "3072"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.0.lengths.2", "4096"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.1.type", "ec"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.1.lengths.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "allowed_user_key_config.1.lengths.0", "256"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".0."+consts.FieldType, "rsa"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".0."+consts.FieldLengths+".#", "3"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".0."+consts.FieldLengths+".0", "2048"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".0."+consts.FieldLengths+".1", "3072"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".0."+consts.FieldLengths+".2", "4096"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".1."+consts.FieldType, "ec"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".1."+consts.FieldLengths+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedUserKeyConfig+".1."+consts.FieldLengths+".0", "256"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "allow_empty_principals"),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldAllowEmptyPrincipals),
 		}
 	}
 
@@ -144,11 +146,11 @@ func TestAccSSHSecretBackendRoleOTP_basic(t *testing.T) {
 			{
 				Config: testAccSSHSecretBackendRoleOTPConfig_basic(name, backend),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "name", name),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "backend", backend),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "allowed_users", "usr1,usr2"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "default_user", "usr"),
-					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", "cidr_list", "0.0.0.0/0"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", consts.FieldAllowedUsers, "usr1,usr2"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", consts.FieldDefaultUser, "usr"),
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role", consts.FieldCIDRList, "0.0.0.0/0"),
 				),
 			},
 		},
@@ -171,13 +173,13 @@ func TestAccSSHSecretBackendRole_template(t *testing.T) {
 			{
 				Config: testAccSSHSecretBackendRoleConfig_template(name, backend),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "backend", backend),
-					resource.TestCheckResourceAttr(resourceName, "default_user", "ssh-{{identity.entity.id}}-user"),
-					resource.TestCheckResourceAttr(resourceName, "default_user_template", "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultUser, "ssh-{{identity.entity.id}}-user"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultUserTemplate, "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, "allow_empty_principals"),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldAllowEmptyPrincipals),
 		},
 	})
 }
@@ -330,4 +332,271 @@ resource "vault_ssh_secret_backend_role" "test_role" {
 `, path, name)
 
 	return config
+}
+
+// TestAccSSHSecretBackendRole_defaultExtensionsTemplate tests default_extensions_template field for CA roles
+func TestAccSSHSecretBackendRole_defaultExtensionsTemplate(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test/ssh")
+	roleName := acctest.RandomWithPrefix("tf-test-ca-role")
+	resourceName := "vault_ssh_secret_backend_role.test_role"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccSSHSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSSHSecretBackendRoleConfig_defaultExtensionsTemplate(roleName, backend, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, roleName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ca"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultExtensionsTemplate, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultExtensions+".permit-pty", ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultExtensions+".permit-port-forwarding", ""),
+				),
+			},
+			{
+				Config: testAccSSHSecretBackendRoleConfig_defaultExtensionsTemplate(roleName, backend, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultExtensionsTemplate, "false"),
+				),
+			},
+			{
+				Config: testAccSSHSecretBackendRoleConfig_defaultExtensionsTemplateEmpty(roleName, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultExtensionsTemplate, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultExtensions+".%", "0"),
+				),
+			},
+			// DiffSuppressFunc handles key_type-specific fields, so no exclusions needed
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldAllowEmptyPrincipals),
+		},
+	})
+}
+
+// TestAccSSHSecretBackendRole_otpFields tests exclude_cidr_list and port fields for OTP roles
+func TestAccSSHSecretBackendRole_otpFields(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test/ssh")
+	roleName := acctest.RandomWithPrefix("tf-test-otp-role")
+	resourceName := "vault_ssh_secret_backend_role.test_role"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccSSHSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSSHSecretBackendRoleConfig_otpFields(roleName, backend, `["192.168.1.0/24", "10.0.0.0/8"]`, 2222),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, roleName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "otp"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExcludeCIDRList+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2222"),
+				),
+			},
+			{
+				Config: testAccSSHSecretBackendRoleConfig_otpFields(roleName, backend, `["172.16.0.0/12"]`, 2223),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExcludeCIDRList+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "2223"),
+				),
+			},
+			{
+				Config: testAccSSHSecretBackendRoleConfig_otpFieldsEmpty(roleName, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExcludeCIDRList+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPort, "22"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldAllowEmptyPrincipals),
+		},
+	})
+}
+
+// Helper functions for test configurations
+
+func testAccSSHSecretBackendRoleConfig_defaultExtensionsTemplate(roleName, path string, enabled bool) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_ca" "test" {
+  backend              = vault_mount.example.path
+  generate_signing_key = true
+}
+
+resource "vault_ssh_secret_backend_role" "test_role" {
+  name                        = "%s"
+  backend                     = vault_mount.example.path
+  key_type                    = "ca"
+  allow_user_certificates     = true
+  default_extensions_template = %t
+  default_extensions = {
+    permit-pty             = ""
+    permit-port-forwarding = ""
+  }
+  allowed_users = "ubuntu,admin,*"
+  default_user  = "ubuntu"
+}
+`, path, roleName, enabled)
+}
+
+func testAccSSHSecretBackendRoleConfig_defaultExtensionsTemplateEmpty(roleName, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_ca" "test" {
+  backend              = vault_mount.example.path
+  generate_signing_key = true
+}
+
+resource "vault_ssh_secret_backend_role" "test_role" {
+  name                        = "%s"
+  backend                     = vault_mount.example.path
+  key_type                    = "ca"
+  allow_user_certificates     = true
+  default_extensions_template = true
+  allowed_users               = "ubuntu,admin,*"
+  default_user                = "ubuntu"
+}
+`, path, roleName)
+}
+
+func testAccSSHSecretBackendRoleConfig_otpFields(roleName, path, cidrList string, port int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_role" "test_role" {
+  name              = "%s"
+  backend           = vault_mount.example.path
+  key_type          = "otp"
+  default_user      = "ubuntu"
+  exclude_cidr_list = %s
+  port              = %d
+  allowed_users     = "ubuntu,admin,*"
+}
+`, path, roleName, cidrList, port)
+}
+
+func testAccSSHSecretBackendRoleConfig_otpFieldsEmpty(roleName, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_role" "test_role" {
+  name          = "%s"
+  backend       = vault_mount.example.path
+  key_type      = "otp"
+  default_user  = "ubuntu"
+  allowed_users = "ubuntu,admin,*"
+}
+`, path, roleName)
+}
+
+// TestAccSSHSecretBackendRole_extensionsTemplateAndOtpFieldsInvalid tests invalid field values
+// Note: Vault's SSH secrets engine does not perform validation on port numbers at the API level.
+// Vault accepts and stores any integer value for the port field,
+// including values outside the valid TCP port range (1-65535) such as 99999 and -1.
+// These test cases verify that the Terraform provider correctly handles this behavior by:
+// 1. Successfully creating resources with out-of-range port values (matching Vault's permissive behavior)
+// 2. Accurately reading back and storing the exact port values that Vault accepts
+// This ensures the provider maintains fidelity with Vault's actual API behavior
+func TestAccSSHSecretBackendRole_extensionsTemplateAndOtpFieldsInvalid(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test/ssh")
+	otpRoleName := acctest.RandomWithPrefix("tf-test-otp-role")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccSSHSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Test: Invalid CIDR format - Vault validates CIDR format
+				Config:      testAccSSHSecretBackendRoleConfig_invalidCIDR(otpRoleName, backend),
+				ExpectError: regexp.MustCompile("invalid CIDR|failed to parse"),
+			},
+			{
+				// Test: Port number exceeding valid TCP range (1-65535)
+				// Vault accepts this without validation, so we verify it's stored correctly
+				Config: testAccSSHSecretBackendRoleConfig_invalidPortHigh(otpRoleName, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role_otp", consts.FieldPort, "99999"),
+				),
+			},
+			{
+				// Test: Negative port number
+				// Vault accepts this without validation, so we verify it's stored correctly
+				Config: testAccSSHSecretBackendRoleConfig_invalidPortNegative(otpRoleName, backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_ssh_secret_backend_role.test_role_otp", consts.FieldPort, "-1"),
+				),
+			},
+		},
+	})
+}
+
+// Helper functions for invalid configurations
+
+func testAccSSHSecretBackendRoleConfig_invalidCIDR(otpRoleName, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_role" "test_role_otp" {
+  name              = "%s"
+  backend           = vault_mount.example.path
+  key_type          = "otp"
+  default_user      = "ubuntu"
+  exclude_cidr_list = ["invalid-cidr-format"]
+  allowed_users     = "ubuntu"
+}
+`, path, otpRoleName)
+}
+
+func testAccSSHSecretBackendRoleConfig_invalidPortHigh(otpRoleName, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_role" "test_role_otp" {
+  name          = "%s"
+  backend       = vault_mount.example.path
+  key_type      = "otp"
+  default_user  = "ubuntu"
+  port          = 99999
+  allowed_users = "ubuntu"
+}
+`, path, otpRoleName)
+}
+
+func testAccSSHSecretBackendRoleConfig_invalidPortNegative(otpRoleName, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "example" {
+  path = "%s"
+  type = "ssh"
+}
+
+resource "vault_ssh_secret_backend_role" "test_role_otp" {
+  name          = "%s"
+  backend       = vault_mount.example.path
+  key_type      = "otp"
+  default_user  = "ubuntu"
+  port          = -1
+  allowed_users = "ubuntu"
+}
+`, path, otpRoleName)
 }

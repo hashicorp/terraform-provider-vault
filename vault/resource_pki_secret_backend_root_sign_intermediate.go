@@ -370,7 +370,6 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldURISans,
 		consts.FieldOtherSans,
 		consts.FieldPermittedDNSDomains,
-		consts.FieldKeyUsage,
 	}
 
 	// Whether name constraints fields (other than permitted_dns_domains), are supproted,
@@ -415,6 +414,15 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		m := util.ToStringArray(d.Get(k).([]interface{}))
 		if len(m) > 0 {
 			data[k] = strings.Join(m, ",")
+		}
+	}
+
+	// handle key_usage as string array (not comma-separated)
+	// only if Vault 1.19.2+ supports it (due to bug fix)
+	isKeyUsageSupported := provider.IsAPISupported(meta, provider.VaultVersion1192)
+	if isKeyUsageSupported {
+		if v, ok := d.GetOk(consts.FieldKeyUsage); ok {
+			data[consts.FieldKeyUsage] = expandStringSlice(v.([]interface{}))
 		}
 	}
 
