@@ -209,11 +209,11 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 		return
 	}
 
-	// Set default values
-	if data.DisplayName.IsNull() || data.DisplayName.ValueString() == "" {
+	// Set default values only if null or known empty string (not if unknown)
+	if data.DisplayName.IsNull() || (!data.DisplayName.IsUnknown() && data.DisplayName.ValueString() == "") {
 		data.DisplayName = types.StringValue("token")
 	}
-	if data.Type.IsNull() || data.Type.ValueString() == "" {
+	if data.Type.IsNull() || (!data.Type.IsUnknown() && data.Type.ValueString() == "") {
 		data.Type = types.StringValue("service")
 	}
 
@@ -228,7 +228,7 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 	createRequest := &api.TokenCreateRequest{}
 
 	// Set policies
-	if !data.Policies.IsNull() {
+	if !data.Policies.IsNull() && !data.Policies.IsUnknown() {
 		var policies []string
 		resp.Diagnostics.Append(data.Policies.ElementsAs(ctx, &policies, false)...)
 		if resp.Diagnostics.HasError() {
@@ -238,49 +238,49 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 	}
 
 	// Set ID field (root only)
-	if !data.ID.IsNull() {
+	if !data.ID.IsNull() && !data.ID.IsUnknown() {
 		createRequest.ID = data.ID.ValueString()
 	}
 
 	// Set string fields
-	if !data.TTL.IsNull() {
+	if !data.TTL.IsNull() && !data.TTL.IsUnknown() {
 		createRequest.TTL = data.TTL.ValueString()
 	}
-	if !data.ExplicitMaxTTL.IsNull() {
+	if !data.ExplicitMaxTTL.IsNull() && !data.ExplicitMaxTTL.IsUnknown() {
 		createRequest.ExplicitMaxTTL = data.ExplicitMaxTTL.ValueString()
 	}
-	if !data.Period.IsNull() {
+	if !data.Period.IsNull() && !data.Period.IsUnknown() {
 		createRequest.Period = data.Period.ValueString()
 	}
-	if !data.DisplayName.IsNull() {
+	if !data.DisplayName.IsNull() && !data.DisplayName.IsUnknown() {
 		createRequest.DisplayName = data.DisplayName.ValueString()
 	}
-	if !data.Type.IsNull() {
+	if !data.Type.IsNull() && !data.Type.IsUnknown() {
 		createRequest.Type = data.Type.ValueString()
 	}
-	if !data.EntityAlias.IsNull() {
+	if !data.EntityAlias.IsNull() && !data.EntityAlias.IsUnknown() {
 		createRequest.EntityAlias = data.EntityAlias.ValueString()
 	}
 
 	// Set boolean fields
-	if !data.NoParent.IsNull() {
+	if !data.NoParent.IsNull() && !data.NoParent.IsUnknown() {
 		createRequest.NoParent = data.NoParent.ValueBool()
 	}
-	if !data.NoDefaultPolicy.IsNull() {
+	if !data.NoDefaultPolicy.IsNull() && !data.NoDefaultPolicy.IsUnknown() {
 		createRequest.NoDefaultPolicy = data.NoDefaultPolicy.ValueBool()
 	}
-	if !data.Renewable.IsNull() {
+	if !data.Renewable.IsNull() && !data.Renewable.IsUnknown() {
 		renewable := data.Renewable.ValueBool()
 		createRequest.Renewable = &renewable
 	}
 
 	// Set numeric fields
-	if !data.NumUses.IsNull() {
+	if !data.NumUses.IsNull() && !data.NumUses.IsUnknown() {
 		createRequest.NumUses = int(data.NumUses.ValueInt64())
 	}
 
 	// Set metadata
-	if !data.Metadata.IsNull() {
+	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
 		metadata := make(map[string]string)
 		resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
 		if resp.Diagnostics.HasError() {
@@ -291,7 +291,7 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 
 	// Handle wrapping if wrapping_ttl is set
 	var wrapped bool
-	if !data.WrappingTTL.IsNull() && data.WrappingTTL.ValueString() != "" {
+	if !data.WrappingTTL.IsNull() && !data.WrappingTTL.IsUnknown() && data.WrappingTTL.ValueString() != "" {
 		wrappingTTL := data.WrappingTTL.ValueString()
 
 		// Clone client for wrapping
@@ -313,7 +313,10 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 
 	// Create the token
 	var tokenResp *api.Secret
-	roleName := data.RoleName.ValueString()
+	var roleName string
+	if !data.RoleName.IsNull() && !data.RoleName.IsUnknown() {
+		roleName = data.RoleName.ValueString()
+	}
 
 	if roleName != "" {
 		tokenResp, err = c.Auth().Token().CreateWithRole(createRequest, roleName)
@@ -361,7 +364,15 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 		data.WrappingAccessor = types.StringValue(tokenResp.WrapInfo.Accessor)
 		accessor = tokenResp.WrapInfo.WrappedAccessor
 		data.LeaseDuration = types.Int64Value(int64(tokenResp.WrapInfo.TTL))
-		tokenType = data.Type.ValueString()
+
+		// Wrapped batch tokens do not include a wrapped accessor. Detect that
+		// case so later cleanup does not treat them like revocable service tokens.
+		if accessor == "" {
+			tokenType = "batch"
+			data.Type = types.StringValue("batch")
+		} else {
+			tokenType = data.Type.ValueString()
+		}
 	} else {
 		// Regular token
 		if tokenResp.Auth == nil {

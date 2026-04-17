@@ -179,6 +179,31 @@ func TestAccToken_wrapped(t *testing.T) {
 	})
 }
 
+// TestAccToken_wrappedBatch confirms that a wrapped batch token can be created
+// and is correctly identified as a batch token (for proper cleanup behavior)
+func TestAccToken_wrappedBatch(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testTokenConfig_wrappedBatch(),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldWrappedToken), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldWrappingAccessor), knownvalue.NotNull()),
+					// Verify the token type is correctly detected as "batch"
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldType), knownvalue.StringExact("batch")),
+				},
+			},
+		},
+	})
+}
+
 // TestAccToken_withEntityAlias confirms that a token can be created with entity alias
 func TestAccToken_withEntityAlias(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
@@ -186,6 +211,8 @@ func TestAccToken_withEntityAlias(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("test-role")
 	entityName := acctest.RandomWithPrefix("test-entity")
 	aliasName := acctest.RandomWithPrefix("test-alias")
+	policyName := acctest.RandomWithPrefix("test-policy")
+	authBackendPath := acctest.RandomWithPrefix("userpass-test")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -196,11 +223,11 @@ func TestAccToken_withEntityAlias(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create all dependencies first
 			{
-				Config: testTokenConfig_entityAliasSetup(roleName, entityName, aliasName),
+				Config: testTokenConfig_entityAliasSetup(roleName, entityName, aliasName, policyName, authBackendPath),
 			},
 			// Step 2: Use the role and entity alias with ephemeral token
 			{
-				Config: testTokenConfig_withEntityAlias(roleName, entityName, aliasName),
+				Config: testTokenConfig_withEntityAlias(roleName, entityName, aliasName, policyName, authBackendPath),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldClientToken), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldEntityID), knownvalue.NotNull()),
@@ -215,6 +242,7 @@ func TestAccToken_batchTokenAutoDetectionViaRole(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 
 	roleName := acctest.RandomWithPrefix("batch-role")
+	policyName := acctest.RandomWithPrefix("test-policy")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
@@ -225,11 +253,11 @@ func TestAccToken_batchTokenAutoDetectionViaRole(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create the batch role first
 			{
-				Config: testTokenConfig_batchRoleOnly(roleName),
+				Config: testTokenConfig_batchRoleOnly(roleName, policyName),
 			},
 			// Step 2: Use the batch role with ephemeral token
 			{
-				Config: testTokenConfig_batchTokenAutoDetectionViaRole(roleName),
+				Config: testTokenConfig_batchTokenAutoDetectionViaRole(roleName, policyName),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldClientToken), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldType), knownvalue.StringExact("batch")),
@@ -446,10 +474,27 @@ resource "echo" "test" {}
 `
 }
 
-func testTokenConfig_entityAliasSetup(roleName, entityName, aliasName string) string {
+func testTokenConfig_wrappedBatch() string {
+	return `
+ephemeral "vault_token" "test" {
+  type         = "batch"
+  policies     = ["default"]
+  ttl          = "1h"
+  wrapping_ttl = "5m"
+}
+
+provider "echo" {
+  data = ephemeral.vault_token.test
+}
+
+resource "echo" "test" {}
+`
+}
+
+func testTokenConfig_entityAliasSetup(roleName, entityName, aliasName, policyName, authBackendPath string) string {
 	return fmt.Sprintf(`
 resource "vault_policy" "test" {
-  name = "test-policy"
+  name = "%s"
   policy = <<EOT
 path "secret/*" {
   capabilities = ["read"]
@@ -459,7 +504,7 @@ EOT
 
 resource "vault_auth_backend" "test" {
   type = "userpass"
-  path = "userpass-test"
+  path = "%s"
 }
 
 resource "vault_identity_entity" "test" {
@@ -477,13 +522,13 @@ resource "vault_token_auth_backend_role" "test" {
   allowed_policies       = [vault_policy.test.name]
   allowed_entity_aliases = [vault_identity_entity_alias.test.name]
 }
-`, entityName, aliasName, roleName)
+`, policyName, authBackendPath, entityName, aliasName, roleName)
 }
 
-func testTokenConfig_withEntityAlias(roleName, entityName, aliasName string) string {
+func testTokenConfig_withEntityAlias(roleName, entityName, aliasName, policyName, authBackendPath string) string {
 	return fmt.Sprintf(`
 resource "vault_policy" "test" {
-  name = "test-policy"
+  name = "%s"
   policy = <<EOT
 path "secret/*" {
   capabilities = ["read"]
@@ -493,7 +538,7 @@ EOT
 
 resource "vault_auth_backend" "test" {
   type = "userpass"
-  path = "userpass-test"
+  path = "%s"
 }
 
 resource "vault_identity_entity" "test" {
@@ -522,13 +567,13 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`, entityName, aliasName, roleName)
+`, policyName, authBackendPath, entityName, aliasName, roleName)
 }
 
-func testTokenConfig_batchRoleOnly(roleName string) string {
+func testTokenConfig_batchRoleOnly(roleName, policyName string) string {
 	return fmt.Sprintf(`
 resource "vault_policy" "test" {
-  name = "test-policy"
+  name = "%s"
   policy = <<EOT
 path "secret/*" {
   capabilities = ["read"]
@@ -543,13 +588,13 @@ resource "vault_token_auth_backend_role" "batch" {
   renewable        = false
   allowed_policies = [vault_policy.test.name]
 }
-`, roleName)
+`, policyName, roleName)
 }
 
-func testTokenConfig_batchTokenAutoDetectionViaRole(roleName string) string {
+func testTokenConfig_batchTokenAutoDetectionViaRole(roleName, policyName string) string {
 	return fmt.Sprintf(`
 resource "vault_policy" "test" {
-  name = "test-policy"
+  name = "%s"
   policy = <<EOT
 path "secret/*" {
   capabilities = ["read"]
@@ -574,7 +619,7 @@ provider "echo" {
 }
 
 resource "echo" "test" {}
-`, roleName)
+`, policyName, roleName)
 }
 
 func testTokenConfig_full(policyName string) string {
@@ -626,5 +671,3 @@ provider "echo" {
 resource "echo" "test" {}
 `, customID)
 }
-
-// Made with Bob

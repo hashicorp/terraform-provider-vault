@@ -19,7 +19,7 @@ import (
 
 func tokenResource() *schema.Resource {
 	return &schema.Resource{
-		DeprecationMessage: "The vault_token resource is maintained for legacy persistence; for better security and batch token support, use the ephemeral vault_token resource instead.",
+		DeprecationMessage: "The vault_token resource is maintained for legacy persistence; for better security and batch token support, use ephemeral \"vault_token\" instead.",
 		Create:             tokenCreate,
 		Read:               provider.ReadWrapper(tokenRead),
 		Update:             tokenUpdate,
