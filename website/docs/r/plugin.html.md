@@ -64,7 +64,7 @@ The following arguments are supported:
 
 * `name` - (Required) Name of the plugin.
 
-* `version` - (Optional) Semantic version of the plugin.
+* `version` - (Optional) Semantic version of the plugin. Required for official enterprise plugins.
 
 * `sha256` - (Optional) SHA256 sum of the plugin binary. Need to be set for non-enterprise plugin.
 
