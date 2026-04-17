@@ -4,6 +4,7 @@
 package userpass_test
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -17,9 +18,12 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/vault/api"
 )
 
 const testAccUserpassAuthBackendUserResourceAddress = "vault_userpass_auth_backend_user.test"
+
+const userpassInvalidCredentialsMessage = "invalid username or password"
 
 var testAccUserpassAuthBackendUserImportIgnore = []string{
 	consts.FieldPasswordWO,
@@ -179,6 +183,37 @@ func TestAccUserpassAuthBackendUser_passwordWOVersion(t *testing.T) {
 	})
 }
 
+func TestAccUserpassAuthBackendUser_passwordWOWithoutVersionIncrement(t *testing.T) {
+	mount := acctest.RandomWithPrefix("userpass-mount")
+	username := acctest.RandomWithPrefix("userpass-user")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccUserpassAuthBackendUserConfigPasswordWithVersion(mount, username, "initial-password", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordWOVersion, "1"),
+					testCheckUserpassLoginPassword(testAccUserpassAuthBackendUserResourceAddress, "initial-password"),
+				),
+				ConfigPlanChecks: testAccUserpassAuthBackendUserEmptyPlanChecks(),
+			},
+			{
+				Config: testAccUserpassAuthBackendUserConfigPasswordWithVersion(mount, username, "updated-password", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testAccUserpassAuthBackendUserResourceAddress, consts.FieldPasswordWOVersion, "1"),
+					testCheckUserpassLoginPassword(testAccUserpassAuthBackendUserResourceAddress, "initial-password"),
+					testCheckUserpassLoginPasswordFails(testAccUserpassAuthBackendUserResourceAddress, "updated-password", userpassInvalidCredentialsMessage),
+				),
+				ConfigPlanChecks: testAccUserpassAuthBackendUserEmptyPlanChecks(),
+			},
+		},
+	})
+}
+
 func TestAccUserpassAuthBackendUser_passwordHashWOVersion(t *testing.T) {
 	mount := acctest.RandomWithPrefix("userpass-mount")
 	username := acctest.RandomWithPrefix("userpass-user")
@@ -221,6 +256,7 @@ func TestAccUserpassAuthBackendUser_passwordHashWOVersion(t *testing.T) {
 func TestAccUserpassAuthBackendUser_passwordHashValidator(t *testing.T) {
 	mount := acctest.RandomWithPrefix("userpass-mount")
 	username := acctest.RandomWithPrefix("userpass-user")
+	invalidPrefixHash := "$2x$10$V1HAj0oLIhJtqkj3w0zGx.fjMxmVnY2m0sI4GTiD6W69eCi7epTzW"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -230,7 +266,11 @@ func TestAccUserpassAuthBackendUser_passwordHashValidator(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccUserpassAuthBackendUserConfigHash(mount, username, "invalid-bcrypt-hash", false),
-				ExpectError: regexp.MustCompile("must be a bcrypt hash"),
+				ExpectError: regexp.MustCompile("password hash has incorrect length"),
+			},
+			{
+				Config:      testAccUserpassAuthBackendUserConfigHash(mount, username, invalidPrefixHash, false),
+				ExpectError: regexp.MustCompile("password hash has incorrect prefix"),
 			},
 		},
 	})
@@ -363,24 +403,7 @@ func testAccUserpassAuthBackendUserImportStepWithNamespace(t *testing.T, mount, 
 
 func testCheckUserpassLoginPassword(resourceName, password string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("resource not found in state: %s", resourceName)
-		}
-
-		client, err := provider.GetClient(rs.Primary, acctestutil.TestProvider.Meta())
-		if err != nil {
-			return err
-		}
-
-		mount := rs.Primary.Attributes[consts.FieldMount]
-		username := rs.Primary.Attributes[consts.FieldUsername]
-		if mount == "" || username == "" {
-			return fmt.Errorf("missing mount or username in state for %s", resourceName)
-		}
-
-		loginPath := fmt.Sprintf("auth/%s/login/%s", mount, username)
-		secret, err := client.Logical().Write(loginPath, map[string]any{"password": password})
+		loginPath, secret, err := performUserpassLogin(s, resourceName, password)
 		if err != nil {
 			return fmt.Errorf("failed userpass login with expected password on %q: %w", loginPath, err)
 		}
@@ -390,6 +413,47 @@ func testCheckUserpassLoginPassword(resourceName, password string) resource.Test
 
 		return nil
 	}
+}
+
+func testCheckUserpassLoginPasswordFails(resourceName, password, wantMessage string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		loginPath, secret, err := performUserpassLogin(s, resourceName, password)
+		if err == nil {
+			if secret != nil && secret.Auth != nil {
+				return fmt.Errorf("unexpected successful userpass login on %q with password that should not have been applied", loginPath)
+			}
+			return fmt.Errorf("expected userpass login failure on %q but received no error", loginPath)
+		}
+
+		if !strings.Contains(err.Error(), wantMessage) {
+			return fmt.Errorf("unexpected userpass login failure on %q: got %q, want substring %q", loginPath, err.Error(), wantMessage)
+		}
+
+		return nil
+	}
+}
+
+func performUserpassLogin(s *terraform.State, resourceName, password string) (string, *api.Secret, error) {
+	rs, ok := s.RootModule().Resources[resourceName]
+	if !ok {
+		return "", nil, fmt.Errorf("resource not found in state: %s", resourceName)
+	}
+
+	client, err := provider.GetClient(rs.Primary, acctestutil.TestProvider.Meta())
+	if err != nil {
+		return "", nil, err
+	}
+
+	mount := rs.Primary.Attributes[consts.FieldMount]
+	username := rs.Primary.Attributes[consts.FieldUsername]
+	if mount == "" || username == "" {
+		return "", nil, fmt.Errorf("missing mount or username in state for %s", resourceName)
+	}
+
+	loginPath := fmt.Sprintf("auth/%s/login/%s", mount, username)
+	secret, err := client.Logical().WriteWithContext(context.Background(), loginPath, map[string]any{"password": password})
+
+	return loginPath, secret, err
 }
 
 func testAccUserpassAuthBackendUserConfigPassword(mount, username, password string) string {
