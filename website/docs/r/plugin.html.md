@@ -22,6 +22,10 @@ For more information on managing external plugins, please refer to the Vault
 
 ## Example Usage
 
+### Register a CE plugin
+
+The `sha256` is required to register a CE plugin.
+
 ```hcl
 resource "vault_plugin" "jwt" {
   type    = "auth"
@@ -39,6 +43,19 @@ resource "vault_auth_backend" "jwt_auth" {
 }
 ```
 
+### Register an official enterprise plugin
+
+The `version` is required for enterprise plugins.
+
+```hcl
+resource "vault_plugin" "oracle" {
+  type    = "database"
+  name    = "vault-plugin-database-oracle"
+  command = "vault-plugin-database-oracle"
+  version = "v0.13.0+ent"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -47,9 +64,9 @@ The following arguments are supported:
 
 * `name` - (Required) Name of the plugin.
 
-* `version` - (Optional) Semantic version of the plugin.
+* `version` - (Optional) Semantic version of the plugin. Required for official enterprise plugins.
 
-* `sha256` - (Required) SHA256 sum of the plugin binary.
+* `sha256` - (Optional) SHA256 sum of the plugin binary. Need to be set for non-enterprise plugin.
 
 * `command` - (Required) Command to execute the plugin, relative to the server's configured `plugin_directory`.
 
