@@ -19,9 +19,10 @@ import (
 func TestAccPKIACMEAccount_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	accountName := acctest.RandomWithPrefix("tf-acme-account")
-	resourceType := "vault_pki_secret_backend_acme_account"
+	resourceType := "vault_pki_external_ca_secret_backend_acme_account"
 	resourceName := resourceType + ".test"
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
@@ -93,7 +94,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA secret engine mount"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount           = vault_mount.test.path
   name            = "%s"
   directory_url   = "%s"
@@ -114,7 +115,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA secret engine mount"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount           = vault_mount.test.path
   name            = "%s"
   directory_url   = "%s"
@@ -132,7 +133,7 @@ EOT
 func TestAccPKIACMEAccount_withEAB(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki")
 	accountName := acctest.RandomWithPrefix("tf-acme-account")
-	resourceType := "vault_pki_secret_backend_acme_account"
+	resourceType := "vault_pki_external_ca_secret_backend_acme_account"
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
@@ -167,7 +168,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA secret engine mount"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount           = vault_mount.test.path
   name            = "%s"
   directory_url   = "https://acme-staging-v02.api.letsencrypt.org/directory"

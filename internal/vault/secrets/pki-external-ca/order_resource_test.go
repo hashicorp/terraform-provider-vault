@@ -4,11 +4,15 @@
 package pki_external_ca_test
 
 import (
+	"archive/tar"
 	"crypto/x509/pkix"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -16,8 +20,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,13 +29,15 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
-	resourceName := "vault_pki_secret_backend_external_ca_order.test"
+	resourceName := "vault_pki_external_ca_secret_backend_order.test"
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			acctestutil.PreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
@@ -57,7 +63,7 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIExternalCAOrderImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"expires", "last_update", "next_work_date", "order_status"},
+				ImportStateVerifyIgnore:              []string{"expires", "last_update", "next_work_date", "order_status", "challenges"},
 			},
 		},
 	})
@@ -98,16 +104,37 @@ func setupVaultAndPebble(t *testing.T) (string, string) {
 		*/
 	}
 
-	ca, port, _ := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions())
-	directoryUrl := fmt.Sprintf("https://localhost:%d/dir", port)
-	return ca, directoryUrl
+	dockerAPI, err := docker.NewDockerAPI()
+	require.NoError(t, err)
+
+	f := filters.NewArgs()
+	f.Add("ancestor", "ghcr.io/letsencrypt/pebble:2.8.0")
+
+	containers, err := dockerAPI.ContainerList(t.Context(), container.ListOptions{Filters: f})
+	require.NoError(t, err)
+
+	require.Len(t, containers, 1)
+	id := containers[0].ID
+
+	rdr, _, err := dockerAPI.CopyFromContainer(t.Context(), id, "test/certs/pebble.minica.pem")
+	require.NoError(t, err)
+	defer rdr.Close()
+
+	tr := tar.NewReader(rdr)
+	_, err = tr.Next()
+	require.NoError(t, err)
+
+	pebbleCa, err := io.ReadAll(tr)
+	require.NoError(t, err)
+
+	return string(pebbleCa), "https://pebble:14000/dir"
 }
 
 func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
 	accountName := acctest.RandomWithPrefix("test-account")
 	roleName := acctest.RandomWithPrefix("test-role")
-	resourceName := "vault_pki_secret_backend_external_ca_order.test"
+	resourceName := "vault_pki_external_ca_secret_backend_order.test"
 	host := "example.com"
 
 	// Generate a test CSR
@@ -128,6 +155,7 @@ func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 	csrb, err := csr.ToCSRBundle()
 	require.NoError(t, err)
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
@@ -157,7 +185,7 @@ func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIExternalCAOrderImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"csr", "expires", "last_update", "next_work_date", "order_status"},
+				ImportStateVerifyIgnore:              []string{"csr", "expires", "last_update", "next_work_date", "order_status", "challenges"},
 			},
 		},
 	})
@@ -171,7 +199,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA test"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
@@ -182,10 +210,10 @@ resource "vault_pki_secret_backend_acme_account" "test" {
 EOT
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "test" {
+resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
-  acme_account_name           = vault_pki_secret_backend_acme_account.test.name
+  acme_account_name           = vault_pki_external_ca_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "*.example.com"]
   allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
@@ -194,9 +222,9 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   force                       =  "true"
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "test" {
+resource "vault_pki_external_ca_secret_backend_order" "test" {
   mount       = vault_mount.test.path
-  role_name   = vault_pki_secret_backend_external_ca_role.test.name
+  role_name   = vault_pki_external_ca_secret_backend_role.test.name
   identifiers = ["example.com", "test.example.com"]
 }
 `, backend, accountName, directoryUrl, ca, roleName)
@@ -210,7 +238,7 @@ resource "vault_mount" "test" {
   description = "PKI External CA test"
 }
 
-resource "vault_pki_secret_backend_acme_account" "test" {
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   directory_url  = "%s"
@@ -221,10 +249,10 @@ resource "vault_pki_secret_backend_acme_account" "test" {
 EOT
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "test" {
+resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
-  acme_account_name           = vault_pki_secret_backend_acme_account.test.name
+  acme_account_name           = vault_pki_external_ca_secret_backend_acme_account.test.name
   allowed_domains             = ["example.com", "*.example.com"]
   allowed_domain_options      = ["bare_domains", "subdomains", "wildcards"]
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
@@ -233,9 +261,9 @@ resource "vault_pki_secret_backend_external_ca_role" "test" {
   force                       =  "true"
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "test" {
+resource "vault_pki_external_ca_secret_backend_order" "test" {
   mount     = vault_mount.test.path
-  role_name = vault_pki_secret_backend_external_ca_role.test.name
+  role_name = vault_pki_external_ca_secret_backend_role.test.name
   csr       = <<EOT
 %s
 EOT

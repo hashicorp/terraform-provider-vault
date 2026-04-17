@@ -74,7 +74,7 @@ jobs:
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: '1.12.*'
           terraform_wrapper: false
@@ -153,12 +153,13 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.16.27-ent"
+        - "vault-enterprise:1.16.31-ent"
         - "vault-enterprise:1.17.18-ent"
         - "vault-enterprise:1.18.15-ent"
-        - "vault-enterprise:1.19.12-ent"
-        - "vault-enterprise:1.20.5-ent"
-        - "vault-enterprise:1.21.1-ent"
+        - "vault-enterprise:1.19.15-ent"
+        - "vault-enterprise:1.20.9-ent"
+        - "vault-enterprise:1.21.4-ent"
+        - "vault-enterprise:2.0.0-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
@@ -172,8 +173,9 @@ jobs:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
           VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SKIP_SETCAP: "true"
           VAULT_LOCAL_CONFIG: |
-            {"plugin_directory": "/vault/plugins"}
+            {"plugin_directory": "/vault/plugins", "disable_mlock": true}
         options: >-
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
@@ -250,6 +252,11 @@ jobs:
           --health-interval 1s
           --health-timeout 30s
           --health-retries 30
+      pebble:
+        image: ghcr.io/letsencrypt/pebble:2.8.0
+        options: --add-host=host.docker.internal:host-gateway
+        ports:
+          - 14000:14000
     steps:
       - name: Update apt cache
         run:
@@ -264,7 +271,7 @@ jobs:
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ matrix.terraform_version }}
           terraform_wrapper: false
