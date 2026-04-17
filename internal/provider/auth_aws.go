@@ -5,18 +5,22 @@ package provider
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	smithyendpoints "github.com/aws/smithy-go/endpoints"
-	"github.com/aws/smithy-go/middleware"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
@@ -37,6 +41,9 @@ const (
 	envVarAWSRoleSessionName       = "AWS_ROLE_SESSION_NAME"
 	envVarAWSRegion                = "AWS_REGION"
 	envVarAWSDefaultRegion         = "AWS_DEFAULT_REGION"
+	stsGetCallerIdentityBody       = "Action=GetCallerIdentity&Version=2011-06-15"
+	stsContentType                 = "application/x-www-form-urlencoded; charset=utf-8"
+	stsSigningName                 = "sts"
 )
 
 func init() {
@@ -146,6 +153,12 @@ var _ AuthLogin = (*AuthLoginAWS)(nil)
 // Requires configuration provided by SchemaLoginAWS.
 type AuthLoginAWS struct {
 	AuthLoginCommon
+	// These fields preserve whether aws_role_arn came from explicit Terraform
+	// config instead of env/default expansion in AuthLoginCommon.params.
+	// The login flow uses that provenance to decide when a second manual
+	// AssumeRole is intended and when it should be skipped.
+	awsRoleARNExplicit   bool
+	awsRoleARNFromConfig string
 }
 
 func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
@@ -160,8 +173,90 @@ func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) (AuthLogin
 	); err != nil {
 		return nil, err
 	}
+	if roleARN, ok := l.getConfigStringField(d, consts.FieldAWSRoleARN); ok {
+		l.awsRoleARNExplicit = true
+		l.awsRoleARNFromConfig = roleARN
+	}
 
 	return l, nil
+}
+
+// getConfigStringField reads the raw provider configuration so we can tell
+// whether a value was explicitly set in Terraform rather than inherited from
+// environment-based defaults in l.params.
+//
+// This is needed because AuthLoginCommon expands env-backed defaults into
+// l.params before auth_login_aws decides whether to perform an extra manual
+// STS AssumeRole call. For web identity flows such as IRSA, treating an
+// env-derived AWS_ROLE_ARN the same as an explicitly configured aws_role_arn
+// can trigger an unintended second AssumeRole after the AWS SDK has already
+// resolved credentials through web identity.
+func (l *AuthLoginAWS) getConfigStringField(d *schema.ResourceData, field string) (string, bool) {
+	v, diags := d.GetRawConfigAt(cty.Path{
+		cty.GetAttrStep{Name: l.authField},
+		cty.IndexStep{Key: cty.NumberIntVal(0)},
+		cty.GetAttrStep{Name: field},
+	})
+	if diags.HasError() || v.IsNull() || !v.IsKnown() {
+		return "", false
+	}
+
+	if v.Type() != cty.String {
+		return "", false
+	}
+
+	return v.AsString(), true
+}
+
+// configuredRoleARN returns only an explicitly configured, non-empty
+// aws_role_arn. This lets the login flow distinguish Terraform config from
+// env-derived defaults when deciding whether to do an extra STS AssumeRole.
+func (l *AuthLoginAWS) configuredRoleARN() (string, bool) {
+	// If the field was not explicitly configured, any value in l.params came from
+	// env/default processing and should not be treated as a Terraform-configured ARN.
+	if !l.awsRoleARNExplicit || l.awsRoleARNFromConfig == "" {
+		return "", false
+	}
+
+	// A non-empty explicit value is safe to treat as a user-requested role ARN.
+	return l.awsRoleARNFromConfig, true
+}
+
+// manualAssumeRoleARN decides whether the provider should perform an explicit
+// STS AssumeRole after the AWS SDK credential chain has been resolved.
+//
+// Any web identity flow skips the extra assume to avoid the IRSA/self-assume
+// regression where the SDK already resolved credentials via web identity.
+func (l *AuthLoginAWS) manualAssumeRoleARN() (string, bool) {
+	webIdentityTokenFile, _ := l.params[consts.FieldAWSWebIdentityTokenFile].(string)
+	// Web identity flows already rely on the SDK credential chain to assume the
+	// target role, so a second manual AssumeRole would create the IRSA regression.
+	if webIdentityTokenFile != "" {
+		return "", false
+	}
+
+	// An explicit non-empty Terraform value should still trigger manual
+	// AssumeRole for non-web-identity credential sources.
+	if roleARN, ok := l.configuredRoleARN(); ok {
+		return roleARN, true
+	}
+
+	// If Terraform explicitly configured aws_role_arn but left it empty,
+	// do not fall back to an env-derived ARN.
+	if l.awsRoleARNExplicit {
+		return "", false
+	}
+
+	roleARN, _ := l.params[consts.FieldAWSRoleARN].(string)
+	// With no explicit config, only use the effective env/default-derived role ARN
+	// when it is actually present.
+	if roleARN == "" {
+		return "", false
+	}
+
+	// Non-web-identity ambient credential sources can still use an env-derived
+	// role ARN for the manual AssumeRole path.
+	return roleARN, true
 }
 
 // MountPath for the aws authentication engine.
@@ -273,8 +368,11 @@ func (l *AuthLoginAWS) getLoginData(ctx context.Context, logger hclog.Logger) (m
 
 	// Check if we need to assume a role
 	var roleARN string
-	if v, ok := l.params[consts.FieldAWSRoleARN].(string); ok && v != "" {
-		roleARN = v
+	if manualAssumeRoleARN, ok := l.manualAssumeRoleARN(); ok {
+		// The credential chain can already resolve web identity and other ambient
+		// credentials. We only do a second, explicit AssumeRole when the helper
+		// above determines it is safe and intended.
+		roleARN = manualAssumeRoleARN
 
 		// Create STS client with base credentials and custom endpoint if configured
 		var stsOpts []func(*sts.Options)
@@ -285,6 +383,8 @@ func (l *AuthLoginAWS) getLoginData(ctx context.Context, logger hclog.Logger) (m
 
 		// Get role session name
 		roleSessionName := "vault-provider-session"
+		// Reuse the configured session name when present so the explicit manual
+		// AssumeRole path behaves consistently with the rest of the provider config.
 		if v, ok := l.params[consts.FieldAWSRoleSessionName].(string); ok && v != "" {
 			roleSessionName = v
 		}
@@ -321,7 +421,12 @@ func (l *AuthLoginAWS) getLoginData(ctx context.Context, logger hclog.Logger) (m
 		headerValue = v
 	}
 
-	return generateLoginData(ctx, awsConfig, headerValue, logger)
+	var stsEndpoint string
+	if v, ok := l.params[consts.FieldAWSSTSEndpoint].(string); ok {
+		stsEndpoint = v
+	}
+
+	return generateLoginData(ctx, awsConfig, headerValue, stsEndpoint)
 }
 
 // customSTSEndpointResolver creates an endpoint resolver for STS with a custom endpoint URL
@@ -410,52 +515,48 @@ func (l *AuthLoginAWS) getCredentialsConfig(logger hclog.Logger) (*awsutil.Crede
 	return config, nil
 }
 
+type stsSigningEndpoint struct {
+	requestURL    string
+	signingName   string
+	signingRegion string
+}
+
 // generateLoginData generates the necessary login data for Vault AWS authentication
-// by creating a presigned STS GetCallerIdentity request.
-func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue string, logger hclog.Logger) (map[string]interface{}, error) {
+// by creating a SigV4-signed STS GetCallerIdentity request.
+func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue string, stsEndpoint string) (map[string]interface{}, error) {
 	const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"
 
 	loginData := make(map[string]interface{})
 
-	// Validate credentials are available before attempting presign
+	if awsConfig == nil || awsConfig.Credentials == nil {
+		return nil, fmt.Errorf("AWS credentials are not configured")
+	}
+
+	// Validate credentials are available before building the signed request.
 	// This catches configuration errors earlier with a clearer error message
-	if _, err := awsConfig.Credentials.Retrieve(ctx); err != nil {
+	credentials, err := awsConfig.Credentials.Retrieve(ctx)
+	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve AWS credentials: %w", err)
 	}
 
-	// If a header value is provided, we need to add it to the signed request
-	// We'll do this by adding middleware to the config
-	if headerValue != "" {
-		awsConfig.APIOptions = append(awsConfig.APIOptions, func(stack *middleware.Stack) error {
-			return stack.Build.Add(middleware.BuildMiddlewareFunc(
-				"AddVaultHeader",
-				func(ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler) (middleware.BuildOutput, middleware.Metadata, error) {
-					req, ok := in.Request.(*smithyhttp.Request)
-					if ok {
-						req.Header.Add(iamServerIdHeader, headerValue)
-					}
-					return next.HandleBuild(ctx, in)
-				},
-			), middleware.After)
-		})
+	region := awsConfig.Region
+	if region == "" {
+		region = awsutil.DefaultRegion
 	}
 
-	// Create STS client with awsConfig (which already contains the correct credentials)
-	stsClient := sts.NewFromConfig(*awsConfig)
-
-	// Create presigner - credentials will be retrieved automatically during presigning
-	presignClient := sts.NewPresignClient(stsClient)
-
-	// Presign the GetCallerIdentity request
-	presignedReq, err := presignClient.PresignGetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+	endpoint, err := resolveSTSSigningEndpoint(region, stsEndpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to presign GetCallerIdentity request: %w", err)
+		return nil, err
 	}
 
-	// Convert the signed headers map to http.Header for proper marshaling
-	headers := make(http.Header)
-	for k, v := range presignedReq.SignedHeader {
-		headers[k] = v
+	req, body, err := buildSignedGetCallerIdentityRequest(ctx, credentials, endpoint, region, headerValue)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := req.Header.Clone()
+	if headers.Get("Host") == "" {
+		headers.Set("Host", req.URL.Host)
 	}
 
 	// Marshal headers to JSON
@@ -465,13 +566,71 @@ func generateLoginData(ctx context.Context, awsConfig *aws.Config, headerValue s
 	}
 
 	// Populate login data with base64-encoded values
-	// Note: GetCallerIdentity is a POST request with an empty body
-	loginData[consts.FieldIAMHttpRequestMethod] = presignedReq.Method
-	loginData[consts.FieldIAMRequestURL] = base64.StdEncoding.EncodeToString([]byte(presignedReq.URL))
+	loginData[consts.FieldIAMHttpRequestMethod] = req.Method
+	loginData[consts.FieldIAMRequestURL] = base64.StdEncoding.EncodeToString([]byte(req.URL.String()))
 	loginData[consts.FieldIAMRequestHeaders] = base64.StdEncoding.EncodeToString(headersJson)
-	loginData[consts.FieldIAMRequestBody] = base64.StdEncoding.EncodeToString([]byte(""))
+	loginData[consts.FieldIAMRequestBody] = base64.StdEncoding.EncodeToString([]byte(body))
 
 	return loginData, nil
+}
+
+func resolveSTSSigningEndpoint(region string, endpointURL string) (stsSigningEndpoint, error) {
+	if endpointURL != "" {
+		uri, err := url.Parse(endpointURL)
+		if err != nil {
+			return stsSigningEndpoint{}, fmt.Errorf("failed to parse custom STS endpoint URL: %w", err)
+		}
+		if uri.Scheme == "" || uri.Host == "" {
+			return stsSigningEndpoint{}, fmt.Errorf("invalid custom STS endpoint URL %q", endpointURL)
+		}
+
+		return stsSigningEndpoint{
+			requestURL:    uri.String(),
+			signingName:   stsSigningName,
+			signingRegion: region,
+		}, nil
+	}
+
+	return stsSigningEndpoint{
+		requestURL:    fmt.Sprintf("https://sts.%s.amazonaws.com", region),
+		signingName:   stsSigningName,
+		signingRegion: region,
+	}, nil
+}
+
+func buildSignedGetCallerIdentityRequest(ctx context.Context, credentials aws.Credentials, endpoint stsSigningEndpoint, region string, headerValue string) (*http.Request, string, error) {
+	body := stsGetCallerIdentityBody
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint.requestURL, strings.NewReader(body))
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to build GetCallerIdentity request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", stsContentType)
+	if headerValue != "" {
+		req.Header.Set("X-Vault-AWS-IAM-Server-ID", headerValue)
+	}
+
+	payloadHash := sha256.Sum256([]byte(body))
+	signingRegion := endpoint.signingRegion
+	if signingRegion == "" {
+		signingRegion = region
+	}
+	if signingRegion == "" {
+		signingRegion = awsutil.DefaultRegion
+	}
+
+	signingName := endpoint.signingName
+	if signingName == "" {
+		signingName = stsSigningName
+	}
+
+	signer := v4.NewSigner()
+
+	if err := signer.SignHTTP(ctx, credentials, req, hex.EncodeToString(payloadHash[:]), signingName, signingRegion, time.Now().UTC()); err != nil {
+		return nil, "", fmt.Errorf("failed to sign GetCallerIdentity request: %w", err)
+	}
+
+	return req, body, nil
 }
 
 // signAWSLogin is for use by the generic auth method
@@ -502,10 +661,47 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		region = v
 	}
 
-	awsConfig, err := awsutil.RetrieveCreds(ctx, accessKey, secretKey, sessionToken, logger,
-		awsutil.WithRegion(region))
+	// Resolve region from environment/IMDS before passing to NewCredentialsConfig.
+	// This ensures EC2 instances use their actual region instead of
+	// defaulting to us-east-1, which would cause cross-region API calls.
+	if region == "" {
+		var err error
+		region, err = awsutil.GetRegion(ctx, region)
+		if err != nil {
+			logger.Warn(fmt.Sprintf("defaulting region to %q due to %s", awsutil.DefaultRegion, err.Error()))
+			region = awsutil.DefaultRegion
+		}
+	}
+
+	// Build credentials config using awsutil.CredentialsConfig
+	var opts []awsutil.Option
+
+	if accessKey != "" {
+		opts = append(opts, awsutil.WithAccessKey(accessKey))
+	}
+	if secretKey != "" {
+		opts = append(opts, awsutil.WithSecretKey(secretKey))
+	}
+	if region != "" {
+		opts = append(opts, awsutil.WithRegion(region))
+	}
+
+	opts = append(opts, awsutil.WithLogger(logger))
+
+	credConfig, err := awsutil.NewCredentialsConfig(opts...)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve AWS credentials: %s", err)
+		return fmt.Errorf("failed to create AWS credentials config: %s", err)
+	}
+
+	// Set session token directly on the config since it's not available as an option
+	if sessionToken != "" {
+		credConfig.SessionToken = sessionToken
+	}
+
+	// Generate the credential chain - this properly handles region and all credential sources
+	awsConfig, err := credConfig.GenerateCredentialChain(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to generate AWS credential chain: %s", err)
 	}
 
 	var headerValue string
@@ -513,7 +709,12 @@ func signAWSLogin(parameters map[string]interface{}, logger hclog.Logger) error 
 		headerValue = v
 	}
 
-	loginData, err := generateLoginData(ctx, awsConfig, headerValue, logger)
+	var stsEndpoint string
+	if v, ok := parameters[consts.FieldAWSSTSEndpoint].(string); ok {
+		stsEndpoint = v
+	}
+
+	loginData, err := generateLoginData(ctx, awsConfig, headerValue, stsEndpoint)
 	if err != nil {
 		return fmt.Errorf("failed to generate AWS login data: %s", err)
 	}

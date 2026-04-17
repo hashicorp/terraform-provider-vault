@@ -397,8 +397,16 @@ resource "vault_mount" "pki" {
   type = "pki"
 }
 
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend     = vault_mount.pki.path
+  type        = "internal"
+  common_name = "test"
+  ttl         = "86400"
+  issuer_name = "root-a"
+}
+
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on                         = ["vault_mount.pki"]
+  depends_on                         = ["vault_pki_secret_backend_root_cert.test"]
   backend                            = vault_mount.pki.path
   name                               = "%s"
   ttl                                = %d
@@ -450,8 +458,15 @@ resource "vault_mount" "pki" {
   type = "pki"
 }
 
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend     = vault_mount.pki.path
+  type        = "internal"
+  common_name = "test"
+  ttl         = "86400"
+}
+
 resource "vault_pki_secret_backend_role" "test" {
-  depends_on = [ "vault_mount.pki" ]
+  depends_on = [ "vault_pki_secret_backend_root_cert.test" ]
   backend = vault_mount.pki.path
   name = "%s"
   ttl = 1800
