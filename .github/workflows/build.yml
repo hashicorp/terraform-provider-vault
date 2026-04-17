@@ -327,7 +327,10 @@ jobs:
           # Register the plugin in Vault's catalog with version (enterprise only)
           # Vault will automatically calculate and verify the SHA256
           CONTAINER_ID=$(docker ps -qf "ancestor=hashicorp/${{ matrix.image }}")
-          docker exec "${CONTAINER_ID}" \
+          docker exec \
+            -e VAULT_ADDR=http://127.0.0.1:8200 \
+            -e VAULT_TOKEN=root \
+            "${CONTAINER_ID}" \
             vault plugin register \
             -version="v0.1.0+ent" \
             secret \
