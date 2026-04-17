@@ -7,10 +7,12 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
@@ -22,12 +24,10 @@ import (
 // Note: This test reads the current state and ensures it can be managed
 func TestAccActivationFlagsResource_basic(t *testing.T) {
 	resourceName := "vault_activation_flags.test"
-	var activatedFlags []string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccActivationFlagsEntPreCheck(t)
-			activatedFlags = testAccReadCurrentActivatedFlags(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -35,7 +35,7 @@ func TestAccActivationFlagsResource_basic(t *testing.T) {
 				Config: testAccActivationFlagsResourceConfig_basic(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
-					testAccCheckActivationFlagsEqual(resourceName, activatedFlags),
+					testAccCheckActivationFlagsMatchDataSource(resourceName, "data.vault_activation_flags.current"),
 				),
 			},
 		},
@@ -167,6 +167,48 @@ func testAccCheckActivationFlagsEqual(resourceName string, expected []string) re
 	return resource.ComposeTestCheckFunc(checks...)
 }
 
+func testAccCheckActivationFlagsMatchDataSource(resourceName, dataSourceName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		resourceState, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		dataSourceState, ok := s.RootModule().Resources[dataSourceName]
+		if !ok {
+			return fmt.Errorf("data source not found: %s", dataSourceName)
+		}
+
+		resourceFlags := testAccActivationFlagsFromState(resourceState.Primary.Attributes)
+		dataSourceFlags := testAccActivationFlagsFromState(dataSourceState.Primary.Attributes)
+
+		if len(resourceFlags) != len(dataSourceFlags) {
+			return fmt.Errorf("activated_flags count mismatch: resource=%v data_source=%v", resourceFlags, dataSourceFlags)
+		}
+
+		for index := range resourceFlags {
+			if resourceFlags[index] != dataSourceFlags[index] {
+				return fmt.Errorf("activated_flags mismatch: resource=%v data_source=%v", resourceFlags, dataSourceFlags)
+			}
+		}
+
+		return nil
+	}
+}
+
+func testAccActivationFlagsFromState(attrs map[string]string) []string {
+	flags := make([]string, 0)
+	for key, value := range attrs {
+		if !strings.HasPrefix(key, "activated_flags.") || key == "activated_flags.#" {
+			continue
+		}
+		flags = append(flags, value)
+	}
+
+	sort.Strings(flags)
+	return flags
+}
+
 // TestAccActivationFlagsResource_delete tests that delete shows warning
 func TestAccActivationFlagsResource_delete(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -189,12 +231,10 @@ func TestAccActivationFlagsResource_delete(t *testing.T) {
 // TestAccActivationFlagsResource_namespace tests resource with namespace
 func TestAccActivationFlagsResource_namespace(t *testing.T) {
 	resourceName := "vault_activation_flags.test"
-	var activatedFlags []string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccActivationFlagsEntPreCheck(t)
-			activatedFlags = testAccReadCurrentActivatedFlags(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -202,7 +242,7 @@ func TestAccActivationFlagsResource_namespace(t *testing.T) {
 				Config: testAccActivationFlagsResourceConfig_namespace(),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
-					testAccCheckActivationFlagsEqual(resourceName, activatedFlags),
+					testAccCheckActivationFlagsMatchDataSource(resourceName, "data.vault_activation_flags.current"),
 				),
 			},
 		},
