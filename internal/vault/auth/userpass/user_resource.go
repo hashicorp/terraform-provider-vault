@@ -37,7 +37,8 @@ import (
 )
 
 var userRegexp = regexp.MustCompile(`^auth/(.+)/users/(.+)$`)
-var bcryptHashRegexp = regexp.MustCompile(`^\$2[abxy]?\$\d{2}\$[./A-Za-z0-9]{53}$`)
+
+const bcryptHashLength = 60
 
 var _ resource.ResourceWithImportState = &UserpassAuthUserResource{}
 
@@ -113,7 +114,6 @@ func (r *UserpassAuthUserResource) Schema(_ context.Context, _ resource.SchemaRe
 				WriteOnly:           true,
 				Validators: []validator.String{
 					stringvalidator.ExactlyOneOf(path.MatchRelative().AtParent().AtName(consts.FieldPasswordWO)),
-					stringvalidator.RegexMatches(bcryptHashRegexp, "must be a bcrypt hash"),
 				},
 			},
 			consts.FieldPasswordHashWOVersion: schema.Int64Attribute{
@@ -140,14 +140,10 @@ func (r *UserpassAuthUserResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	// Read version fields from config to ensure they're stored in state
-	var configData UserpassAuthUserModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &configData)...)
+	resp.Diagnostics.Append(r.populateVersionFieldsFromConfig(ctx, req.Config, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	data.PasswordWOVersion = configData.PasswordWOVersion
-	data.PasswordHashWOVersion = configData.PasswordHashWOVersion
 
 	resp.Diagnostics.Append(r.upsertUser(ctx, &data, req.Config, errutil.VaultCreateErr)...)
 	if resp.Diagnostics.HasError() {
@@ -196,14 +192,10 @@ func (r *UserpassAuthUserResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	// Read version fields from config to ensure they're stored in state
-	var configData UserpassAuthUserModel
-	resp.Diagnostics.Append(req.Config.Get(ctx, &configData)...)
+	resp.Diagnostics.Append(r.populateVersionFieldsFromConfig(ctx, req.Config, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	data.PasswordWOVersion = configData.PasswordWOVersion
-	data.PasswordHashWOVersion = configData.PasswordHashWOVersion
 
 	resp.Diagnostics.Append(r.upsertUser(ctx, &data, req.Config, errutil.VaultUpdateErr)...)
 	if resp.Diagnostics.HasError() {
@@ -231,6 +223,19 @@ func (r *UserpassAuthUserResource) Delete(ctx context.Context, req resource.Dele
 			return
 		}
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
+	}
+}
+
+func validatePasswordHash(passwordHash string) error {
+	switch {
+	case len(passwordHash) != bcryptHashLength:
+		return fmt.Errorf("password hash has incorrect length")
+	case strings.HasPrefix(passwordHash, "$2a$"),
+		strings.HasPrefix(passwordHash, "$2y$"),
+		strings.HasPrefix(passwordHash, "$2b$"):
+		return nil
+	default:
+		return fmt.Errorf("password hash has incorrect prefix")
 	}
 }
 
@@ -269,6 +274,22 @@ func (r *UserpassAuthUserResource) supportsAliasMetadata() bool {
 	return meta != nil && meta.IsAPISupported(provider.VaultVersion121) && meta.IsEnterpriseSupported()
 }
 
+// populateVersionFieldsFromConfig preserves write-only version counters in state.
+func (r *UserpassAuthUserResource) populateVersionFieldsFromConfig(ctx context.Context, config tfsdk.Config, data *UserpassAuthUserModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	var configData UserpassAuthUserModel
+
+	diags.Append(config.Get(ctx, &configData)...)
+	if diags.HasError() {
+		return diags
+	}
+
+	data.PasswordWOVersion = configData.PasswordWOVersion
+	data.PasswordHashWOVersion = configData.PasswordHashWOVersion
+
+	return diags
+}
+
 // readCredentialsFromConfig reads credential attributes directly from config.
 func (r *UserpassAuthUserResource) readCredentialsFromConfig(ctx context.Context, config tfsdk.Config) (types.String, types.String, diag.Diagnostics) {
 	var diags diag.Diagnostics
@@ -287,6 +308,13 @@ func (r *UserpassAuthUserResource) upsertUser(ctx context.Context, data *Userpas
 	passwordWO, passwordHashWO, diags := r.readCredentialsFromConfig(ctx, config)
 	if diags.HasError() {
 		return diags
+	}
+
+	if !passwordHashWO.IsNull() && !passwordHashWO.IsUnknown() && passwordHashWO.ValueString() != "" {
+		if err := validatePasswordHash(passwordHashWO.ValueString()); err != nil {
+			diags.AddAttributeError(path.Root(consts.FieldPasswordHashWO), "invalid bcrypt hash", err.Error())
+			return diags
+		}
 	}
 
 	diags.Append(r.validatePasswordHashVersion(passwordHashWO)...)
