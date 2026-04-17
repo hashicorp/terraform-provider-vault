@@ -651,6 +651,12 @@ const (
 	FieldTokenBoundCIDRs          = "token_bound_cidrs"
 	FieldLocalSecretIDs           = "local_secret_ids"
 	FieldTokenNumUses             = "token_num_uses"
+	// OS Secrets Engine fields
+	FieldSSHHostKey                = "ssh_host_key"
+	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
+	FieldParentAccountRef          = "parent_account_ref"
+	FieldNextVaultRotation         = "next_vault_rotation"
+	FieldHost                      = "host"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
@@ -900,6 +906,7 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeOS           = "os"
 	MountTypeKeyMgmt      = "keymgmt"
 	MountTypeAliCloud     = "alicloud"
 
