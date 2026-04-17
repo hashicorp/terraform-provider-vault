@@ -41,7 +41,9 @@ resource "vault_auth_backend" "jwt_auth" {
 }
 ```
 
-Register an enterprise plugin
+### Register an official enterprise plugin
+
+The `version` is required for enterprise plugins.
 
 ```hcl
 resource "vault_plugin" "oracle" {
