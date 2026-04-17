@@ -97,7 +97,7 @@ func pluginResource() *schema.Resource {
 			fieldCommand: {
 				Type:        schema.TypeString,
 				Description: "Command to execute the plugin, relative to the plugin_directory.",
-				Required:    true,
+				Optional:    true,
 			},
 			fieldArgs: {
 				Type:        schema.TypeList,
@@ -306,6 +306,9 @@ func pluginCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta inter
 	} else {
 		if d.Get(fieldSHA256).(string) == "" {
 			return fmt.Errorf("field %s needs to be set for non enterprise plugin", fieldSHA256)
+		}
+		if d.Get(fieldCommand).(string) == "" {
+			return fmt.Errorf("field %s needs to be set for non enterprise plugin", fieldCommand)
 		}
 	}
 	return nil
