@@ -12,6 +12,7 @@ FEATURES:
 * **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858), [#2874](https://github.com/hashicorp/terraform-provider-vault/pull/2874))
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 * Add support for CORS configuration: `vault_sys_config_cors` resource and data source for managing and reading Vault's CORS (Cross-Origin Resource Sharing) settings. ([#2849](https://github.com/hashicorp/terraform-provider-vault/pull/2849))
+* **New Resource**: Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
 
 IMPROVEMENTS:
 
@@ -26,6 +27,7 @@ BUGS:
 * `resource_database_secret_backend_connection` : Fixes a regression issue for `resource_database_secret_backend_connection` for elasticsearch. Reverted the field name from insecure_tls to insecure.
 * `vault_rabbitmq_secret_backend_role`: Fixed spurious diff issue for `vhost` and `vhost_topic` fields by changing field type from TypeList to TypeSet. ([#2872](https://github.com/hashicorp/terraform-provider-vault/pull/2872))
 * `provider/auth_aws`: Fix `auth_login_aws` to avoid an unintended second STS `AssumeRole` call during web identity credential flows, while preserving manual role assumption for explicitly configured or env-derived `aws_role_arn` values in non-web-identity setups.([#2850](https://github.com/hashicorp/terraform-provider-vault/pull/2850))
+
 
 ## 5.8.0 (March 12, 2026)
 

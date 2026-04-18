@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
@@ -240,6 +241,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
+		radius.NewRadiusAuthBackendConfigResource,
+		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
 		sys.NewRotationPolicyResource,
 		sysconfig.NewQuotaConfigResource,
@@ -279,6 +282,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 		alicloud.NewAliCloudAccessCredentialsEphemeralResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
+		radius.NewRadiusAuthLoginEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
 		cloudfoundry.NewCFAuthLoginEphemeralResource,
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
