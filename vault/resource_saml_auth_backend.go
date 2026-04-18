@@ -17,6 +17,18 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
+const (
+	fieldIDPMetadataURL = "idp_metadata_url"
+	fieldIDPSSOURL      = "idp_sso_url"
+	fieldIDPEntityID    = "idp_entity_id"
+	fieldIDPCert        = "idp_cert"
+	fieldEntityID       = "entity_id"
+	fieldACSURLS        = "acs_urls"
+	fieldDefaultRole    = "default_role"
+	fieldVerboseLogging = "verbose_logging"
+	fieldAccessor       = "accessor"
+)
+
 var (
 	samlAPIFields = []string{
 		consts.FieldIDPMetadataURL,
@@ -102,6 +114,7 @@ func samlAuthBackendResource() *schema.Resource {
 					"during the SAML exchange according to the current logging level. Not " +
 					"recommended for production.",
 			},
+<<<<<<< HEAD
 			consts.FieldValidateAssertionSignature: {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -113,6 +126,12 @@ func samlAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				Description: "Whether to validate the response signature.",
+=======
+			fieldAccessor: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the SAML auth backend, populated at creation.",
+>>>>>>> 5a3df96a (Add missing attribute accessor to saml auth)
 			},
 			consts.FieldTune: authMountTuneSchema(),
 		},
@@ -220,6 +239,22 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 
 	if resp == nil {
 		log.Printf("[WARN] No info found at %q; removing from state.", id)
+		d.SetId("")
+		return nil
+	}
+
+	mounts, err := client.Sys().ListAuth()
+	if err != nil {
+		return diag.Errorf("error listing auth mounts: %s", err)
+	}
+
+	mountPath := id + "/"
+	if mount, ok := mounts[mountPath]; ok {
+		d.Set(fieldAccessor, mount.Accessor)
+	} else if mount, ok := mounts[id]; ok {
+		d.Set(fieldAccessor, mount.Accessor)
+	} else {
+		log.Printf("[WARN] Mount for %q not found in auth list; removing from state.", id)
 		d.SetId("")
 		return nil
 	}
