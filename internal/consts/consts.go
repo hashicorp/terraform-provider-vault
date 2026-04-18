@@ -933,6 +933,7 @@ const (
 	FieldIdentityCACertificates   = "identity_ca_certificates"
 	FieldCFInstanceCert           = "cf_instance_cert"
 	FieldCFPasswordWO             = "cf_password_wo"
+	FieldCFPasswordWOVersion      = "cf_password_wo_version"
 	FieldCFTimeout                = "cf_timeout"
 	FieldCFUsername               = "cf_username"
 	FieldLoginMaxSecsNotAfter     = "login_max_seconds_not_after"
