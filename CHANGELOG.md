@@ -93,6 +93,7 @@ IMPROVEMENTS:
 BUGS:
 
 * Clears the bindpass field in the state file after migrating to the write-only field in `vault_ldap_auth_backend` resource. ([#2813](https://github.com/hashicorp/terraform-provider-vault/pull/2813))
+* Namespaces defined in the config now take precedence over environment variables while importing a resource. ([#2831](https://github.com/hashicorp/terraform-provider-vault/pull/2831/))
 
 ## 5.7.0 (February 5, 2026)
 

@@ -278,6 +278,9 @@ func UpdateContextWrapper(f schema.UpdateContextFunc, minVersion *version.Versio
 }
 
 func importNamespace(d *schema.ResourceData) error {
+	if v, ok := d.GetOk(consts.FieldNamespace); ok && v.(string) != "" {
+		return nil
+	}
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		s := d.State()
 		var attemptNamespaceImport bool
@@ -293,13 +296,12 @@ func importNamespace(d *schema.ResourceData) error {
 			_, ok := s.Attributes[consts.FieldNamespace]
 			attemptNamespaceImport = !ok
 		}
+
 		if attemptNamespaceImport {
-			log.Printf(`[INFO] Environment variable %s set, `+
-				`attempting TF state import "%s=%s"`,
+			log.Printf("[INFO] Environment variable %s set, attempting TF state import \"%s=%s\"",
 				consts.EnvVarVaultNamespaceImport, consts.FieldNamespace, ns)
 			if err := d.Set(consts.FieldNamespace, ns); err != nil {
-				return fmt.Errorf("failed to import %q, err=%w",
-					consts.EnvVarVaultNamespaceImport, err)
+				return fmt.Errorf("failed to import %q, err=%w", consts.EnvVarVaultNamespaceImport, err)
 			}
 		}
 	}
