@@ -5,8 +5,11 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -138,6 +141,17 @@ func hashManagedKeys(v interface{}) int {
 
 var getHashFromName = helper.HashCodeString
 
+var managedKeyUsageByIndex = map[int]string{
+	1: "encrypt",
+	2: "decrypt",
+	3: "sign",
+	4: "verify",
+	5: "wrap",
+	6: "unwrap",
+	7: "mac",
+	8: "generate_random",
+}
+
 func getCommonManagedKeysSchema() schemaMap {
 	return schemaMap{
 		consts.FieldAllowGenerateKey: {
@@ -171,6 +185,17 @@ func getCommonManagedKeysSchema() schemaMap {
 			Optional:    true,
 			Computed:    true,
 			Description: "Allow usage from any mount point within the namespace if 'true'",
+		},
+
+		consts.FieldUsages: {
+			Type:     schema.TypeSet,
+			Optional: true,
+			Computed: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "A comma-delimited list of the allowed usages of this key. " +
+				"Valid values are encrypt, decrypt, sign, verify, wrap, unwrap, mac, and generate_random",
 		},
 
 		consts.FieldUUID: {
@@ -438,7 +463,7 @@ func managedKeysGCPConfigSchema() schemaMap {
 	return setCommonManagedKeysSchema(s)
 }
 
-func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (string, map[string]interface{}) {
+func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (string, map[string]interface{}, error) {
 	data := map[string]interface{}{}
 	var name string
 
@@ -450,6 +475,18 @@ func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (stri
 				continue
 			}
 
+			if blockKey == consts.FieldUsages {
+				usageVals, err := managedKeyUsagesToAPI(v)
+				if err != nil {
+					return "", nil, fmt.Errorf("failed to parse %s: %w", consts.FieldUsages, err)
+				}
+
+				if usageVals != "" {
+					data[blockKey] = usageVals
+				}
+				continue
+			}
+
 			data[blockKey] = v
 
 			if blockKey == consts.FieldName {
@@ -458,7 +495,143 @@ func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (stri
 		}
 	}
 
-	return name, data
+	return name, data, nil
+}
+
+func normalizeManagedKeyUsagesCSV(input string) (string, error) {
+	if strings.TrimSpace(input) == "" {
+		return "", nil
+	}
+
+	vals := strings.Split(input, ",")
+	result := make([]string, 0, len(vals))
+
+	for _, raw := range vals {
+		usage := strings.TrimSpace(strings.ToLower(raw))
+		if usage == "" {
+			continue
+		}
+		result = append(result, usage)
+	}
+
+	return strings.Join(result, ","), nil
+}
+
+func normalizeManagedKeyUsagesSlice(input []string) []string {
+	result := make([]string, 0, len(input))
+	for _, raw := range input {
+		usage := strings.TrimSpace(strings.ToLower(raw))
+		if usage == "" {
+			continue
+		}
+		result = append(result, usage)
+	}
+
+	return result
+}
+
+func managedKeyUsageFromInt(v interface{}) (string, error) {
+	var i int
+
+	switch n := v.(type) {
+	case int:
+		i = n
+	case int64:
+		i = int(n)
+	case float64:
+		i = int(n)
+	case json.Number:
+		num, err := n.Int64()
+		if err != nil {
+			return "", fmt.Errorf("invalid numeric usage value %q", n.String())
+		}
+		i = int(num)
+	case string:
+		num, err := strconv.Atoi(n)
+		if err != nil {
+			return "", fmt.Errorf("invalid numeric usage value %q", n)
+		}
+		i = num
+	default:
+		return "", fmt.Errorf("unsupported usages value type %T", v)
+	}
+
+	usage, ok := managedKeyUsageByIndex[i]
+	if !ok {
+		return "", fmt.Errorf("unknown usage index %d", i)
+	}
+
+	return usage, nil
+}
+
+func managedKeyUsagesFromAPI(v interface{}) ([]interface{}, error) {
+	switch vals := v.(type) {
+	case string:
+		normalized, err := normalizeManagedKeyUsagesCSV(vals)
+		if err != nil {
+			return nil, err
+		}
+
+		if normalized == "" {
+			return []interface{}{}, nil
+		}
+
+		return convertStringSliceToInterfaces(strings.Split(normalized, ",")), nil
+	case []string:
+		return convertStringSliceToInterfaces(normalizeManagedKeyUsagesSlice(vals)), nil
+	case []interface{}:
+		usages := make([]string, 0, len(vals))
+		for _, item := range vals {
+			switch t := item.(type) {
+			case string:
+				usages = append(usages, t)
+			default:
+				u, err := managedKeyUsageFromInt(t)
+				if err != nil {
+					return nil, err
+				}
+				usages = append(usages, u)
+			}
+		}
+
+		return convertStringSliceToInterfaces(normalizeManagedKeyUsagesSlice(usages)), nil
+	default:
+		return nil, fmt.Errorf("unsupported usages response type %T", v)
+	}
+}
+
+func managedKeyUsagesToAPI(v interface{}) (string, error) {
+	set, ok := v.(*schema.Set)
+	if !ok || set == nil {
+		return "", fmt.Errorf("invalid usages type %T", v)
+	}
+
+	values := make([]string, 0, set.Len())
+	for _, raw := range set.List() {
+		s, ok := raw.(string)
+		if !ok {
+			return "", fmt.Errorf("invalid usage value type %T", raw)
+		}
+		if s = strings.TrimSpace(strings.ToLower(s)); s != "" {
+			values = append(values, s)
+		}
+	}
+
+	if len(values) == 0 {
+		return "", nil
+	}
+
+	sort.Strings(values)
+	return strings.Join(values, ","), nil
+}
+
+func convertStringSliceToInterfaces(values []string) []interface{} {
+	result := make([]interface{}, 0, len(values))
+	for _, v := range values {
+		result = append(result, v)
+	}
+
+	return result
 }
 
 func getManagedKeysPathPrefix(keyType string) string {
@@ -534,7 +707,10 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 
 	newKeySet := map[string]bool{}
 	for _, block := range newBlocks.(*schema.Set).List() {
-		keyName, data := getManagedKeysConfigData(block.(map[string]interface{}), config.schemaFunc())
+		keyName, data, err := getManagedKeysConfigData(block.(map[string]interface{}), config.schemaFunc())
+		if err != nil {
+			return diag.FromErr(err)
+		}
 
 		if err := validateConfigData(providerType, data); err != nil {
 			return diag.Errorf("bad configuration for %s: %v", keyName, err)
@@ -674,6 +850,15 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 				}
 
 				if v, ok := resp.Data[vaultKey]; ok {
+					if k == consts.FieldUsages {
+						normalized, err := managedKeyUsagesFromAPI(v)
+						if err != nil {
+							return fmt.Errorf("failed to normalize usages for %q: %w", path, err)
+						}
+						m[k] = normalized
+						continue
+					}
+
 					// log an out-of-band change on UUID
 					if vaultKey == "UUID" {
 						stateKey := fmt.Sprintf("%s.%d.%s", providerType, getHashFromName(name.(string)), k)

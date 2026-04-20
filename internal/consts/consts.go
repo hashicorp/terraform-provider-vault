@@ -145,6 +145,7 @@ const (
 	FieldAllowGenerateKey                   = "allow_generate_key"
 	FieldAllowReplaceKey                    = "allow_replace_key"
 	FieldAllowStoreKey                      = "allow_store_key"
+	FieldUsages                             = "usages"
 	FieldAnyMount                           = "any_mount"
 	FieldID                                 = "id"
 	FieldUUID                               = "uuid"
