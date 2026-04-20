@@ -95,7 +95,7 @@ func TestPlugin_ent(t *testing.T) {
 
 	resourceName := "vault_plugin.test"
 
-	// VAULT_PLUGIN_ENT_TYPE, VAULT_PLUGIN_ENT_NAME,VAULT_PLUGIN_ENT_VERSIONshould be set to the name of the plugin executable
+	// VAULT_PLUGIN_ENT_TYPE, VAULT_PLUGIN_ENT_NAME,VAULT_PLUGIN_ENT_VERSION should be set to the name of the plugin executable
 	// in the configured plugin_directory for Vault.
 	typ := os.Getenv(envPluginEntType)
 	name := os.Getenv(envPluginEntName)
