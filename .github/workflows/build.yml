@@ -303,9 +303,7 @@ jobs:
           curl -sO "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/{${ZIP},${SHA256SUMS}}"
           shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
           unzip "${ZIP}" -d "${ZIP_DIR}"; rm "${ZIP}" "${SHA256SUMS}"
-          echo "test1"
           chmod a+r "${ZIP_DIR}/metadata.json.sig"
-          echo "test2"
           {
           echo "type=${TYPE}"
           echo "name=${PLUGIN}"
@@ -360,7 +358,6 @@ jobs:
           VAULT_PLUGIN_ENT_TYPE:  ${{ steps.plugin_enterprise.outputs.type }}
           VAULT_PLUGIN_ENT_NAME:  ${{ steps.plugin_enterprise.outputs.name }}
           VAULT_PLUGIN_ENT_VERSION:  ${{ steps.plugin_enterprise.outputs.version }}
-
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
