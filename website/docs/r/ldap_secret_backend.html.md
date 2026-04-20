@@ -102,6 +102,10 @@ The following arguments are supported:
 
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
 
+* `self_managed` - (Optional) If true, Vault performs rotations by authenticating as this account
+  using its current password (no privileged bind DN). Immutable after creation. Enforces `password`
+  requirement when creating static roles. Requires Vault Enterprise 2.0+.
+
 ### Common Mount Arguments
 These arguments are common across all resources that mount a secret engine.
 
