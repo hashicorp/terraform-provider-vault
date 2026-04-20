@@ -210,9 +210,10 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.Errorf("error reading plugin %q: %s", d.Id(), err)
 	}
 
-	// Unset SHA256 for enteprise plugin version
+	// Unset SHA256 and Command for enteprise plugin version
 	if strings.HasSuffix(version, "+ent") {
 		resp.SHA256 = ""
+		resp.Command = ""
 	}
 
 	result := map[string]any{
@@ -302,6 +303,9 @@ func pluginCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta inter
 	if strings.HasSuffix(curVersion, "+ent") {
 		if d.Get(fieldSHA256).(string) != "" {
 			return fmt.Errorf("field %s needs to be empty for enterprise plugin", fieldSHA256)
+		}
+		if d.Get(fieldCommand).(string) != "" {
+			return fmt.Errorf("field %s needs to be empty for enterprise plugin", fieldCommand)
 		}
 	} else {
 		if d.Get(fieldSHA256).(string) == "" {
