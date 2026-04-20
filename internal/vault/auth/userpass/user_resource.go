@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
@@ -303,7 +302,7 @@ func (r *UserpassAuthUserResource) readCredentialsFromConfig(ctx context.Context
 	return passwordWO, passwordHashWO, diags
 }
 
-// upsertUser validates credentials, writes the user, applies compatibility endpoint updates, and refreshes state data.
+// upsertUser validates credentials, writes the user through the main endpoint, and refreshes state data.
 func (r *UserpassAuthUserResource) upsertUser(ctx context.Context, data *UserpassAuthUserModel, config tfsdk.Config, writeErr func(error) (string, string)) diag.Diagnostics {
 	passwordWO, passwordHashWO, diags := r.readCredentialsFromConfig(ctx, config)
 	if diags.HasError() {
@@ -336,11 +335,6 @@ func (r *UserpassAuthUserResource) upsertUser(ctx context.Context, data *Userpas
 
 	_, err := vaultClient.Logical().WriteWithContext(ctx, r.userPath(data.Mount.ValueString(), data.Username.ValueString()), vaultRequest)
 	if err != nil {
-		diags.AddError(writeErr(err))
-		return diags
-	}
-
-	if err := r.updatePasswordAndPoliciesEndpoints(ctx, vaultClient, data, passwordWO.ValueString(), passwordHashWO.ValueString()); err != nil {
 		diags.AddError(writeErr(err))
 		return diags
 	}
@@ -410,48 +404,6 @@ func (r *UserpassAuthUserResource) getAPIModel(ctx context.Context, data *Userpa
 	}
 
 	return vaultRequest, nil
-}
-
-// updatePasswordAndPoliciesEndpoints writes legacy compatibility endpoints when needed.
-func (r *UserpassAuthUserResource) updatePasswordAndPoliciesEndpoints(ctx context.Context, vaultClient *api.Client, data *UserpassAuthUserModel, password, passwordHash string) error {
-	if password != "" {
-		_, err := vaultClient.Logical().WriteWithContext(ctx, r.userPath(data.Mount.ValueString(), data.Username.ValueString(), "password"), map[string]any{"password": password})
-		if err != nil && !util.Is404(err) {
-			return fmt.Errorf("failed writing user password endpoint: %w", err)
-		}
-	}
-
-	if passwordHash != "" {
-		_, err := vaultClient.Logical().WriteWithContext(ctx, r.userPath(data.Mount.ValueString(), data.Username.ValueString(), "password"), map[string]any{"password_hash": passwordHash})
-		if err != nil && !util.Is404(err) {
-			return fmt.Errorf("failed writing user password_hash endpoint: %w", err)
-		}
-	}
-
-	if data.TokenPolicies.IsNull() || data.TokenPolicies.IsUnknown() {
-		return nil
-	}
-
-	var policies []string
-	if diags := data.TokenPolicies.ElementsAs(ctx, &policies, false); diags.HasError() {
-		return fmt.Errorf("failed decoding token policies for policies endpoint: %s", diags.Errors()[0].Detail())
-	}
-
-	if len(policies) == 0 {
-		return nil
-	}
-
-	sort.Strings(policies)
-	payload := map[string]any{
-		"token_policies": policies,
-	}
-
-	_, err := vaultClient.Logical().WriteWithContext(ctx, r.userPath(data.Mount.ValueString(), data.Username.ValueString(), "policies"), payload)
-	if err != nil && !util.Is404(err) {
-		return fmt.Errorf("failed writing user policies endpoint: %w", err)
-	}
-
-	return nil
 }
 
 // populateDataModelFromAPI maps a Vault read response into the Terraform state model.
