@@ -1,5 +1,7 @@
 ## Unreleased
 
+## 5.9.0 (April 15, 2026)
+
 BREAKING CHANGES:
 
 * Renamed all Vault 2.0 pki-external-ca resources from version 5.8.0 to a common prefix of `vault_pki_external_ca_`. ([#2838](https://github.com/hashicorp/terraform-provider-vault/pull/2838))
@@ -17,6 +19,8 @@ IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 * Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
+* `vault_ldap_secret_backend`: Add self-managed support to ldap secrets engine. Requires Vault Enterprise 2.0+. ([#2845](https://github.com/hashicorp/terraform-provider-vault/pull/2845))
+* `azure_static_role`: Add support for importing existing credentials via new Vault import endpoint, deprecating expiration. ([#2756](https://github.com/hashicorp/terraform-provider-vault/pull/2756))
 
 BUGS:
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))

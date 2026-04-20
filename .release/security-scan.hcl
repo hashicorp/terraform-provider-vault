@@ -19,7 +19,12 @@ binary {
 				// Upgrading to latest version of go-secure-stdlib is not possible at this time.
 				// The required functionality was inadvertently dropped from
 				// github.com/hashicorp/go-secure-stdlib/awsutil during the migration to aws-sdk-go-v2.
-				"GO-2022-0635"
+				"GO-2022-0635",
+				// This is a false positive that has been fixed as of
+				// github.com/jackc/pgx/v5 @ >= v5.0.9
+				// There is a open request to have the vulndb updated as such:
+				// https://github.com/golang/vulndb/issues/4943
+				"GO-2026-4771",
 			]
 		}
 	}
