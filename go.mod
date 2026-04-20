@@ -16,6 +16,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/coreos/pkg v0.0.0-20240122114842-bbd7aa9bf6fb
 	github.com/denisenkom/go-mssqldb v0.12.3
+	github.com/docker/docker v28.3.3+incompatible
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/go-test/deep v1.1.1
 	github.com/go-viper/mapstructure/v2 v2.5.0

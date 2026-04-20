@@ -11,7 +11,7 @@ FEATURES:
 * **New Resources**: `vault_rotation_policy` for managing rotation policies. Requires Vault 2.0.0+. ([#2844](https://github.com/hashicorp/terraform-provider-vault/pull/2844))
 * Add support for `vault_quota_config` resource. ([#2837](https://github.com/hashicorp/terraform-provider-vault/pull/2837))
 * **New Resources**: Add support for Vault Key Management secrets engine with resources for managing KMS providers (AWS KMS, Azure Key Vault, GCP Cloud KMS), cryptographic keys, key distribution, replication, and rotation (Vault Enterprise). ([#2802](https://github.com/hashicorp/terraform-provider-vault/pull/2802))
-* **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858))
+* **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858), [#2874](https://github.com/hashicorp/terraform-provider-vault/pull/2874))
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 * Add support for CORS configuration: `vault_sys_config_cors` resource and data source for managing and reading Vault's CORS (Cross-Origin Resource Sharing) settings. ([#2849](https://github.com/hashicorp/terraform-provider-vault/pull/2849))
 
@@ -29,6 +29,7 @@ BUGS:
 * `provider/auth_aws`: Fix `auth_login_aws` for Vault AWS auth backends configured with `use_sts_region_from_client = true` by generating a standard SigV4-signed `GetCallerIdentity` request with an `Authorization` header, and added support for custom STS endpoints. ([#2841](https://github.com/hashicorp/terraform-provider-vault/pull/2841))
 * `resource_database_secret_backend_connection` : Fixes a regression issue for `resource_database_secret_backend_connection` for elasticsearch. Reverted the field name from insecure_tls to insecure.
 * `vault_rabbitmq_secret_backend_role`: Fixed spurious diff issue for `vhost` and `vhost_topic` fields by changing field type from TypeList to TypeSet. ([#2872](https://github.com/hashicorp/terraform-provider-vault/pull/2872))
+* `provider/auth_aws`: Fix `auth_login_aws` to avoid an unintended second STS `AssumeRole` call during web identity credential flows, while preserving manual role assumption for explicitly configured or env-derived `aws_role_arn` values in non-web-identity setups.([#2850](https://github.com/hashicorp/terraform-provider-vault/pull/2850))
 
 ## 5.8.0 (March 12, 2026)
 
