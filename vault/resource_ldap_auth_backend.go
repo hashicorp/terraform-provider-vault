@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -85,10 +86,24 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed: true,
 		},
 		consts.FieldBindPass: {
-			Type:      schema.TypeString,
-			Optional:  true,
-			Computed:  true,
-			Sensitive: true,
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			ConflictsWith: []string{consts.FieldBindPassWO},
+		},
+		consts.FieldBindPassWO: {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Description:   "Write-only bind password to use for LDAP authentication.",
+			Sensitive:     true,
+			WriteOnly:     true,
+			ConflictsWith: []string{consts.FieldBindPass},
+		},
+		consts.FieldBindPassWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Description:  "Version counter for write-only bind password.",
+			RequiredWith: []string{consts.FieldBindPassWO},
 		},
 		consts.FieldCaseSensitiveNames: {
 			Type:     schema.TypeBool,
@@ -274,10 +289,6 @@ func ldapAuthBackendConfigPath(path string) string {
 	return "auth/" + strings.Trim(path, "/") + "/config"
 }
 
-func ldapAuthBackendTunePath(path string) string {
-	return "auth/" + strings.Trim(path, "/") + "/tune"
-}
-
 func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
@@ -352,8 +363,19 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
+	// Handle bindpass - check for regular field first, then write-only field
+	var bindpass string
 	if v, ok := d.GetOk(consts.FieldBindPass); ok {
-		data[consts.FieldBindPass] = v.(string)
+		bindpass = v.(string)
+	} else if d.IsNewResource() || d.HasChange(consts.FieldBindPassWOVersion) {
+		p := cty.GetAttrPath(consts.FieldBindPassWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			bindpass = woVal.AsString()
+		}
+	}
+	if bindpass != "" {
+		data[consts.FieldBindPass] = bindpass
 	}
 
 	if v, ok := d.GetOk(consts.FieldClientTLSCert); ok {
@@ -419,7 +441,6 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	d.Set(consts.FieldAccessor, mount.Accessor)
 	d.Set(consts.FieldLocal, mount.Local)
 
-	tunePath := ldapAuthBackendTunePath(path)
 	path = ldapAuthBackendConfigPath(path)
 
 	log.Printf("[DEBUG] Reading LDAP auth backend config %q", path)
@@ -488,8 +509,9 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	// Tune block support
-	log.Printf("[DEBUG] Reading ldap auth tune from %q", tunePath)
-	rawTune, err := authMountTuneGet(ctx, client, tunePath)
+	ldapAuthPath := "auth/" + d.Id()
+	log.Printf("[DEBUG] Reading ldap auth tune from %q", ldapAuthPath+"/tune")
+	rawTune, err := authMountTuneGet(ctx, client, ldapAuthPath)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -499,7 +521,7 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 	mergedTune := mergeAuthMethodTune(rawTune, input)
 	if err := d.Set(consts.FieldTune, mergedTune); err != nil {
-		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", tunePath, err)
+		log.Printf("[ERROR] Error when setting tune config from path %q to state: %s", ldapAuthPath+"/tune", err)
 		return diag.FromErr(err)
 	}
 

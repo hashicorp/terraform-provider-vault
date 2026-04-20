@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -21,6 +22,12 @@ const (
 )
 
 func SyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}, typ string, writeFields, readFields []string) diag.Diagnostics {
+	return SyncDestinationCreateUpdateWithOptions(ctx, d, meta, typ, writeFields, readFields, nil)
+}
+
+// SyncDestinationCreateUpdateWithOptions creates or updates a sync destination with additional options.
+// typeSetFields is an optional map of field names that need to be converted from TypeSet to List for JSON serialization.
+func SyncDestinationCreateUpdateWithOptions(ctx context.Context, d *schema.ResourceData, meta interface{}, typ string, writeFields, readFields []string, typeSetFields map[string]bool) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -32,17 +39,45 @@ func SyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, me
 	data := map[string]interface{}{}
 
 	for _, k := range writeFields {
+
 		if v, ok := d.GetOk(k); ok {
+			// Convert TypeSet to List for JSON serialization if needed
+			if typeSetFields != nil && typeSetFields[k] {
+				if set, ok := v.(*schema.Set); ok {
+					data[k] = set.List()
+					continue
+				}
+			}
 			data[k] = v
+		}
+
+		if k == consts.FieldIdentityTokenAudience {
+			if d.IsNewResource() || d.HasChange(consts.FieldIdentityTokenAudienceWOVersion) {
+				// Use GetRawConfigAt for write-only fields
+				p := cty.GetAttrPath(consts.FieldIdentityTokenAudienceWO)
+				woVal, _ := d.GetRawConfigAt(p)
+				if !woVal.IsNull() {
+					data[k] = woVal.AsString()
+				}
+			}
+		}
+
+		if k == consts.FieldIdentityTokenKey {
+			if d.IsNewResource() || d.HasChange(consts.FieldIdentityTokenKeyWOVersion) {
+				// Use GetRawConfigAt for write-only fields
+				p := cty.GetAttrPath(consts.FieldIdentityTokenKeyWO)
+				woVal, _ := d.GetRawConfigAt(p)
+				if !woVal.IsNull() {
+					data[k] = woVal.AsString()
+				}
+			}
 		}
 	}
 
-	log.Printf("[DEBUG] Writing sync destination data to %q", path)
 	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error writing sync destination data to %q: %s", path, err)
 	}
-	log.Printf("[DEBUG] Wrote sync destination data to %q", path)
 
 	if d.IsNewResource() {
 		d.SetId(name)

@@ -20,6 +20,8 @@ for more details.
 
 ## Example Usage
 
+### PostgreSQL Connection
+
 ```hcl
 resource "vault_mount" "db" {
   path = "postgres"
@@ -39,6 +41,45 @@ resource "vault_database_secret_backend_connection" "postgres" {
 }
 ```
 
+### Oracle Connection with Self-Managed Mode (Rootless)
+
+For Vault 1.18+ Enterprise, you can configure Oracle connections in self-managed mode,
+which allows a static role to manage its own database credentials without requiring root access:
+
+```hcl
+resource "vault_mount" "db" {
+  path = "database"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "oracle" {
+  backend       = vault_mount.db.path
+  name          = "oracle"
+  allowed_roles = ["my-role"]
+  plugin_version = "v0.20.0"
+  skip_static_role_import_rotation = true
+  password_policy = "default"
+  skip
+
+  oracle {
+    connection_url = "{{username}}/{{password}}@//host:port/service"
+    self_managed   = true
+    plugin_name    = "vault-plugin-database-oracle"
+  }
+}
+
+resource "vault_database_secret_backend_static_role" "oracle_role" {
+  backend = vault_mount.db.path
+  name    = "my-role"
+  db_name = vault_database_secret_backend_connection.oracle.name
+  
+  username            = "vault_user"
+  password_wo         = "initial-password"
+  password_wo_version = 1
+  rotation_period     = 3600
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -53,6 +94,12 @@ The following arguments are supported:
 * `backend` - (Required) The unique name of the Vault mount to configure.
 
 * `plugin_name` - (Optional) Specifies the name of the plugin to use.
+
+* `plugin_version` - (Optional) Specifies the semantic version of the plugin to use for this connection.
+
+* `password_policy` - (Optional)  The name of the password policy to use when generating passwords for this database. If not specified, this will use a default policy defined as: 20 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 dash character.
+
+* `skip_static_role_import_rotation` - (Optional) Specifies if a given static account's password should be rotated on creation of the static roles associated with this database config. This can be overridden at the role-level by the static role's skip_import_rotation field. The default is false. Requires Vault Enterprise 1.19+.
 
 * `verify_connection` - (Optional) Whether the connection should be verified on
   initial configuration or not.
@@ -142,6 +189,17 @@ Exactly one of the nested blocks of configuration options must be supplied.
   These checks ensure that Vault is able to create roles, but can be resource intensive in clusters with many roles.
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+
+* `username_template` - (Optional)  Template describing how dynamic usernames are generated.
+
+* `tls_server_name` - (Optional) Specifies the name to use as the SNI host when connecting to the Cassandra server via TLS.
+
+* `local_datacenter` - (Optional) If set, enables host selection policy which will prioritize and use hosts which are in the local datacenter before hosts in all other datacenters.
+
+* `socket_keep_alive` - (Optional) The keep-alive period for an active network connection. If zero, keep-alives are not enabled.
+
+* `consistency` - (Optional)  Specifies the consistency option to use. See the gocql definition for valid options.
+
 
 ### Couchbase Configuration Options
 
@@ -239,6 +297,12 @@ See the [Vault
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
+* `write_concern` - (Optional) A JSON string specifying the MongoDB write concern. For example: `{"wmode": "majority", "wtimeout": 5000}`.
+
+* `tls_ca` - (Optional) The CA certificate to use when verifying the MongoDB server's TLS certificate.
+
+* `tls_certificate_key` - (Optional) The client certificate and private key (concatenated in PEM format) to use for TLS authentication with MongoDB. This is a sensitive field that will not be returned in API responses.
+
 ### MongoDB Atlas Configuration Options
 
 * `public_key` - (Required) The Public Programmatic API Key used to authenticate with the MongoDB Atlas API.
@@ -246,6 +310,8 @@ See the [Vault
 * `private_key` - (Required) The Private Programmatic API Key used to connect with MongoDB Atlas API.
 
 * `project_id` - (Required) The Project ID the Database User should be created within.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
 
 ### SAP HanaDB Configuration Options
 
@@ -268,6 +334,8 @@ See the [Vault
 * `password` - (Optional) The root credential password used in the connection URL.
 
 * `disable_escaping` - (Optional) Disable special character escaping in username and password.
+
+* `username_template` - (Optional) Template describing how dynamic usernames are generated.
 
 * `password_wo_version` - (Optional)  The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
@@ -401,8 +469,15 @@ See the [Vault
   maintain.
 
 * `username` - (Optional) The root credential username used in the connection URL.
+  Mutually exclusive with `self_managed`.
 
 * `password` - (Optional) The root credential password used in the connection URL.
+  Mutually exclusive with `self_managed`.
+
+* `self_managed` - (Optional)  If set to `true`, allows onboarding static roles with a rootless
+  connection configuration. When enabled, Vault manages its own database credentials and 
+  `username`, `password`, and `password_wo` must not be set.
+  If set, will force `verify_connection` to be false. Requires Vault 1.18+ Enterprise.
 
 * `max_connection_lifetime` - (Optional) The maximum number of seconds to keep
   a connection alive for.

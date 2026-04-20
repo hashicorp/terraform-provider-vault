@@ -41,6 +41,24 @@ resource "vault_jwt_auth_backend" "example" {
 }
 ```
 
+Manage OIDC auth backend with write-only secret (recommended):
+
+```hcl
+resource "vault_jwt_auth_backend" "example" {
+    description                     = "Demonstration of the Terraform JWT auth backend"
+    path                            = "oidc"
+    type                            = "oidc"
+    oidc_discovery_url              = "https://myco.auth0.com/"
+    oidc_client_id                  = "1234567890"
+    oidc_client_secret_wo           = "secret123456"
+    oidc_client_secret_wo_version   = 1  # Increment to update the secret
+    bound_issuer                    = "https://myco.auth0.com/"
+    tune {
+        listing_visibility = "unauth"
+    }
+}
+```
+
 Configuring the auth backend with a `provider_config:
 
 ```hcl
@@ -83,7 +101,9 @@ The following arguments are supported:
 
 * `oidc_client_id` - (Optional) Client ID used for OIDC backends
 
-* `oidc_client_secret` - (Optional) Client Secret used for OIDC backends
+* `oidc_client_secret` - (Optional) Client Secret used for OIDC backends. **Note:** This field is stored in state. For enhanced security, use `oidc_client_secret_wo` instead.
+
+* `oidc_client_secret_wo_version` - (Optional) Version counter for the write-only `oidc_client_secret_wo` field. Increment this value to trigger an update of the client secret in Vault. Required when using `oidc_client_secret_wo`.
 
 * `oidc_response_mode` - (Optional) The response mode to be used in the OAuth2 request. Allowed values are `query` and `form_post`. Defaults to `query`. If using Vault namespaces, and `oidc_response_mode` is `form_post`, then `namespace_in_state` should be set to `false`.
 
@@ -138,6 +158,12 @@ The `tune` block is used to tune the auth backend:
 
 * `token_type` - (Optional) Specifies the type of tokens that should be returned by
   the mount. Valid values are "default-service", "default-batch", "service", "batch".
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `oidc_client_secret_wo` - (Optional) Write-only Client Secret used for OIDC backends. This value will **never** be stored in Terraform state. Mutually exclusive with `oidc_client_secret`. Must be used with `oidc_client_secret_wo_version`. To rotate the secret, update the value and increment `oidc_client_secret_wo_version`.
 
 ## Attributes Reference
 

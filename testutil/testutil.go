@@ -269,6 +269,16 @@ func GetTestPKCSCreds(t *testing.T) (string, string, string) {
 	return v[0], v[1], v[2]
 }
 
+func GetTestGCPKeyRing(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_KEY_RING")
+	return v[0]
+}
+
+func GetTestGCPRegion(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_REGION")
+	return v[0]
+}
+
 func TestCheckResourceAttrJSON(name, key, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState, ok := s.RootModule().Resources[name]
@@ -1046,4 +1056,24 @@ func (r *TestRetryHandler) Handler() http.HandlerFunc {
 			w.WriteHeader(r.RetryStatus)
 		}
 	}
+}
+
+func GetTestAWSSessionToken(t *testing.T) string {
+	return os.Getenv("AWS_SESSION_TOKEN")
+}
+
+func GetTestAzureKMSCreds(t *testing.T) (tenantID, clientID, clientSecret, keyVaultName string) {
+	t.Helper()
+	v := SkipTestEnvUnset(t, "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET", "AZURE_KEYVAULT_NAME")
+	return v[0], v[1], v[2], v[3]
+}
+
+func GetTestGCPCredsFile(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_CREDENTIALS_FILE")
+	return v[0]
+}
+
+func GetTestGCPProject(t *testing.T) string {
+	v := SkipTestEnvUnset(t, "GOOGLE_PROJECT")
+	return v[0]
 }

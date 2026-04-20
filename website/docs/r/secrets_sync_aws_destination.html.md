@@ -38,6 +38,37 @@ resource "vault_secrets_sync_aws_destination" "aws" {
 }
 ```
 
+### Example with Networking Restrictions
+
+```hcl
+resource "vault_secrets_sync_aws_destination" "aws_restricted" {
+  name                      = "aws-dest-restricted"
+  access_key_id             = var.access_key_id
+  secret_access_key         = var.secret_access_key
+  region                    = "us-east-1"
+  allowed_ipv4_addresses    = ["192.168.1.0/24", "10.0.0.0/8"]
+  allowed_ipv6_addresses    = ["2001:db8::/32"]
+  allowed_ports             = [443, 8200]
+  disable_strict_networking = false
+}
+```
+
+### Using Workload Identity Federation (Vault 2.0.0+)
+
+```hcl
+resource "vault_secrets_sync_aws_destination" "aws_wif" {
+  name                               = "aws-dest-wif"
+  region                             = "us-east-1"
+  role_arn                           = var.role_arn
+  identity_token_audience_wo         = var.identity_token_audience
+  identity_token_audience_wo_version = 1
+  identity_token_ttl                 = 3600
+  identity_token_key_wo              = "my-key"
+  identity_token_key_wo_version      = 1
+  granularity                        = "secret-path"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -79,6 +110,44 @@ The following arguments are supported:
   The field is mutable with no special condition, but users must be careful that the new value fits with the trust
   relationship condition they set on AWS otherwise sync operations will start to fail due to client-side access 
   denied errors. Ignored if the `role_arn` field is empty.
+
+* `allowed_ipv4_addresses` - (Optional) Allowed IPv4 addresses for outbound connections from Vault to AWS Secrets Manager.
+  Can also be set via an IP address range using CIDR notation. For example: `["192.168.1.0/24", "10.0.0.0/8"]`.
+  **Requires Vault 1.19.0+**.
+
+* `allowed_ipv6_addresses` - (Optional) Allowed IPv6 addresses for outbound connections from Vault to AWS Secrets Manager.
+  Can also be set via an IP address range using CIDR notation. For example: `["2001:db8::/32"]`.
+  **Requires Vault 1.19.0+**.
+
+* `allowed_ports` - (Optional) Allowed ports for outbound connections from Vault to AWS Secrets Manager.
+  For example: `[443, 8200]`.
+  **Requires Vault 1.19.0+**.
+
+* `disable_strict_networking` - (Optional) Disable strict networking mode. When set to `true`, Vault will not enforce
+  allowed IP addresses and ports. Defaults to `false`.
+  **Requires Vault 1.19.0+**.
+
+### Workload Identity Federation (Vault 2.0.0+)
+
+* `identity_token_audience_wo` - (Optional) The audience claim value for identity tokens. This is a write-only
+  field and will not be read back from Vault.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience_wo` to track
+  updates as `identity_token_audience_wo` is a write-only field. Increment this field to update `identity_token_audience_wo`.
+  Required with `identity_token_audience_wo`. **Requires Vault 2.0.0+**.
+
+* `identity_token_ttl` - (Optional/Computed) The TTL of generated identity tokens in seconds.
+  Vault sets a default of 3600 seconds when not provided.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_key_wo` - (Optional) The key to use for signing identity tokens. This is a write-only field
+  and will not be read back from Vault.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key_wo` to track
+  updates as `identity_token_key_wo` is a write-only field. Increment this field to update `identity_token_key_wo`.
+  Required with `identity_token_key_wo`. **Requires Vault 2.0.0+**.
 
 ## Attributes Reference
 

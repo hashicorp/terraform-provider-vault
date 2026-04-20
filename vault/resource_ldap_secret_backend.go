@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/go-cty/cty"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -33,10 +34,27 @@ func ldapSecretBackendResource() *schema.Resource {
 			Description: "Distinguished name of object to bind when performing user and group search.",
 		},
 		consts.FieldBindPass: {
-			Type:        schema.TypeString,
-			Required:    true,
-			Sensitive:   true,
-			Description: "LDAP password for searching for the user DN.",
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			Description:   "LDAP password for searching for the user DN.",
+			ConflictsWith: []string{consts.FieldBindPassWO, consts.FieldSelfManaged},
+			ExactlyOneOf:  []string{consts.FieldBindPass, consts.FieldBindPassWO, consts.FieldSelfManaged},
+		},
+		consts.FieldBindPassWO: {
+			Type:          schema.TypeString,
+			Optional:      true,
+			Sensitive:     true,
+			WriteOnly:     true,
+			Description:   "Write-only LDAP password for searching for the user DN.",
+			ConflictsWith: []string{consts.FieldBindPass, consts.FieldSelfManaged},
+			ExactlyOneOf:  []string{consts.FieldBindPass, consts.FieldBindPassWO, consts.FieldSelfManaged},
+		},
+		consts.FieldBindPassWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			Description:  "Version counter for write-only bind password.",
+			RequiredWith: []string{consts.FieldBindPassWO},
 		},
 		consts.FieldCertificate: {
 			Type:        schema.TypeString,
@@ -122,6 +140,15 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 			Description: "The type of credential to manage. Options include: 'password', 'phrase'. Defaults to 'password'.",
+		},
+		consts.FieldSelfManaged: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+			Description: "If true, Vault performs rotations by authenticating as this account using its current password " +
+				"(no privileged bind DN). Immutable after creation. Requires password on create.",
+			ConflictsWith: []string{consts.FieldBindPass, consts.FieldBindPassWO},
+			ExactlyOneOf:  []string{consts.FieldBindPass, consts.FieldBindPassWO, consts.FieldSelfManaged},
 		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
@@ -215,9 +242,33 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		}
 	}
 
+	// Handle write-only bindpass field
+	if _, hasBindPass := data[consts.FieldBindPass]; !hasBindPass {
+		if d.IsNewResource() || d.HasChange(consts.FieldBindPassWOVersion) {
+			p := cty.GetAttrPath(consts.FieldBindPassWO)
+			woVal, _ := d.GetRawConfigAt(p)
+			if !woVal.IsNull() {
+				data[consts.FieldBindPass] = woVal.AsString()
+			}
+		}
+	}
+
 	// get automated rotation fields
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+	}
+
+	// get self-managed boolean
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if d.HasChange(consts.FieldSelfManaged) {
+			// on an update, this field is ignored by Vault, so writing on an update may
+			// cause drifts between the TF config and state
+			// we return an error to the user to indicate self_managed can only work on create.
+			if !d.IsNewResource() {
+				return diag.Errorf("self_managed parameter cannot be updated once config has been created")
+			}
+			data[consts.FieldSelfManaged] = d.Get(consts.FieldSelfManaged)
+		}
 	}
 
 	configPath := fmt.Sprintf("%s/config", path)
@@ -288,6 +339,12 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, path); err != nil {
 			return diag.Errorf("error setting automated rotation fields: %s", err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldSelfManaged, resp.Data[consts.FieldSelfManaged]); err != nil {
+			return diag.Errorf("error setting self-managed field: %s", err)
 		}
 	}
 

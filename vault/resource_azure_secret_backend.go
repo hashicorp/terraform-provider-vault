@@ -9,6 +9,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -69,10 +70,25 @@ func azureSecretBackendResource() *schema.Resource {
 				Sensitive:   true,
 			},
 			consts.FieldClientSecret: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The client secret for credentials to query the Azure APIs",
-				Sensitive:   true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The client secret for credentials to query the Azure APIs",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldClientSecretWO},
+			},
+			consts.FieldClientSecretWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The client secret for credentials to query the Azure APIs. This is a write-only field and will not be read back from Vault.",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldClientSecret},
+			},
+			consts.FieldClientSecretWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only client_secret_wo field. Incrementing this value will trigger an update to the client secret.",
+				RequiredWith: []string{consts.FieldClientSecretWO},
 			},
 			consts.FieldEnvironment: {
 				Type:        schema.TypeString,
@@ -263,7 +279,6 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		consts.FieldClientID,
 		consts.FieldEnvironment,
 		consts.FieldTenantID,
-		consts.FieldClientSecret,
 		consts.FieldSubscriptionID,
 	}
 
@@ -273,6 +288,19 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 			data[k] = d.Get(k)
 		} else if d.HasChange(k) {
 			data[k] = d.Get(k)
+		}
+	}
+
+	// Handle client_secret and client_secret_wo
+	if v, ok := d.GetOk(consts.FieldClientSecret); ok {
+		if d.IsNewResource() || d.HasChange(consts.FieldClientSecret) {
+			data[consts.FieldClientSecret] = v.(string)
+		}
+	} else if d.IsNewResource() || d.HasChange(consts.FieldClientSecretWOVersion) {
+		p := cty.GetAttrPath(consts.FieldClientSecretWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			data[consts.FieldClientSecret] = woVal.AsString()
 		}
 	}
 

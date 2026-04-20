@@ -35,6 +35,68 @@ resource "vault_secrets_sync_gcp_destination" "gcp" {
 }
 ```
 
+### With Networking Configuration (Vault 1.19+)
+
+```hcl
+resource "vault_secrets_sync_gcp_destination" "gcp_networking" {
+  name                         = "gcp-dest-networking"
+  project_id                   = "gcp-project-id"
+  credentials                  = file(var.credentials_file)
+  secret_name_template         = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
+  
+  allowed_ipv4_addresses       = ["10.0.0.0/8", "192.168.0.0/16"]
+  allowed_ipv6_addresses       = ["2001:db8::/32"]
+  allowed_ports                = [443, 8443]
+  disable_strict_networking    = false
+}
+```
+
+### With Global Encryption (Vault 1.19+)
+
+```hcl
+resource "vault_secrets_sync_gcp_destination" "gcp_encryption" {
+  name                 = "gcp-dest-encryption"
+  project_id           = "gcp-project-id"
+  credentials          = file(var.credentials_file)
+  secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
+  
+  global_kms_key = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
+}
+```
+
+### With Multi-Region Replication and Regional Encryption (Vault 1.19+)
+
+```hcl
+resource "vault_secrets_sync_gcp_destination" "gcp_replication_encryption" {
+  name                 = "gcp-dest-replication-encryption"
+  project_id           = "gcp-project-id"
+  credentials          = file(var.credentials_file)
+  secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}_{{ .SecretKey | lowercase }}"
+  granularity          = "secret-key"
+  
+  locational_kms_keys = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+    "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
+  }
+  replication_locations = ["us-central1", "us-east1"]
+}
+```
+
+### Using Workload Identity Federation (Vault 2.0.0+)
+
+```hcl
+resource "vault_secrets_sync_gcp_destination" "gcp_wif" {
+  name                                  = "gcp-dest-wif"
+  service_account_email                 = var.service_account_email
+  identity_token_audience_wo            = var.identity_token_audience
+  identity_token_audience_wo_version    = 1
+  identity_token_ttl                    = 3600
+  identity_token_key_wo                 = "my-key"
+  identity_token_key_wo_version         = 1
+  granularity                           = "secret-path"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -61,6 +123,63 @@ The following arguments are supported:
   overrides the project ID derived from the service account JSON credentials or application
   default credentials. The service account must be [authorized](https://cloud.google.com/iam/docs/service-account-overview#locations)
   to perform Secret Manager actions in the target project.
+
+
+### Workload Identity Federation (Vault 2.0.0+)
+
+* `service_account_email` – (Optional) Service Account to impersonate for secrets sync workload identity federation.
+  Required with `identity_token_audience_wo`. **Requires Vault 2.0.0+**.
+
+* `identity_token_audience_wo` - (Optional) The audience claim value for identity tokens. This is a write-only field
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience_wo` to track updates as `identity_token_audience_wo` is a write-only field. Increment this field to update `identity_token_audience_wo`
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Default is 3600 seconds.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_key_wo` - (Optional) The key to use for signing identity tokens. This is a write-only field.
+  **Requires Vault 2.0.0+**.  
+
+* `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key_wo` to track updates as `identity_token_key_wo` is a write-only field. Increment this field to update `identity_token_key_wo`
+  **Requires Vault 2.0.0+**.
+  
+
+
+### Networking Configuration (Vault 1.19+)
+
+* `allowed_ipv4_addresses` - (Optional) List of IPv4 CIDR blocks that are allowed to access the synced secrets.
+  Example: `["10.0.0.0/8", "192.168.0.0/16"]`.
+
+* `allowed_ipv6_addresses` - (Optional) List of IPv6 CIDR blocks that are allowed to access the synced secrets.
+  Example: `["2001:db8::/32"]`.
+
+* `allowed_ports` - (Optional) List of TCP ports allowed for access. If not specified, all ports are allowed.
+  Example: `[443, 8443]`.
+
+* `disable_strict_networking` - (Optional) If `true`, disables strict network access controls. Default is `false`.
+
+### Encryption Configuration (Vault 1.19+)
+
+* `global_kms_key` - (Optional) KMS key resource name for encrypting all secrets. 
+  Format: `projects/{project}/locations/{location}/keyRings/{keyring}/cryptoKeys/{key}`.
+
+* `locational_kms_keys` - (Optional) Map of GCP regions to KMS key resource names for regional encryption. 
+  Each replication location must have a corresponding KMS key.
+  
+  Example:
+  ```hcl
+  locational_kms_keys = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+    "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
+  }
+  ```
+
+### Replication Configuration (Vault 1.18+)
+
+* `replication_locations` - (Optional) List of GCP regions where secrets should be replicated. 
+  Example: `["us-central1", "us-east1"]`.
 
 ## Attributes Reference
 

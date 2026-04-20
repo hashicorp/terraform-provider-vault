@@ -50,6 +50,18 @@ resource "vault_azure_secret_backend" "azure" {
 }
 ```
 
+Using `client_secret_wo` to configure the client secret as a write-only attribute (requires Terraform 1.11+):
+```hcl
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id            = "11111111-2222-3333-4444-111111111111"
+  tenant_id                  = "11111111-2222-3333-4444-222222222222"
+  client_id                  = "11111111-2222-3333-4444-333333333333"
+  client_secret_wo           = var.azure_client_secret
+  client_secret_wo_version   = 1
+  environment                = "AzurePublicCloud"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -66,6 +78,7 @@ The following arguments are supported:
 - `client_id` (`string:""`) - The OAuth2 client id to connect to Azure.
 
 - `client_secret` (`string:""`) - The OAuth2 client secret to connect to Azure.
+  Conflicts with `client_secret_wo`.
 
 - `environment` (`string:""`) - The Azure environment.
 
@@ -140,6 +153,19 @@ These arguments are common across all resources that mount a secret engine.
 * `identity_token_key` - (Optional)  The key to use for signing plugin workload identity tokens. If
   not provided, this will default to Vault's OIDC default key. Requires Vault Enterprise 1.16+.
 
+
+## Ephemeral Attributes Reference
+
+These attributes are write-only and will not be persisted to Terraform state.
+Requires Terraform 1.11+.
+
+* `client_secret_wo` (`string:""`) - The OAuth2 client secret to connect to Azure.
+  This is a write-only field and will not be read back from Vault.
+  Conflicts with `client_secret`.
+
+* `client_secret_wo_version` (`int:0`) - A version counter for the write-only `client_secret_wo` field.
+  Incrementing this value will trigger an update to the client secret.
+  Required when using `client_secret_wo`.
 
 ## Attributes Reference
 

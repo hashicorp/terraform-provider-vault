@@ -9,6 +9,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -79,10 +80,25 @@ func awsSecretBackendResource() *schema.Resource {
 				Sensitive:   true,
 			},
 			consts.FieldSecretKey: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "The AWS Secret Access Key to use when generating new credentials.",
-				Sensitive:   true,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The AWS Secret Access Key to use when generating new credentials.",
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldSecretKeyWO},
+			},
+			consts.FieldSecretKeyWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "The AWS Secret Access Key to use when generating new credentials. This is a write-only field and will not be read back from Vault.",
+				Sensitive:     true,
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldSecretKey},
+			},
+			consts.FieldSecretKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only secret_key_wo field. Incrementing this value will trigger an update to the secret_key.",
+				RequiredWith: []string{consts.FieldSecretKeyWO},
 			},
 			consts.FieldRegion: {
 				Type:        schema.TypeString,
@@ -214,8 +230,20 @@ func awsSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta in
 
 	path := d.Get(consts.FieldPath).(string)
 	accessKey := d.Get(consts.FieldAccessKey).(string)
-	secretKey := d.Get(consts.FieldSecretKey).(string)
 	region := d.Get(consts.FieldRegion).(string)
+
+	// Handle secret_key - check both regular and write-only fields
+	var secretKey string
+	if v, ok := d.GetOk(consts.FieldSecretKey); ok {
+		secretKey = v.(string)
+	} else if d.IsNewResource() || d.HasChange(consts.FieldSecretKeyWOVersion) {
+		// Use GetRawConfigAt for write-only fields
+		p := cty.GetAttrPath(consts.FieldSecretKeyWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			secretKey = woVal.AsString()
+		}
+	}
 
 	d.Partial(true)
 	log.Printf("[DEBUG] Mounting AWS backend at %q", path)
@@ -414,7 +442,7 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 	}
 	path := d.Id()
 	if d.HasChanges(consts.FieldAccessKey,
-		consts.FieldSecretKey, consts.FieldRegion, consts.FieldIAMEndpoint,
+		consts.FieldSecretKey, consts.FieldSecretKeyWOVersion, consts.FieldRegion, consts.FieldIAMEndpoint,
 		consts.FieldSTSEndpoint, consts.FieldSTSFallbackEndpoints, consts.FieldSTSRegion, consts.FieldSTSFallbackRegions,
 		consts.FieldIdentityTokenTTL, consts.FieldIdentityTokenAudience, consts.FieldRoleArn, consts.FieldMaxRetries,
 		consts.FieldRotationSchedule,
@@ -423,9 +451,25 @@ func awsSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		consts.FieldDisableAutomatedRotation,
 	) {
 		log.Printf("[DEBUG] Updating root credentials at %q", path+"/config/root")
+
+		// Handle secret_key - check both regular and write-only fields
+		var secretKey string
+		if v, ok := d.GetOk(consts.FieldSecretKey); ok {
+			secretKey = v.(string)
+		} else if d.HasChange(consts.FieldSecretKeyWOVersion) {
+			// Use GetRawConfig for write-only fields
+			woVal := d.GetRawConfig().GetAttr(consts.FieldSecretKeyWO)
+			if !woVal.IsNull() {
+				secretKey = woVal.AsString()
+			}
+		}
+
 		data := map[string]interface{}{
 			consts.FieldAccessKey: d.Get(consts.FieldAccessKey).(string),
-			consts.FieldSecretKey: d.Get(consts.FieldSecretKey).(string),
+		}
+
+		if secretKey != "" {
+			data[consts.FieldSecretKey] = secretKey
 		}
 
 		for _, k := range awsSecretFields {

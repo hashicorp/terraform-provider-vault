@@ -70,9 +70,17 @@ The following arguments are supported:
 
 * `operation_create` - (Optional) Grant permission to use the KMIP Create operation.
 
+* `operation_create_key_pair` - (Optional) Grant permission to use the KMIP Create Key Pair operation.
+
+* `operation_decrypt` - (Optional) Grant permission to use the KMIP Decrypt operation.
+
+* `operation_delete_attribute` - (Optional) Grant permission to use the KMIP Delete Attribute operation.
+
 * `operation_destroy` - (Optional) Grant permission to use the KMIP Destroy operation.
 
 * `operation_discover_versions` - (Optional) Grant permission to use the KMIP Discover Version operation.
+
+* `operation_encrypt` - (Optional) Grant permission to use the KMIP Encrypt operation.
 
 * `operation_get` - (Optional) Grant permission to use the KMIP Get operation.
 
@@ -80,15 +88,35 @@ The following arguments are supported:
 
 * `operation_get_attributes` - (Optional) Grant permission to use the KMIP Get Atrributes operation.
 
+* `operation_import` - (Optional) Grant permission to use the KMIP Import operation.
+
 * `operation_locate` - (Optional) Grant permission to use the KMIP Get Locate operation.
 
+* `operation_mac` - (Optional) Grant permission to use the KMIP MAC operation.
+
+* `operation_mac_verify` - (Optional) Grant permission to use the KMIP MAC Verify operation.
+
+* `operation_modify_attribute` - (Optional) Grant permission to use the KMIP Modify Attribute operation.
+
 * `operation_none` - (Optional) Remove all permissions from this role. May not be specified with any other `operation_*` params.
+
+* `operation_query` - (Optional) Grant permission to use the KMIP Query operation.
 
 * `operation_register` - (Optional) Grant permission to use the KMIP Register operation.
 
 * `operation_rekey` - (Optional) Grant permission to use the KMIP Rekey operation.
 
+* `operation_rekey_key_pair` - (Optional) Grant permission to use the KMIP Rekey Key Pair operation.
+
 * `operation_revoke` - (Optional) Grant permission to use the KMIP Revoke operation.
+
+* `operation_rng_retrieve` - (Optional) Grant permission to use the KMIP RNG Retrieve operation.
+
+* `operation_rng_seed` - (Optional) Grant permission to use the KMIP RNG Seed operation.
+
+* `operation_sign` - (Optional) Grant permission to use the KMIP Sign operation.
+
+* `operation_signature_verify` - (Optional) Grant permission to use the KMIP Signature Verify operation.
 
 
 ## Attributes Reference

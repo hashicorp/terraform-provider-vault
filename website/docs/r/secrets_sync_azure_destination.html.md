@@ -37,6 +37,38 @@ resource "vault_secrets_sync_azure_destination" "az" {
 }
 ```
 
+### With Networking Configuration (Vault 1.19+)
+
+```hcl
+resource "vault_secrets_sync_azure_destination" "az_networking" {
+  name          = "az-dest-networking"
+  key_vault_uri = var.key_vault_uri
+  client_id     = var.client_id
+  client_secret = var.client_secret
+  tenant_id     = var.tenant_id
+
+  allowed_ipv4_addresses    = ["10.0.0.0/8", "192.168.0.0/16"]
+  allowed_ipv6_addresses    = ["2001:db8::/32"]
+  allowed_ports             = [443, 8443]
+  disable_strict_networking = false
+}
+```
+
+### Using Workload Identity Federation (Vault 2.0.0+)
+
+```hcl
+resource "vault_secrets_sync_azure_destination" "az_wif" {
+  name                    = "az-dest-wif"
+  key_vault_uri           = var.key_vault_uri
+  client_id               = var.client_id
+  tenant_id               = var.tenant_id
+  identity_token_audience = var.identity_token_audience
+  identity_token_ttl      = 3600
+  identity_token_key      = "my-key"
+  granularity             = "secret-path"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -72,6 +104,37 @@ The following arguments are supported:
 
 * `granularity` - (Optional) Determines what level of information is synced as a distinct resource
   at the destination. Supports `secret-path` and `secret-key`.
+
+### Workload Identity Federation (Vault 2.0.0+)
+
+* `identity_token_audience` - (Optional) The audience claim value for identity tokens. This is a write-only field.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience` to track updates as `identity_token_audience` is a write-only field. Increment this field to update `identity_token_audience`.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_ttl` - (Optional) The TTL of generated identity tokens in seconds. Default is 3600 seconds.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_key` - (Optional) The key to use for signing identity tokens. This is a write-only field.
+  **Requires Vault 2.0.0+**.
+
+* `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key` to track updates as `identity_token_key` is a write-only field. Increment this field to update `identity_token_key`.
+  **Requires Vault 2.0.0+**.
+
+### Networking Configuration (Vault 1.19+)
+
+* `allowed_ipv4_addresses` - (Optional) List of IPv4 addresses or CIDR blocks allowed to make outbound
+  connections from Vault to the destination.
+
+* `allowed_ipv6_addresses` - (Optional) List of IPv6 addresses or CIDR blocks allowed to make outbound 
+  connections from Vault to the destination
+
+* `allowed_ports` - (Optional) List of port numbers allowed for outbound connections from Vault to the 
+  destination.
+
+* `disable_strict_networking` - (Optional) When set to `true`, disables strict enforcement of networking
+  restrictions. Defaults to `false`
 
 ## Attributes Reference
 

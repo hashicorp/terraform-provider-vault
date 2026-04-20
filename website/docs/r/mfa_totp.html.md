@@ -53,6 +53,8 @@ The following arguments are supported:
 - `skew` `(int)` - The number of delay periods that are allowed when validating a TOTP token.
   This value can either be 0 or 1.
 
+- `max_validation_attempts` `(int)` - The maximum number of consecutive failed validation attempts allowed. Must be a positive integer. Vault defaults this value to `5` if not provided or if set to `0`.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
