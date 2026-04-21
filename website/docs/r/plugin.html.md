@@ -22,7 +22,7 @@ For more information on managing external plugins, please refer to the Vault
 
 ## Example Usage
 
-### Register an Official Enterprise plugin (version vX.Y.Z-ent)
+### Register an Official Enterprise plugin (version vX.Y.Z+ent)
 
 The `version` is required for enterprise plugins.
 The `sha256` and `command` shoud not be set for an enterprise plugin.
