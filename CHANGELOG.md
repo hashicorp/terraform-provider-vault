@@ -1,5 +1,5 @@
 ## Unreleased
-* **New Ephemeral Resource**: Add ephemeral resource for `vault_generic_endpoint` to write to generic Vault endpoints and extract response data, including Auth and WrapInfo support.([#2830](https://github.com/hashicorp/terraform-provider-vault/pull/2830))
+
 
 BREAKING CHANGES:
 
@@ -13,6 +13,7 @@ FEATURES:
 * **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858), [#2874](https://github.com/hashicorp/terraform-provider-vault/pull/2874))
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 * Add support for CORS configuration: `vault_sys_config_cors` resource and data source for managing and reading Vault's CORS (Cross-Origin Resource Sharing) settings. ([#2849](https://github.com/hashicorp/terraform-provider-vault/pull/2849))
+* **New Ephemeral Resource**:Add vault_generic_endpoint ephemeral resource with response field extraction from data, auth, wrap_info, and lease metadata.([#2830](https://github.com/hashicorp/terraform-provider-vault/pull/2830))
 
 IMPROVEMENTS:
 
