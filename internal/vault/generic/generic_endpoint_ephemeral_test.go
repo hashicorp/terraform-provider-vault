@@ -361,6 +361,38 @@ func TestAccGenericEndpointEphemeral_complexTypes(t *testing.T) {
 	})
 }
 
+// TestAccGenericEndpointEphemeral_writeFieldNotFound tests the warning when a write_field is not present in the response.
+// This verifies that when a user requests a field that doesn't exist in any of the checked locations
+// (response.Data, wrap_info, auth, top-level fields), a warning diagnostic is issued but the operation succeeds.
+
+func TestAccGenericEndpointEphemeral_writeFieldNotFound(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGenericEndpointEphemeral_writeFieldNotFoundConfig(),
+				// The test should succeed - warnings don't cause failures
+				// The warning will be visible in test output when run with -v flag
+				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify that the valid field (accessor) was extracted successfully
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("accessor"), knownvalue.NotNull()),
+				},
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 // Helper functions for ephemeral resource tests
 
 // testAccGenericEndpointEphemeral_infraConfig creates the userpass auth backend and user.
@@ -655,6 +687,29 @@ ephemeral "vault_generic_endpoint" "token" {
     ttl      = "1h"
   })
   write_fields = ["lease_duration", "lease_id"]
+}
+
+provider "echo" {
+  data = ephemeral.vault_generic_endpoint.token.write_data
+}
+
+resource "echo" "test" {}
+`
+}
+// testAccGenericEndpointEphemeral_writeFieldNotFoundConfig tests warning for non-existent write_field
+// This config requests both a valid field (accessor) and an invalid field (nonexistent_field)
+// The warning should be issued for nonexistent_field, but accessor should still be extracted
+func testAccGenericEndpointEphemeral_writeFieldNotFoundConfig() string {
+	return `
+ephemeral "vault_generic_endpoint" "token" {
+  path      = "auth/token/create"
+  data_json = jsonencode({
+    policies = ["default"]
+    ttl      = "1h"
+  })
+  # Request a field that doesn't exist in the response (nonexistent_field)
+  # and a valid field (accessor) to verify partial success
+  write_fields = ["nonexistent_field", "accessor"]
 }
 
 provider "echo" {
