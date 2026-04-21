@@ -41,9 +41,10 @@ type AliCloudSecretBackendResource struct {
 type AliCloudSecretBackendModel struct {
 	base.BaseModel
 
-	Mount       types.String `tfsdk:"mount"`
-	AccessKey   types.String `tfsdk:"access_key"`
-	SecretKeyWO types.String `tfsdk:"secret_key_wo"`
+	Mount              types.String `tfsdk:"mount"`
+	AccessKey          types.String `tfsdk:"access_key"`
+	SecretKeyWO        types.String `tfsdk:"secret_key_wo"`
+	SecretKeyWOVersion types.Int64  `tfsdk:"secret_key_wo_version"`
 }
 
 func (r *AliCloudSecretBackendResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -71,6 +72,10 @@ func (r *AliCloudSecretBackendResource) Schema(_ context.Context, _ resource.Sch
 				Required:            true,
 				Sensitive:           true,
 				WriteOnly:           true,
+			},
+			consts.FieldSecretKeyWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "A version counter for the write-only `secret_key_wo` field. Incrementing this value will trigger an update to the secret key in Vault.",
+				Required:            true,
 			},
 		},
 		MarkdownDescription: "Configures the AliCloud secrets engine credentials. " +
