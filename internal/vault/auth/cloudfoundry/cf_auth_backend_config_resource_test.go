@@ -360,7 +360,7 @@ func TestAccCFAuthBackendConfigInvalid(t *testing.T) {
 }
 
 // TestAccCFAuthBackendConfigPasswordVersionTracking tests that the cf_password_wo_version
-// field correctly triggers password updates when incremented.
+// field is tracked in state. The password is sent on every update regardless of version changes.
 func TestAccCFAuthBackendConfigPasswordVersionTracking(t *testing.T) {
 	mount := acctest.RandomWithPrefix("cf-mount")
 	resourceAddress := "vault_cf_auth_backend_config.test"
@@ -387,7 +387,7 @@ func TestAccCFAuthBackendConfigPasswordVersionTracking(t *testing.T) {
 					},
 				},
 			},
-			// Step 2: Update password by incrementing version to 2
+			// Step 2: Update version to 2 (password is sent on every update)
 			{
 				Config: testAccCFAuthBackendConfigPasswordVersion(mount, params, 2),
 				Check: resource.ComposeTestCheckFunc(
@@ -401,7 +401,7 @@ func TestAccCFAuthBackendConfigPasswordVersionTracking(t *testing.T) {
 					},
 				},
 			},
-			// Step 3: Keep version at 2 - should not trigger password update
+			// Step 3: Keep version at 2 (password is still sent on every update)
 			{
 				Config: testAccCFAuthBackendConfigPasswordVersion(mount, params, 2),
 				Check: resource.ComposeTestCheckFunc(

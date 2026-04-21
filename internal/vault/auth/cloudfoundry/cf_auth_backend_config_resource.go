@@ -98,16 +98,14 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 				Required:            true,
 			},
 			consts.FieldCFPasswordWO: schema.StringAttribute{
-				MarkdownDescription: "The password for authenticating to the CF API. This field is write-only and will never be stored in state. " +
-					"Requires 'cf_password_wo_version' to trigger updates.",
-				Required:  true,
-				Sensitive: true,
-				WriteOnly: true,
+				MarkdownDescription: "The password for authenticating to the CF API. This field is write-only and will never be stored in state. Requires 'cf_password_wo_version' to trigger updates.",
+				Required:            true,
+				Sensitive:           true,
+				WriteOnly:           true,
 			},
 			consts.FieldCFPasswordWOVersion: schema.Int64Attribute{
-				MarkdownDescription: "Version number for the write-only password field. Increment this to trigger an update of cf_password_wo. " +
-					"Required when cf_password_wo is set.",
-				Required: true,
+				MarkdownDescription: "Version counter for 'cf_password_wo'. Increment this value to trigger an update when only the write-only password changes.",
+				Required:            true,
 			},
 			consts.FieldCFApiTrustedCertificates: schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -225,41 +223,18 @@ func (r *CFAuthBackendConfigResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	// Always read the password from config
+	// Always read and send the password from config on updates.
+	// The password is sent on every update regardless of version changes.
 	var cfPasswordWO types.String
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCFPasswordWO), &cfPasswordWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Check if version changed to determine which password to send
-	var oldData CFAuthBackendConfigModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &oldData)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	versionChanged := oldData.CFPasswordWOVersion.IsNull() ||
-		oldData.CFPasswordWOVersion.ValueInt64() != data.CFPasswordWOVersion.ValueInt64()
-
 	var cfPassword *string
-	if versionChanged {
-		// Version changed: send the new password from config
-		if cfPasswordWO.IsNull() || cfPasswordWO.IsUnknown() || strings.TrimSpace(cfPasswordWO.ValueString()) == "" {
-			resp.Diagnostics.AddError(
-				"Missing cf_password_wo",
-				"cf_password_wo must be provided whenever cf_password_wo_version changes",
-			)
-			return
-		}
+	if !cfPasswordWO.IsNull() && !cfPasswordWO.IsUnknown() {
 		v := cfPasswordWO.ValueString()
 		cfPassword = &v
-	} else {
-		// Version unchanged: always send the current password (even without version change)
-		if !cfPasswordWO.IsNull() && !cfPasswordWO.IsUnknown() {
-			v := cfPasswordWO.ValueString()
-			cfPassword = &v
-		}
 	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
