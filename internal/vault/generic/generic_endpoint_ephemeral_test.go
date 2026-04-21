@@ -696,6 +696,7 @@ provider "echo" {
 resource "echo" "test" {}
 `
 }
+
 // testAccGenericEndpointEphemeral_writeFieldNotFoundConfig tests warning for non-existent write_field
 // This config requests both a valid field (accessor) and an invalid field (nonexistent_field)
 // The warning should be issued for nonexistent_field, but accessor should still be extracted
