@@ -100,6 +100,205 @@ func TestAuthLoginAWS_Init(t *testing.T) {
 	}
 }
 
+func TestAuthLoginAWS_ConfiguredRoleARN(t *testing.T) {
+	tests := []struct {
+		name                    string
+		awsRoleARNExplicit      bool
+		awsRoleARNFromConfig    string
+		expectConfigured        bool
+		expectConfiguredRoleARN string
+	}{
+		{
+			name:                    "omitted-in-config",
+			awsRoleARNExplicit:      false,
+			awsRoleARNFromConfig:    "",
+			expectConfigured:        false,
+			expectConfiguredRoleARN: "",
+		},
+		{
+			name:                    "explicit-empty-in-config",
+			awsRoleARNExplicit:      true,
+			awsRoleARNFromConfig:    "",
+			expectConfigured:        false,
+			expectConfiguredRoleARN: "",
+		},
+		{
+			name:                    "explicit-value-in-config",
+			awsRoleARNExplicit:      true,
+			awsRoleARNFromConfig:    "arn:aws:iam::123456789012:role/from-config",
+			expectConfigured:        true,
+			expectConfiguredRoleARN: "arn:aws:iam::123456789012:role/from-config",
+		},
+		{
+			name:                    "inconsistent-state-non-empty-without-explicit",
+			awsRoleARNExplicit:      false,
+			awsRoleARNFromConfig:    "arn:aws:iam::123456789012:role/from-config",
+			expectConfigured:        false,
+			expectConfiguredRoleARN: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &AuthLoginAWS{
+				awsRoleARNExplicit:   tt.awsRoleARNExplicit,
+				awsRoleARNFromConfig: tt.awsRoleARNFromConfig,
+			}
+
+			gotRoleARN, gotConfigured := l.configuredRoleARN()
+			if gotConfigured != tt.expectConfigured {
+				t.Fatalf("configuredRoleARN() configured = %v, want %v", gotConfigured, tt.expectConfigured)
+			}
+
+			if gotRoleARN != tt.expectConfiguredRoleARN {
+				t.Fatalf("configuredRoleARN() role ARN = %q, want %q", gotRoleARN, tt.expectConfiguredRoleARN)
+			}
+		})
+	}
+}
+
+func TestAuthLoginAWS_ManualAssumeRoleARN(t *testing.T) {
+	tests := []struct {
+		name                   string
+		awsRoleARNExplicit     bool
+		awsRoleARNFromConfig   string
+		params                 map[string]interface{}
+		expectManualAssume     bool
+		expectManualAssumeRole string
+	}{
+		{
+			name:                   "explicit-value-in-config",
+			awsRoleARNExplicit:     true,
+			awsRoleARNFromConfig:   "arn:aws:iam::123456789012:role/from-config",
+			expectManualAssume:     true,
+			expectManualAssumeRole: "arn:aws:iam::123456789012:role/from-config",
+		},
+		{
+			name:                 "explicit-value-in-config-with-web-identity-skips-manual-assume",
+			awsRoleARNExplicit:   true,
+			awsRoleARNFromConfig: "arn:aws:iam::123456789012:role/from-config",
+			params: map[string]interface{}{
+				consts.FieldAWSWebIdentityTokenFile: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token",
+			},
+			expectManualAssume:     false,
+			expectManualAssumeRole: "",
+		},
+		{
+			name:                 "explicit-empty-in-config-disables-manual-assume",
+			awsRoleARNExplicit:   true,
+			awsRoleARNFromConfig: "",
+			params: map[string]interface{}{
+				consts.FieldAWSRoleARN: "arn:aws:iam::123456789012:role/from-env",
+			},
+			expectManualAssume:     false,
+			expectManualAssumeRole: "",
+		},
+		{
+			name: "env-role-arn-without-web-identity",
+			params: map[string]interface{}{
+				consts.FieldAWSRoleARN: "arn:aws:iam::123456789012:role/from-env",
+			},
+			expectManualAssume:     true,
+			expectManualAssumeRole: "arn:aws:iam::123456789012:role/from-env",
+		},
+		{
+			name: "env-role-arn-with-web-identity-skips-manual-assume",
+			params: map[string]interface{}{
+				consts.FieldAWSRoleARN:              "arn:aws:iam::123456789012:role/from-env",
+				consts.FieldAWSWebIdentityTokenFile: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token",
+			},
+			expectManualAssume:     false,
+			expectManualAssumeRole: "",
+		},
+		{
+			name: "no-role-arn",
+			params: map[string]interface{}{
+				consts.FieldAWSWebIdentityTokenFile: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token",
+			},
+			expectManualAssume:     false,
+			expectManualAssumeRole: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := &AuthLoginAWS{
+				AuthLoginCommon:      AuthLoginCommon{params: tt.params},
+				awsRoleARNExplicit:   tt.awsRoleARNExplicit,
+				awsRoleARNFromConfig: tt.awsRoleARNFromConfig,
+			}
+
+			gotRoleARN, gotManualAssume := l.manualAssumeRoleARN()
+			if gotManualAssume != tt.expectManualAssume {
+				t.Fatalf("manualAssumeRoleARN() manual assume = %v, want %v", gotManualAssume, tt.expectManualAssume)
+			}
+
+			if gotRoleARN != tt.expectManualAssumeRole {
+				t.Fatalf("manualAssumeRoleARN() role ARN = %q, want %q", gotRoleARN, tt.expectManualAssumeRole)
+			}
+		})
+	}
+}
+
+func TestAuthLoginAWS_GetConfigStringField_Negative(t *testing.T) {
+	tests := []struct {
+		name  string
+		raw   map[string]interface{}
+		field string
+	}{
+		{
+			name:  "missing-auth-block",
+			raw:   map[string]interface{}{},
+			field: consts.FieldAWSRoleARN,
+		},
+		{
+			name: "missing-field-in-auth-block",
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginAWS: []interface{}{
+					map[string]interface{}{
+						consts.FieldRole: "alice",
+					},
+				},
+			},
+			field: consts.FieldAWSRoleARN,
+		},
+		{
+			name: "non-string-field-in-auth-block",
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginAWS: []interface{}{
+					map[string]interface{}{
+						consts.FieldRole:       "alice",
+						consts.FieldAWSRoleARN: true,
+					},
+				},
+			},
+			field: consts.FieldAWSRoleARN,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := map[string]*schema.Schema{
+				consts.FieldAuthLoginAWS: GetAWSLoginSchema(consts.FieldAuthLoginAWS),
+			}
+			d := schema.TestResourceDataRaw(t, s, tt.raw)
+
+			l := &AuthLoginAWS{
+				AuthLoginCommon: AuthLoginCommon{authField: consts.FieldAuthLoginAWS},
+			}
+
+			got, ok := l.getConfigStringField(d, tt.field)
+			if ok {
+				t.Fatalf("getConfigStringField() ok = true, want false, got value %q", got)
+			}
+
+			if got != "" {
+				t.Fatalf("getConfigStringField() value = %q, want empty string", got)
+			}
+		})
+	}
+}
+
 func TestAuthLoginAWS_LoginPath(t *testing.T) {
 	type fields struct {
 		AuthLoginCommon AuthLoginCommon
@@ -237,6 +436,52 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "irsa-web-identity-with-role-arn",
+			fields: fields{
+				AuthLoginCommon: AuthLoginCommon{
+					params: map[string]interface{}{
+						consts.FieldAWSRoleARN:              "arn:aws:iam::123456789012:role/test-role",
+						consts.FieldAWSRoleSessionName:      "irsa-session",
+						consts.FieldAWSWebIdentityTokenFile: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token",
+						consts.FieldAWSRegion:               "us-west-2",
+					},
+				},
+			},
+			logger: hclog.NewNullLogger(),
+			want: &awsutil.CredentialsConfig{
+				Region:               "us-west-2",
+				RoleARN:              "arn:aws:iam::123456789012:role/test-role",
+				RoleSessionName:      "irsa-session",
+				WebIdentityTokenFile: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token",
+			},
+			wantErr: false,
+		},
+		{
+			name: "irsa-web-identity-without-role-arn",
+			fields: fields{
+				AuthLoginCommon: AuthLoginCommon{
+					params: map[string]interface{}{
+						consts.FieldAWSWebIdentityTokenFile: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token",
+						consts.FieldAWSRegion:               "us-west-2",
+					},
+				},
+			},
+			logger:  hclog.NewNullLogger(),
+			wantErr: true,
+		},
+		{
+			name: "role-session-without-role-arn",
+			fields: fields{
+				AuthLoginCommon: AuthLoginCommon{
+					params: map[string]interface{}{
+						consts.FieldAWSRoleSessionName: "test-session",
+					},
+				},
+			},
+			logger:  hclog.NewNullLogger(),
+			wantErr: true,
+		},
+		{
 			name: "all",
 			fields: fields{
 				AuthLoginCommon: AuthLoginCommon{
@@ -280,6 +525,9 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 			got, err := l.getCredentialsConfig(tt.logger)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getCredentialsConfig() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
 				return
 			}
 
@@ -614,7 +862,7 @@ func TestAuthLoginAWS_Login(t *testing.T) {
 		{
 			name: "error-uninitialized",
 			authLogin: &AuthLoginAWS{
-				AuthLoginCommon{
+				AuthLoginCommon: AuthLoginCommon{
 					initialized: false,
 				},
 			},
@@ -628,7 +876,7 @@ func TestAuthLoginAWS_Login(t *testing.T) {
 		{
 			name: "error-vault-token-set",
 			authLogin: &AuthLoginAWS{
-				AuthLoginCommon{
+				AuthLoginCommon: AuthLoginCommon{
 					authField: "baz",
 					mount:     "foo",
 					params: map[string]interface{}{
