@@ -25,6 +25,7 @@ FEATURES:
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 * Add support for CORS configuration: `vault_sys_config_cors` resource and data source for managing and reading Vault's CORS (Cross-Origin Resource Sharing) settings. ([#2849](https://github.com/hashicorp/terraform-provider-vault/pull/2849))
 * **New Ephemeral Resource**: Add vault_generic_endpoint ephemeral resource with response field extraction from data, auth, wrap_info, and lease metadata.([#2830](https://github.com/hashicorp/terraform-provider-vault/pull/2830))
+* `vault_transform_transformation`: Added `mapping_mode`, `stores` and `convergent` fields to the resource. ([#2820] https://github.com/hashicorp/terraform-provider-vault/pull/2820/)
 
 IMPROVEMENTS:
 
