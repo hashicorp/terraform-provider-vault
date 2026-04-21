@@ -2207,6 +2207,7 @@ resource "vault_database_secret_backend_connection" "test" {
   name = "%s"
   allowed_roles = ["dev", "prod"]
   root_rotation_statements = ["FOOBAR"]
+	password_policy = "elastic-policy"
 
   elasticsearch {
     url = "%s"
