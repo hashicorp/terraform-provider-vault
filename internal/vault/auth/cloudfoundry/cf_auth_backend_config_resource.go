@@ -225,35 +225,38 @@ func (r *CFAuthBackendConfigResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	// Only send the password when the version field changes or on new resource
+	// Always read the password from config
+	var cfPasswordWO types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCFPasswordWO), &cfPasswordWO)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if version changed to determine which password to send
+	var oldData CFAuthBackendConfigModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &oldData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	versionChanged := oldData.CFPasswordWOVersion.IsNull() ||
+		oldData.CFPasswordWOVersion.ValueInt64() != data.CFPasswordWOVersion.ValueInt64()
+
 	var cfPassword *string
-	if !data.CFPasswordWOVersion.IsNull() && !data.CFPasswordWOVersion.IsUnknown() {
-		var oldData CFAuthBackendConfigModel
-		resp.Diagnostics.Append(req.State.Get(ctx, &oldData)...)
-		if resp.Diagnostics.HasError() {
+	if versionChanged {
+		// Version changed: send the new password from config
+		if cfPasswordWO.IsNull() || cfPasswordWO.IsUnknown() || strings.TrimSpace(cfPasswordWO.ValueString()) == "" {
+			resp.Diagnostics.AddError(
+				"Missing cf_password_wo",
+				"cf_password_wo must be provided whenever cf_password_wo_version changes",
+			)
 			return
 		}
-
-		// Check if version changed
-		versionChanged := oldData.CFPasswordWOVersion.IsNull() ||
-			oldData.CFPasswordWOVersion.ValueInt64() != data.CFPasswordWOVersion.ValueInt64()
-
-		if versionChanged {
-			// Read the write-only password from config
-			var cfPasswordWO types.String
-			resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCFPasswordWO), &cfPasswordWO)...)
-			if resp.Diagnostics.HasError() {
-				return
-			}
-
-			if cfPasswordWO.IsNull() || cfPasswordWO.IsUnknown() || strings.TrimSpace(cfPasswordWO.ValueString()) == "" {
-				resp.Diagnostics.AddError(
-					"Missing cf_password_wo",
-					"cf_password_wo must be provided whenever cf_password_wo_version changes",
-				)
-				return
-			}
-
+		v := cfPasswordWO.ValueString()
+		cfPassword = &v
+	} else {
+		// Version unchanged: always send the current password (even without version change)
+		if !cfPasswordWO.IsNull() && !cfPasswordWO.IsUnknown() {
 			v := cfPasswordWO.ValueString()
 			cfPassword = &v
 		}
