@@ -11,8 +11,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -22,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	containerclient "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -107,17 +106,20 @@ func setupVaultAndPebble(t *testing.T) (string, string) {
 	dockerAPI, err := docker.NewDockerAPI()
 	require.NoError(t, err)
 
-	f := filters.NewArgs()
+	f := containerclient.Filters{}
 	f.Add("ancestor", "ghcr.io/letsencrypt/pebble:2.8.0")
 
-	containers, err := dockerAPI.ContainerList(t.Context(), container.ListOptions{Filters: f})
+	containers, err := dockerAPI.ContainerList(t.Context(), containerclient.ContainerListOptions{Filters: f})
 	require.NoError(t, err)
 
-	require.Len(t, containers, 1)
-	id := containers[0].ID
+	require.Len(t, containers.Items, 1)
+	id := containers.Items[0].ID
 
-	rdr, _, err := dockerAPI.CopyFromContainer(t.Context(), id, "test/certs/pebble.minica.pem")
+	copyResult, err := dockerAPI.CopyFromContainer(t.Context(), id, containerclient.CopyFromContainerOptions{
+		SourcePath: "test/certs/pebble.minica.pem",
+	})
 	require.NoError(t, err)
+	rdr := copyResult.Content
 	defer rdr.Close()
 
 	tr := tar.NewReader(rdr)
