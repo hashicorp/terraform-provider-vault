@@ -22,7 +22,20 @@ For more information on managing external plugins, please refer to the Vault
 
 ## Example Usage
 
-### Register a CE plugin
+### Register an Official Enterprise plugin (version vX.Y.Z-ent)
+
+The `version` is required for enterprise plugins.
+The `sha256` and `command` shoud not be set for an enterprise plugin.
+
+```hcl
+resource "vault_plugin" "oracle" {
+  type    = "database"
+  name    = "vault-plugin-database-oracle"
+  version = "v0.13.0+ent"
+}
+```
+
+### Register a CE plugin (version vX.Y.Z)
 
 The `sha256` and `command` are required to register a CE plugin.
 
@@ -40,19 +53,6 @@ resource "vault_plugin" "jwt" {
 
 resource "vault_auth_backend" "jwt_auth" {
   type = vault_plugin.jwt.name
-}
-```
-
-### Register an official enterprise plugin
-
-The `version` is required for enterprise plugins.
-The `sha256` and `command` shoud not be set for an enterprise plugin.
-
-```hcl
-resource "vault_plugin" "oracle" {
-  type    = "database"
-  name    = "vault-plugin-database-oracle"
-  version = "v0.13.0+ent"
 }
 ```
 
