@@ -31,18 +31,35 @@ resource "vault_auth_backend" "userpass" {
   path = "userpass"
 }
 
+resource "vault_policy" "token_operations" {
+  name = "token-operations"
+
+  policy = <<EOT
+path "auth/token/create" {
+  capabilities = ["create", "update", "sudo"]
+}
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+path "auth/token/renew-self" {
+  capabilities = ["update"]
+}
+EOT
+}
+
 resource "vault_generic_endpoint" "user" {
-  depends_on           = [vault_auth_backend.userpass]
-  path                 = "auth/userpass/users/myuser"
+  path                 = "auth/${vault_auth_backend.userpass.path}/users/myuser"
   ignore_absent_fields = true
-  data_json            = jsonencode({
+  data_json = jsonencode({
     password = "changeme"
+    policies = ["default", vault_policy.token_operations.name]
   })
 }
 
 # Login and extract token from response.Auth
 ephemeral "vault_generic_endpoint" "login" {
-  path         = "auth/userpass/login/myuser"
+  mount_id     = vault_generic_endpoint.user.id
+  path         = "auth/${vault_auth_backend.userpass.path}/login/myuser"
   data_json    = jsonencode({
     password = "changeme"
   })
@@ -51,15 +68,14 @@ ephemeral "vault_generic_endpoint" "login" {
 
 # Use the ephemeral token with an aliased provider
 provider "vault" {
-  alias            = "user_auth"
-  token            = ephemeral.vault_generic_endpoint.login.write_data["token"]
-  skip_child_token = true
+  alias   = "user_auth"
+  token   = ephemeral.vault_generic_endpoint.login.write_data["token"]
 }
 
 # Access Vault using the user's token
-data "vault_generic_secret" "user_data" {
+data "vault_generic_secret" "token_check" {
   provider = vault.user_auth
-  path     = "secret/data/myapp"
+  path     = "auth/token/lookup-self"
 }
 ```
 
@@ -133,6 +149,10 @@ The following arguments are supported:
   wrap the response and return a wrapping token instead of the actual response.
   The value should be a duration string like `"30s"`, `"5m"`, or `"1h"`.
   When enabled, `write_fields` should extract from WrapInfo fields.
+
+* `mount_id` - (Optional) The ID of a resource that this ephemeral resource depends on.
+  This ensures proper ordering of operations when the ephemeral resource depends on
+  infrastructure resources like auth backends or secret engines.
 
 ## Attributes Reference
 

@@ -454,7 +454,7 @@ resource "vault_generic_endpoint" "user" {
 
 ephemeral "vault_generic_endpoint" "u1_token" {
   mount_id     = vault_generic_endpoint.user.id
-  mount        = "auth/${vault_auth_backend.userpass.path}/login/%s"
+  path         = "auth/${vault_auth_backend.userpass.path}/login/%s"
   data_json    = jsonencode({ password = "%s" })
   write_fields = ["token", "accessor"]
 }
@@ -502,7 +502,7 @@ resource "vault_generic_endpoint" "user" {
 
 ephemeral "vault_generic_endpoint" "u1_token" {
   mount_id     = vault_generic_endpoint.user.id
-  mount        = "auth/${vault_auth_backend.userpass.path}/login/%s"
+  path         = "auth/${vault_auth_backend.userpass.path}/login/%s"
   data_json    = jsonencode({ password = "%s" })
   write_fields = ["token", "accessor"]
 }
@@ -525,7 +525,7 @@ data "vault_generic_secret" "token_check" {
 func testAccGenericEndpointEphemeral_wrapInfoConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "wrapped_token" {
-  mount     = "auth/token/create"
+  path      = "auth/token/create"
   data_json = jsonencode({
     policies = ["default"]
     ttl      = "1h"
@@ -546,7 +546,7 @@ resource "echo" "test" {}
 func testAccGenericEndpointEphemeral_invalidJSONConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "test" {
-  mount = "auth/token/create"
+  path = "auth/token/create"
   data_json = "{invalid json"
 }
 `
@@ -556,7 +556,7 @@ ephemeral "vault_generic_endpoint" "test" {
 func testAccGenericEndpointEphemeral_invalidPathConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "test" {
-  mount = "nonexistent/invalid/path"
+  path = "nonexistent/invalid/path"
   data_json = jsonencode({})
 }
 `
@@ -566,7 +566,7 @@ ephemeral "vault_generic_endpoint" "test" {
 func testAccGenericEndpointEphemeral_wrapInfoSpecialFieldConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "wrapped_token" {
-  mount     = "auth/token/create"
+  path      = "auth/token/create"
   data_json = jsonencode({
     policies = ["default"]
     ttl      = "1h"
@@ -601,7 +601,7 @@ resource "vault_generic_endpoint" "user" {
 
 ephemeral "vault_generic_endpoint" "u1_token" {
 	 mount_id     = vault_generic_endpoint.user.id
-	 mount        = "auth/${vault_auth_backend.userpass.path}/login/%s"
+	 path         = "auth/${vault_auth_backend.userpass.path}/login/%s"
 	 data_json    = jsonencode({ password = "%s" })
 	 write_fields = ["auth"]
 }
@@ -632,7 +632,7 @@ resource "vault_generic_endpoint" "user" {
 
 ephemeral "vault_generic_endpoint" "u1_token" {
 	 mount_id     = vault_generic_endpoint.user.id
-	 mount        = "auth/${vault_auth_backend.userpass.path}/login/%s"
+	 path         = "auth/${vault_auth_backend.userpass.path}/login/%s"
 	 data_json    = jsonencode({ password = "%s" })
 	 write_fields = ["token"]
 }
@@ -649,7 +649,7 @@ resource "echo" "test" {}
 func testAccGenericEndpointEphemeral_topLevelFieldsConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "token" {
-  mount     = "auth/token/create"
+  path      = "auth/token/create"
   data_json = jsonencode({
     policies = ["default"]
     ttl      = "1h"
@@ -669,7 +669,7 @@ resource "echo" "test" {}
 func testAccGenericEndpointEphemeral_extractFromDataConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "token" {
-  mount     = "auth/token/create"
+  path      = "auth/token/create"
   data_json = jsonencode({
     policies = ["default"]
     ttl      = "1h"
@@ -689,7 +689,7 @@ resource "echo" "test" {}
 func testAccGenericEndpointEphemeral_complexTypesConfig() string {
 	return `
 ephemeral "vault_generic_endpoint" "token" {
-  mount     = "auth/token/create"
+  path      = "auth/token/create"
   data_json = jsonencode({
     policies = ["default", "policy1", "policy2"]
     ttl      = "1h"

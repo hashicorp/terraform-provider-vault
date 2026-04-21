@@ -39,7 +39,7 @@ type GenericEndpointEphemeralModel struct {
 	base.BaseModelEphemeral
 
 	// fields specific to this resource
-	Mount         types.String `tfsdk:"mount"`
+	Path          types.String `tfsdk:"path"`
 	DataJSON      types.String `tfsdk:"data_json"`
 	WriteFields   types.List   `tfsdk:"write_fields"`
 	WriteDataJSON types.String `tfsdk:"write_data_json"`
@@ -53,7 +53,7 @@ type GenericEndpointEphemeralModel struct {
 func (r *GenericEndpointEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldMount: schema.StringAttribute{
+			consts.FieldPath: schema.StringAttribute{
 				MarkdownDescription: "Full path to the Vault endpoint that will be written",
 				Required:            true,
 			},
@@ -138,7 +138,7 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 		return
 	}
 
-	path := data.Mount.ValueString()
+	path := data.Path.ValueString()
 
 	// Use a per-request client when wrap TTL is provided to avoid mutating the shared client.
 	vc := vaultClient
