@@ -14,12 +14,34 @@ for operating system accounts on remote hosts via SSH. This resource requires Va
 The OS Secrets Engine mount itself is managed separately, typically with `vault_mount`. This resource only manages
 backend configuration for an existing OS mount.
 
+Before mounting the OS Secrets Engine, the external OS plugin must already be registered in Vault's plugin catalog.
+You can register it with the [`vault_plugin` resource](plugin.html).
+
 The examples below use the canonical plugin name `vault-plugin-secrets-os`. If your Vault cluster registers the
 OS plugin under a different catalog name, use that name in `vault_mount.type` instead.
 
 See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for more information.
 
 ## Example Usage
+
+### Register Plugin And Configure Backend
+
+```hcl
+resource "vault_plugin" "os" {
+  type    = "secret"
+  name    = "vault-plugin-secrets-os"
+  version = "v0.1.0+ent"
+}
+
+resource "vault_mount" "os" {
+  path = "os"
+  type = vault_plugin.os.name
+}
+
+resource "vault_os_secret_backend" "os" {
+  mount = vault_mount.os.path
+}
+```
 
 ### Basic Configuration
 
@@ -75,6 +97,6 @@ $ terraform import vault_os_secret_backend.os os
 ## Notes
 
 * This resource requires Vault 2.0.0 or later.
-* The OS Secrets Engine must be enabled before this resource can manage its configuration.
+* The OS Secrets Engine plugin must be registered before the mount is enabled. Use `vault_plugin` to manage catalog registration when appropriate.
 * Use `vault_mount` to create, tune, or remove the OS Secrets Engine mount.
 * When `ssh_host_key_trust_on_first_use` is enabled, the first connection to a host will automatically trust and store its SSH host key.

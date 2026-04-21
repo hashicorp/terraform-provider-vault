@@ -211,9 +211,15 @@ func testAccOSSecretBackendHostImportStateIdFunc(resourceName string) resource.I
 // valid period-based rotation configuration.
 func testAccOSSecretBackendHostConfig_basic(mount, name string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -241,9 +247,15 @@ resource "vault_os_secret_backend_host" "test" {
 // host fixture.
 func testAccOSSecretBackendHostConfig_updated(mount, name string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -270,9 +282,15 @@ resource "vault_os_secret_backend_host" "test" {
 // so optional settings can be cleared deterministically.
 func testAccOSSecretBackendHostConfig_minimal(mount, name string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -292,9 +310,15 @@ resource "vault_os_secret_backend_host" "test" {
 // accepted by the beta plugin while also covering metadata updates.
 func testAccOSSecretBackendHostConfig_allFields(mount, name string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -321,9 +345,15 @@ resource "vault_os_secret_backend_host" "test" {
 
 func testAccOSSecretBackendHostConfig_withSSHKey(mount, name, sshHostKey string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {

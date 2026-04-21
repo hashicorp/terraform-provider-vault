@@ -972,4 +972,16 @@ const (
 	PathDelim        = "/"
 	VaultAPIV1Root   = "/v1"
 	SysNamespaceRoot = "sys/namespaces/"
+
+	/*
+		GenericNameRegex is a reusable name pattern fragment for Vault names.
+		Callers should wrap this with ^ and $ when validating an entire value.
+		Pattern: \w(?:(?:[\w-.]+)?\w)?
+		- Must start with an ASCII word character (letter, digit, or underscore)
+		- Optionally can have middle characters (word chars, hyphens, dots) followed by ending word char
+		- Single character names are valid (the entire optional group can be omitted)
+		- No leading/trailing hyphens or dots allowed
+		- Uses non-capturing groups (?:...) to avoid extra capture groups in regex matches
+	*/
+	GenericNameRegex = `\w(?:(?:[\w-.]+)?\w)?`
 )

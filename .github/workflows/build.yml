@@ -289,7 +289,6 @@ jobs:
           shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
-
       - name: Download OS secrets plugin
         id: os_plugin
         env:
@@ -306,11 +305,10 @@ jobs:
           mkdir -p "${DIR}"
           unzip "${ZIP}" -d "${DIR}"
           rm "${ZIP}"
-          chmod -R a+rX "${DIR}"
+          chmod -R a+r "${DIR}/metadata.json.sig"
           
           # Set output to indicate successful download
           echo "downloaded=true" >> "${GITHUB_OUTPUT}"
-
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
@@ -321,23 +319,6 @@ jobs:
           key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-golang-
-
-      - name: Register OS plugin in Vault
-        if: ${{ steps.os_plugin.outputs.downloaded == 'true' && contains(matrix.image, '-ent') }}
-        run: |
-          # Register the plugin in Vault's catalog with version (enterprise only)
-          # Vault will automatically calculate and verify the SHA256
-          CONTAINER_ID=$(docker ps -qf "ancestor=hashicorp/${{ matrix.image }}")
-          docker exec \
-            -e VAULT_ADDR=http://127.0.0.1:8200 \
-            -e VAULT_TOKEN=root \
-            "${CONTAINER_ID}" \
-            vault plugin register \
-            -version="v0.1.0+ent" \
-            secret \
-            vault-plugin-secrets-os
-          
-          echo "OS plugin registered successfully"
 
       - name: Acceptance Tests
         env:

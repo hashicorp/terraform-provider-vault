@@ -14,12 +14,41 @@ Vault will manage operating system account credentials via SSH. This resource re
 The OS Secrets Engine mount itself is managed separately, typically with `vault_mount`. This resource manages
 hosts beneath an existing OS mount.
 
+Before mounting the OS Secrets Engine, the external OS plugin must already be registered in Vault's plugin catalog.
+You can register it with the [`vault_plugin` resource](plugin.html).
+
 The examples below use the canonical plugin name `vault-plugin-secrets-os`. If your Vault cluster registers the
 OS plugin under a different catalog name, use that name in `vault_mount.type` instead.
 
 See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for more information.
 
 ## Example Usage
+
+### Register Plugin And Configure Host
+
+```hcl
+resource "vault_plugin" "os" {
+  type    = "secret"
+  name    = "vault-plugin-secrets-os"
+  version = "v0.1.0+ent"
+}
+
+resource "vault_mount" "os" {
+  path = "os"
+  type = vault_plugin.os.name
+}
+
+resource "vault_os_secret_backend" "os" {
+  mount = vault_mount.os.path
+}
+
+resource "vault_os_secret_backend_host" "example" {
+  mount   = vault_os_secret_backend.os.mount
+  name    = "web-server-01"
+  address = "192.168.1.100"
+  port    = 22
+}
+```
 
 ### Basic Host Configuration
 
@@ -138,6 +167,7 @@ $ terraform import vault_os_secret_backend_host.example os/hosts/web-server-01
 ## Notes
 
 * This resource requires Vault 2.0.0 or later.
+* The OS Secrets Engine plugin must be registered before the mount is enabled. Use `vault_plugin` to manage catalog registration when appropriate.
 * Use `vault_mount` to create, tune, or remove the OS Secrets Engine mount before managing hosts with this resource.
 * The host must be configured before accounts can be created on it.
 * When `ssh_host_key` is not provided, the backend's `ssh_host_key_trust_on_first_use` setting determines whether the host key will be automatically trusted on first connection.

@@ -364,9 +364,15 @@ func testAccOSSecretBackendAccountConfig_basic(mount, hostName, accountName, use
 
 func testAccOSSecretBackendAccountConfig_basicWithHost(mount, hostName, accountName, username, address string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -397,9 +403,15 @@ resource "vault_os_secret_backend_account" "test" {
 // baseline fixture used by the SSH-independent CRUD coverage.
 func testAccOSSecretBackendAccountConfig_updated(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -430,9 +442,15 @@ resource "vault_os_secret_backend_account" "test" {
 // fields so optional-field clearing can be tested deterministically.
 func testAccOSSecretBackendAccountConfig_minimal(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -462,9 +480,15 @@ resource "vault_os_secret_backend_account" "test" {
 // fields together using a combination accepted by the beta plugin.
 func testAccOSSecretBackendAccountConfig_allFields(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -496,9 +520,15 @@ resource "vault_os_secret_backend_account" "test" {
 // path for import and readback coverage.
 func testAccOSSecretBackendAccountConfig_withSchedule(mount, hostName, accountName, username string, verifyConnection bool) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {

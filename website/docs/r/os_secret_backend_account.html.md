@@ -24,10 +24,47 @@ See the [Vault documentation](https://www.vaultproject.io/docs/secrets/os) for m
 The OS Secrets Engine mount itself is managed separately, typically with `vault_mount`. This resource manages
 accounts beneath an existing OS mount and host.
 
+Before mounting the OS Secrets Engine, the external OS plugin must already be registered in Vault's plugin catalog.
+You can register it with the [`vault_plugin` resource](plugin.html).
+
 The examples below use the canonical plugin name `vault-plugin-secrets-os`. If your Vault cluster registers the
 OS plugin under a different catalog name, use that name in `vault_mount.type` instead.
 
 ## Example Usage
+
+### Register Plugin And Configure Account
+
+```hcl
+resource "vault_plugin" "os" {
+  type    = "secret"
+  name    = "vault-plugin-secrets-os"
+  version = "v0.1.0+ent"
+}
+
+resource "vault_mount" "os" {
+  path = "os"
+  type = vault_plugin.os.name
+}
+
+resource "vault_os_secret_backend" "os" {
+  mount = vault_mount.os.path
+}
+
+resource "vault_os_secret_backend_host" "server" {
+  mount   = vault_os_secret_backend.os.mount
+  name    = "web-server"
+  address = "192.168.1.100"
+  port    = 22
+}
+
+resource "vault_os_secret_backend_account" "admin" {
+  mount       = vault_os_secret_backend.os.mount
+  host        = vault_os_secret_backend_host.server.name
+  name        = "admin-account"
+  username    = "admin"
+  password_wo = "initial-secure-password-123"
+}
+```
 
 ### Basic Account Configuration
 
@@ -208,6 +245,7 @@ providing better audit trails and security controls.
 ## Notes
 
 * This resource requires Vault 2.0.0 or later.
+* The OS Secrets Engine plugin must be registered before the mount is enabled. Use `vault_plugin` to manage catalog registration when appropriate.
 * Use `vault_mount` to create, tune, or remove the OS Secrets Engine mount before managing accounts with this resource.
 * The account must reference an existing host configuration.
 * The `password_wo` field is write-only and create-only for security reasons. Once set, Vault will manage the password through rotation, but the current password cannot be retrieved through the API.

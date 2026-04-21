@@ -6,22 +6,15 @@ package os
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
 var (
-	// namePattern matches valid Vault names using the same pattern as framework.GenericNameRegex
-	// Pattern: \w(?:(?:[\w-.]+)?\w)?
-	// - Must start with a word character (letter, digit, or underscore)
-	// - Optionally can have middle characters (word chars, hyphens, dots) followed by ending word char
-	// - Single character names are valid (the entire optional group can be omitted)
-	// - No leading/trailing hyphens or dots allowed
-	// Uses non-capturing groups (?:...) to avoid extra capture groups in regex matches
-	namePattern = `\w(?:(?:[\w-.]+)?\w)?`
-
 	// hostIDRe matches: {mount}/hosts/{name}
-	hostIDRe = regexp.MustCompile(`^(` + namePattern + `)/hosts/(` + namePattern + `)$`)
+	hostIDRe = regexp.MustCompile(`^(` + consts.GenericNameRegex + `)/hosts/(` + consts.GenericNameRegex + `)$`)
 	// accountIDRe matches: {mount}/hosts/{host}/accounts/{name}
-	accountIDRe = regexp.MustCompile(`^(` + namePattern + `)/hosts/(` + namePattern + `)/accounts/(` + namePattern + `)$`)
+	accountIDRe = regexp.MustCompile(`^(` + consts.GenericNameRegex + `)/hosts/(` + consts.GenericNameRegex + `)/accounts/(` + consts.GenericNameRegex + `)$`)
 )
 
 // parseHostID parses host resource ID

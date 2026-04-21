@@ -189,9 +189,15 @@ func testAccOSSecretBackendImportStateIdFunc(resourceName string) resource.Impor
 // with TOFU enabled and a non-zero max_versions value.
 func testAccOSSecretBackendConfig_basic(path string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -206,9 +212,15 @@ resource "vault_os_secret_backend" "test" {
 // backend fixture.
 func testAccOSSecretBackendConfig_updated(path string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -223,9 +235,15 @@ resource "vault_os_secret_backend" "test" {
 // so optional mount configuration can be cleared deterministically.
 func testAccOSSecretBackendConfig_minimal(path string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
 	path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -238,9 +256,15 @@ resource "vault_os_secret_backend" "test" {
 // backend-level configuration fields.
 func testAccOSSecretBackendConfig_allFields(path string) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
   path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -255,9 +279,15 @@ resource "vault_os_secret_backend" "test" {
 
 func testAccOSSecretBackendConfig_withMaxVersions(path string, maxVersions int) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
   path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
@@ -269,9 +299,15 @@ resource "vault_os_secret_backend" "test" {
 
 func testAccOSSecretBackendConfig_withTOFU(path string, tofu bool) string {
 	return fmt.Sprintf(`
+resource "vault_plugin" "os" {
+        type    = "secret"
+        name    = "vault-plugin-secrets-os"
+        version = "v0.1.0+ent"
+}
+
 resource "vault_mount" "test" {
   path = "%s"
-	type = "vault-plugin-secrets-os"
+	type = vault_plugin.os.name
 }
 
 resource "vault_os_secret_backend" "test" {
