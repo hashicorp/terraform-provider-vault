@@ -498,36 +498,8 @@ func getManagedKeysConfigData(config map[string]interface{}, sm schemaMap) (stri
 	return name, data, nil
 }
 
-func normalizeManagedKeyUsagesCSV(input string) (string, error) {
-	if strings.TrimSpace(input) == "" {
-		return "", nil
-	}
-
-	vals := strings.Split(input, ",")
-	result := make([]string, 0, len(vals))
-
-	for _, raw := range vals {
-		usage := strings.TrimSpace(strings.ToLower(raw))
-		if usage == "" {
-			continue
-		}
-		result = append(result, usage)
-	}
-
-	return strings.Join(result, ","), nil
-}
-
-func normalizeManagedKeyUsagesSlice(input []string) []string {
-	result := make([]string, 0, len(input))
-	for _, raw := range input {
-		usage := strings.TrimSpace(strings.ToLower(raw))
-		if usage == "" {
-			continue
-		}
-		result = append(result, usage)
-	}
-
-	return result
+func normalizeManagedKeyUsageValue(v string) string {
+	return strings.TrimSpace(strings.ToLower(v))
 }
 
 func managedKeyUsageFromInt(v interface{}) (string, error) {
@@ -567,18 +539,13 @@ func managedKeyUsageFromInt(v interface{}) (string, error) {
 func managedKeyUsagesFromAPI(v interface{}) ([]interface{}, error) {
 	switch vals := v.(type) {
 	case string:
-		normalized, err := normalizeManagedKeyUsagesCSV(vals)
-		if err != nil {
-			return nil, err
-		}
-
-		if normalized == "" {
+		if strings.TrimSpace(vals) == "" {
 			return []interface{}{}, nil
 		}
 
-		return convertStringSliceToInterfaces(strings.Split(normalized, ",")), nil
+		return toUsageInterfaces(strings.Split(vals, ",")), nil
 	case []string:
-		return convertStringSliceToInterfaces(normalizeManagedKeyUsagesSlice(vals)), nil
+		return toUsageInterfaces(vals), nil
 	case []interface{}:
 		usages := make([]string, 0, len(vals))
 		for _, item := range vals {
@@ -594,7 +561,7 @@ func managedKeyUsagesFromAPI(v interface{}) ([]interface{}, error) {
 			}
 		}
 
-		return convertStringSliceToInterfaces(normalizeManagedKeyUsagesSlice(usages)), nil
+		return toUsageInterfaces(usages), nil
 	default:
 		return nil, fmt.Errorf("unsupported usages response type %T", v)
 	}
@@ -612,7 +579,7 @@ func managedKeyUsagesToAPI(v interface{}) (string, error) {
 		if !ok {
 			return "", fmt.Errorf("invalid usage value type %T", raw)
 		}
-		if s = strings.TrimSpace(strings.ToLower(s)); s != "" {
+		if s = normalizeManagedKeyUsageValue(s); s != "" {
 			values = append(values, s)
 		}
 	}
@@ -625,10 +592,12 @@ func managedKeyUsagesToAPI(v interface{}) (string, error) {
 	return strings.Join(values, ","), nil
 }
 
-func convertStringSliceToInterfaces(values []string) []interface{} {
+func toUsageInterfaces(values []string) []interface{} {
 	result := make([]interface{}, 0, len(values))
-	for _, v := range values {
-		result = append(result, v)
+	for _, raw := range values {
+		if v := normalizeManagedKeyUsageValue(raw); v != "" {
+			result = append(result, v)
+		}
 	}
 
 	return result
