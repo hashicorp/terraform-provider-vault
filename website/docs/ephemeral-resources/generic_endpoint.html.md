@@ -12,11 +12,6 @@ Writes to a generic Vault endpoint and extracts response data as ephemeral value
 This is useful for authentication flows, token generation, or any Vault operation
 where you need to extract sensitive data without persisting it to state.
 
-The ephemeral resource supports extracting fields from three response structures:
-- `response.Auth` - Authentication tokens and metadata
-- `response.WrapInfo` - Wrapped response tokens and metadata
-- `response.Data` - Generic response data
-
 ~> **Important** All Vault ephemeral resources are supported from Terraform 1.10+.
 Please refer to the [ephemeral resources usage guide](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_ephemeral_resources)
 for additional information.
@@ -179,7 +174,7 @@ The resource extracts fields in the following order:
 
 ## Important Notes
 
-~> **Important** Ephemeral resources are designed for sensitive data that should not be stored in Terraform state. However, the data will still appear in console output when Terraform runs and may be included in plan files if secrets are interpolated into resource attributes. Protect these artifacts accordingly.
+~> **Important** Ephemeral resources are designed for sensitive data that should not be stored in Terraform state. However, the data can still appear in console output when Terraform runs and may be included in plan files if secrets are interpolated into resource attributes. Protect these artifacts accordingly.
 
 * **Use with provider aliases** - The most common pattern is to extract a token
   and use it with a Vault provider alias (see examples above).
