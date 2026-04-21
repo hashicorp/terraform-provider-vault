@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -89,6 +90,49 @@ func TestResourceGenericSecretNS(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, "namespace"),
 					testResourceGenericSecret_updateCheck,
 				),
+			},
+		},
+	})
+}
+
+func TestResourceGenericSecretNSImportConfigNamespacePrecedence(t *testing.T) {
+	nsEnv := acctest.RandomWithPrefix("ns")
+	nsConfig := acctest.RandomWithPrefix("ns")
+	path := "secret/test"
+	resourceName := "vault_generic_secret.example"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceGenericSecret_initialConfigNSImportPrecedence(nsEnv, nsConfig),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "namespace", nsConfig),
+				),
+			},
+			{
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, nsConfig)
+
+					client, err := testProvider.Meta().(*provider.ProviderMeta).GetNSClient(nsConfig)
+					if err != nil {
+						t.Fatalf("failed to get namespace client for %q: %s", nsConfig, err)
+					}
+
+					if _, err := client.Logical().Write(path, map[string]interface{}{"zip": "zap"}); err != nil {
+						t.Fatalf("unable to ensure secret exists at %q in namespace %q: %s", path, nsConfig, err)
+					}
+				},
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
+			{
+				Config: testResourceGenericSecret_initialConfigNSImportPrecedence(nsEnv, nsConfig),
+				PreConfig: func() {
+					os.Unsetenv(consts.EnvVarVaultNamespaceImport)
+				},
+				PlanOnly: true,
 			},
 		},
 	})
@@ -226,6 +270,60 @@ resource "vault_generic_secret" "test" {
 }
 EOT
 }`, ns, mount, name)
+
+	return result
+}
+
+func testResourceGenericSecret_initialConfigNSImportPrecedence(nsEnv, nsConfig string) string {
+	result := fmt.Sprintf(`
+resource "vault_namespace" "ns_env" {
+    path = "%s"
+}
+
+resource "vault_namespace" "ns_config" {
+    path = "%s"
+}
+
+resource "vault_mount" "v1" {
+    namespace = vault_namespace.ns_config.path
+	path = "secret"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
+resource "vault_mount" "v1_env" {
+    namespace = vault_namespace.ns_env.path
+	path = "secret"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
+resource "vault_generic_secret" "seed_ns1" {
+	namespace = vault_namespace.ns_env.path
+    path = "${vault_mount.v1_env.path}/test"
+    data_json = <<EOT
+{
+    "zip": "zap"
+}
+EOT
+}
+
+data "vault_generic_secret" "secret" {
+    namespace = vault_namespace.ns_env.path
+    path = "secret/test"
+    depends_on = [vault_generic_secret.seed_ns1]
+}
+
+resource "vault_generic_secret" "example" {
+	namespace = "%s"
+    path = "secret/test"
+    data_json = data.vault_generic_secret.secret.data_json
+}
+`, nsEnv, nsConfig, nsConfig)
 
 	return result
 }
