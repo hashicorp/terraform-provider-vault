@@ -35,7 +35,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-var userRegexp = regexp.MustCompile(`^auth/(.+)/users/(.+)$`)
+const userpassUsernamePattern = `\w(?:[\w-.]*\w)?`
+
+var userpassUsernameRegexp = regexp.MustCompile(`^` + userpassUsernamePattern + `$`)
+
+var userRegexp = regexp.MustCompile(`^auth/(.+)/users/(` + userpassUsernamePattern + `)$`)
 
 const bcryptHashLength = 60
 
@@ -82,6 +86,9 @@ func (r *UserpassAuthUserResource) Schema(_ context.Context, _ resource.SchemaRe
 			consts.FieldUsername: schema.StringAttribute{
 				MarkdownDescription: "Username for this Userpass user.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(userpassUsernameRegexp, "must start and end with a letter, number, or underscore and otherwise contain only letters, numbers, underscores, hyphens, and periods"),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
