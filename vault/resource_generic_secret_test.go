@@ -320,7 +320,7 @@ data "vault_generic_secret" "secret" {
 
 resource "vault_generic_secret" "example" {
 	namespace = "%s"
-    path = "secret/test"
+	path = "${vault_mount.v1.path}/test"
     data_json = data.vault_generic_secret.secret.data_json
 }
 `, nsEnv, nsConfig, nsConfig)
