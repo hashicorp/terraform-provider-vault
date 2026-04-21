@@ -112,6 +112,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 		t.Errorf("Error retrieving pkcs7 signature: %s", err)
 	}
 	// CHANGED: replaced ioutil.ReadAll with io.ReadAll
+	defer pkcs7Output.Content.Close()
 	pkcs7Bytes, err := io.ReadAll(pkcs7Output.Content)
 	if err != nil {
 		t.Errorf("Error reading pkcs7 content: %s", err)
@@ -177,6 +178,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 		t.Errorf("Error retrieving raw identity: %s", err)
 	}
 	// CHANGED: replaced ioutil.ReadAll with io.ReadAll
+	defer identityOutput.Content.Close()
 	identityBytes, err := io.ReadAll(identityOutput.Content)
 	if err != nil {
 		t.Errorf("Error reading identity content: %s", err)
@@ -189,6 +191,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error retrieving signature: %s", err)
 	}
+	defer sigOutput.Content.Close()
 	sigBytes, err := io.ReadAll(sigOutput.Content)
 	if err != nil {
 		t.Errorf("Error reading signature content: %s", err)
