@@ -209,7 +209,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			}
 		}
 
-		foundFields := make(map[string]bool)
 		for _, writeField := range writeFields {
 			// 1) Check response.Data first - this is the primary data payload returned by most Vault endpoints.
 			// It is always checked first for any write_field requested by the user.
@@ -217,7 +216,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			if response.Data != nil {
 				if v, ok := response.Data[writeField]; ok {
 					addToWriteData(writeData, writeDataMap, writeField, v)
-					foundFields[writeField] = true
 					continue
 				}
 			}
@@ -228,7 +226,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			// (token, ttl, creation_time, etc.) as a single JSON object.
 			if writeField == "wrap_info" && wrapMap != nil {
 				addToWriteData(writeData, writeDataMap, writeField, wrapMap)
-				foundFields[writeField] = true
 				continue
 			}
 
@@ -239,7 +236,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			if wrapMap != nil {
 				if v, ok := wrapMap[writeField]; ok {
 					addToWriteData(writeData, writeDataMap, writeField, v)
-					foundFields[writeField] = true
 					continue
 				}
 			}
@@ -250,7 +246,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			// as a complete JSON object (client_token, accessor, policies, metadata, etc.).
 			if writeField == "auth" && authMap != nil {
 				addToWriteData(writeData, writeDataMap, writeField, authMap)
-				foundFields[writeField] = true
 				continue
 			}
 
@@ -261,7 +256,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			if authMap != nil {
 				if v, ok := authMap[writeField]; ok {
 					addToWriteData(writeData, writeDataMap, writeField, v)
-					foundFields[writeField] = true
 					continue
 				}
 
@@ -270,7 +264,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 				if writeField == "token" {
 					if v, ok := authMap["client_token"]; ok {
 						addToWriteData(writeData, writeDataMap, writeField, v)
-						foundFields[writeField] = true
 						continue
 					}
 				}
@@ -287,7 +280,6 @@ func (r *GenericEndpointEphemeralResource) Open(ctx context.Context, req ephemer
 			}
 			if v, ok := topLevel[writeField]; ok {
 				addToWriteData(writeData, writeDataMap, writeField, v)
-				foundFields[writeField] = true
 				continue
 			}
 
