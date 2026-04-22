@@ -258,6 +258,7 @@ jobs:
       - name: Update apt cache
         run:
           sudo apt-get update
+        timeout-minutes: 2
       - name: install ldap utils
         run:
           sudo apt-get install -y ldap-utils
