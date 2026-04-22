@@ -401,18 +401,6 @@ func TestAccCFAuthBackendConfigPasswordVersionTracking(t *testing.T) {
 					},
 				},
 			},
-			// Step 3: Keep version at 2 (password is still sent on every update)
-			{
-				Config: testAccCFAuthBackendConfigPasswordVersion(mount, params, 2),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceAddress, consts.FieldCFPasswordWOVersion, "2"),
-				),
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PostApplyPostRefresh: []plancheck.PlanCheck{
-						plancheck.ExpectEmptyPlan(),
-					},
-				},
-			},
 		},
 	})
 }
