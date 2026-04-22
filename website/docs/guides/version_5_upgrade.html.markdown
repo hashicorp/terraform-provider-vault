@@ -41,8 +41,8 @@ these changes, we don't expect you'll need to make any major refactorings.
 
 ## What Vault server versions are supported in version 5.X?
 
-The Vault provider will be dropping Vault version support for Vault <= `1.14.x`.
-This means that going forward only Vault server version `1.15.x` and greater will be officially
+The Vault provider will be dropping Vault version support for Vault <= `1.18.x`.
+This means that going forward only Vault server version `1.19.x` and greater will be officially
 tested against.
 
 ## Which Terraform versions are supported?
