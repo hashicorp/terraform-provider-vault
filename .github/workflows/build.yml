@@ -287,6 +287,26 @@ jobs:
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
 
+      - name: Download external Enterprise plugin
+        id: plugin_enterprise
+        env:
+          TYPE: "database"
+          PLUGIN: "vault-plugin-database-oracle"
+          VERSION: "0.13.0+ent"
+        run: |
+          ZIP="${PLUGIN}_${VERSION}_linux_amd64.zip"
+          ZIP_DIR="${PLUGIN}_${VERSION}_linux_amd64"
+          SHA256SUMS="${PLUGIN}_${VERSION}_SHA256SUMS"
+          curl -sO "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/{${ZIP},${SHA256SUMS}}"
+          shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
+          unzip "${ZIP}" -d "${ZIP_DIR}"; rm "${ZIP}" "${SHA256SUMS}"
+          chmod a+r "${ZIP_DIR}/metadata.json.sig"
+          {
+          echo "type=${TYPE}"
+          echo "name=${PLUGIN}"
+          echo "version=${VERSION}"
+          } >> "${GITHUB_OUTPUT}"
+
       - name: Cache go build
         uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
@@ -332,6 +352,9 @@ jobs:
           # service URL of accessible from the Vault container
           LDAP_URL: "ldap://openldap:389"
           VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
+          VAULT_PLUGIN_ENT_TYPE:  ${{ steps.plugin_enterprise.outputs.type }}
+          VAULT_PLUGIN_ENT_NAME:  ${{ steps.plugin_enterprise.outputs.name }}
+          VAULT_PLUGIN_ENT_VERSION:  ${{ steps.plugin_enterprise.outputs.version }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
