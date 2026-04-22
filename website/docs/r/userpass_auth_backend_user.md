@@ -10,6 +10,18 @@ description: |-
 
 Manages a user for the [Userpass auth method](https://developer.hashicorp.com/vault/docs/auth/userpass) in Vault.
 
+## API Behavior
+
+Vault exposes a primary Userpass user create/update endpoint along with separate sub-endpoints for updating a user's password and policies independently.
+
+This resource uses the primary user endpoint for create and update operations. The password-only and policies-only sub-endpoints are not modeled as separate Terraform resources because they do not represent distinct managed objects and would be redundant with the full user management flow provided by this resource.
+
+As a result:
+
+* Changes to `password_wo` or `password_hash_wo` are applied through this resource.
+* Changes to token-related settings such as `token_policies`, `token_ttl`, and `token_max_ttl` are also applied through this resource.
+* There is no separate Terraform resource for the password-only or policies-only sub-endpoints.
+
 ## Example Usage
 
 ### Password-Based User With Token Settings
