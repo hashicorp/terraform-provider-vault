@@ -98,7 +98,7 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 				Required:            true,
 			},
 			consts.FieldCFPasswordWO: schema.StringAttribute{
-				MarkdownDescription: "The password for authenticating to the CF API. This field is write-only and will never be stored in state. Requires 'cf_password_wo_version' to trigger updates.",
+				MarkdownDescription: "The password for authenticating to the CF API. This attribute is write-only and is never stored in Terraform state.",
 				Required:            true,
 				Sensitive:           true,
 				WriteOnly:           true,

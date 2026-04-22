@@ -360,7 +360,7 @@ func TestAccCFAuthBackendConfigInvalid(t *testing.T) {
 }
 
 // TestAccCFAuthBackendConfigPasswordVersionTracking tests that the cf_password_wo_version
-// field is tracked in state. The password is sent on every update regardless of version changes.
+// field is tracked in state and that updating the version triggers a resource update.
 func TestAccCFAuthBackendConfigPasswordVersionTracking(t *testing.T) {
 	mount := acctest.RandomWithPrefix("cf-mount")
 	resourceAddress := "vault_cf_auth_backend_config.test"
@@ -387,7 +387,7 @@ func TestAccCFAuthBackendConfigPasswordVersionTracking(t *testing.T) {
 					},
 				},
 			},
-			// Step 2: Update version to 2 (password is sent on every update)
+			// Step 2: Update version to 2 to validate version tracking
 			{
 				Config: testAccCFAuthBackendConfigPasswordVersion(mount, params, 2),
 				Check: resource.ComposeTestCheckFunc(
