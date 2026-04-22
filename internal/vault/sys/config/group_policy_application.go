@@ -6,6 +6,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -13,9 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
@@ -55,16 +58,6 @@ type ConfigGroupPolicyApplicationModel struct {
 	Namespace                  types.String `tfsdk:"namespace"`
 }
 
-// ConfigGroupPolicyApplicationAPIModel describes the Vault API data model for write operations.
-type ConfigGroupPolicyApplicationAPIModel struct {
-	GroupPolicyApplicationMode string `json:"group_policy_application_mode" mapstructure:"group_policy_application_mode"`
-}
-
-// ConfigGroupPolicyApplicationReadAPIModel describes the Vault API data model for read operations.
-type ConfigGroupPolicyApplicationReadAPIModel struct {
-	GroupPolicyApplicationMode string `json:"group_policy_application_mode" mapstructure:"group_policy_application_mode"`
-}
-
 // Metadata defines the resource name as it would appear in Terraform configurations
 //
 // https://developer.hashicorp.com/terraform/plugin/framework/resources#metadata-method
@@ -87,10 +80,13 @@ func (r *ConfigGroupPolicyApplicationResource) Schema(ctx context.Context, req r
 				},
 			},
 			consts.FieldGroupPolicyApplicationMode: schema.StringAttribute{
-				Required: true,
-				MarkdownDescription: "Mode for group policy application. Must be either \"within_namespace_hierarchy\" (default) or \"any\". " +
-					"\"within_namespace_hierarchy\" means policies only apply when the token authorizing a request was created in the same namespace as the group, or a descendent namespace. " +
+				Optional: true,
+				Computed: true,
+				MarkdownDescription: "Mode for group policy application. Must be either \"within_namespace_hierarchy\" or \"any\". " +
+					"Defaults to \"within_namespace_hierarchy\". " +
+					"\"within_namespace_hierarchy\" means policies only apply when the token authorizing a request was created in the same namespace as the group, or a descendant namespace. " +
 					"\"any\" means group policies apply to all members of a group, regardless of what namespace the request token came from.",
+				Default: stringdefault.StaticString(modeWithinNamespaceHierarchy),
 				Validators: []validator.String{
 					stringvalidator.OneOf(modeWithinNamespaceHierarchy, modeAny),
 				},
@@ -102,6 +98,9 @@ func (r *ConfigGroupPolicyApplicationResource) Schema(ctx context.Context, req r
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+				Validators: []validator.String{
+					stringvalidator.OneOf("", "admin"),
+				},
 			},
 		},
 		MarkdownDescription: "Manages the global group policy application mode for Vault Enterprise. " +
@@ -112,14 +111,14 @@ func (r *ConfigGroupPolicyApplicationResource) Schema(ctx context.Context, req r
 	}
 }
 
-// validateNamespace ensures the namespace is root or administrative
-func (r *ConfigGroupPolicyApplicationResource) validateNamespace(namespace string, resp *resource.CreateResponse) bool {
-	if namespace != "" && namespace != "admin" {
-		resp.Diagnostics.AddError(
+// validateActualNamespace ensures the actual namespace from the client is root or administrative
+func (r *ConfigGroupPolicyApplicationResource) validateActualNamespace(actualNamespace string, diagnostics *diag.Diagnostics) bool {
+	if actualNamespace != "" && actualNamespace != "admin" {
+		diagnostics.AddError(
 			"Invalid Namespace",
 			fmt.Sprintf("Group policy application configuration must be managed from the root "+
 				"or administrative namespace. Current namespace: %q. "+
-				"Please use namespace = \"\" (root) or namespace = \"admin\".", namespace),
+				"Please use namespace = \"\" (root) or namespace = \"admin\".", actualNamespace),
 		)
 		return false
 	}
@@ -165,8 +164,8 @@ func (r *ConfigGroupPolicyApplicationResource) writeGroupPolicyConfig(ctx contex
 		consts.FieldGroupPolicyApplicationMode: mode,
 	}
 
-	path := r.path()
-	_, err := vaultClient.Logical().WriteWithContext(ctx, path, vaultRequest)
+	endpointPath := r.path()
+	_, err := vaultClient.Logical().WriteWithContext(ctx, endpointPath, vaultRequest)
 	if err != nil {
 		diagnostics.AddError(errorFunc(err))
 		return false
@@ -195,11 +194,6 @@ func (r *ConfigGroupPolicyApplicationResource) Create(ctx context.Context, req r
 	// Get namespace from plan data, default to root if not specified
 	namespace := data.Namespace.ValueString()
 
-	// Validate namespace - must be root or administrative
-	if !r.validateNamespace(namespace, resp) {
-		return
-	}
-
 	// Get Vault client
 	vaultClient, ok := r.getClientForNamespace(ctx, namespace, &resp.Diagnostics)
 	if !ok {
@@ -208,6 +202,11 @@ func (r *ConfigGroupPolicyApplicationResource) Create(ctx context.Context, req r
 
 	// Get the actual namespace from the client
 	actualNamespace := vaultClient.Namespace()
+
+	// Validate actual namespace - must be root or administrative
+	if !r.validateActualNamespace(actualNamespace, &resp.Diagnostics) {
+		return
+	}
 
 	mode := data.GroupPolicyApplicationMode.ValueString()
 
@@ -255,8 +254,13 @@ func (r *ConfigGroupPolicyApplicationResource) Read(ctx context.Context, req res
 	// Get the actual namespace from the client
 	actualNamespace := vaultClient.Namespace()
 
-	path := r.path()
-	configResp, err := vaultClient.Logical().ReadWithContext(ctx, path)
+	// Validate actual namespace - must be root or administrative
+	if !r.validateActualNamespace(actualNamespace, &resp.Diagnostics) {
+		return
+	}
+
+	endpointPath := r.path()
+	configResp, err := vaultClient.Logical().ReadWithContext(ctx, endpointPath)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultReadErr(err),
@@ -270,11 +274,24 @@ func (r *ConfigGroupPolicyApplicationResource) Read(ctx context.Context, req res
 	}
 
 	// Extract mode from response
-	if modeRaw, ok := configResp.Data[consts.FieldGroupPolicyApplicationMode]; ok {
-		if modeStr, ok := modeRaw.(string); ok {
-			data.GroupPolicyApplicationMode = types.StringValue(modeStr)
-		}
+	modeRaw, ok := configResp.Data[consts.FieldGroupPolicyApplicationMode]
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Invalid Vault API response",
+			fmt.Sprintf("Missing %q in response for %q", consts.FieldGroupPolicyApplicationMode, endpointPath),
+		)
+		return
 	}
+
+	modeStr, ok := modeRaw.(string)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Invalid Vault API response",
+			fmt.Sprintf("Expected %q to be a string in response for %q, got %T", consts.FieldGroupPolicyApplicationMode, endpointPath, modeRaw),
+		)
+		return
+	}
+	data.GroupPolicyApplicationMode = types.StringValue(modeStr)
 
 	// Always set namespace explicitly (it's computed)
 	data.Namespace = types.StringValue(actualNamespace)
@@ -310,6 +327,11 @@ func (r *ConfigGroupPolicyApplicationResource) Update(ctx context.Context, req r
 
 	// Get the actual namespace from the client
 	actualNamespace := vaultClient.Namespace()
+
+	// Validate actual namespace - must be root or administrative
+	if !r.validateActualNamespace(actualNamespace, &resp.Diagnostics) {
+		return
+	}
 
 	mode := data.GroupPolicyApplicationMode.ValueString()
 
@@ -352,8 +374,16 @@ func (r *ConfigGroupPolicyApplicationResource) Delete(ctx context.Context, req r
 		return
 	}
 
+	// Get the actual namespace from the client
+	actualNamespace := vaultClient.Namespace()
+
+	// Validate actual namespace - must be root or administrative
+	if !r.validateActualNamespace(actualNamespace, &resp.Diagnostics) {
+		return
+	}
+
 	// Reset to default value instead of deleting
-	if !r.writeGroupPolicyConfig(ctx, vaultClient, modeWithinNamespaceHierarchy, &resp.Diagnostics, errutil.VaultDeleteErr) {
+	if !r.writeGroupPolicyConfig(ctx, vaultClient, modeWithinNamespaceHierarchy, &resp.Diagnostics, errutil.VaultUpdateErr) {
 		return
 	}
 
@@ -374,6 +404,16 @@ func (r *ConfigGroupPolicyApplicationResource) ImportState(ctx context.Context, 
 
 	// Set the ID attribute
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), configGroupPolicyApplicationID)...)
+
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+		return
+	}
 
 	// Set namespace to root by default
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), "")...)

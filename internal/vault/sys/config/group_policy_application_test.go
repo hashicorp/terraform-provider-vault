@@ -5,6 +5,7 @@ package config_test
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 
@@ -121,7 +122,39 @@ func TestAccConfigGroupPolicyApplication_invalidNamespace(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccConfigGroupPolicyApplicationConfig_withNamespace("any", "invalid-namespace"),
-				ExpectError: regexp.MustCompile(`Invalid Namespace`),
+				ExpectError: regexp.MustCompile(`Attribute namespace value must be one of`),
+			},
+		},
+	})
+}
+
+// TestAccConfigGroupPolicyApplication_providerNamespaceUnset tests that provider-level child namespaces
+// are rejected even when the resource namespace attribute is unset.
+func TestAccConfigGroupPolicyApplication_providerNamespaceUnset(t *testing.T) {
+	const providerNamespace = "child-namespace"
+
+	originalNamespace, hadOriginalNamespace := os.LookupEnv("VAULT_NAMESPACE")
+	t.Setenv("VAULT_NAMESPACE", providerNamespace)
+	if hadOriginalNamespace {
+		t.Cleanup(func() {
+			_ = os.Setenv("VAULT_NAMESPACE", originalNamespace)
+		})
+	} else {
+		t.Cleanup(func() {
+			_ = os.Unsetenv("VAULT_NAMESPACE")
+		})
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccConfigGroupPolicyApplicationConfig_basic("any"),
+				ExpectError: regexp.MustCompile(`(Invalid Namespace|Enterprise Feature Required)`),
 			},
 		},
 	})
