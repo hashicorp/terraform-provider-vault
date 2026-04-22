@@ -11,7 +11,8 @@ description: |-
 Manages the configuration for the [CloudFoundry (CF) auth method](https://developer.hashicorp.com/vault/docs/auth/cf) in Vault.
 
 ~> **Important** The `cf_password_wo` field is write-only and will never be
-stored in Terraform state. See [Ephemeral Attributes Reference](#ephemeral-attributes-reference) below.
+stored in Terraform state. The password is sent to Vault on every update.
+See [Ephemeral Attributes Reference](#ephemeral-attributes-reference) below.
 
 ## Example Usage
 
@@ -27,6 +28,7 @@ resource "vault_cf_auth_backend_config" "config" {
   cf_api_addr                  = "https://api.my-cf.example.com"
   cf_username                  = "admin"
   cf_password_wo               = var.cf_password
+  cf_password_wo_version       = 1
   login_max_seconds_not_before = 300
 }
 ```
@@ -74,11 +76,16 @@ The following arguments are supported:
 
 ## Ephemeral Attributes Reference
 
-The following write-only attribute is supported:
+The following write-only attributes are supported:
 
-* `cf_password_wo` - (Required) The password for authenticating to the CF API,
-  provided as a write-only field. This value will **never** be stored in
-  Terraform state or plan files.
+* `cf_password_wo` - (Required) The password for authenticating to the CF API.
+  This attribute is write-only and is never stored in Terraform state. It is sent
+  to Vault on create and on every update. Because Terraform cannot detect changes
+  to write-only values, increment `cf_password_wo_version` to trigger an update
+  when only this password changes.
+
+* `cf_password_wo_version` - (Required) Version counter for `cf_password_wo`.
+  Increment this value to trigger an update when only the write-only password changes.
 
 ## Import
 
