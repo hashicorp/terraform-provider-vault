@@ -16,6 +16,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_cf_auth_backend_config`: Added `cf_password_wo_version` to trigger updates when only `cf_password_wo` changes.([#2878](https://github.com/hashicorp/terraform-provider-vault/pull/2878))
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 * Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
 * Add support for Enterprise Plugins in `vault_plugin` resource. ([#2707](https://github.com/hashicorp/terraform-provider-vault/pull/2707))
