@@ -113,12 +113,12 @@ resource "vault_config_group_policy_application" "config" {
 
 The following arguments are supported:
 
-* `group_policy_application_mode` - (Required) Mode for group policy application. Must be either `within_namespace_hierarchy` (default) or `any`.
-  - `within_namespace_hierarchy`: Policies only apply when the token authorizing a request was created in the same namespace as the group, or a descendent namespace.
+* `group_policy_application_mode` - (Optional) Mode for group policy application. Must be either `within_namespace_hierarchy` or `any`. Defaults to `within_namespace_hierarchy`.
+  - `within_namespace_hierarchy`: Policies only apply when the token authorizing a request was created in the same namespace as the group, or a descendant namespace.
   - `any`: Group policies apply to all members of a group, regardless of what namespace the request token came from.
 
-* `namespace` - (Optional) Target namespace. Must be root (`""`) or administrative (`"admin"`) namespace. Defaults to root namespace.
-  The value should not contain leading or trailing forward slashes.
+* `namespace` - (Optional) Target namespace. Must be root (`""`) or administrative (`"admin"`) namespace. If omitted, the provider's configured namespace is used.
+  Set this to `""` to explicitly target the root namespace. The value should not contain leading or trailing forward slashes.
   *Available only for Vault Enterprise*.
 
 ## Attributes Reference
