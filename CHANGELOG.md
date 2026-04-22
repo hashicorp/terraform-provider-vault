@@ -11,6 +11,7 @@ BREAKING CHANGES:
 
 FEATURES:
 
+* **New Resources**: Add support for OS Secrets Engine with `vault_os_secret_backend`, `vault_os_secret_backend_host`, and `vault_os_secret_backend_account` resources for managing operating system credentials via SSH. Requires Vault 2.0.0+. ([#2865](https://github.com/hashicorp/terraform-provider-vault/pull/2865))
 * **New Resources**: `vault_rotation_policy` for managing rotation policies. Requires Vault 2.0.0+. ([#2844](https://github.com/hashicorp/terraform-provider-vault/pull/2844))
 * Add support for `vault_quota_config` resource. ([#2837](https://github.com/hashicorp/terraform-provider-vault/pull/2837))
 * **New Resources**: Add support for Vault Key Management secrets engine with resources for managing KMS providers (AWS KMS, Azure Key Vault, GCP Cloud KMS), cryptographic keys, key distribution, replication, and rotation (Vault Enterprise). ([#2802](https://github.com/hashicorp/terraform-provider-vault/pull/2802))
@@ -21,6 +22,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_cf_auth_backend_config`: Added `cf_password_wo_version` to trigger updates when only `cf_password_wo` changes.([#2878](https://github.com/hashicorp/terraform-provider-vault/pull/2878))
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
 * Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
 * Add support for Enterprise Plugins in `vault_plugin` resource. ([#2707](https://github.com/hashicorp/terraform-provider-vault/pull/2707))
