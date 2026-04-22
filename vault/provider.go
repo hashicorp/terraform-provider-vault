@@ -223,6 +223,10 @@ var (
 			Resource:      UpdateSchemaResource(transitCMACDataSource()),
 			PathInventory: []string{"/transit/cmac/{name}/{url_mac_length}"},
 		},
+		"vault_mounts": {
+			Resource:      UpdateSchemaResource(mountsDataSource()),
+			PathInventory: []string{"/sys/mounts"},
+		},
 	}
 
 	ResourceRegistry = map[string]*provider.Description{
