@@ -21,6 +21,9 @@ import (
 )
 
 const envPluginCommand = "VAULT_PLUGIN_COMMAND"
+const envPluginEntType = "VAULT_PLUGIN_ENT_TYPE"
+const envPluginEntName = "VAULT_PLUGIN_ENT_NAME"
+const envPluginEntVersion = "VAULT_PLUGIN_ENT_VERSION"
 
 func TestPlugin(t *testing.T) {
 	const (
@@ -81,6 +84,47 @@ func TestPlugin(t *testing.T) {
 	})
 }
 
+func TestPlugin_ent(t *testing.T) {
+	const (
+		args = `["--foo"]`
+		env  = `["FOO=BAR"]`
+
+		argsUpdated = `["--bar"]`
+		envUpdated  = `["FOO=BAZ"]`
+	)
+
+	resourceName := "vault_plugin.test"
+
+	// VAULT_PLUGIN_ENT_TYPE, VAULT_PLUGIN_ENT_NAME,VAULT_PLUGIN_ENT_VERSION should be set to the name of the plugin executable
+	// in the configured plugin_directory for Vault.
+	typ := os.Getenv(envPluginEntType)
+	name := os.Getenv(envPluginEntName)
+	version := os.Getenv(envPluginEntVersion)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvUnset(t, envPluginEntName, envPluginEntVersion, envPluginEntType)
+			// Skip if Vault lower than 1.18 as in 1.17, command or oci_image are required to be set and incompatible with Enterprise plugin
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testPluginConfig_ent(typ, name, version, args, env),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
+					testValidateList(resourceName, fieldArgs, []string{"--foo"}),
+					testValidateList(resourceName, fieldEnv, []string{"FOO=BAR"}),
+				),
+			},
+		},
+	})
+}
+
 func testPluginConfig(pluginType, name, version, sha256, command, args, env string) string {
 	return fmt.Sprintf(`
 resource "vault_plugin" "test" {
@@ -93,6 +137,18 @@ resource "vault_plugin" "test" {
   env       = %s
 }
 `, pluginType, name, version, sha256, command, args, env)
+}
+
+func testPluginConfig_ent(pluginType, name, version, args, env string) string {
+	return fmt.Sprintf(`
+resource "vault_plugin" "test" {
+  type      = "%s"
+  name      = "%s"
+  version   = "%s"
+  args      = %s
+  env       = %s
+}
+`, pluginType, name, version, args, env)
 }
 
 func testValidateList(resourceName, attr string, expected []string) resource.TestCheckFunc {

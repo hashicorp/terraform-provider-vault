@@ -48,10 +48,15 @@ const (
 	FieldPasswordPolicy                     = "password_policy"
 	FieldLength                             = "length"
 	FieldInsecureTLS                        = "insecure_tls"
+	FieldInsecure                           = "insecure"
 	FieldURL                                = "url"
 	FieldUserAttr                           = "userattr"
 	FieldUserDN                             = "userdn"
 	FieldRotationPeriod                     = "rotation_period"
+	FieldRateLimitExemptPaths               = "rate_limit_exempt_paths"
+	FieldAbsoluteRateLimitExemptPaths       = "absolute_rate_limit_exempt_paths"
+	FieldEnableRateLimitAuditLogging        = "enable_rate_limit_audit_logging"
+	FieldEnableRateLimitResponseHeaders     = "enable_rate_limit_response_headers"
 	FieldPaths                              = "paths"
 	FieldParameters                         = "parameters"
 	FieldMethod                             = "method"
@@ -63,6 +68,10 @@ const (
 	FieldPathsFQ                            = "paths_fq"
 	FieldData                               = "data"
 	FieldDisableRead                        = "disable_read"
+	FieldWriteFields                        = "write_fields"
+	FieldWriteData                          = "write_data"
+	FieldWriteDataJSON                      = "write_data_json"
+	FieldPathWrapTTL                        = "path_wrap_ttl"
 	FieldName                               = "name"
 	FieldVersion                            = "version"
 	FieldMetadata                           = "metadata"
@@ -114,6 +123,7 @@ const (
 	FieldSKID                               = "skid"
 	FieldUsePSS                             = "use_pss"
 	FieldForceRWSession                     = "force_rw_session"
+	FieldValues                             = "values"
 	FieldAccessKey                          = "access_key"
 	FieldSecretKey                          = "secret_key"
 	FieldSecretKeyWO                        = "secret_key_wo"
@@ -498,6 +508,9 @@ const (
 	FieldIdentityTokenAudienceWOVersion     = "identity_token_audience_wo_version"
 	FieldIdentityTokenTTL                   = "identity_token_ttl"
 	FieldRoleArn                            = "role_arn"
+	FieldInlinePolicies                     = "inline_policies"
+	FieldRemotePolicies                     = "remote_policies"
+	FieldPolicyDocument                     = "policy_document"
 	FieldAccessor                           = "accessor"
 	FieldOptions                            = "options"
 	FieldAllowedManagedKeys                 = "allowed_managed_keys"
@@ -599,6 +612,8 @@ const (
 	FieldSerialNumberSource                 = "serial_number_source"
 	FieldCertMetadata                       = "cert_metadata"
 	FieldTokenType                          = "token_type"
+	FieldMaxRetriesPerCycle                 = "max_retries_per_cycle"
+	FieldMaxRetryCycles                     = "max_retry_cycles"
 	FieldKMSName                            = "kms_name"
 	FieldKeyCollection                      = "key_collection"
 	FieldServiceAccountFile                 = "service_account_file"
@@ -609,6 +624,8 @@ const (
 	FieldReplicaRegions                     = "replica_regions"
 	FieldMinEnabledVersion                  = "min_enabled_version"
 	FieldProvider                           = "provider"
+	FieldAllowedOrigins                     = "allowed_origins"
+	FieldAllowedHeaders                     = "allowed_headers"
 
 	FieldInput                    = "input"
 	FieldKeyVersion               = "key_version"
@@ -639,6 +656,12 @@ const (
 	FieldTokenBoundCIDRs          = "token_bound_cidrs"
 	FieldLocalSecretIDs           = "local_secret_ids"
 	FieldTokenNumUses             = "token_num_uses"
+	// OS Secrets Engine fields
+	FieldSSHHostKey                = "ssh_host_key"
+	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
+	FieldParentAccountRef          = "parent_account_ref"
+	FieldNextVaultRotation         = "next_vault_rotation"
+	FieldHost                      = "host"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
@@ -675,6 +698,7 @@ const (
 	FieldAudience                             = "audience"
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
+	FieldDeferInitialCreds                    = "defer_initial_creds"
 	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
 	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
@@ -791,6 +815,8 @@ const (
 	FieldAzureEndpoint             = "azure_endpoint"
 	FieldAzureClientID             = "azure_client_id"
 	FieldAzureAuthMode             = "azure_auth_mode"
+	FieldSelfManaged               = "self_managed"
+	FieldRotationPolicy            = "rotation_policy"
 
 	/*
 		ephemeral resource constants and write-only attributes
@@ -886,7 +912,9 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeOS           = "os"
 	MountTypeKeyMgmt      = "keymgmt"
+	MountTypeAliCloud     = "alicloud"
 
 	/*
 		Vault version constants
@@ -918,6 +946,7 @@ const (
 	FieldIdentityCACertificates   = "identity_ca_certificates"
 	FieldCFInstanceCert           = "cf_instance_cert"
 	FieldCFPasswordWO             = "cf_password_wo"
+	FieldCFPasswordWOVersion      = "cf_password_wo_version"
 	FieldCFTimeout                = "cf_timeout"
 	FieldCFUsername               = "cf_username"
 	FieldLoginMaxSecsNotAfter     = "login_max_seconds_not_after"
@@ -950,4 +979,16 @@ const (
 	PathDelim        = "/"
 	VaultAPIV1Root   = "/v1"
 	SysNamespaceRoot = "sys/namespaces/"
+
+	/*
+		GenericNameRegex is a reusable name pattern fragment for Vault names.
+		Callers should wrap this with ^ and $ when validating an entire value.
+		Pattern: \w(?:(?:[\w-.]+)?\w)?
+		- Must start with an ASCII word character (letter, digit, or underscore)
+		- Optionally can have middle characters (word chars, hyphens, dots) followed by ending word char
+		- Single character names are valid (the entire optional group can be omitted)
+		- No leading/trailing hyphens or dots allowed
+		- Uses non-capturing groups (?:...) to avoid extra capture groups in regex matches
+	*/
+	GenericNameRegex = `\w(?:(?:[\w-.]+)?\w)?`
 )

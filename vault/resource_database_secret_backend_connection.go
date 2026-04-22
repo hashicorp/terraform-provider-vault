@@ -261,7 +261,7 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Optional:    true,
 						Description: "This, if set, is used to set the SNI host when connecting via TLS",
 					},
-					consts.FieldInsecureTLS: {
+					consts.FieldInsecure: {
 						Type:        schema.TypeBool,
 						Optional:    true,
 						Default:     false,
