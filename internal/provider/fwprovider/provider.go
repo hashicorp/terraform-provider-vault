@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
@@ -250,6 +251,9 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
 		kmip.NewKMIPCAImportedResource,
+		os.NewOSSecretBackendResource,
+		os.NewOSSecretBackendHostResource,
+		os.NewOSSecretBackendAccountResource,
 		pki_external_ca.NewPKIExternalCAACMEAccountResource,
 		pki_external_ca.NewPKIExternalCARoleResource,
 		pki_external_ca.NewPKIExternalCAOrderResource,

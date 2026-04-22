@@ -289,7 +289,26 @@ jobs:
           shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
           unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
-
+      - name: Download OS secrets plugin
+        id: os_plugin
+        env:
+          PLUGIN: "vault-plugin-secrets-os"
+          VERSION: "0.1.0+ent"
+        run: |
+          ZIP="${PLUGIN}_${VERSION}_linux_amd64.zip"
+          DIR="${PLUGIN}_${VERSION}_linux_amd64"
+          
+          # Download the plugin
+          curl -fsSL -O "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/${ZIP}"
+          
+          # Create directory and extract into it
+          mkdir -p "${DIR}"
+          unzip "${ZIP}" -d "${DIR}"
+          rm "${ZIP}"
+          chmod -R a+r "${DIR}/metadata.json.sig"
+          
+          # Set output to indicate successful download
+          echo "downloaded=true" >> "${GITHUB_OUTPUT}"
       - name: Download external Enterprise plugin
         id: plugin_enterprise
         env:
