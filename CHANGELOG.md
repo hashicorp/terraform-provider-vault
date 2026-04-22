@@ -2,6 +2,9 @@
 
 ## 5.9.0 (April 15, 2026)
 
+Release Note:
+* **Vault Version Support**: The provider will no longer support Vault versions ≤ 1.18.x; going forward, only Vault server versions 1.19.x and newer will be officially tested.
+
 BREAKING CHANGES:
 
 * Renamed all Vault 2.0 pki-external-ca resources from version 5.8.0 to a common prefix of `vault_pki_external_ca_`. ([#2838](https://github.com/hashicorp/terraform-provider-vault/pull/2838))
