@@ -194,7 +194,7 @@ func getCommonManagedKeysSchema() schemaMap {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Description: "A comma-delimited list of the allowed usages of this key. " +
+			Description: "A list of the allowed usages of this key. " +
 				"Valid values are encrypt, decrypt, sign, verify, wrap, unwrap, mac, and generate_random",
 		},
 
@@ -283,6 +283,12 @@ func managedKeysPKCSConfigSchema() schemaMap {
 			Optional: true,
 			Description: "Force all operations to open up a read-write session " +
 				"to the HSM",
+		},
+		consts.FieldMaxParallel: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Description: "The number of concurrent requests that may be in flight to the HSM at any given time.",
 		},
 	}
 

@@ -201,6 +201,7 @@ func TestManagedKeysPKCS(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "1"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.max_parallel", "2"),
 				),
 			},
 			{
@@ -263,6 +264,7 @@ resource "vault_managed_keys" "test" {
     slot               = "%s"
     pin                = "%s"
     mechanism          = "0x0001"
+    max_parallel       = 2
   }
 }
 `, name, library, slot, pin)
