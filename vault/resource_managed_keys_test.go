@@ -5,10 +5,13 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
@@ -680,4 +683,72 @@ GCPCREDS
   }
 }
 `, name, credentials, project, keyRing, region)
+}
+
+func TestManagedKeyUsagesFromAPI(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   interface{}
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "vault 2 list of strings",
+			input: []interface{}{"encrypt", "decrypt", "wrap", "unwrap"},
+			want:  "encrypt,decrypt,wrap,unwrap",
+		},
+		{
+			name:  "vault pre-2 list of ints",
+			input: []interface{}{1, 2, 5, 6},
+			want:  "encrypt,decrypt,wrap,unwrap",
+		},
+		{
+			name:  "vault pre-2 list of json.Number",
+			input: []interface{}{json.Number("1"), json.Number("2")},
+			want:  "encrypt,decrypt",
+		},
+		{
+			name:    "unknown usage index",
+			input:   []interface{}{99},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := managedKeyUsagesFromAPI(tc.input)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			wantVals := []interface{}{}
+			if tc.want != "" {
+				for _, v := range strings.Split(tc.want, ",") {
+					wantVals = append(wantVals, v)
+				}
+			}
+
+			if !schema.NewSet(schema.HashString, got).Equal(schema.NewSet(schema.HashString, wantVals)) {
+				t.Fatalf("got %#v, want %#v", got, wantVals)
+			}
+		})
+	}
+}
+
+func TestManagedKeyUsagesToAPI(t *testing.T) {
+	got, err := managedKeyUsagesToAPI(schema.NewSet(schema.HashString, []interface{}{"wrap", " decrypt ", "encrypt"}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := "decrypt,encrypt,wrap"
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
 }
