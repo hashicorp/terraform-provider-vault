@@ -114,7 +114,7 @@ func (r *ConfigUIDefaultAuthResource) Schema(ctx context.Context, req resource.S
 				},
 			},
 			consts.FieldBackupAuthTypes: schema.ListAttribute{
-				MarkdownDescription: "List of backup authentication methods. Uses `ListAttribute` with `ElementType: StringType` to preserve order of backup methods. Each must be a valid auth type. Vault presents these in the \"Sign in with other methods\" tab.",
+				MarkdownDescription: "List of backup authentication methods. Uses `ListAttribute` with `ElementType: StringType` to preserve order of backup methods. Each must be a valid auth type. Vault presents these in the \"Sign in with other methods\" tab. **Note:** Removing this field from configuration will clear it in Vault by sending an empty array.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Validators: []validator.List{
@@ -124,7 +124,7 @@ func (r *ConfigUIDefaultAuthResource) Schema(ctx context.Context, req resource.S
 				},
 			},
 			consts.FieldDisableInheritance: schema.BoolAttribute{
-				MarkdownDescription: "If true, child namespaces will not inherit default_auth_type and backup_auth_types from this configuration.",
+				MarkdownDescription: "If true, child namespaces will not inherit default_auth_type and backup_auth_types from this configuration. **Note:** Removing this field from configuration will reset it to `false` in Vault.",
 				Optional:            true,
 			},
 		},
@@ -189,7 +189,7 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 		vaultRequest[consts.FieldNamespacePath] = namespacePath
 	}
 
-	// Add backup_auth_types if provided
+	// Always send backup_auth_types - send empty array if not provided to reset the field
 	if !data.BackupAuthTypes.IsNull() && !data.BackupAuthTypes.IsUnknown() {
 		var backupAuthTypes []string
 		resp.Diagnostics.Append(data.BackupAuthTypes.ElementsAs(ctx, &backupAuthTypes, false)...)
@@ -197,11 +197,17 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 			return
 		}
 		vaultRequest[consts.FieldBackupAuthTypes] = backupAuthTypes
+	} else {
+		// Send empty array to clear the field when removed from config
+		vaultRequest[consts.FieldBackupAuthTypes] = []string{}
 	}
 
-	// Add disable_inheritance if provided
+	// Always send disable_inheritance - send false if not provided to reset the field
 	if !data.DisableInheritance.IsNull() && !data.DisableInheritance.IsUnknown() {
 		vaultRequest[consts.FieldDisableInheritance] = data.DisableInheritance.ValueBool()
+	} else {
+		// Send false to reset the field when removed from config
+		vaultRequest[consts.FieldDisableInheritance] = false
 	}
 
 	path := r.path(data.Name.ValueString())
@@ -274,7 +280,7 @@ func (r *ConfigUIDefaultAuthResource) Read(ctx context.Context, req resource.Rea
 
 		return
 	}
-	if configResp == nil {
+	if configResp == nil || configResp.Data == nil {
 		// Resource has been deleted outside of Terraform, remove from state
 		resp.State.RemoveResource(ctx)
 		return
@@ -294,8 +300,8 @@ func (r *ConfigUIDefaultAuthResource) Read(ctx context.Context, req resource.Rea
 	// We normalize to either "" or "root" based on what user configured
 	if namespacePath, ok := configResp.Data[consts.FieldNamespacePath].(string); ok {
 		namespacePath = strings.TrimRight(namespacePath, "/")
-		// For root namespace from API
-		if namespacePath == "root" || namespacePath == "" {
+		// For root namespace from API (Vault always returns "root/" which becomes "root" after trim)
+		if namespacePath == "root" {
 			// Check what user originally configured
 			if !data.NamespacePath.IsNull() {
 				configValue := strings.TrimRight(data.NamespacePath.ValueString(), "/")
@@ -384,7 +390,7 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 		vaultRequest[consts.FieldNamespacePath] = namespacePath
 	}
 
-	// Add backup_auth_types if provided
+	// Always send backup_auth_types - send empty array if not provided to reset the field
 	if !data.BackupAuthTypes.IsNull() && !data.BackupAuthTypes.IsUnknown() {
 		var backupAuthTypes []string
 		resp.Diagnostics.Append(data.BackupAuthTypes.ElementsAs(ctx, &backupAuthTypes, false)...)
@@ -392,11 +398,17 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 			return
 		}
 		vaultRequest[consts.FieldBackupAuthTypes] = backupAuthTypes
+	} else {
+		// Send empty array to clear the field when removed from config
+		vaultRequest[consts.FieldBackupAuthTypes] = []string{}
 	}
 
-	// Add disable_inheritance if provided
+	// Always send disable_inheritance - send false if not provided to reset the field
 	if !data.DisableInheritance.IsNull() && !data.DisableInheritance.IsUnknown() {
 		vaultRequest[consts.FieldDisableInheritance] = data.DisableInheritance.ValueBool()
+	} else {
+		// Send false to reset the field when removed from config
+		vaultRequest[consts.FieldDisableInheritance] = false
 	}
 
 	path := r.path(data.Name.ValueString())
