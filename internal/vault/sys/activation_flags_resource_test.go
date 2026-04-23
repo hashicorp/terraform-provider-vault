@@ -22,7 +22,7 @@ import (
 func TestAccActivationFlagsResource_basic(t *testing.T) {
 	resourceName := "vault_activation_flags.test"
 	testAccActivationFlagsEntPreCheck(t)
-	feature := testAccActivationFlagForResource(t)
+	feature := testAccActivatedFlagForResource(t)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -194,6 +194,19 @@ func testAccActivationFlagForResource(t *testing.T) string {
 	}
 
 	t.Skip("Vault reported no activation flags")
+	return ""
+}
+
+func testAccActivatedFlagForResource(t *testing.T) string {
+	t.Helper()
+
+	activatedFlags := testAccReadCurrentActivatedFlags(t)
+	if len(activatedFlags) > 0 {
+		sort.Strings(activatedFlags)
+		return activatedFlags[0]
+	}
+
+	t.Skip("Vault reported no activated flags")
 	return ""
 }
 

@@ -63,6 +63,10 @@ func (d *ActivationFlagsDataSource) Schema(_ context.Context, _ datasource.Schem
 				Computed:            true,
 				MarkdownDescription: "Unique identifier for this data source.",
 			},
+			consts.FieldNamespace: schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Root-namespace-only endpoint; this attribute is always null.",
+			},
 		},
 		MarkdownDescription: "Reads activation flags from Vault.",
 	}
@@ -104,6 +108,8 @@ func (d *ActivationFlagsDataSource) Read(ctx context.Context, req datasource.Rea
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	data.Namespace = types.StringNull()
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

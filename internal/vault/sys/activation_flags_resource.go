@@ -78,6 +78,10 @@ func (r *ActivationFlagsResource) Schema(_ context.Context, _ resource.SchemaReq
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			consts.FieldNamespace: schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "Root-namespace-only endpoint; this attribute is always null.",
+			},
 			activationFlagFeatureField: schema.StringAttribute{
 				Required: true,
 				PlanModifiers: []planmodifier.String{
@@ -92,6 +96,7 @@ func (r *ActivationFlagsResource) Schema(_ context.Context, _ resource.SchemaReq
 
 func (r *ActivationFlagsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldID), req, resp)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), types.StringNull())...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(activationFlagFeatureField), req.ID)...)
 }
 
@@ -124,6 +129,8 @@ func (r *ActivationFlagsResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	data.Namespace = types.StringNull()
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -155,6 +162,7 @@ func (r *ActivationFlagsResource) Read(ctx context.Context, req resource.ReadReq
 
 	if activationFlagIsListed(feature, flagsState.Activated) {
 		data.ID = types.StringValue(feature)
+		data.Namespace = types.StringNull()
 		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
 	}
@@ -197,6 +205,8 @@ func (r *ActivationFlagsResource) Update(ctx context.Context, req resource.Updat
 	if !readActivationFlagState(ctx, cli, &data, &resp.Diagnostics) {
 		return
 	}
+
+	data.Namespace = types.StringNull()
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -247,6 +257,7 @@ func readActivationFlagState(ctx context.Context, cli *api.Client, data *Activat
 	}
 
 	data.ID = types.StringValue(feature)
+	data.Namespace = types.StringNull()
 
 	return true
 }
