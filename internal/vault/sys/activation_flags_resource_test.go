@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
@@ -20,44 +18,49 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-// TestAccActivationFlagsResource_basic tests basic resource creation and read
-// Note: This test reads the current state and ensures it can be managed
+// TestAccActivationFlagsResource_basic tests resource creation and read.
 func TestAccActivationFlagsResource_basic(t *testing.T) {
 	resourceName := "vault_activation_flags.test"
+	testAccActivationFlagsEntPreCheck(t)
+	feature := testAccActivationFlagForResource(t)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccActivationFlagsEntPreCheck(t)
-		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccActivationFlagsResourceConfig_basic(),
+				Config: testAccActivationFlagsResourceConfig(feature),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
-					testAccCheckActivationFlagsMatchDataSource(resourceName, "data.vault_activation_flags.current"),
+					resource.TestCheckResourceAttr(resourceName, "id", feature),
+					resource.TestCheckResourceAttr(resourceName, "feature", feature),
+					resource.TestCheckTypeSetElemAttr("data.vault_activation_flags.current", "activated_flags.*", feature),
 				),
 			},
 		},
 	})
 }
 
-// TestAccActivationFlagsResource_omitsAlreadyActiveFlag verifies the resource
-// fails when configuration omits a flag that is already active in Vault.
-func TestAccActivationFlagsResource_omitsAlreadyActiveFlag(t *testing.T) {
+// TestAccActivationFlagsResource_activateFeature verifies the resource
+// activates a single unactivated feature.
+func TestAccActivationFlagsResource_activateFeature(t *testing.T) {
 	testAccActivationFlagsEntPreCheck(t)
 
-	activatedFlags := testAccReadCurrentActivatedFlags(t)
-	if len(activatedFlags) == 0 {
-		t.Skip("Vault has no activated flags; omission error path is not applicable")
+	unactivatedFlags := testAccReadCurrentUnactivatedFlags(t)
+	if len(unactivatedFlags) == 0 {
+		t.Skip("Vault has no unactivated flags; single-feature activation path is not applicable")
 	}
+
+	feature := unactivatedFlags[0]
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccActivationFlagsResourceConfigExplicit(activatedFlags[1:]),
-				ExpectError: regexp.MustCompile(`already has activated flags not declared in configuration`),
+				Config: testAccActivationFlagsResourceConfig(feature),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_activation_flags.test", "id", feature),
+					resource.TestCheckResourceAttr("vault_activation_flags.test", "feature", feature),
+					resource.TestCheckTypeSetElemAttr("data.vault_activation_flags.current", "activated_flags.*", feature),
+				),
 			},
 		},
 	})
@@ -73,7 +76,7 @@ func TestAccActivationFlagsResource_unknownFlagName(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccActivationFlagsResourceConfigExplicit([]string{"definitely-not-a-real-activation-flag"}),
+				Config:      testAccActivationFlagsResourceConfig("definitely-not-a-real-activation-flag"),
 				ExpectError: regexp.MustCompile(`was\s+not\s+returned by GET /sys/activation-flags`),
 			},
 		},
@@ -83,17 +86,16 @@ func TestAccActivationFlagsResource_unknownFlagName(t *testing.T) {
 // TestAccActivationFlagsResource_import tests importing the resource
 func TestAccActivationFlagsResource_import(t *testing.T) {
 	resourceName := "vault_activation_flags.test"
+	testAccActivationFlagsEntPreCheck(t)
+	feature := testAccActivationFlagForResource(t)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccActivationFlagsEntPreCheck(t)
-		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccActivationFlagsResourceConfig_basic(),
+				Config: testAccActivationFlagsResourceConfig(feature),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
+					resource.TestCheckResourceAttr(resourceName, "id", feature),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),
@@ -155,95 +157,20 @@ func testAccReadCurrentActivationFlagsField(t *testing.T, field string) []string
 	return flags
 }
 
-func testAccCheckActivationFlagsEqual(resourceName string, expected []string) resource.TestCheckFunc {
-	checks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "activated_flags.#", fmt.Sprintf("%d", len(expected))),
-	}
-
-	for _, flag := range expected {
-		checks = append(checks, resource.TestCheckTypeSetElemAttr(resourceName, "activated_flags.*", flag))
-	}
-
-	return resource.ComposeTestCheckFunc(checks...)
-}
-
-func testAccCheckActivationFlagsMatchDataSource(resourceName, dataSourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		dataSourceState, ok := s.RootModule().Resources[dataSourceName]
-		if !ok {
-			return fmt.Errorf("data source not found: %s", dataSourceName)
-		}
-
-		resourceFlags := testAccActivationFlagsFromState(resourceState.Primary.Attributes)
-		dataSourceFlags := testAccActivationFlagsFromState(dataSourceState.Primary.Attributes)
-
-		if len(resourceFlags) != len(dataSourceFlags) {
-			return fmt.Errorf("activated_flags count mismatch: resource=%v data_source=%v", resourceFlags, dataSourceFlags)
-		}
-
-		for index := range resourceFlags {
-			if resourceFlags[index] != dataSourceFlags[index] {
-				return fmt.Errorf("activated_flags mismatch: resource=%v data_source=%v", resourceFlags, dataSourceFlags)
-			}
-		}
-
-		return nil
-	}
-}
-
-func testAccActivationFlagsFromState(attrs map[string]string) []string {
-	flags := make([]string, 0)
-	for key, value := range attrs {
-		if !strings.HasPrefix(key, "activated_flags.") || key == "activated_flags.#" {
-			continue
-		}
-		flags = append(flags, value)
-	}
-
-	sort.Strings(flags)
-	return flags
-}
-
 // TestAccActivationFlagsResource_delete tests that delete shows warning
 func TestAccActivationFlagsResource_delete(t *testing.T) {
+	testAccActivationFlagsEntPreCheck(t)
+	feature := testAccActivationFlagForResource(t)
+
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccActivationFlagsEntPreCheck(t)
-		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccActivationFlagsResourceConfig_basic(),
+				Config: testAccActivationFlagsResourceConfig(feature),
 			},
 			{
-				Config:  testAccActivationFlagsResourceConfig_basic(),
+				Config:  testAccActivationFlagsResourceConfig(feature),
 				Destroy: true,
-			},
-		},
-	})
-}
-
-// TestAccActivationFlagsResource_namespace tests resource with namespace
-func TestAccActivationFlagsResource_namespace(t *testing.T) {
-	resourceName := "vault_activation_flags.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccActivationFlagsEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccActivationFlagsResourceConfig_namespace(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
-					testAccCheckActivationFlagsMatchDataSource(resourceName, "data.vault_activation_flags.current"),
-				),
 			},
 		},
 	})
@@ -251,43 +178,31 @@ func TestAccActivationFlagsResource_namespace(t *testing.T) {
 
 // Config functions
 
-func testAccActivationFlagsResourceConfig_basic() string {
-	return `
-# Read the current activation flags state from Vault
-data "vault_activation_flags" "current" {}
+func testAccActivationFlagForResource(t *testing.T) string {
+	t.Helper()
 
-# Manage activation flags - maintain currently activated flags
-resource "vault_activation_flags" "test" {
-  # Keep all currently activated flags
-  activated_flags = data.vault_activation_flags.current.activated_flags
-}
-`
-}
-
-func testAccActivationFlagsResourceConfigExplicit(flags []string) string {
-	quotedFlags := make([]string, 0, len(flags))
-	for _, flag := range flags {
-		quotedFlags = append(quotedFlags, fmt.Sprintf("%q", flag))
+	unactivatedFlags := testAccReadCurrentUnactivatedFlags(t)
+	if len(unactivatedFlags) > 0 {
+		sort.Strings(unactivatedFlags)
+		return unactivatedFlags[0]
 	}
 
-	return fmt.Sprintf(`
-resource "vault_activation_flags" "test" {
-  activated_flags = [%s]
-}
-`, strings.Join(quotedFlags, ", "))
+	activatedFlags := testAccReadCurrentActivatedFlags(t)
+	if len(activatedFlags) > 0 {
+		sort.Strings(activatedFlags)
+		return activatedFlags[0]
+	}
+
+	t.Skip("Vault reported no activation flags")
+	return ""
 }
 
-func testAccActivationFlagsResourceConfig_namespace() string {
-	return `
-# Read current state
+func testAccActivationFlagsResourceConfig(feature string) string {
+	return fmt.Sprintf(`
 data "vault_activation_flags" "current" {}
 
-# Manage activation flags in root namespace
 resource "vault_activation_flags" "test" {
-  namespace       = "root"
-  activated_flags = data.vault_activation_flags.current.activated_flags
+  feature = %q
 }
-`
+`, feature)
 }
-
-// Made with Bob

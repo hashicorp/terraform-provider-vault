@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -33,7 +34,7 @@ var (
 )
 
 const (
-	activationFlagsID                  = "activation-flags"
+	activationFlagFeatureField         = "feature"
 	activationFlagActivatePathTemplate = activationFlagsPath + "/%s/activate"
 	activationFlagsAPIActivatedField   = "activated"
 	activationFlagsAPIUnactivatedField = "unactivated"
@@ -47,15 +48,14 @@ func NewActivationFlagsResource() resource.Resource {
 // ActivationFlagsResource implements the resource
 type ActivationFlagsResource struct {
 	base.ResourceWithConfigure
-	base.WithImportByID
 }
 
 // ActivationFlagsModel describes the Terraform resource data model
 type ActivationFlagsModel struct {
 	base.BaseModel
 
-	ID             types.String `tfsdk:"id"`
-	ActivatedFlags types.Set    `tfsdk:"activated_flags"`
+	ID      types.String `tfsdk:"id"`
+	Feature types.String `tfsdk:"feature"`
 }
 
 type activationFlagsState struct {
@@ -78,16 +78,21 @@ func (r *ActivationFlagsResource) Schema(_ context.Context, _ resource.SchemaReq
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			consts.FieldActivatedFlags: schema.SetAttribute{
-				Required:            true,
-				ElementType:         types.StringType,
-				MarkdownDescription: "Full set of feature flags that should be activated. Because Vault exposes activation but not public deactivation for activation flags, any flags already activated in Vault must also be declared here.",
+			activationFlagFeatureField: schema.StringAttribute{
+				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				MarkdownDescription: "Exact feature key to activate with PUT /sys/activation-flags/:feature/activate.",
 			},
 		},
-		MarkdownDescription: "Manages activation flags in Vault. This is a singleton resource - only one instance should exist per Vault cluster.",
+		MarkdownDescription: "Activates a single activation flag in Vault.",
 	}
+}
 
-	base.MustAddBaseSchema(&resp.Schema)
+func (r *ActivationFlagsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root(consts.FieldID), req, resp)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(activationFlagFeatureField), req.ID)...)
 }
 
 // Create is called during terraform apply
@@ -99,23 +104,23 @@ func (r *ActivationFlagsResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	cli, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	desiredFlags, ok := getDesiredActivatedFlags(ctx, data, &resp.Diagnostics)
+	feature, ok := getDesiredActivationFlag(data, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	if err := reconcileActivatedFlags(ctx, cli, desiredFlags); err != nil {
+	if err := activateFlag(ctx, cli, feature); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
 
-	if !readActivationFlagsState(ctx, cli, &data, &resp.Diagnostics) {
+	if !readActivationFlagState(ctx, cli, &data, &resp.Diagnostics) {
 		return
 	}
 
@@ -131,17 +136,37 @@ func (r *ActivationFlagsResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	cli, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	if !readActivationFlagsState(ctx, cli, &data, &resp.Diagnostics) {
+	feature, ok := getDesiredActivationFlag(data, &resp.Diagnostics)
+	if !ok {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	flagsState, err := readActivationFlags(ctx, cli)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+		return
+	}
+
+	if activationFlagIsListed(feature, flagsState.Activated) {
+		data.ID = types.StringValue(feature)
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+		return
+	}
+
+	if !activationFlagIsListed(feature, flagsState.Unactivated) {
+		resp.Diagnostics.AddWarning(
+			"Activation flag no longer reported by Vault",
+			fmt.Sprintf("Activation flag %q was not returned by GET /%s. Removing it from Terraform state.", feature, activationFlagsPath),
+		)
+	}
+
+	resp.State.RemoveResource(ctx)
 }
 
 // Update is called during terraform apply
@@ -153,23 +178,23 @@ func (r *ActivationFlagsResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	cli, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	desiredFlags, ok := getDesiredActivatedFlags(ctx, data, &resp.Diagnostics)
+	feature, ok := getDesiredActivationFlag(data, &resp.Diagnostics)
 	if !ok {
 		return
 	}
 
-	if err := reconcileActivatedFlags(ctx, cli, desiredFlags); err != nil {
+	if err := activateFlag(ctx, cli, feature); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
 	}
 
-	if !readActivationFlagsState(ctx, cli, &data, &resp.Diagnostics) {
+	if !readActivationFlagState(ctx, cli, &data, &resp.Diagnostics) {
 		return
 	}
 
@@ -179,85 +204,70 @@ func (r *ActivationFlagsResource) Update(ctx context.Context, req resource.Updat
 // Delete is called during terraform destroy
 func (r *ActivationFlagsResource) Delete(ctx context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.Diagnostics.AddWarning(
-		"Activation flags remain enabled in Vault",
-		"The public Vault API exposes activation but not deactivation for activation flags. Terraform will remove this resource from state, but it cannot disable flags that were previously activated.",
+		"Activation flag remains enabled in Vault",
+		"The public Vault API exposes activation but not deactivation for activation flags. Terraform will remove this resource from state, but it cannot disable a flag that was previously activated.",
 	)
 
 	resp.State.RemoveResource(ctx)
 }
 
-func getDesiredActivatedFlags(ctx context.Context, data ActivationFlagsModel, diagnostics *diag.Diagnostics) ([]string, bool) {
-	if data.ActivatedFlags.IsNull() || data.ActivatedFlags.IsUnknown() {
-		return []string{}, true
+func getDesiredActivationFlag(data ActivationFlagsModel, diagnostics *diag.Diagnostics) (string, bool) {
+	if data.Feature.IsNull() || data.Feature.IsUnknown() {
+		diagnostics.AddError("Missing activation flag feature", "The feature attribute must be known before Terraform can activate it.")
+		return "", false
 	}
 
-	var flags []string
-	diagnostics.Append(data.ActivatedFlags.ElementsAs(ctx, &flags, false)...)
-	if diagnostics.HasError() {
-		return nil, false
+	feature := data.Feature.ValueString()
+	if feature == "" {
+		diagnostics.AddError("Missing activation flag feature", "The feature attribute must not be empty.")
+		return "", false
 	}
 
-	return flags, true
+	return feature, true
 }
 
-func readActivationFlagsState(ctx context.Context, cli *api.Client, data *ActivationFlagsModel, diagnostics *diag.Diagnostics) bool {
-	vaultResp, err := cli.Logical().ReadWithContext(ctx, activationFlagsPath)
+func readActivationFlagState(ctx context.Context, cli *api.Client, data *ActivationFlagsModel, diagnostics *diag.Diagnostics) bool {
+	feature, ok := getDesiredActivationFlag(*data, diagnostics)
+	if !ok {
+		return false
+	}
+
+	flagsState, err := readActivationFlags(ctx, cli)
 	if err != nil {
 		diagnostics.AddError(errutil.VaultReadErr(err))
 		return false
 	}
 
-	if vaultResp == nil {
-		diagnostics.AddError(errutil.VaultReadResponseNil())
-		return false
-	}
-
-	flags, err := getActivationFlagsFromResponse(vaultResp.Data, activationFlagsAPIActivatedField)
-	if err != nil {
+	if !activationFlagIsListed(feature, flagsState.Activated) {
 		diagnostics.AddError(
-			"Error Reading Activation Flags",
-			err.Error(),
+			"Error Reading Activation Flag",
+			fmt.Sprintf("Activation flag %q is not active in Vault after PUT /%s.", feature, fmt.Sprintf(activationFlagActivatePathTemplate, url.PathEscape(feature))),
 		)
 		return false
 	}
 
-	flagsSet, diags := types.SetValueFrom(ctx, types.StringType, flags)
-	diagnostics.Append(diags...)
-	if diagnostics.HasError() {
-		return false
-	}
-
-	data.ActivatedFlags = flagsSet
-	data.ID = types.StringValue(activationFlagsID)
+	data.ID = types.StringValue(feature)
 
 	return true
 }
 
-func reconcileActivatedFlags(ctx context.Context, cli *api.Client, desiredFlags []string) error {
+func activateFlag(ctx context.Context, cli *api.Client, feature string) error {
 	flagsState, err := readActivationFlags(ctx, cli)
 	if err != nil {
 		return err
 	}
 
-	if err := validateDesiredActivationFlags(desiredFlags, flagsState); err != nil {
+	if err := validateActivationFlag(feature, flagsState); err != nil {
 		return err
 	}
 
-	currentFlags := flagsState.Activated
-
-	undeclaredFlags := diffActivationFlags(currentFlags, desiredFlags)
-	if len(undeclaredFlags) > 0 {
-		return fmt.Errorf(
-			"Vault already has activated flags not declared in configuration: %s. The public activation flags API does not support deactivation, so activated_flags must include all currently activated flags",
-			strings.Join(undeclaredFlags, ", "),
-		)
+	if activationFlagIsListed(feature, flagsState.Activated) {
+		return nil
 	}
 
-	for _, flag := range diffActivationFlags(desiredFlags, currentFlags) {
-		activatePath := fmt.Sprintf(activationFlagActivatePathTemplate, url.PathEscape(flag))
-		if _, err := cli.Logical().WriteWithContext(ctx, activatePath, map[string]interface{}{}); err != nil {
-			return fmt.Errorf("error activating flag %q: %w", flag, err)
-		}
+	activatePath := fmt.Sprintf(activationFlagActivatePathTemplate, url.PathEscape(feature))
+	if _, err := cli.Logical().WriteWithContext(ctx, activatePath, map[string]interface{}{}); err != nil {
+		return fmt.Errorf("error activating flag %q: %w", feature, err)
 	}
 
 	return nil
@@ -290,7 +300,7 @@ func readActivationFlags(ctx context.Context, cli *api.Client) (*activationFlags
 	}, nil
 }
 
-func validateDesiredActivationFlags(desiredFlags []string, flagsState *activationFlagsState) error {
+func validateActivationFlag(feature string, flagsState *activationFlagsState) error {
 	availableFlags := make(map[string]struct{}, len(flagsState.Activated)+len(flagsState.Unactivated))
 	for _, flag := range flagsState.Activated {
 		availableFlags[flag] = struct{}{}
@@ -299,29 +309,25 @@ func validateDesiredActivationFlags(desiredFlags []string, flagsState *activatio
 		availableFlags[flag] = struct{}{}
 	}
 
-	for _, flag := range desiredFlags {
-		if _, ok := availableFlags[flag]; ok {
-			continue
-		}
+	if _, ok := availableFlags[feature]; ok {
+		return nil
+	}
 
-		suggestion := suggestActivationFlagName(flag, availableFlags)
-		if suggestion != "" {
-			return fmt.Errorf(
-				"activation flag %q was not returned by GET /%s. Use the exact feature key reported by Vault. Did you mean %q?",
-				flag,
-				activationFlagsPath,
-				suggestion,
-			)
-		}
-
+	suggestion := suggestActivationFlagName(feature, availableFlags)
+	if suggestion != "" {
 		return fmt.Errorf(
-			"activation flag %q was not returned by GET /%s. Use the exact feature key reported by Vault",
-			flag,
+			"activation flag %q was not returned by GET /%s. Use the exact feature key reported by Vault. Did you mean %q?",
+			feature,
 			activationFlagsPath,
+			suggestion,
 		)
 	}
 
-	return nil
+	return fmt.Errorf(
+		"activation flag %q was not returned by GET /%s. Use the exact feature key reported by Vault",
+		feature,
+		activationFlagsPath,
+	)
 }
 
 func suggestActivationFlagName(flag string, availableFlags map[string]struct{}) string {
@@ -371,23 +377,12 @@ func rawActivationFlagsToStrings(raw interface{}, field string) ([]string, error
 	}
 }
 
-func diffActivationFlags(left, right []string) []string {
-	rightSet := make(map[string]struct{}, len(right))
-	for _, flag := range right {
-		rightSet[flag] = struct{}{}
-	}
-
-	result := make([]string, 0)
-	seen := make(map[string]struct{}, len(left))
-	for _, flag := range left {
-		if _, ok := seen[flag]; ok {
-			continue
-		}
-		seen[flag] = struct{}{}
-		if _, ok := rightSet[flag]; !ok {
-			result = append(result, flag)
+func activationFlagIsListed(feature string, flags []string) bool {
+	for _, flag := range flags {
+		if flag == feature {
+			return true
 		}
 	}
 
-	return result
+	return false
 }

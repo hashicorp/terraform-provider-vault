@@ -5,7 +5,6 @@ package sys_test
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -43,47 +42,24 @@ func TestAccActivationFlagsDataSource_withResource(t *testing.T) {
 	resourceName := "vault_activation_flags.test"
 	testAccActivationFlagsEntPreCheck(t)
 
-	activatedFlags := testAccReadCurrentActivatedFlags(t)
 	unactivatedFlags := testAccReadCurrentUnactivatedFlags(t)
 	if len(unactivatedFlags) == 0 {
-		t.Skip("Vault has no unactivated flags; resource-driven activation update path is not applicable")
+		t.Skip("Vault has no unactivated flags; single-feature activation path is not applicable")
 	}
 
-	desiredFlags := append(append([]string{}, activatedFlags...), unactivatedFlags[0])
+	feature := unactivatedFlags[0]
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccActivationFlagsDataSourceConfig_withResourceExplicit(desiredFlags),
+				Config: testAccActivationFlagsDataSourceConfig_withResource(feature),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, "id", "sys/activation-flags"),
-					testAccCheckActivationFlagsSetEqual(dataSourceName, desiredFlags),
+					resource.TestCheckTypeSetElemAttr(dataSourceName, "activated_flags.*", feature),
 					resource.TestCheckResourceAttrSet(dataSourceName, "unactivated_flags.#"),
-					resource.TestCheckResourceAttr(resourceName, "id", "activation-flags"),
-					testAccCheckActivationFlagsEqual(resourceName, desiredFlags),
-				),
-			},
-		},
-	})
-}
-
-// TestAccActivationFlagsDataSource_namespace tests data source with namespace
-func TestAccActivationFlagsDataSource_namespace(t *testing.T) {
-	dataSourceName := "data.vault_activation_flags.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccActivationFlagsEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccActivationFlagsDataSourceConfig_namespace(),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, "id", "sys/activation-flags"),
-					resource.TestCheckResourceAttrSet(dataSourceName, "activated_flags.#"),
-					resource.TestCheckResourceAttrSet(dataSourceName, "unactivated_flags.#"),
+					resource.TestCheckResourceAttr(resourceName, "id", feature),
+					resource.TestCheckResourceAttr(resourceName, "feature", feature),
 				),
 			},
 		},
@@ -139,46 +115,6 @@ func testAccCheckActivationFlagsDataSourceValid(dataSourceName string) resource.
 	}
 }
 
-// testAccCheckActivationFlagsConsistency verifies that the resource and data source have consistent data
-func testAccCheckActivationFlagsConsistency(resourceName, dataSourceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		resourceState, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		dataSourceState, ok := s.RootModule().Resources[dataSourceName]
-		if !ok {
-			return fmt.Errorf("data source not found: %s", dataSourceName)
-		}
-
-		// Get activated flags count from resource
-		resourceFlagsCount := resourceState.Primary.Attributes["activated_flags.#"]
-
-		// Get activated flags count from data source
-		dataSourceFlagsCount := dataSourceState.Primary.Attributes["activated_flags.#"]
-
-		if resourceFlagsCount != dataSourceFlagsCount {
-			return fmt.Errorf("activated_flags count mismatch: resource has %s, data source has %s",
-				resourceFlagsCount, dataSourceFlagsCount)
-		}
-
-		return nil
-	}
-}
-
-func testAccCheckActivationFlagsSetEqual(resourceName string, expected []string) resource.TestCheckFunc {
-	checks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttr(resourceName, "activated_flags.#", fmt.Sprintf("%d", len(expected))),
-	}
-
-	for _, flag := range expected {
-		checks = append(checks, resource.TestCheckTypeSetElemAttr(resourceName, "activated_flags.*", flag))
-	}
-
-	return resource.ComposeTestCheckFunc(checks...)
-}
-
 // Config functions
 
 func testAccActivationFlagsDataSourceConfig_basic() string {
@@ -187,47 +123,16 @@ data "vault_activation_flags" "test" {}
 `
 }
 
-func testAccActivationFlagsDataSourceConfig_withResource() string {
-	return `
-# First read current state
-data "vault_activation_flags" "current" {}
-
-# Manage activation flags resource
-resource "vault_activation_flags" "test" {
-  # Maintain currently activated flags
-  activated_flags = data.vault_activation_flags.current.activated_flags
-}
-
-# Read activation flags again to verify consistency
-data "vault_activation_flags" "test" {
-  depends_on = [vault_activation_flags.test]
-}
-`
-}
-
-func testAccActivationFlagsDataSourceConfig_withResourceExplicit(flags []string) string {
-	quotedFlags := make([]string, 0, len(flags))
-	for _, flag := range flags {
-		quotedFlags = append(quotedFlags, fmt.Sprintf("%q", flag))
-	}
-
+func testAccActivationFlagsDataSourceConfig_withResource(feature string) string {
 	return fmt.Sprintf(`
 resource "vault_activation_flags" "test" {
-  activated_flags = [%s]
+  feature = %q
 }
 
 data "vault_activation_flags" "test" {
   depends_on = [vault_activation_flags.test]
 }
-`, strings.Join(quotedFlags, ", "))
-}
-
-func testAccActivationFlagsDataSourceConfig_namespace() string {
-	return `
-data "vault_activation_flags" "test" {
-  namespace = "root"
-}
-`
+`, feature)
 }
 
 func testAccActivationFlagsDataSourceConfig_withOutputs() string {

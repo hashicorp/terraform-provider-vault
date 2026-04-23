@@ -12,34 +12,31 @@ Reads activation flags from Vault.
 
 ~> **Important** Activation flags are available only in Vault Enterprise and are exposed through a singleton system endpoint.
 
+~> **Important** The activation flags endpoint is root-namespace-only. This data source does not accept a `namespace` argument.
+
 ## Example Usage
 
 ```hcl
 data "vault_activation_flags" "current" {}
 ```
 
-### Use the Current Activated Set in a Resource
+### Pair With the Resource
 
 ```hcl
 data "vault_activation_flags" "current" {}
 
 resource "vault_activation_flags" "example" {
-  activated_flags = data.vault_activation_flags.current.activated_flags
+  feature = "my-feature-flag"
 }
 ```
 
 ## Argument Reference
 
-The following arguments are supported:
-
-* `namespace` - (Optional) The namespace of the target resource.
-  The value should not contain leading or trailing forward slashes.
-  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
-  *Available only for Vault Enterprise*.
+This data source has no arguments.
 
 ## Attributes Reference
 
-In addition to the argument above, the following attributes are exported:
+The following attributes are exported:
 
 * `id` - Unique identifier for this data source. This value is always `sys/activation-flags`.
 

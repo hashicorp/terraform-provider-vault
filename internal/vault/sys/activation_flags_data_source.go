@@ -63,10 +63,6 @@ func (d *ActivationFlagsDataSource) Schema(_ context.Context, _ datasource.Schem
 				Computed:            true,
 				MarkdownDescription: "Unique identifier for this data source.",
 			},
-			consts.FieldNamespace: schema.StringAttribute{
-				Optional:            true,
-				MarkdownDescription: "Target namespace. (requires Enterprise)",
-			},
 		},
 		MarkdownDescription: "Reads activation flags from Vault.",
 	}
@@ -81,7 +77,7 @@ func (d *ActivationFlagsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	cli, err := client.GetClient(ctx, d.Meta(), data.Namespace.ValueString())
+	cli, err := client.GetClient(ctx, d.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
