@@ -9,6 +9,7 @@ BREAKING CHANGES:
 FEATURES:
 
 * **New Resources**: Add support for OS Secrets Engine with `vault_os_secret_backend`, `vault_os_secret_backend_host`, and `vault_os_secret_backend_account` resources for managing operating system credentials via SSH. Requires Vault 2.0.0+. ([#2865](https://github.com/hashicorp/terraform-provider-vault/pull/2865))
+* **New Resource**: `vault_oauth_resource_server_config_profile` for managing OAuth Resource Server Configuration profiles in Vault Enterprise. Enables JWT-based authentication by defining how Vault validates JWT tokens from OAuth 2.0 resource servers. Supports both JWKS-based and static PEM key validation. Requires Vault 2.0.0+.
 * **New Resources**: `vault_rotation_policy` for managing rotation policies. Requires Vault 2.0.0+. ([#2844](https://github.com/hashicorp/terraform-provider-vault/pull/2844))
 * Add support for `vault_quota_config` resource. ([#2837](https://github.com/hashicorp/terraform-provider-vault/pull/2837))
 * **New Resources**: Add support for Vault Key Management secrets engine with resources for managing KMS providers (AWS KMS, Azure Key Vault, GCP Cloud KMS), cryptographic keys, key distribution, replication, and rotation (Vault Enterprise). ([#2802](https://github.com/hashicorp/terraform-provider-vault/pull/2802))
