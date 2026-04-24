@@ -35,11 +35,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const userpassUsernamePattern = `\w(?:[\w-.]*\w)?`
+var userpassUsernameRegexp = regexp.MustCompile(`^` + consts.GenericNameRegex + `$`)
 
-var userpassUsernameRegexp = regexp.MustCompile(`^` + userpassUsernamePattern + `$`)
-
-var userRegexp = regexp.MustCompile(`^auth/(.+)/users/(` + userpassUsernamePattern + `)$`)
+var userRegexp = regexp.MustCompile(`^auth/(.+)/users/(` + consts.GenericNameRegex + `)$`)
 
 const bcryptHashLength = 60
 
