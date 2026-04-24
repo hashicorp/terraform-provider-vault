@@ -825,7 +825,9 @@ const (
 	FieldMountID = "mount_id"
 
 	FieldPasswordWO                 = "password_wo"
+	FieldPasswordHashWO             = "password_hash_wo"
 	FieldPasswordWOVersion          = "password_wo_version"
+	FieldPasswordHashWOVersion      = "password_hash_wo_version"
 	FieldCredentialsWO              = "credentials_wo"
 	FieldCredentialsWOVersion       = "credentials_wo_version"
 	FieldDataJSONWO                 = "data_json_wo"

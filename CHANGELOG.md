@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* **New Resources**: `vault_userpass_auth_backend_user` for user creation, deletion, password updates, and policy updates, and ephemeral resource `vault_userpass_auth_login` for authenticating with Userpass. ([#2859](https://github.com/hashicorp/terraform-provider-vault/pull/2859))
+
 ## 5.9.0 (April 22, 2026)
 
 BREAKING CHANGES:
