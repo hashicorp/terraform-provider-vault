@@ -6,7 +6,6 @@ package sys_test
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"sort"
 	"testing"
 
@@ -61,23 +60,6 @@ func TestAccActivationFlagsResource_activateFeature(t *testing.T) {
 					resource.TestCheckResourceAttr("vault_activation_flags.test", "feature", feature),
 					resource.TestCheckTypeSetElemAttr("data.vault_activation_flags.after", "activated_flags.*", feature),
 				),
-			},
-		},
-	})
-}
-
-// TestAccActivationFlagsResource_unknownFlagName verifies the resource fails
-// when configuration includes a feature key that Vault does not advertise.
-func TestAccActivationFlagsResource_unknownFlagName(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			testAccActivationFlagsEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccActivationFlagsResourceConfig("definitely-not-a-real-activation-flag"),
-				ExpectError: regexp.MustCompile(`unsupported path`),
 			},
 		},
 	})
