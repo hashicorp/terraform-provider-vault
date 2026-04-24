@@ -22,7 +22,7 @@ Activates a single activation flag in Vault.
 
 ```hcl
 resource "vault_activation_flags" "example" {
-  feature = "my-feature-flag"
+  feature = "secrets-sync"
 }
 ```
 

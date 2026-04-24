@@ -12,7 +12,7 @@ FEATURES:
 * **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858))
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 * Add support for CORS configuration: `vault_sys_config_cors` resource and data source for managing and reading Vault's CORS (Cross-Origin Resource Sharing) settings. ([#2849](https://github.com/hashicorp/terraform-provider-vault/pull/2849))
-* **New Resource**: `activation_flags_resource` and `activation_flags_data_resource` for managing manage Vault features that are gated by one-time flags. Requires Vault 1.15 or later. Needs Vault enterprise licence([#2861](https://github.com/hashicorp/terraform-provider-vault/pull/2861/))
+* **New Resource**: `activation_flags_resource` and `activation_flags_data_source` for managing Vault features that are gated by one-time flags. Requires Vault 1.15 or later. Needs Vault enterprise licence([#2861](https://github.com/hashicorp/terraform-provider-vault/pull/2861/))
 
 IMPROVEMENTS:
 

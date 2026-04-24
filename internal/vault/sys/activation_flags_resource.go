@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"net/url"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -172,34 +171,12 @@ func (r *ActivationFlagsResource) Read(ctx context.Context, req resource.ReadReq
 
 // Update is called during terraform apply
 func (r *ActivationFlagsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data ActivationFlagsModel
+	//update is not supported because the API does not support changing an activation flag after it has been activated.
+	resp.Diagnostics.AddWarning(
+		"Update not supported for activation flags",
+		"The Vault API does not support changing an activation flag after it has been activated. Terraform will destroy and recreate the resource to activate the new flag, but the old flag will remain activated in Vault.",
+	)
 
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	cli, err := client.GetClient(ctx, r.Meta(), "")
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	feature, ok := getDesiredActivationFlag(data, &resp.Diagnostics)
-	if !ok {
-		return
-	}
-
-	if err := activateFlag(ctx, cli, feature); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
-		return
-	}
-
-	if !readActivationFlagState(ctx, cli, &data, &resp.Diagnostics) {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Delete is called during terraform destroy
@@ -253,19 +230,6 @@ func readActivationFlagState(ctx context.Context, cli *api.Client, data *Activat
 }
 
 func activateFlag(ctx context.Context, cli *api.Client, feature string) error {
-	flagsState, err := readActivationFlags(ctx, cli)
-	if err != nil {
-		return err
-	}
-
-	if err := validateActivationFlag(feature, flagsState); err != nil {
-		return err
-	}
-
-	if activationFlagIsListed(feature, flagsState.Activated) {
-		return nil
-	}
-
 	activatePath := fmt.Sprintf(activationFlagActivatePathTemplate, url.PathEscape(feature))
 	if _, err := cli.Logical().WriteWithContext(ctx, activatePath, map[string]interface{}{}); err != nil {
 		return fmt.Errorf("error activating flag %q: %w", feature, err)
@@ -299,49 +263,6 @@ func readActivationFlags(ctx context.Context, cli *api.Client) (*activationFlags
 		Activated:   activated,
 		Unactivated: unactivated,
 	}, nil
-}
-
-func validateActivationFlag(feature string, flagsState *activationFlagsState) error {
-	availableFlags := make(map[string]struct{}, len(flagsState.Activated)+len(flagsState.Unactivated))
-	for _, flag := range flagsState.Activated {
-		availableFlags[flag] = struct{}{}
-	}
-	for _, flag := range flagsState.Unactivated {
-		availableFlags[flag] = struct{}{}
-	}
-
-	if _, ok := availableFlags[feature]; ok {
-		return nil
-	}
-
-	suggestion := suggestActivationFlagName(feature, availableFlags)
-	if suggestion != "" {
-		return fmt.Errorf(
-			"activation flag %q was not returned by GET /%s. Use the exact feature key reported by Vault. Did you mean %q?",
-			feature,
-			activationFlagsPath,
-			suggestion,
-		)
-	}
-
-	return fmt.Errorf(
-		"activation flag %q was not returned by GET /%s. Use the exact feature key reported by Vault",
-		feature,
-		activationFlagsPath,
-	)
-}
-
-func suggestActivationFlagName(flag string, availableFlags map[string]struct{}) string {
-	if !strings.Contains(flag, "_") {
-		return ""
-	}
-
-	candidate := strings.ReplaceAll(flag, "_", "-")
-	if _, ok := availableFlags[candidate]; ok {
-		return candidate
-	}
-
-	return ""
 }
 
 func getActivationFlagsFromResponse(data map[string]interface{}, field string) ([]string, error) {

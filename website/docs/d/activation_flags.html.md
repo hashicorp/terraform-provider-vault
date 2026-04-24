@@ -20,13 +20,8 @@ Reads activation flags from Vault.
 data "vault_activation_flags" "current" {}
 ```
 
-### Pair With the Resource
-
-```hcl
-data "vault_activation_flags" "current" {}
-
 resource "vault_activation_flags" "example" {
-  feature = "my-feature-flag"
+  feature = "secrets-sync"
 }
 ```
 

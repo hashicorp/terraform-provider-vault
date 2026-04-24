@@ -55,11 +55,11 @@ func TestAccActivationFlagsResource_activateFeature(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccActivationFlagsResourceConfig(feature),
+				Config: testAccActivationFlagsResourceConfigWithAfter(feature),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_activation_flags.test", "id", feature),
 					resource.TestCheckResourceAttr("vault_activation_flags.test", "feature", feature),
-					resource.TestCheckTypeSetElemAttr("data.vault_activation_flags.current", "activated_flags.*", feature),
+					resource.TestCheckTypeSetElemAttr("data.vault_activation_flags.after", "activated_flags.*", feature),
 				),
 			},
 		},
@@ -77,7 +77,7 @@ func TestAccActivationFlagsResource_unknownFlagName(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccActivationFlagsResourceConfig("definitely-not-a-real-activation-flag"),
-				ExpectError: regexp.MustCompile(`was\s+not\s+returned by GET /sys/activation-flags`),
+				ExpectError: regexp.MustCompile(`unsupported path`),
 			},
 		},
 	})
@@ -216,6 +216,18 @@ data "vault_activation_flags" "current" {}
 
 resource "vault_activation_flags" "test" {
   feature = %q
+}
+`, feature)
+}
+
+func testAccActivationFlagsResourceConfigWithAfter(feature string) string {
+	return fmt.Sprintf(`
+resource "vault_activation_flags" "test" {
+	feature = %q
+}
+
+data "vault_activation_flags" "after" {
+	depends_on = [vault_activation_flags.test]
 }
 `, feature)
 }
