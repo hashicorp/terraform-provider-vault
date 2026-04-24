@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -25,12 +24,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
-)
-
-var (
-	// Regex patterns for parsing import path
-	radiusAuthBackendUserMountFromPathRegex = regexp.MustCompile("^auth/(.+)/users/.+$")
-	radiusAuthBackendUserNameFromPathRegex  = regexp.MustCompile("^auth/.+/users/(.+)$")
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -61,6 +54,8 @@ type RadiusAuthBackendUserModel struct {
 type RadiusAuthBackendUserAPIModel struct {
 	Policies []string `json:"policies" mapstructure:"policies"`
 }
+
+const radiusUserImportIDFormat = "expected import ID in the format auth/<mount>/users/<username>"
 
 // Metadata defines the resource name as it would appear in Terraform configurations
 func (r *RadiusAuthBackendUserResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -231,24 +226,12 @@ func (r *RadiusAuthBackendUserResource) Delete(ctx context.Context, req resource
 func (r *RadiusAuthBackendUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	id := req.ID
 
-	var mount, username string
-	var err error
-
 	// Parse the import ID using the official Vault API format
-	mount, err = r.mountFromPath(id)
+	mount, username, err := extractRadiusUserMountAndNameFromID(id)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid import ID format",
 			fmt.Sprintf("Expected format: 'auth/<mount>/users/<username>', got: '%s'", req.ID),
-		)
-		return
-	}
-
-	username, err = r.usernameFromPath(id)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Invalid import ID format",
-			fmt.Sprintf("Could not parse username from path '%s': %s", id, err),
 		)
 		return
 	}
@@ -276,28 +259,28 @@ func (r *RadiusAuthBackendUserResource) userPath(mount, username string) string 
 	return fmt.Sprintf("auth/%s/users/%s", mount, username)
 }
 
-// mountFromPath extracts the mount from the full path
-func (r *RadiusAuthBackendUserResource) mountFromPath(path string) (string, error) {
-	if !radiusAuthBackendUserMountFromPathRegex.MatchString(path) {
-		return "", fmt.Errorf("no mount found in path: %s", path)
+// extractRadiusUserMountAndNameFromID parses an import identifier in the form
+// auth/<mount>/users/<username>. The username segment intentionally remains
+// broad to match Vault's RADIUS route pattern of users/(?P<name>.+).
+func extractRadiusUserMountAndNameFromID(id string) (string, string, error) {
+	id = strings.Trim(id, "/")
+	remainder, ok := strings.CutPrefix(id, "auth/")
+	if !ok {
+		return "", "", fmt.Errorf(radiusUserImportIDFormat)
 	}
-	matches := radiusAuthBackendUserMountFromPathRegex.FindStringSubmatch(path)
-	if len(matches) != 2 {
-		return "", fmt.Errorf("unexpected number of matches in path: %s", path)
-	}
-	return matches[1], nil
-}
 
-// usernameFromPath extracts the username from the full path
-func (r *RadiusAuthBackendUserResource) usernameFromPath(path string) (string, error) {
-	if !radiusAuthBackendUserNameFromPathRegex.MatchString(path) {
-		return "", fmt.Errorf("no username found in path: %s", path)
+	separatorIndex := strings.LastIndex(remainder, "/users/")
+	if separatorIndex < 1 {
+		return "", "", fmt.Errorf(radiusUserImportIDFormat)
 	}
-	matches := radiusAuthBackendUserNameFromPathRegex.FindStringSubmatch(path)
-	if len(matches) != 2 {
-		return "", fmt.Errorf("unexpected number of matches in path: %s", path)
+
+	mount := strings.Trim(remainder[:separatorIndex], "/")
+	username := remainder[separatorIndex+len("/users/"):]
+	if mount == "" || username == "" || strings.Contains(mount, "//") {
+		return "", "", fmt.Errorf(radiusUserImportIDFormat)
 	}
-	return matches[1], nil
+
+	return mount, username, nil
 }
 
 // getClientAndUserData returns a Vault client together with normalized mount,

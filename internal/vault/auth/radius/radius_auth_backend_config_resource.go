@@ -229,13 +229,13 @@ func (r *RadiusAuthBackendConfigResource) Update(ctx context.Context, req resour
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-// upsertConfig reads the write-only secret from config, writes the RADIUS
-// backend configuration, and refreshes the model from Vault's read-after-write
-// response.
+// upsertConfig reads the write-only secret from Terraform config, writes the
+// RADIUS backend configuration, and refreshes the model from Vault's
+// read-after-write response.
 func (r *RadiusAuthBackendConfigResource) upsertConfig(ctx context.Context, data *RadiusAuthBackendModel, config tfsdk.Config, writeErr func(error) (string, string)) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	secret, secretDiags := r.readSecretFromConfig(ctx, config)
+	secret, secretDiags := r.readSecretForWriteFromConfig(ctx, config)
 	diags.Append(secretDiags...)
 	if diags.HasError() {
 		return diags
@@ -371,9 +371,10 @@ func (r *RadiusAuthBackendConfigResource) writeConfig(ctx context.Context, vault
 	return configResp, diags
 }
 
-// readSecretFromConfig reads the write-only secret from the Terraform config.
-// Write-only fields are not included in the plan, so they must be read from config directly.
-func (r *RadiusAuthBackendConfigResource) readSecretFromConfig(ctx context.Context, config tfsdk.Config) (string, diag.Diagnostics) {
+// readSecretForWriteFromConfig reads the write-only secret from Terraform
+// config for create/update requests. Vault does not reliably return this field
+// on read, and write-only attributes are not stored in plan or state.
+func (r *RadiusAuthBackendConfigResource) readSecretForWriteFromConfig(ctx context.Context, config tfsdk.Config) (string, diag.Diagnostics) {
 	var secret *string
 	diags := config.GetAttribute(ctx, path.Root(consts.FieldSecretWO), &secret)
 	if diags.HasError() || secret == nil {

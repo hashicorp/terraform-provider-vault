@@ -22,7 +22,7 @@ IMPROVEMENTS:
 
 * `vault_cf_auth_backend_config`: Added `cf_password_wo_version` to trigger updates when only `cf_password_wo` changes.([#2878](https://github.com/hashicorp/terraform-provider-vault/pull/2878))
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
-* Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
+* Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734))
 * Add support for Enterprise Plugins in `vault_plugin` resource. ([#2707](https://github.com/hashicorp/terraform-provider-vault/pull/2707))
 * `vault_ldap_secret_backend`: Add self-managed support to ldap secrets engine. Requires Vault Enterprise 2.0+. ([#2845](https://github.com/hashicorp/terraform-provider-vault/pull/2845))
 * `azure_static_role`: Add support for importing existing credentials via new Vault import endpoint. ([#2756](https://github.com/hashicorp/terraform-provider-vault/pull/2756))
