@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -25,33 +26,35 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	// CHANGED: replaced session.NewSession(nil) with config.LoadDefaultConfig
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		t.Errorf("Error creating AWS config: %s", err)
+		t.Fatalf("Error creating AWS config: %s", err)
 	}
 
-	// CHANGED: replaced sts.New(sess) with sts.NewFromConfig(cfg)
 	stsClient := sts.NewFromConfig(cfg)
 
-	// CHANGED: added context.TODO() as first argument
 	testIdentity, err := stsClient.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		t.Errorf("Error obtaining identity document: %s", err)
 	}
 
-	// CHANGED: replaced GetCallerIdentityRequest (v1 presign pattern) with
-	// v2 presign pattern using sts.NewPresignClient
 	presignClient := sts.NewPresignClient(stsClient)
 	presignedReq, err := presignClient.PresignGetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		t.Errorf("Error presigning GetCallerIdentity request: %s", err)
 	}
 
-	reqMethod := "POST"
+	reqMethod := presignedReq.Method
+
 	reqURL := base64.StdEncoding.EncodeToString([]byte(presignedReq.URL))
-	reqHeaders := base64.StdEncoding.EncodeToString([]byte("{}"))
-	reqBody := base64.StdEncoding.EncodeToString([]byte("Action=GetCallerIdentity&Version=2011-06-15"))
+
+	headerBytes, err := json.Marshal(presignedReq.SignedHeader)
+	if err != nil {
+		t.Fatalf("error marshaling signed headers: %s", err)
+	}
+	reqHeaders := base64.StdEncoding.EncodeToString(headerBytes)
+
+	reqBody := base64.StdEncoding.EncodeToString([]byte(""))
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -74,29 +77,24 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	// CHANGED: replaced session.NewSession(nil) with config.LoadDefaultConfig
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		t.Errorf("Error creating AWS config: %s", err)
+		t.Fatalf("Error creating AWS config: %s", err)
 	}
 
-	// CHANGED: replaced ec2metadata.New(sess) with imds.NewFromConfig(cfg)
 	metadataClient := imds.NewFromConfig(cfg)
 
-	// CHANGED: replaced metadata.Available() with GetInstanceIdentityDocument check
 	_, err = metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
 
-	// CHANGED: replaced metadata.IAMInfo() with GetIAMInfo
 	iamInfoOutput, err := metadataClient.GetIAMInfo(context.TODO(), &imds.GetIAMInfoInput{})
 	if err != nil {
 		t.Errorf("Error retrieving IAM info for instance: %s", err)
 	}
 	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
-	// CHANGED: replaced metadata.GetInstanceIdentityDocument() with v2 equivalent
 	docOutput, err := metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Errorf("Error retrieving instance identity document: %s", err)
@@ -104,15 +102,17 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	ami := docOutput.ImageID
 	account := docOutput.AccountID
 
-	// CHANGED: replaced metadata.GetDynamicData with GetDynamicData v2 pattern
 	pkcs7Output, err := metadataClient.GetDynamicData(context.TODO(), &imds.GetDynamicDataInput{
 		Path: "instance-identity/pkcs7",
 	})
+
 	if err != nil {
-		t.Errorf("Error retrieving pkcs7 signature: %s", err)
+		t.Fatalf("Error retrieving pkcs7 signature: %s", err)
 	}
-	// CHANGED: replaced ioutil.ReadAll with io.ReadAll
-	defer pkcs7Output.Content.Close()
+	if pkcs7Output.Content != nil {
+		defer pkcs7Output.Content.Close()
+	}
+
 	pkcs7Bytes, err := io.ReadAll(pkcs7Output.Content)
 	if err != nil {
 		t.Errorf("Error reading pkcs7 content: %s", err)
@@ -140,29 +140,24 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	// CHANGED: replaced session.NewSession(nil) with config.LoadDefaultConfig
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		t.Errorf("Error creating AWS config: %s", err)
+		t.Fatalf("Error creating AWS config: %s", err)
 	}
 
-	// CHANGED: replaced ec2metadata.New(sess) with imds.NewFromConfig(cfg)
 	metadataClient := imds.NewFromConfig(cfg)
 
-	// CHANGED: replaced metadata.Available() with GetInstanceIdentityDocument check
 	_, err = metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
 
-	// CHANGED: replaced metadata.IAMInfo() with GetIAMInfo
 	iamInfoOutput, err := metadataClient.GetIAMInfo(context.TODO(), &imds.GetIAMInfoInput{})
 	if err != nil {
 		t.Errorf("Error retrieving IAM info for instance: %s", err)
 	}
 	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
-	// CHANGED: replaced metadata.GetInstanceIdentityDocument() with v2 equivalent
 	docOutput, err := metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Errorf("Error retrieving instance identity document: %s", err)
@@ -170,18 +165,20 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	ami := docOutput.ImageID
 	account := docOutput.AccountID
 
-	// CHANGED: replaced metadata.GetDynamicData with v2 pattern
 	identityOutput, err := metadataClient.GetDynamicData(context.TODO(), &imds.GetDynamicDataInput{
 		Path: "instance-identity/document",
 	})
 	if err != nil {
-		t.Errorf("Error retrieving raw identity: %s", err)
+		t.Fatalf("Error retrieving raw identity: %s", err)
 	}
-	// CHANGED: replaced ioutil.ReadAll with io.ReadAll
-	defer identityOutput.Content.Close()
+
+	if identityOutput.Content != nil {
+		defer identityOutput.Content.Close()
+	}
+
 	identityBytes, err := io.ReadAll(identityOutput.Content)
 	if err != nil {
-		t.Errorf("Error reading identity content: %s", err)
+		t.Fatalf("Error reading identity content: %s", err)
 	}
 	identity := base64.StdEncoding.EncodeToString(identityBytes)
 
@@ -189,12 +186,16 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 		Path: "instance-identity/signature",
 	})
 	if err != nil {
-		t.Errorf("Error retrieving signature: %s", err)
+		t.Fatalf("Error retrieving signature: %s", err)
 	}
-	defer sigOutput.Content.Close()
+
+	if sigOutput.Content != nil {
+		defer sigOutput.Content.Close()
+	}
+
 	sigBytes, err := io.ReadAll(sigOutput.Content)
 	if err != nil {
-		t.Errorf("Error reading signature content: %s", err)
+		t.Fatalf("Error reading signature content: %s", err)
 	}
 	sig := strings.Replace(string(sigBytes), "\n", "", -1)
 
