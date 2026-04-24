@@ -1,5 +1,8 @@
 ## Unreleased
 
+FEATURES:
+* **New Resources**: `vault_userpass_auth_backend_user` for user creation, deletion, password updates, and policy updates, and ephemeral resource `vault_userpass_auth_login` for authenticating with Userpass. ([#2859](https://github.com/hashicorp/terraform-provider-vault/pull/2859))
+
 ## 5.9.0 (April 22, 2026)
 
 BREAKING CHANGES:
@@ -16,8 +19,6 @@ FEATURES:
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 * Add support for CORS configuration: `vault_sys_config_cors` resource and data source for managing and reading Vault's CORS (Cross-Origin Resource Sharing) settings. ([#2849](https://github.com/hashicorp/terraform-provider-vault/pull/2849))
 * **New Ephemeral Resource**: Add vault_generic_endpoint ephemeral resource with response field extraction from data, auth, wrap_info, and lease metadata.([#2830](https://github.com/hashicorp/terraform-provider-vault/pull/2830))
-
-* **New Resources**: `vault_userpass_auth_backend_user` for user creation, deletion, password updates, and policy updates, and ephemeral resource `vault_userpass_auth_login` for authenticating with Userpass. ([#2859](https://github.com/hashicorp/terraform-provider-vault/pull/2859))
 
 IMPROVEMENTS:
 
