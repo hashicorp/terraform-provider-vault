@@ -20,11 +20,6 @@ Reads activation flags from Vault.
 data "vault_activation_flags" "current" {}
 ```
 
-resource "vault_activation_flags" "example" {
-  feature = "secrets-sync"
-}
-```
-
 ## Argument Reference
 
 This data source has no arguments.

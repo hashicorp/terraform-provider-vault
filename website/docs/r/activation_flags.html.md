@@ -44,7 +44,7 @@ In addition to the arguments above, the following attributes are exported:
 The activation flags resource can be imported using the feature key, e.g.
 
 ```shell
-$ terraform import vault_activation_flags.example my-feature-flag
+$ terraform import vault_activation_flags.example secret_sync
 ```
 
 ## Notes
