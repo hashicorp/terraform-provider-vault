@@ -28,6 +28,11 @@ const (
 	sequentialSuccessTimeLimit  = time.Minute
 	retryTimeOut                = 30 * time.Second
 	propagationBuffer           = 5 * time.Second
+
+	// AWS error codes used in credential validation
+	awsErrorAccessDenied       = "AccessDenied"
+	awsErrorValidationError    = "ValidationError"
+	awsErrorInvalidClientToken = "InvalidClientTokenId"
 )
 
 func awsAccessCredentialsDataSource() *schema.Resource {
@@ -162,7 +167,6 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set(consts.FieldLeaseRenewable, secret.Renewable)
 
-	// CHANGED: replaced aws.Config + session.NewSession with config.LoadDefaultConfig
 	optFns := []func(*config.LoadOptions) error{
 		config.WithCredentialsProvider(
 			credentials.NewStaticCredentialsProvider(accessKey, secretKey, securityToken),
@@ -180,14 +184,17 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 		return fmt.Errorf("error creating AWS config: %s", err)
 	}
 
-	// CHANGED: replaced iam.New(sess) and sts.New(sess) with NewFromConfig
 	iamconn := iam.NewFromConfig(cfg)
 	stsconn := sts.NewFromConfig(cfg)
 
 	if credType == "sts" {
 		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
-		// CHANGED: added context.TODO() as first argument
-		if _, err := stsconn.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{}); err != nil {
+
+		// Create a cancellable context with timeout for the STS call
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if _, err := stsconn.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{}); err != nil {
 			return err
 		}
 		return nil
@@ -197,11 +204,16 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 
 	validateCreds := func() *retry.RetryError {
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
-		// CHANGED: added context.TODO() as first argument
-		if _, err := iamconn.GetUser(context.TODO(), nil); err != nil && isAWSAuthError(err) {
+
+		// Create a cancellable context with timeout for each IAM validation call
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if _, err := iamconn.GetUser(ctx, nil); err != nil && isAWSAuthError(err) {
 			sequentialSuccesses = 0
 			log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
-			return retry.RetryableError(err)
+			wrappedErr := fmt.Errorf("AWS credentials validation failed (retryable): %w", err)
+			return retry.RetryableError(wrappedErr)
 		} else if err != nil {
 			log.Printf("[DEBUG] Error checking if creds %q are valid: %s", secret.LeaseID, err)
 			return retry.NonRetryableError(err)
@@ -226,18 +238,13 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	return nil
 }
 
-// CHANGED: replaced awserr.Error pattern with smithy.APIError + errors.As
 func isAWSAuthError(err error) bool {
 	var apiErr smithy.APIError
 	if !errors.As(err, &apiErr) {
 		return false
 	}
 	switch apiErr.ErrorCode() {
-	case "AccessDenied":
-		return true
-	case "ValidationError":
-		return true
-	case "InvalidClientTokenId":
+	case awsErrorAccessDenied, awsErrorValidationError, awsErrorInvalidClientToken:
 		return true
 	default:
 		return false
