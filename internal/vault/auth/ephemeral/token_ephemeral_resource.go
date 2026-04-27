@@ -84,7 +84,7 @@ func (r *TokenEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaReq
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldID: schema.StringAttribute{
-				MarkdownDescription: "The ID of the client token. Can only be specified by a root token. The ID provided may not contain a '.' character and should not start with the 's.' prefix.",
+				MarkdownDescription: "The ID of the client token. This is an input field, not a resource identifier. Can only be specified by a root token. The ID provided may not contain a '.' character and should not start with the 's.' prefix.",
 				Optional:            true,
 			},
 			consts.FieldRoleName: schema.StringAttribute{
@@ -388,6 +388,9 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 		data.LeaseDuration = types.Int64Value(int64(tokenResp.Auth.LeaseDuration))
 
 		// Handle batch tokens (no accessor)
+		// Batch tokens don't have an accessor field in the Auth response, but we use
+		// the RequestID as a unique identifier for tracking purposes. This is not used
+		// for revocation since batch tokens cannot be revoked via API.
 		if accessor == "" && tokenResp.Auth.ClientToken != "" && strings.HasPrefix(tokenResp.Auth.ClientToken, "hvb.") {
 			accessor = tokenResp.RequestID
 			tokenType = "batch"

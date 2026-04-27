@@ -158,6 +158,7 @@ func TestAccToken_withRole(t *testing.T) {
 }
 
 // TestAccToken_wrapped confirms that a wrapped token can be created
+// and that fields not available for wrapped tokens are properly null
 func TestAccToken_wrapped(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 
@@ -171,8 +172,14 @@ func TestAccToken_wrapped(t *testing.T) {
 			{
 				Config: testTokenConfig_wrapped(),
 				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify wrapped token fields are set
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldWrappedToken), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldWrappingAccessor), knownvalue.NotNull()),
+					// Verify fields not available for wrapped tokens are null
+					// These fields are only available after unwrapping the token
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldTokenPolicies), knownvalue.Null()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldEntityID), knownvalue.Null()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldOrphan), knownvalue.Null()),
 				},
 			},
 		},
@@ -194,10 +201,15 @@ func TestAccToken_wrappedBatch(t *testing.T) {
 			{
 				Config: testTokenConfig_wrappedBatch(),
 				ConfigStateChecks: []statecheck.StateCheck{
+					// Verify wrapped token fields are set
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldWrappedToken), knownvalue.NotNull()),
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldWrappingAccessor), knownvalue.NotNull()),
 					// Verify the token type is correctly detected as "batch"
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldType), knownvalue.StringExact("batch")),
+					// Verify fields not available for wrapped tokens are null
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldTokenPolicies), knownvalue.Null()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldEntityID), knownvalue.Null()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldOrphan), knownvalue.Null()),
 				},
 			},
 		},
