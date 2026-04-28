@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	maxPollAttempts = 5
+	maxPollAttempts = 30
 	pollInterval    = 2 * time.Second
 )
 

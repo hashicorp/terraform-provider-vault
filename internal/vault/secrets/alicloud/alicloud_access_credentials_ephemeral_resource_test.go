@@ -47,7 +47,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_basic(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -85,7 +85,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_namespace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -163,7 +163,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_inlinePolicy(t *testing.T
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -200,7 +200,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_remotePolicy(t *testing.T
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -236,6 +236,7 @@ resource "vault_alicloud_secret_backend" "test" {
 	mount         = vault_mount.alicloud.path
 	access_key    = "%s"
 	secret_key_wo = "%s"
+	secret_key_wo_version = 1
 }
 `, testAccAliCloudAccessCredentialsEphemeralResourceNamespaceConfig, backend, accessKey, secretKey)
 }
@@ -550,7 +551,7 @@ func TestAccAliCloudAccessCredentialsEphemeralResource_multipleSimultaneous(t *t
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){

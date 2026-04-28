@@ -52,12 +52,13 @@ func TestAliCloudSecretBackend_lifecycle(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateId:                        path,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore:              []string{consts.FieldSecretKeyWO, consts.FieldSecretKeyWOVersion},
 			},
 		},
 	})
 }
 
-// TestAliCloudSecretBackend_writeOnly tests write-only credential pattern with multiple updates
+// TestAliCloudSecretBackend_writeOnly tests write-only credential pattern with version field
 func TestAliCloudSecretBackend_writeOnly(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-alicloud")
 	accessKey, secretKey := getTestAliCloudCreds(t)
@@ -71,46 +72,42 @@ func TestAliCloudSecretBackend_writeOnly(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
+				Config: testAliCloudSecretBackend_configWithVersion(path, accessKey, secretKey, 1),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "1"),
 					// secret_key_wo is write-only, not in state after Read
 				),
 			},
 			{
-				// Update secret_key_wo to new value
-				Config: testAliCloudSecretBackend_config(path, accessKey, updatedSecretKey),
+				// Update secret_key_wo by incrementing version
+				Config: testAliCloudSecretBackend_configWithVersion(path, accessKey, updatedSecretKey, 2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "2"),
 					// secret_key_wo is write-only, not in state after Read
 				),
 			},
 			{
-				// Keep same secret_key_wo value
-				Config: testAliCloudSecretBackend_config(path, accessKey, updatedSecretKey),
+				// Keep same secret_key_wo value and version (no update)
+				Config: testAliCloudSecretBackend_configWithVersion(path, accessKey, updatedSecretKey, 2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "2"),
 					// secret_key_wo is write-only, not in state after Read
 				),
 			},
 			{
-				// Revert secret_key_wo back to original value
-				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
+				// Revert secret_key_wo back to original value by incrementing version
+				Config: testAliCloudSecretBackend_configWithVersion(path, accessKey, secretKey, 3),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretKeyWOVersion, "3"),
 					// secret_key_wo is write-only, not in state after Read
-				),
-			},
-			{
-				// Keep same secret_key_wo value (original)
-				Config: testAliCloudSecretBackend_config(path, accessKey, secretKey),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAccessKey, accessKey),
 				),
 			},
 		},
@@ -301,10 +298,11 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_alicloud_secret_backend" "test" {
-  namespace     = vault_namespace.test.path
-  mount         = vault_mount.test.path
-  access_key    = %q
-  secret_key_wo = %q
+  namespace             = vault_namespace.test.path
+  mount                 = vault_mount.test.path
+  access_key            = %q
+  secret_key_wo         = %q
+  secret_key_wo_version = 1
 }
 `, namespacePath, path, accessKey, secretKey)
 }
@@ -325,11 +323,29 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_alicloud_secret_backend" "test" {
-  mount         = vault_mount.test.path
-  access_key    = %q
-  secret_key_wo = %q
+  mount                 = vault_mount.test.path
+  access_key            = %q
+  secret_key_wo         = %q
+  secret_key_wo_version = 1
 }
 `, path, accessKey, secretKey)
+}
+
+// testAliCloudSecretBackend_configWithVersion returns test configuration with version field
+func testAliCloudSecretBackend_configWithVersion(path, accessKey, secretKey string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = %q
+  type = "alicloud"
+}
+
+resource "vault_alicloud_secret_backend" "test" {
+  mount                  = vault_mount.test.path
+  access_key             = %q
+  secret_key_wo          = %q
+  secret_key_wo_version  = %d
+}
+`, path, accessKey, secretKey, version)
 }
 
 // testAliCloudSecretBackend_missingMountConfig returns config without mount field
@@ -341,8 +357,9 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_alicloud_secret_backend" "test" {
-  access_key    = %q
-  secret_key_wo = %q
+  access_key            = %q
+  secret_key_wo         = %q
+  secret_key_wo_version = 1
 }
 `, accessKey, secretKey)
 }
@@ -356,8 +373,9 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_alicloud_secret_backend" "test" {
-  mount         = vault_mount.test.path
-  secret_key_wo = %q
+  mount                 = vault_mount.test.path
+  secret_key_wo         = %q
+  secret_key_wo_version = 1
 }
 `, path, secretKey)
 }

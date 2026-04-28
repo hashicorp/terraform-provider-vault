@@ -22,6 +22,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 	resourceType := "vault_pki_external_ca_secret_backend_acme_account"
 	resourceName := resourceType + ".test"
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
