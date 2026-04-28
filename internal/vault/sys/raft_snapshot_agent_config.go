@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -127,7 +127,7 @@ func (r *RaftSnapshotAgentConfigResource) Schema(_ context.Context, _ resource.S
 			},
 			consts.FieldPathPrefix: schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "The directory or bucket prefix to to use.",
+				MarkdownDescription: "The directory or bucket prefix to use.",
 			},
 			consts.FieldFilePrefix: schema.StringAttribute{
 				Optional:            true,
@@ -197,6 +197,9 @@ func (r *RaftSnapshotAgentConfigResource) Schema(_ context.Context, _ resource.S
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
+				Validators: []fwvalidator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldAWSSecretAccessKeyWO)),
+				},
 				MarkdownDescription: "Version number for write-only secret updates. " +
 					"If not set, the provider automatically detects changes to write-only secrets " +
 					"using a SHA-256 hash stored in private state. If set manually, you control " +
@@ -212,26 +215,18 @@ func (r *RaftSnapshotAgentConfigResource) Schema(_ context.Context, _ resource.S
 			},
 			consts.FieldAWSS3DisableTLS: schema.BoolAttribute{
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Disable TLS for the S3 endpoint. This should only be used for testing purposes.",
 			},
 			consts.FieldAWSS3ForcePathStyle: schema.BoolAttribute{
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Use the endpoint/bucket URL style instead of bucket.endpoint.",
 			},
 			consts.FieldAWSS3EnableKMS: schema.BoolAttribute{
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Use KMS to encrypt bucket contents.",
 			},
 			consts.FieldAWSS3ServerSideEncryption: schema.BoolAttribute{
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Use AES256 to encrypt bucket contents.",
 			},
 			consts.FieldAWSS3KMSKey: schema.StringAttribute{
@@ -252,8 +247,6 @@ func (r *RaftSnapshotAgentConfigResource) Schema(_ context.Context, _ resource.S
 			},
 			consts.FieldGoogleDisableTLS: schema.BoolAttribute{
 				Optional:            true,
-				Computed:            true,
-				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 				MarkdownDescription: "Disable TLS for the GCS endpoint.",
 			},
 			consts.FieldAzureContainerName: schema.StringAttribute{
@@ -721,10 +714,10 @@ func (r *RaftSnapshotAgentConfigResource) readIntoModel(ctx context.Context, vau
 	}
 	readStringField(resp.Data, consts.FieldAWSSessionToken, &data.AWSSessionToken)
 	readStringField(resp.Data, consts.FieldAWSS3Endpoint, &data.AWSS3Endpoint)
-	readComputedBoolField(resp.Data, consts.FieldAWSS3DisableTLS, &data.AWSS3DisableTLS)
-	readComputedBoolField(resp.Data, consts.FieldAWSS3ForcePathStyle, &data.AWSS3ForcePathStyle)
-	readComputedBoolField(resp.Data, consts.FieldAWSS3EnableKMS, &data.AWSS3EnableKMS)
-	readComputedBoolField(resp.Data, consts.FieldAWSS3ServerSideEncryption, &data.AWSS3ServerSideEncryption)
+	readBoolField(resp.Data, consts.FieldAWSS3DisableTLS, &data.AWSS3DisableTLS)
+	readBoolField(resp.Data, consts.FieldAWSS3ForcePathStyle, &data.AWSS3ForcePathStyle)
+	readBoolField(resp.Data, consts.FieldAWSS3EnableKMS, &data.AWSS3EnableKMS)
+	readBoolField(resp.Data, consts.FieldAWSS3ServerSideEncryption, &data.AWSS3ServerSideEncryption)
 	readStringField(resp.Data, consts.FieldAWSS3KMSKey, &data.AWSS3KMSKey)
 
 	// Google fields
@@ -738,7 +731,7 @@ func (r *RaftSnapshotAgentConfigResource) readIntoModel(ctx context.Context, vau
 		}
 	}
 
-	readComputedBoolField(resp.Data, consts.FieldGoogleDisableTLS, &data.GoogleDisableTLS)
+	readBoolField(resp.Data, consts.FieldGoogleDisableTLS, &data.GoogleDisableTLS)
 
 	// Azure fields
 	readStringField(resp.Data, consts.FieldAzureContainerName, &data.AzureContainerName)
@@ -793,8 +786,8 @@ func readInt64Field(data map[string]interface{}, key string, target *types.Int64
 }
 
 // readBoolField reads a bool value from a Vault response data map into a types.Bool.
-// If the target is currently null and the API returns false, the null is preserved.
-// Use this for Optional-only bool fields (e.g. autoload_enabled).
+// If the target is currently null and the API returns false, the null is preserved
+// to avoid "inconsistent result after apply" errors for optional-only bool fields.
 func readBoolField(data map[string]interface{}, key string, target *types.Bool) {
 	if val, ok := data[key]; ok {
 		if b, ok := val.(bool); ok {
@@ -804,20 +797,6 @@ func readBoolField(data map[string]interface{}, key string, target *types.Bool) 
 			*target = types.BoolValue(b)
 		}
 	}
-}
-
-// readComputedBoolField reads a bool value from a Vault response data map into a types.Bool.
-// Unlike readBoolField, this always sets the value, which is correct for Computed fields
-// with a default (e.g. Optional + Computed + Default(false)). If the key is missing from
-// the response (e.g. non-applicable storage type), it defaults to false.
-func readComputedBoolField(data map[string]interface{}, key string, target *types.Bool) {
-	if val, ok := data[key]; ok {
-		if b, ok := val.(bool); ok {
-			*target = types.BoolValue(b)
-			return
-		}
-	}
-	*target = types.BoolValue(false)
 }
 
 // setStringIfSet adds a string value to the config map if it's set (not null/unknown)
