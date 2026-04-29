@@ -2,6 +2,7 @@
 
 FEATURES:
 * **New Resource**: Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
+* **New Resource**: `vault_activation_flags`  for managing Vault features that are gated by one-time flags. Requires Vault 1.16 or later. Needs Vault enterprise licence([#2861](https://github.com/hashicorp/terraform-provider-vault/pull/2861/))
 
 ## 5.9.0 (April 22, 2026)
 
@@ -18,7 +19,6 @@ FEATURES:
 * **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858), [#2874](https://github.com/hashicorp/terraform-provider-vault/pull/2874))
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 * Add support for CORS configuration: `vault_sys_config_cors` resource and data source for managing and reading Vault's CORS (Cross-Origin Resource Sharing) settings. ([#2849](https://github.com/hashicorp/terraform-provider-vault/pull/2849))
-* **New Resource**: `vault_activation_flags`  for managing Vault features that are gated by one-time flags. Requires Vault 1.15 or later. Needs Vault enterprise licence([#2861](https://github.com/hashicorp/terraform-provider-vault/pull/2861/))
 * **New Ephemeral Resource**: Add vault_generic_endpoint ephemeral resource with response field extraction from data, auth, wrap_info, and lease metadata.([#2830](https://github.com/hashicorp/terraform-provider-vault/pull/2830))
 
 IMPROVEMENTS:
