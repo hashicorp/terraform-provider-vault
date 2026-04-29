@@ -195,7 +195,8 @@ func getCommonManagedKeysSchema() schemaMap {
 				Type: schema.TypeString,
 			},
 			Description: "A list of the allowed usages of this key. " +
-				"Valid values are encrypt, decrypt, sign, verify, wrap, unwrap, mac, and generate_random",
+				"Valid values are encrypt, decrypt, sign, verify, wrap, unwrap, mac, and generate_random. " +
+				"Default values are sign and verify.",
 		},
 
 		consts.FieldUUID: {
@@ -288,7 +289,8 @@ func managedKeysPKCSConfigSchema() schemaMap {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Computed:    true,
-			Description: "The number of concurrent requests that may be in flight to the HSM at any given time.",
+			Description: "The number of concurrent requests that may be in flight to the HSM at any given time."+
+				"Default is 1",
 		},
 	}
 

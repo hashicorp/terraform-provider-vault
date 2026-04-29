@@ -111,6 +111,8 @@ The following arguments are supported:
 * `any_mount` - (Optional) If `true`, allows usage from any mount point within the
   namespace.
 
+* `usages` - (Optional) A list of the allowed usages of this key. Valid values are encrypt, decrypt, sign, verify, wrap, unwrap, mac, and generate_random.
+
 
 ### AWS Parameters
 
@@ -192,6 +194,8 @@ The following arguments are supported:
 
 * `force_rw_session` - (Optional) Force all operations to open up a read-write session to
   the HSM.
+
+* `max_parallel` - (Optional) The number of concurrent requests that may be in flight to the HSM at any given time.
 
 
 ### GCP Cloud KMS Parameters
