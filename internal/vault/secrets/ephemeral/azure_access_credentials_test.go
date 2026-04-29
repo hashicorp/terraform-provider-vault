@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -78,6 +79,15 @@ func TestAccAzureAccessCredentialsEphemeralResource_basic(t *testing.T) {
 							statecheck.ExpectKnownValue("echo.test_azure",
 								tfjsonpath.New("data").AtMapKey("lease_renewable"),
 								knownvalue.NotNull()),
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey(consts.FieldMetadata).AtMapKey("hello"),
+								knownvalue.StringExact("world")),
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey(consts.FieldMetadata).AtMapKey("team"),
+								knownvalue.StringExact("eco")),
+							statecheck.ExpectKnownValue("echo.test_azure",
+								tfjsonpath.New("data").AtMapKey(consts.FieldMetadata).AtMapKey("foo"),
+								knownvalue.StringExact("bar")),
 						},
 					},
 				},
@@ -102,6 +112,10 @@ resource "vault_azure_secret_backend_role" "role" {
   ttl                    = 3600
   max_ttl                = 7200
   application_object_id = "%s"
+  metadata = {
+    hello = "world"
+    team  = "eco"
+  }
 }
 
 ephemeral "vault_azure_access_credentials" "cred" {
@@ -110,6 +124,9 @@ ephemeral "vault_azure_access_credentials" "cred" {
   mount_id = vault_azure_secret_backend_role.role.id
   validate_creds = %t
   num_sequential_successes = 2
+  request_metadata = {
+	foo = "bar"
+  }
 }
 
 provider "echo" {

@@ -59,10 +59,30 @@ The following arguments are supported:
   password rotation for. If given, it will take precedence over `username` for the LDAP
   search performed during password rotation. Cannot be modified after creation.
 
-* `rotation_period` - (Required) How often Vault should rotate the password of the user entry.
-
 * `skip_import_rotation` - (Optional) Causes vault to skip the initial secret rotation on import. Not applicable to updates.
   Requires Vault 1.16 or above.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before rotating the static credential.
+  A zero value tells Vault not to rotate the credential. The minimum rotation period is 10 seconds. Requires Vault Enterprise 2.0+.
+
+* `rotation_schedule` - (Optional) The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the static credential. Requires Vault Enterprise 2.0+.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 2.0+.
+
+* `rotation_policy` - (Optional) The rotation policy to use for this credential. Requires Vault Enterprise 2.0+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the static credential until unset. Requires Vault Enterprise 2.0+.
+
+* `password_wo_version` - (Optional) The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
+  Requires Vault Enterprise 2.0+.
+
+## Ephemeral Attributes Reference
+* `password_wo` - (Optional) The password for the user. Can be updated.
+  **Note**: This property is write-only and will not be read from the API.
+  Requires Vault Enterprise 2.0+.
 
 ## Attributes Reference
 

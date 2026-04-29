@@ -180,8 +180,8 @@ func approleAuthBackendRoleSecretIDCreate(ctx context.Context, d *schema.Resourc
 		name := "vault_approle_auth_backend_role_secret_id"
 		result, err := normalizeDataJSON(v.(string))
 		if err != nil {
-			log.Printf("[ERROR] Failed to normalize JSON data %q, resource=%q, key=%q, err=%s",
-				v, name, consts.FieldMetadata, err)
+			log.Printf("[ERROR] Failed to normalize JSON data, resource=%q, key=%q, err=%s",
+				name, consts.FieldMetadata, err)
 			return diag.FromErr(err)
 		}
 		data[consts.FieldMetadata] = result

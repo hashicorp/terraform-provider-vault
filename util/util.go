@@ -15,6 +15,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
@@ -487,4 +488,37 @@ func GetStringSliceFromSecret(secret *api.Secret, fieldName string) ([]string, b
 	}
 
 	return output, true
+}
+
+func StringValueOrNull(v interface{}) types.String {
+	if s, ok := v.(string); ok {
+		if s == "" {
+			return types.StringNull()
+		}
+		return types.StringValue(s)
+	}
+	return types.StringNull()
+}
+
+func BoolValueOrNull(v interface{}) types.Bool {
+	if b, ok := v.(bool); ok {
+		return types.BoolValue(b)
+	}
+	return types.BoolNull()
+}
+
+func Int64ValueOrNull(v interface{}) types.Int64 {
+	switch val := v.(type) {
+	case int64:
+		return types.Int64Value(val)
+	case int:
+		return types.Int64Value(int64(val))
+	case json.Number:
+		if i, err := val.Int64(); err == nil {
+			return types.Int64Value(i)
+		}
+		return types.Int64Null()
+	default:
+		return types.Int64Null()
+	}
 }

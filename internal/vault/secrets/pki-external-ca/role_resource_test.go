@@ -22,12 +22,13 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("test-role")
 	resourceName := "vault_pki_external_ca_secret_backend_role.test"
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			acctestutil.PreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
@@ -77,6 +78,7 @@ func TestAccPKIExternalCARoleResource_update(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("test-role")
 	resourceName := "vault_pki_external_ca_secret_backend_role.test"
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
