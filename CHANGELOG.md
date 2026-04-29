@@ -2,6 +2,7 @@
 
 FEATURES:
 * **New Resource**: Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
+* **New Data Source**: Add plural and singular data sources for Vault Policy (`vault_policy` & `vault_policies`). ([#2896](https://github.com/hashicorp/terraform-provider-vault/pull/2896))
 
 ## 5.9.0 (April 22, 2026)
 
