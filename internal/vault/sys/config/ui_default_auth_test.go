@@ -98,7 +98,113 @@ func TestAccConfigUIDefaultAuthWithNamespacePath(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "jwt"),
+					// State matches config: "admin" stays "admin" (we normalize Vault's "admin/")
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespacePath, namespacePath),
+				),
+			},
+			{
+				// Update to verify changes work
+				Config: testAccConfigUIDefaultAuthConfigWithNamespacePath(configName, "oidc", namespacePath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "oidc"),
+					// State matches config: "admin" stays "admin" (we normalize Vault's "admin/")
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespacePath, namespacePath),
+				),
+			},
+			// Import returns Vault's format with trailing slash
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldNamespacePath),
+		},
+	})
+}
+
+// TestAccConfigUIDefaultAuthWithTrailingSlash tests that trailing slashes are accepted
+// and stored as-is by Vault (Vault treats "admin" and "admin/" as the same namespace)
+func TestAccConfigUIDefaultAuthWithTrailingSlash(t *testing.T) {
+	configName := acctest.RandomWithPrefix("test-config")
+	resourceName := "vault_config_ui_default_auth.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion120)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Create with trailing slash - Vault stores it as-is
+				Config: testAccConfigUIDefaultAuthConfigWithNamespacePath(configName, "jwt", "admin/"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "jwt"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespacePath, "admin/"),
+				),
+			},
+			{
+				// Update auth type - trailing slash should remain
+				Config: testAccConfigUIDefaultAuthConfigWithNamespacePath(configName, "oidc", "admin/"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "oidc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespacePath, "admin/"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}
+
+// TestAccConfigUIDefaultAuthRootNamespaceNormalization tests namespace_path normalization
+// for root namespace scenarios in the Read() function
+func TestAccConfigUIDefaultAuthRootNamespaceNormalization(t *testing.T) {
+	configName := acctest.RandomWithPrefix("test-config")
+	resourceName := "vault_config_ui_default_auth.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion120)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Test empty string for root namespace - API returns "root/" but should normalize to ""
+				Config: testAccConfigUIDefaultAuthConfigWithNamespacePath(configName, "jwt", ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "jwt"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespacePath, ""),
+				),
+			},
+			{
+				// Test explicit "root" for root namespace
+				Config: testAccConfigUIDefaultAuthConfigWithNamespacePath(configName, "jwt", "root"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "jwt"),
+					// State matches config: "root" stays "root" (we normalize Vault's "root/")
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespacePath, "root"),
+				),
+			},
+			{
+				// Test "root/" with trailing slash - user configured with slash, we preserve it
+				Config: testAccConfigUIDefaultAuthConfigWithNamespacePath(configName, "jwt", "root/"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "jwt"),
+					// State matches config: "root/" stays "root/" (user configured with slash)
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespacePath, "root/"),
+				),
+			},
+			{
+				// Test omitted namespace_path (null) - should remain null in state
+				Config: testAccConfigUIDefaultAuthConfigMinimal(configName, "token"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, configName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultAuthType, "token"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldNamespacePath),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil),

@@ -177,13 +177,14 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 	}
 
 	// Always include namespace_path.
-	// Normalize: trim trailing slashes, but preserve distinction between "" and "root"
+	// Send to Vault as-is - Vault will add trailing slashes
 	namespacePath := ""
 	if !data.NamespacePath.IsNull() && !data.NamespacePath.IsUnknown() {
-		namespacePath = strings.TrimRight(data.NamespacePath.ValueString(), "/")
+		namespacePath = data.NamespacePath.ValueString()
 	}
-	// Send "root" to API for both "" and "root" (API requirement)
-	if namespacePath == "" || namespacePath == "root" {
+	// Send "root" to API for empty string
+	// For all other values (including "root" and "root/"), send as-is
+	if namespacePath == "" {
 		vaultRequest[consts.FieldNamespacePath] = "root"
 	} else {
 		vaultRequest[consts.FieldNamespacePath] = namespacePath
@@ -202,11 +203,10 @@ func (r *ConfigUIDefaultAuthResource) Create(ctx context.Context, req resource.C
 		vaultRequest[consts.FieldBackupAuthTypes] = []string{}
 	}
 
-	// Always send disable_inheritance - send false if not provided to reset the field
-	if !data.DisableInheritance.IsNull() && !data.DisableInheritance.IsUnknown() {
+	// Always send disable_inheritance. Use false when unset to reset the field.
+	if !data.DisableInheritance.IsUnknown() {
 		vaultRequest[consts.FieldDisableInheritance] = data.DisableInheritance.ValueBool()
 	} else {
-		// Send false to reset the field when removed from config
 		vaultRequest[consts.FieldDisableInheritance] = false
 	}
 
@@ -295,28 +295,28 @@ func (r *ConfigUIDefaultAuthResource) Read(ctx context.Context, req resource.Rea
 
 	data.DefaultAuthType = types.StringValue(readResp.DefaultAuthType)
 
-	// Handle namespace_path - normalize API response to match user's intent
-	// API returns "root/" for root namespace
-	// We normalize to either "" or "root" based on what user configured
+	// Normalize namespace_path to match the configured form when available.
+	// Vault returns namespace paths with a trailing slash.
 	if namespacePath, ok := configResp.Data[consts.FieldNamespacePath].(string); ok {
-		namespacePath = strings.TrimRight(namespacePath, "/")
-		// For root namespace from API (Vault always returns "root/" which becomes "root" after trim)
-		if namespacePath == "root" {
-			// Check what user originally configured
-			if !data.NamespacePath.IsNull() {
-				configValue := strings.TrimRight(data.NamespacePath.ValueString(), "/")
-				// Preserve user's choice: "" stays "", "root" stays "root"
-				if configValue == "" {
-					data.NamespacePath = types.StringValue("")
-				} else {
-					data.NamespacePath = types.StringValue("root")
-				}
+		trimmedPath := strings.TrimRight(namespacePath, "/")
+
+		if !data.NamespacePath.IsNull() {
+			configValue := data.NamespacePath.ValueString()
+			if configValue == "" {
+				// Preserve an explicitly configured empty string for root namespace.
+				data.NamespacePath = types.StringValue("")
+			} else if strings.HasSuffix(configValue, "/") {
+				// Preserve a configured trailing slash.
+				data.NamespacePath = types.StringValue(namespacePath)
+			} else {
+				// Remove Vault's trailing slash when config did not include it.
+				data.NamespacePath = types.StringValue(trimmedPath)
 			}
-			// If user didn't configure namespace_path, leave it null to match config
-		} else {
-			// For non-root namespaces, always set the value
+		} else if trimmedPath != "root" {
+			// During import, preserve Vault's format for non-root namespaces.
 			data.NamespacePath = types.StringValue(namespacePath)
 		}
+		// For root namespace during import, leave namespace_path null.
 	}
 
 	// Handle backup_auth_types - only set if present in API response
@@ -378,13 +378,14 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 	}
 
 	// Always include namespace_path.
-	// Normalize: trim trailing slashes, but preserve distinction between "" and "root"
+	// Send to Vault as-is - Vault will add trailing slashes
 	namespacePath := ""
 	if !data.NamespacePath.IsNull() && !data.NamespacePath.IsUnknown() {
-		namespacePath = strings.TrimRight(data.NamespacePath.ValueString(), "/")
+		namespacePath = data.NamespacePath.ValueString()
 	}
-	// Send "root" to API for both "" and "root" (API requirement)
-	if namespacePath == "" || namespacePath == "root" {
+	// Send "root" to API for empty string (API requirement)
+	// For all other values (including "root" and "root/"), send as-is
+	if namespacePath == "" {
 		vaultRequest[consts.FieldNamespacePath] = "root"
 	} else {
 		vaultRequest[consts.FieldNamespacePath] = namespacePath
@@ -403,11 +404,10 @@ func (r *ConfigUIDefaultAuthResource) Update(ctx context.Context, req resource.U
 		vaultRequest[consts.FieldBackupAuthTypes] = []string{}
 	}
 
-	// Always send disable_inheritance - send false if not provided to reset the field
-	if !data.DisableInheritance.IsNull() && !data.DisableInheritance.IsUnknown() {
+	// Always send disable_inheritance. Use false when unset to reset the field.
+	if !data.DisableInheritance.IsUnknown() {
 		vaultRequest[consts.FieldDisableInheritance] = data.DisableInheritance.ValueBool()
 	} else {
-		// Send false to reset the field when removed from config
 		vaultRequest[consts.FieldDisableInheritance] = false
 	}
 
