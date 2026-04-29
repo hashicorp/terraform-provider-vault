@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -93,6 +94,7 @@ func testAccReadCurrentActivatedFlags(t *testing.T) []string {
 func testAccActivationFlagsEntPreCheck(t *testing.T) {
 	t.Helper()
 	acctestutil.TestEntPreCheck(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
 }
 
 func testAccReadCurrentUnactivatedFlags(t *testing.T) []string {

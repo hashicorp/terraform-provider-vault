@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const activationFlagsPath = "sys/activation-flags"
@@ -110,6 +111,11 @@ func (r *ActivationFlagsResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
+	if !provider.IsAPISupported(r.Meta(), provider.VaultVersion116) {
+		resp.Diagnostics.AddError("Unsupported Vault Version", "activation flags require Vault 1.16 or later")
+		return
+	}
+
 	feature, ok := getDesiredActivationFlag(data, &resp.Diagnostics)
 	if !ok {
 		return
@@ -139,6 +145,11 @@ func (r *ActivationFlagsResource) Read(ctx context.Context, req resource.ReadReq
 	cli, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	if !provider.IsAPISupported(r.Meta(), provider.VaultVersion116) {
+		resp.Diagnostics.AddError("Unsupported Vault Version", "activation flags require Vault 1.16 or later")
 		return
 	}
 

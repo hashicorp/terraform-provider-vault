@@ -10,6 +10,8 @@ description: |-
 
 Activates a single activation flag in Vault.
 
+~> **Important** Activation flags require Vault 1.16 or later.
+
 ~> **Important** Activation flags are available only in Vault Enterprise.
 
 ~> **Important** The activation flags endpoint is root-namespace-only. This resource does not accept a `namespace` argument.

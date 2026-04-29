@@ -10,6 +10,8 @@ description: |-
 
 Reads activation flags from Vault.
 
+~> **Important** Activation flags require Vault 1.16 or later.
+
 ~> **Important** Activation flags are available only in Vault Enterprise and are exposed through a singleton system endpoint.
 
 ~> **Important** The activation flags endpoint is root-namespace-only. This data source does not accept a `namespace` argument.
