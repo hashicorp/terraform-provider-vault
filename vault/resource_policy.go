@@ -14,7 +14,7 @@ import (
 
 func policyResource() *schema.Resource {
 	return &schema.Resource{
-		Create: policyWrite,
+		Create: policyCreate,
 		Update: policyWrite,
 		Delete: policyDelete,
 		Read:   provider.ReadWrapper(policyRead),
@@ -37,6 +37,25 @@ func policyResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+func policyCreate(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	name := d.Get("name").(string)
+
+	existing, err := client.Sys().GetPolicy(name)
+	if err != nil {
+		return fmt.Errorf("error checking for existing policy %q: %s", name, err)
+	}
+	if existing != "" {
+		return fmt.Errorf("policy %q already exists; use terraform import to manage it", name)
+	}
+
+	return policyWrite(d, meta)
 }
 
 func policyWrite(d *schema.ResourceData, meta interface{}) error {

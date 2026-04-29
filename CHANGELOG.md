@@ -18,6 +18,9 @@ IMPROVEMENTS:
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
 
+BUGS:
+* `vault_policy`: Vault policy would overwrite pre-existing policies of the same name if they were managed out of band.([#2895](https://github.com/hashicorp/terraform-provider-vault/pull/2895))
+
 ## 5.9.0 (April 22, 2026)
 
 BREAKING CHANGES:
