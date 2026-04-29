@@ -307,6 +307,7 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
 		sys.NewPluginRuntimesDataSource,
 		sys.NewPolicyDataSource,
+		sys.NewPoliciesDataSource,
 		config.NewSysConfigCORSDataSource,
 	}
 }

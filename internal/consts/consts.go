@@ -276,6 +276,7 @@ const (
 	FieldWrappingAccessor                   = "wrapping_accessor"
 	FieldRoleName                           = "role_name"
 	FieldPolicies                           = "policies"
+	FieldNameFilter                         = "name_filter"
 	FieldNoParent                           = "no_parent"
 	FieldNoDefaultPolicy                    = "no_default_policy"
 	FieldRenewable                          = "renewable"
