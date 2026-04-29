@@ -286,10 +286,10 @@ func managedKeysPKCSConfigSchema() schemaMap {
 				"to the HSM",
 		},
 		consts.FieldMaxParallel: {
-			Type:        schema.TypeInt,
-			Optional:    true,
-			Computed:    true,
-			Description: "The number of concurrent requests that may be in flight to the HSM at any given time."+
+			Type:     schema.TypeInt,
+			Optional: true,
+			Computed: true,
+			Description: "The number of concurrent requests that may be in flight to the HSM at any given time." +
 				"Default is 1",
 		},
 	}
