@@ -12,12 +12,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -237,17 +243,36 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
+		radius.NewRadiusAuthBackendConfigResource,
+		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
 		sysconfig.NewConfigUIHeaderResource,
+		sys.NewRotationPolicyResource,
+		sysconfig.NewQuotaConfigResource,
+		sys.NewPluginRuntimeResource,
+		config.NewSysConfigCORSResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
 		kmip.NewKMIPCAImportedResource,
+		os.NewOSSecretBackendResource,
+		os.NewOSSecretBackendHostResource,
+		os.NewOSSecretBackendAccountResource,
 		pki_external_ca.NewPKIExternalCAACMEAccountResource,
 		pki_external_ca.NewPKIExternalCARoleResource,
 		pki_external_ca.NewPKIExternalCAOrderResource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
 		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
+		sys.NewActivationFlagsResource,
+		keymgmt.NewKeyResource,
+		keymgmt.NewAWSKMSResource,
+		keymgmt.NewAzureKMSResource,
+		keymgmt.NewGCPKMSResource,
+		keymgmt.NewKeyRotateResource,
+		keymgmt.NewDistributeKeyResource,
+		keymgmt.NewReplicateKeyResource,
+		alicloud.NewAliCloudSecretBackendResource,
+		alicloud.NewAliCloudSecretBackendRoleResource,
 	}, testResources()...)
 }
 
@@ -262,11 +287,14 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewGCPOAuth2AccessTokenEphemeralResource,
 		ephemeralsecrets.NewAWSAccessCredentialsEphemeralSecretResource,
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
+		alicloud.NewAliCloudAccessCredentialsEphemeralResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
+		radius.NewRadiusAuthLoginEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
 		cloudfoundry.NewCFAuthLoginEphemeralResource,
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
+		ephemeralgeneric.NewGenericEndpointEphemeralResource,
 	}
 }
 
@@ -277,6 +305,9 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 // the Metadata method. All data sources must have unique names.
 func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		sys.NewActivationFlagsDataSource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
+		sys.NewPluginRuntimesDataSource,
+		config.NewSysConfigCORSDataSource,
 	}
 }

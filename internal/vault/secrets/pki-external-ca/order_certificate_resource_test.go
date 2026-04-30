@@ -28,6 +28,7 @@ func TestAccPKIExternalCAOrderCertificateResource_basic(t *testing.T) {
 
 	resourceName := "vault_pki_external_ca_secret_backend_order_certificate.test"
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{

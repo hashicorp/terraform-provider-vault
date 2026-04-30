@@ -87,8 +87,8 @@ func validateDataJSON(name string, data, k string) ([]string, []error) {
 	dataMap := map[string]interface{}{}
 	err := json.Unmarshal([]byte(data), &dataMap)
 	if err != nil {
-		log.Printf("[ERROR] Failed to validate JSON data %q, resource=%q, key=%q, err=%s",
-			data, name, k, err)
+		log.Printf("[ERROR] Failed to validate JSON data, resource=%q, key=%q, err=%s",
+			name, k, err)
 		return nil, []error{err}
 	}
 	return nil, nil
@@ -102,7 +102,7 @@ func NormalizeDataJSONFunc(name string) func(c interface{}) string {
 		result, err := normalizeDataJSON(data)
 		if err != nil {
 			// The validate function should've prevented invalid JSON ever getting here.
-			log.Printf("[WARN] Failed to normalize JSON data %q, resource=%q, err=%s", data, name, err)
+			log.Printf("[WARN] Failed to normalize JSON data, resource=%q, err=%s", name, err)
 		}
 		return result
 	}

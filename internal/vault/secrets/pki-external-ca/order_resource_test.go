@@ -4,8 +4,10 @@
 package pki_external_ca_test
 
 import (
+	"archive/tar"
 	"crypto/x509/pkix"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
@@ -16,8 +18,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
-	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
+	containerclient "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,11 +30,13 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("test-role")
 	resourceName := "vault_pki_external_ca_secret_backend_order.test"
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
-			acctestutil.PreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
 		},
 		Steps: []resource.TestStep{
@@ -57,7 +62,7 @@ func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIExternalCAOrderImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"expires", "last_update", "next_work_date", "order_status"},
+				ImportStateVerifyIgnore:              []string{"expires", "last_update", "next_work_date", "order_status", "challenges"},
 			},
 		},
 	})
@@ -98,9 +103,33 @@ func setupVaultAndPebble(t *testing.T) (string, string) {
 		*/
 	}
 
-	ca, port, _ := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions())
-	directoryUrl := fmt.Sprintf("https://localhost:%d/dir", port)
-	return ca, directoryUrl
+	dockerAPI, err := docker.NewDockerAPI()
+	require.NoError(t, err)
+
+	f := containerclient.Filters{}
+	f.Add("ancestor", "ghcr.io/letsencrypt/pebble:2.8.0")
+
+	containers, err := dockerAPI.ContainerList(t.Context(), containerclient.ContainerListOptions{Filters: f})
+	require.NoError(t, err)
+
+	require.Len(t, containers.Items, 1)
+	id := containers.Items[0].ID
+
+	copyResult, err := dockerAPI.CopyFromContainer(t.Context(), id, containerclient.CopyFromContainerOptions{
+		SourcePath: "test/certs/pebble.minica.pem",
+	})
+	require.NoError(t, err)
+	rdr := copyResult.Content
+	defer rdr.Close()
+
+	tr := tar.NewReader(rdr)
+	_, err = tr.Next()
+	require.NoError(t, err)
+
+	pebbleCa, err := io.ReadAll(tr)
+	require.NoError(t, err)
+
+	return string(pebbleCa), "https://pebble:14000/dir"
 }
 
 func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
@@ -128,6 +157,7 @@ func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 	csrb, err := csr.ToCSRBundle()
 	require.NoError(t, err)
 
+	acctestutil.SkipTestAccEnt(t)
 	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
@@ -157,7 +187,7 @@ func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIExternalCAOrderImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"csr", "expires", "last_update", "next_work_date", "order_status"},
+				ImportStateVerifyIgnore:              []string{"csr", "expires", "last_update", "next_work_date", "order_status", "challenges"},
 			},
 		},
 	})
