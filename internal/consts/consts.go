@@ -124,7 +124,6 @@ const (
 	FieldSKID                               = "skid"
 	FieldUsePSS                             = "use_pss"
 	FieldForceRWSession                     = "force_rw_session"
-	FieldValues                             = "values"
 	FieldAccessKey                          = "access_key"
 	FieldSecretKey                          = "secret_key"
 	FieldSecretKeyWO                        = "secret_key_wo"
