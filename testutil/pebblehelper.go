@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	containerclient "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/acme"
 )
@@ -99,8 +100,11 @@ func SetupPebbleAcmeServerWithOption(t *testing.T, options *PebbleOptions) (stri
 	require.NoError(t, err)
 	t.Cleanup(service.Cleanup)
 
-	rdr, _, err := runner.DockerAPI.CopyFromContainer(t.Context(), service.Container.ID, "test/certs/pebble.minica.pem")
+	copyResult, err := runner.DockerAPI.CopyFromContainer(t.Context(), service.Container.ID, containerclient.CopyFromContainerOptions{
+		SourcePath: "test/certs/pebble.minica.pem",
+	})
 	require.NoError(t, err)
+	rdr := copyResult.Content
 	defer rdr.Close()
 
 	tr := tar.NewReader(rdr)
@@ -115,7 +119,7 @@ func SetupPebbleAcmeServerWithOption(t *testing.T, options *PebbleOptions) (stri
 
 	networkAddr := ""
 	if options.NetworkName != "" {
-		networkAddr = service.Container.NetworkSettings.Networks[options.NetworkName].IPAddress + ":14000"
+		networkAddr = fmt.Sprintf("%v:14000", service.Container.NetworkSettings.Networks[options.NetworkName].IPAddress)
 	}
 	return string(pebbleCa), acmePort, networkAddr
 }
