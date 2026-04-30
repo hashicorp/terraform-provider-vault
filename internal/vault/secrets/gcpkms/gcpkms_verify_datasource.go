@@ -6,11 +6,11 @@ package gcpkms
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -36,7 +36,7 @@ type GCPKMSVerifyModel struct {
 	base.BaseModel
 
 	Mount      types.String `tfsdk:"mount"`
-	Name       types.String `tfsdk:"name"`
+	KeyName    types.String `tfsdk:"key_name"`
 	Digest     types.String `tfsdk:"digest"`
 	Signature  types.String `tfsdk:"signature"`
 	KeyVersion types.Int64  `tfsdk:"key_version"`
@@ -58,8 +58,8 @@ func (d *GCPKMSVerifyDataSource) Schema(_ context.Context, _ datasource.SchemaRe
 				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
 			},
-			consts.FieldName: schema.StringAttribute{
-				MarkdownDescription: "Name of the key to use for verification.",
+			consts.FieldKeyName: schema.StringAttribute{
+				MarkdownDescription: "Name of the Vault key to use for verification.",
 				Required:            true,
 			},
 			consts.FieldDigest: schema.StringAttribute{
@@ -97,19 +97,19 @@ func (d *GCPKMSVerifyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	verifyPath := fmt.Sprintf("%s/verify/%s", mount, name)
+	keyName := data.KeyName.ValueString()
+	verifyPath := fmt.Sprintf("%s/verify/%s", mount, keyName)
 
 	requestData := map[string]interface{}{
-		"digest":    data.Digest.ValueString(),
-		"signature": data.Signature.ValueString(),
+		consts.FieldDigest:    data.Digest.ValueString(),
+		consts.FieldSignature: data.Signature.ValueString(),
 	}
 
-	if !data.KeyVersion.IsNull() {
-		requestData["key_version"] = data.KeyVersion.ValueInt64()
-	}
+	requestData[consts.FieldKeyVersion] = data.KeyVersion.ValueInt64()
 
-	log.Printf("[DEBUG] Verifying signature with GCP KMS at %q", verifyPath)
+	tflog.Debug(ctx, "Verifying signature with GCP KMS", map[string]interface{}{
+		"path": verifyPath,
+	})
 	secret, err := cli.Logical().WriteWithContext(ctx, verifyPath, requestData)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -128,7 +128,7 @@ func (d *GCPKMSVerifyDataSource) Read(ctx context.Context, req datasource.ReadRe
 	}
 
 	valid := false
-	if v, ok := secret.Data["valid"].(bool); ok {
+	if v, ok := secret.Data[consts.FieldValid].(bool); ok {
 		valid = v
 	}
 

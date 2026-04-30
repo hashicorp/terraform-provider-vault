@@ -33,60 +33,9 @@ func TestGCPKMSVerifyDataSource_basic(t *testing.T) {
 				Config: testGCPKMSVerifyDataSource_basicConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(dataSourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldDigest),
 					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldSignature),
-					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldValid),
-				),
-			},
-		},
-	})
-}
-
-func TestGCPKMSVerifyDataSource_withKeyVersion(t *testing.T) {
-	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
-
-	path := acctest.RandomWithPrefix("tf-test-gcpkms")
-	keyName := acctest.RandomWithPrefix("test-key")
-
-	dataSourceType := "vault_gcpkms_verify"
-	dataSourceName := "data." + dataSourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testGCPKMSVerifyDataSource_withKeyVersionConfig(path, keyName, keyRing, credentials),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldKeyVersion, "1"),
-					resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldValid),
-				),
-			},
-		},
-	})
-}
-
-func TestGCPKMSVerifyDataSource_invalidSignature(t *testing.T) {
-	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
-
-	path := acctest.RandomWithPrefix("tf-test-gcpkms")
-	keyName := acctest.RandomWithPrefix("test-key")
-
-	dataSourceType := "vault_gcpkms_verify"
-	dataSourceName := "data." + dataSourceType + ".test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testGCPKMSVerifyDataSource_invalidSignatureConfig(path, keyName, keyRing, credentials),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
 					resource.TestCheckResourceAttr(dataSourceName, consts.FieldValid, "false"),
 				),
 			},
@@ -103,7 +52,7 @@ func TestGCPKMSVerifyDataSource_namespace(t *testing.T) {
 	getSteps := func(path, keyName, ns string) []resource.TestStep {
 		checks := []resource.TestCheckFunc{
 			resource.TestCheckResourceAttr(dataSourceName, consts.FieldMount, path),
-			resource.TestCheckResourceAttr(dataSourceName, consts.FieldName, keyName),
+			resource.TestCheckResourceAttr(dataSourceName, consts.FieldKeyName, keyName),
 			resource.TestCheckResourceAttr(dataSourceName, consts.FieldKeyVersion, "1"),
 			resource.TestCheckResourceAttrSet(dataSourceName, consts.FieldValid),
 		}
@@ -186,7 +135,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 
 data "vault_gcpkms_verify" "test" {
   mount       = vault_mount.test.path
-  name        = vault_gcpkms_secret_backend_key.test.name
+  key_name    = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "dGVzdC1zaWduYXR1cmU="
@@ -221,78 +170,10 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 
 data "vault_gcpkms_verify" "test" {
   mount       = vault_mount.test.path
-  name        = vault_gcpkms_secret_backend_key.test.name
+  key_name    = vault_gcpkms_secret_backend_key.test.name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "dGVzdC1zaWduYXR1cmU="
-}
-`, path, credentials, keyName, keyRing)
-}
-
-func testGCPKMSVerifyDataSource_withKeyVersionConfig(path, keyName, keyRing, credentials string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
-resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
-  credentials_wo         = <<-EOT
-%s
-EOT
-  credentials_wo_version = 1
-}
-
-resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
-  key_ring         = "%s"
-  purpose          = "asymmetric_sign"
-  algorithm        = "rsa_sign_pss_2048_sha256"
-  protection_level = "software"
-}
-
-data "vault_gcpkms_verify" "test" {
-  mount       = vault_mount.test.path
-  name        = vault_gcpkms_secret_backend_key.test.name
-  digest      = "dGVzdC1kaWdlc3Q="
-  signature   = "dGVzdC1zaWduYXR1cmU="
-  key_version = 1
-}
-`, path, credentials, keyName, keyRing)
-}
-
-func testGCPKMSVerifyDataSource_invalidSignatureConfig(path, keyName, keyRing, credentials string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
-resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
-  credentials_wo         = <<-EOT
-%s
-EOT
-  credentials_wo_version = 1
-}
-
-resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
-  key_ring         = "%s"
-  purpose          = "asymmetric_sign"
-  algorithm        = "rsa_sign_pss_2048_sha256"
-  protection_level = "software"
-}
-
-data "vault_gcpkms_verify" "test" {
-  mount       = vault_mount.test.path
-  name        = vault_gcpkms_secret_backend_key.test.name
-  key_version = 1
-  digest      = "dGVzdC1kaWdlc3Q="
-  signature   = "aW52YWxpZC1zaWduYXR1cmU="
 }
 `, path, credentials, keyName, keyRing)
 }
