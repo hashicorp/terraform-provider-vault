@@ -89,6 +89,12 @@ func (r *ConfigUIHeaderResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
+	// Perform a fresh read from Vault to ensure state matches what's actually stored
+	resp.Diagnostics.Append(r.readHeader(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -104,65 +110,19 @@ func (r *ConfigUIHeaderResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	vaultClient, err := r.getRootNamespaceClient(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	// Read from Vault - if resource not found, remove from state
-	name := data.Name.ValueString()
-	path := r.path(name)
-	queryParams := map[string][]string{
-		"multivalue": {"true"},
-	}
-	headerResp, err := vaultClient.Logical().ReadWithDataWithContext(ctx, path, queryParams)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			errutil.VaultReadErr(err),
-		)
-		return
-	}
-	// If response is nil, the header has been deleted outside of Terraform
-	if headerResp == nil || headerResp.Data == nil {
-		resp.State.RemoveResource(ctx)
-		return
-	}
-
-	// Extract values from response
-	if valuesRaw, ok := headerResp.Data[consts.FieldValues]; ok {
-		var values []string
-
-		switch valuesTyped := valuesRaw.(type) {
-		case []interface{}:
-			values = make([]string, len(valuesTyped))
-			for i, val := range valuesTyped {
-				strVal, ok := val.(string)
-				if !ok {
-					resp.Diagnostics.AddError(
-						"Unexpected Vault Response",
-						fmt.Sprintf("Expected %q to contain only string values, but element %d had type %T.", consts.FieldValues, i, val),
-					)
+	resp.Diagnostics.Append(r.readHeader(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		// If resource not found, remove from state
+		if len(resp.Diagnostics) > 0 {
+			for _, d := range resp.Diagnostics {
+				if d.Summary() == "Resource Not Found" {
+					resp.State.RemoveResource(ctx)
+					resp.Diagnostics = diag.Diagnostics{} // Clear the error since we handled it
 					return
 				}
-				values[i] = strVal
 			}
-		case []string:
-			values = valuesTyped
-		default:
-			resp.Diagnostics.AddError(
-				"Unexpected Vault Response",
-				fmt.Sprintf("Expected %q to be a list of strings, but got %T.", consts.FieldValues, valuesRaw),
-			)
-			return
 		}
-
-		valuesSet, diags := types.SetValueFrom(ctx, types.StringType, values)
-		resp.Diagnostics.Append(diags...)
-		if resp.Diagnostics.HasError() {
-			return
-		}
-		data.Values = valuesSet
+		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -181,6 +141,12 @@ func (r *ConfigUIHeaderResource) Update(ctx context.Context, req resource.Update
 	}
 
 	resp.Diagnostics.Append(r.writeHeader(ctx, data, errutil.VaultUpdateErr, "updating")...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Perform a fresh read from Vault to ensure state matches what's actually stored
+	resp.Diagnostics.Append(r.readHeader(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -278,6 +244,78 @@ func (r *ConfigUIHeaderResource) writeHeader(
 			title, detail := vaultErr(err)
 			diags.AddError(title, detail)
 		}
+	}
+
+	return diags
+}
+
+// readHeader is a helper method that reads the header configuration from Vault
+// and populates the provided data model. This is used by Read, Create, and Update
+// to ensure state consistency with what's actually stored in Vault.
+func (r *ConfigUIHeaderResource) readHeader(ctx context.Context, data *ConfigUIHeaderModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	vaultClient, err := r.getRootNamespaceClient(ctx)
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return diags
+	}
+
+	// Read from Vault
+	name := data.Name.ValueString()
+	path := r.path(name)
+	queryParams := map[string][]string{
+		"multivalue": {"true"},
+	}
+	headerResp, err := vaultClient.Logical().ReadWithDataWithContext(ctx, path, queryParams)
+	if err != nil {
+		diags.AddError(errutil.VaultReadErr(err))
+		return diags
+	}
+
+	// If response is nil, the header has been deleted outside of Terraform
+	if headerResp == nil || headerResp.Data == nil {
+		diags.AddError(
+			"Resource Not Found",
+			fmt.Sprintf("UI header %q not found in Vault", name),
+		)
+		return diags
+	}
+
+	// Extract values from response
+	if valuesRaw, ok := headerResp.Data[consts.FieldValues]; ok {
+		var values []string
+
+		switch valuesTyped := valuesRaw.(type) {
+		case []interface{}:
+			values = make([]string, len(valuesTyped))
+			for i, val := range valuesTyped {
+				strVal, ok := val.(string)
+				if !ok {
+					diags.AddError(
+						"Unexpected Vault Response",
+						fmt.Sprintf("Expected %q to contain only string values, but element %d had type %T.", consts.FieldValues, i, val),
+					)
+					return diags
+				}
+				values[i] = strVal
+			}
+		case []string:
+			values = valuesTyped
+		default:
+			diags.AddError(
+				"Unexpected Vault Response",
+				fmt.Sprintf("Expected %q to be a list of strings, but got %T.", consts.FieldValues, valuesRaw),
+			)
+			return diags
+		}
+
+		valuesSet, setDiags := types.SetValueFrom(ctx, types.StringType, values)
+		diags.Append(setDiags...)
+		if diags.HasError() {
+			return diags
+		}
+		data.Values = valuesSet
 	}
 
 	return diags
