@@ -348,6 +348,18 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			continue
 		}
 
+		// provider_config values need to be converted back to strings because
+		// the schema defines it as TypeMap with string Elem, but the Vault API
+		// returns typed values (bool, int). This fixes perpetual diff issues.
+		if configOption == consts.FieldProviderConfig {
+			if providerConfig, ok := config.Data[configOption].(map[string]interface{}); ok {
+				d.Set(configOption, convertProviderConfigValuesToStrings(providerConfig))
+			} else {
+				d.Set(configOption, config.Data[configOption])
+			}
+			continue
+		}
+
 		d.Set(configOption, config.Data[configOption])
 	}
 
@@ -394,6 +406,21 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 		}
 	}
 	return newConfig, nil
+}
+
+// convertProviderConfigValuesToStrings converts provider_config values from the API
+// response (which may be bool, int, or string) back to strings for state storage.
+// This is necessary because the schema defines provider_config as TypeMap with
+// string Elem, but the Vault API returns typed values.
+func convertProviderConfigValuesToStrings(input map[string]interface{}) map[string]interface{} {
+	if input == nil {
+		return nil
+	}
+	result := make(map[string]interface{})
+	for k, v := range input {
+		result[k] = fmt.Sprintf("%v", v)
+	}
+	return result
 }
 
 func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
