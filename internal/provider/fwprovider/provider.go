@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
@@ -242,6 +243,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
+		radius.NewRadiusAuthBackendConfigResource,
+		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
 		sys.NewRotationPolicyResource,
 		sysconfig.NewQuotaConfigResource,
@@ -260,6 +263,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCAOrderResource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
 		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
+		sys.NewActivationFlagsResource,
 		keymgmt.NewKeyResource,
 		keymgmt.NewAWSKMSResource,
 		keymgmt.NewAzureKMSResource,
@@ -285,6 +289,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 		alicloud.NewAliCloudAccessCredentialsEphemeralResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
+		radius.NewRadiusAuthLoginEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
 		cloudfoundry.NewCFAuthLoginEphemeralResource,
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
@@ -301,6 +306,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 // the Metadata method. All data sources must have unique names.
 func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		sys.NewActivationFlagsDataSource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
