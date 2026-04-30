@@ -175,9 +175,10 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	}
 
 	region := d.Get("region").(string)
-	if region != "" {
-		optFns = append(optFns, config.WithRegion(region))
+	if region == "" {
+		region = "us-east-1"
 	}
+	optFns = append(optFns, config.WithRegion(region))
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), optFns...)
 	if err != nil {
@@ -190,7 +191,6 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	if credType == "sts" {
 		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
 
-		// Create a cancellable context with timeout for the STS call
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
@@ -205,7 +205,6 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	validateCreds := func() *retry.RetryError {
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
 
-		// Create a cancellable context with timeout for each IAM validation call
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 

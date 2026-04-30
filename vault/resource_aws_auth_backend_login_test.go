@@ -26,7 +26,11 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	region := testutil.GetTestAWSRegion(t)
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithRegion(region),
+	)
 	if err != nil {
 		t.Fatalf("Error creating AWS config: %s", err)
 	}
@@ -35,13 +39,13 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 
 	testIdentity, err := stsClient.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
-		t.Errorf("Error obtaining identity document: %s", err)
+		t.Fatalf("Error obtaining identity document: %s", err)
 	}
 
 	presignClient := sts.NewPresignClient(stsClient)
 	presignedReq, err := presignClient.PresignGetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
 	if err != nil {
-		t.Errorf("Error presigning GetCallerIdentity request: %s", err)
+		t.Fatalf("Error presigning GetCallerIdentity request: %s", err)
 	}
 
 	reqMethod := presignedReq.Method
@@ -77,7 +81,11 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	region := testutil.GetTestAWSRegion(t)
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithRegion(region),
+	)
 	if err != nil {
 		t.Fatalf("Error creating AWS config: %s", err)
 	}
@@ -140,7 +148,11 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	region := testutil.GetTestAWSRegion(t)
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithRegion(region),
+	)
 	if err != nil {
 		t.Fatalf("Error creating AWS config: %s", err)
 	}
