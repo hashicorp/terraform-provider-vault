@@ -46,26 +46,26 @@ type AgentRegistrationModel struct {
 	base.BaseModel
 
 	// fields specific to this resource
-	ID                       types.String `tfsdk:"id"`
-	DisplayName              types.String `tfsdk:"display_name"`
-	EntityID                 types.String `tfsdk:"entity_id"`
-	CeilingPolicyIdentifiers types.List   `tfsdk:"ceiling_policy_identifiers"`
-	NoDefaultCeilingPolicy   types.Bool   `tfsdk:"no_default_ceiling_policy"`
-	Description              types.String `tfsdk:"description"`
-	CreationTime             types.String `tfsdk:"creation_time"`
-	LastUpdatedTime          types.String `tfsdk:"last_updated_time"`
+	ID                     types.String `tfsdk:"id"`
+	DisplayName            types.String `tfsdk:"display_name"`
+	EntityID               types.String `tfsdk:"entity_id"`
+	CeilingPolicies        types.List   `tfsdk:"ceiling_policies"`
+	NoDefaultCeilingPolicy types.Bool   `tfsdk:"no_default_ceiling_policy"`
+	Description            types.String `tfsdk:"description"`
+	CreationTime           types.String `tfsdk:"creation_time"`
+	LastUpdatedTime        types.String `tfsdk:"last_updated_time"`
 }
 
 // AgentRegistrationAPIModel describes the Vault API data model.
 type AgentRegistrationAPIModel struct {
-	ID                       string   `json:"id" mapstructure:"id"`
-	DisplayName              string   `json:"display_name" mapstructure:"display_name"`
-	EntityID                 string   `json:"entity_id" mapstructure:"entity_id"`
-	CeilingPolicyIdentifiers []string `json:"ceiling_policy_identifiers" mapstructure:"ceiling_policy_identifiers"`
-	NoDefaultCeilingPolicy   bool     `json:"no_default_ceiling_policy" mapstructure:"no_default_ceiling_policy"`
-	Description              string   `json:"description" mapstructure:"description"`
-	CreationTime             string   `json:"creation_time" mapstructure:"creation_time"`
-	LastUpdatedTime          string   `json:"last_updated_time" mapstructure:"last_updated_time"`
+	ID                     string   `json:"id" mapstructure:"id"`
+	DisplayName            string   `json:"display_name" mapstructure:"display_name"`
+	EntityID               string   `json:"entity_id" mapstructure:"entity_id"`
+	CeilingPolicies        []string `json:"ceiling_policies" mapstructure:"ceiling_policies"`
+	NoDefaultCeilingPolicy bool     `json:"no_default_ceiling_policy" mapstructure:"no_default_ceiling_policy"`
+	Description            string   `json:"description" mapstructure:"description"`
+	CreationTime           string   `json:"creation_time" mapstructure:"creation_time"`
+	LastUpdatedTime        string   `json:"last_updated_time" mapstructure:"last_updated_time"`
 }
 
 // Metadata defines the resource name as it would appear in Terraform configurations
@@ -103,7 +103,7 @@ func (r *AgentRegistrationResource) Schema(ctx context.Context, req resource.Sch
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			consts.FieldCeilingPolicyIdentifiers: schema.ListAttribute{
+			consts.FieldCeilingPolicies: schema.ListAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
@@ -175,13 +175,13 @@ func (r *AgentRegistrationResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Add optional fields
-	if !data.CeilingPolicyIdentifiers.IsNull() && !data.CeilingPolicyIdentifiers.IsUnknown() {
+	if !data.CeilingPolicies.IsNull() && !data.CeilingPolicies.IsUnknown() {
 		var policies []string
-		resp.Diagnostics.Append(data.CeilingPolicyIdentifiers.ElementsAs(ctx, &policies, false)...)
+		resp.Diagnostics.Append(data.CeilingPolicies.ElementsAs(ctx, &policies, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		vaultRequest[consts.FieldCeilingPolicyIdentifiers] = policies
+		vaultRequest[consts.FieldCeilingPolicies] = policies
 	}
 
 	if !data.NoDefaultCeilingPolicy.IsNull() && !data.NoDefaultCeilingPolicy.IsUnknown() {
@@ -288,13 +288,13 @@ func (r *AgentRegistrationResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	// Add optional fields
-	if !data.CeilingPolicyIdentifiers.IsNull() && !data.CeilingPolicyIdentifiers.IsUnknown() {
+	if !data.CeilingPolicies.IsNull() && !data.CeilingPolicies.IsUnknown() {
 		var policies []string
-		resp.Diagnostics.Append(data.CeilingPolicyIdentifiers.ElementsAs(ctx, &policies, false)...)
+		resp.Diagnostics.Append(data.CeilingPolicies.ElementsAs(ctx, &policies, false)...)
 		if resp.Diagnostics.HasError() {
 			return
 		}
-		vaultRequest[consts.FieldCeilingPolicyIdentifiers] = policies
+		vaultRequest[consts.FieldCeilingPolicies] = policies
 	}
 
 	if !data.NoDefaultCeilingPolicy.IsNull() && !data.NoDefaultCeilingPolicy.IsUnknown() {
@@ -440,10 +440,10 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 		data.Description = types.StringValue(apiModel.Description)
 	}
 
-	// Filter out default policies from ceiling_policy_identifiers
+	// Filter out default policies from ceiling_policies
 	// Similar to how vault_token resource filters out "default" policy
 	filteredPolicies := make([]string, 0)
-	for _, policy := range apiModel.CeilingPolicyIdentifiers {
+	for _, policy := range apiModel.CeilingPolicies {
 		// Skip default policies that Vault automatically adds
 		if policy == "default" || policy == "default-ceiling" {
 			continue
@@ -451,11 +451,11 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 		filteredPolicies = append(filteredPolicies, policy)
 	}
 
-	// Always set ceiling_policy_identifiers to avoid type issues
+	// Always set ceiling_policies to avoid type issues
 	policies, d := types.ListValueFrom(ctx, types.StringType, filteredPolicies)
 	diags.Append(d...)
 	if !diags.HasError() {
-		data.CeilingPolicyIdentifiers = policies
+		data.CeilingPolicies = policies
 	}
 
 	data.NoDefaultCeilingPolicy = types.BoolValue(apiModel.NoDefaultCeilingPolicy)

@@ -38,8 +38,8 @@ func TestAccAgentRegistration_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCreationTime),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLastUpdatedTime),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNoDefaultCeilingPolicy, "false"),
-					// ceiling_policy_identifiers should be empty list (default policies filtered out)
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".#", "0"),
+					// ceiling_policies should be empty list (default policies filtered out)
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicies+".#", "0"),
 				),
 			},
 			{
@@ -84,8 +84,8 @@ func TestAccAgentRegistration_withPolicies(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldEntityID),
 					// Default policies are filtered out, so we only see user-specified policies
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".0", policyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicies+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicies+".0", policyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNoDefaultCeilingPolicy, "false"),
 				),
 			},
@@ -195,8 +195,8 @@ func TestAccAgentRegistration_updatePolicies(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
 					// Default policies are filtered out, so we only see user-specified policies
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".0", policy1),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicies+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicies+".0", policy1),
 				),
 			},
 			{
@@ -204,8 +204,8 @@ func TestAccAgentRegistration_updatePolicies(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
 					// Default policies are filtered out, so we only see user-specified policies
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".#", "1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".0", policy2),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicies+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicies+".0", policy2),
 				),
 			},
 		},
@@ -296,9 +296,9 @@ func TestAccAgentRegistration_multiplePolicies(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldEntityID),
 					// Default policies are filtered out, so we only see user-specified policies
-					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".#", "2"),
-					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".*", policy1),
-					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldCeilingPolicyIdentifiers+".*", policy2),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCeilingPolicies+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldCeilingPolicies+".*", policy1),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldCeilingPolicies+".*", policy2),
 				),
 			},
 			{
@@ -347,7 +347,7 @@ resource "vault_identity_entity" "test" {
 resource "vault_agent_registration" "test" {
   display_name              = "%s"
   entity_id                 = vault_identity_entity.test.id
-  ceiling_policy_identifiers = [vault_policy.test.name]
+  ceiling_policies = [vault_policy.test.name]
 }
 `, policyName, displayName, displayName)
 }
@@ -429,7 +429,7 @@ resource "vault_identity_entity" "test" {
 resource "vault_agent_registration" "test" {
   display_name              = "%s"
   entity_id                 = vault_identity_entity.test.id
-  ceiling_policy_identifiers = [
+  ceiling_policies = [
     vault_policy.test1.name,
     vault_policy.test2.name,
   ]

@@ -812,10 +812,10 @@ const (
 	/*
 		agent registry fields
 	*/
-	FieldCeilingPolicyIdentifiers = "ceiling_policy_identifiers"
-	FieldNoDefaultCeilingPolicy   = "no_default_ceiling_policy"
-	FieldCreationTime             = "creation_time"
-	FieldLastUpdatedTime          = "last_updated_time"
+	FieldCeilingPolicies        = "ceiling_policies"
+	FieldNoDefaultCeilingPolicy = "no_default_ceiling_policy"
+	FieldCreationTime           = "creation_time"
+	FieldLastUpdatedTime        = "last_updated_time"
 
 	/*
 		raft snapshot agent config fields

@@ -50,10 +50,10 @@ resource "vault_identity_entity" "agent" {
 }
 
 resource "vault_agent_registration" "example" {
-  display_name               = "my-agent"
-  entity_id                  = vault_identity_entity.agent.id
-  ceiling_policy_identifiers = [vault_policy.agent_ceiling.name]
-  description                = "Production agent for application X"
+  display_name     = "my-agent"
+  entity_id        = vault_identity_entity.agent.id
+  ceiling_policies = [vault_policy.agent_ceiling.name]
+  description      = "Production agent for application X"
 }
 ```
 
@@ -120,7 +120,7 @@ resource "vault_identity_entity" "agent" {
 resource "vault_agent_registration" "example" {
   display_name = "my-agent"
   entity_id    = vault_identity_entity.agent.id
-  ceiling_policy_identifiers = [
+  ceiling_policies = [
     vault_policy.secrets_read.name,
     vault_policy.auth_renew.name,
   ]
@@ -140,7 +140,7 @@ The following arguments are supported:
 
 * `entity_id` - (Required) The ID of the identity entity to associate with this agent registration. The entity must exist before creating the agent registration.
 
-* `ceiling_policy_identifiers` - (Optional) A list of policy names that define the maximum permissions this agent can obtain. These policies act as a ceiling - the agent cannot obtain permissions beyond what these policies allow, even if the entity or token policies would grant more permissions. By default, Vault applies a default ceiling policy unless `no_default_ceiling_policy` is set to `true`.
+* `ceiling_policies` - (Optional) A list of policy names that define the maximum permissions this agent can obtain. These policies act as a ceiling - the agent cannot obtain permissions beyond what these policies allow, even if the entity or token policies would grant more permissions. By default, Vault applies a default ceiling policy unless `no_default_ceiling_policy` is set to `true`.
 
 * `no_default_ceiling_policy` - (Optional) When set to `true`, prevents Vault from applying the default ceiling policy to this agent. This allows you to have complete control over the agent's ceiling policies. Defaults to `false`.
 
@@ -174,7 +174,7 @@ $ terraform import vault_agent_registration.example application/my-agent
 
 * **Ceiling Policies**: Ceiling policies define the maximum permissions an agent can obtain. Even if the associated entity or token policies grant broader permissions, the agent will be limited to the intersection of all applicable policies and the ceiling policies.
 
-* **Default Ceiling Policy**: By default, Vault applies a default ceiling policy to agent registrations. This policy is automatically filtered out when reading the resource state, so only user-specified ceiling policies appear in the `ceiling_policy_identifiers` attribute.
+* **Default Ceiling Policy**: By default, Vault applies a default ceiling policy to agent registrations. This policy is automatically filtered out when reading the resource state, so only user-specified ceiling policies appear in the `ceiling_policies` attribute.
 
 * **Entity Requirement**: The identity entity specified in `entity_id` must exist before creating the agent registration. The entity defines the base identity for the agent.
 
