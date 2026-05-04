@@ -10,7 +10,7 @@ description: |-
 
 Manages agent registrations in Vault Enterprise. Agent registration allows you to register Vault agents with specific identity entities and configure ceiling policies that limit the maximum permissions an agent can obtain.
 
-~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.0 or later.
+~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.1 or later.
 
 ## Example Usage
 
@@ -184,4 +184,4 @@ $ terraform import vault_agent_registration.example application/my-agent
 
 * **Enterprise Feature**: Agent registration is only available in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
 
-* **Version Requirement**: This resource requires Vault 1.18.0 or later.
+* **Version Requirement**: This resource requires Vault 2.0.1 or later.
