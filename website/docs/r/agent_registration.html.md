@@ -172,6 +172,8 @@ $ terraform import vault_agent_registration.example application/my-agent
 
 ## Notes
 
+* **Mount:** The Agent Registry is mounted by default. There is no need to take action to enable it.
+
 * **Ceiling Policies**: Ceiling policies define the maximum permissions an agent can obtain. Even if the associated entity or token policies grant broader permissions, the agent will be limited to the intersection of all applicable policies and the ceiling policies.
 
 * **Default Ceiling Policy**: By default, Vault applies a default ceiling policy to agent registrations. This policy is automatically filtered out when reading the resource state, so only user-specified ceiling policies appear in the `ceiling_policies` attribute.
