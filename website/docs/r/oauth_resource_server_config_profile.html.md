@@ -10,7 +10,7 @@ description: |-
 
 Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These profiles define how Vault validates JWT tokens from OAuth 2.0 resource servers, enabling JWT-based authentication for API requests.
 
-~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.0 or later.
+~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.1 or later.
 
 ~> **Activation Flag Required** The OAuth Resource Server feature must be activated on each Vault instance before using this resource. Activate it using the Vault CLI: `vault write -f sys/activation-flags/oauth-resource-server/activate`. This is a one-time operation per Vault instance and must be performed outside of Terraform.
 
@@ -208,7 +208,7 @@ $ terraform import vault_oauth_resource_server_config_profile.example applicatio
 
 * **Enterprise Feature**: OAuth Resource Server Configuration is only available in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
 
-* **Version Requirement**: This resource requires Vault 2.0.0 or later.
+* **Version Requirement**: This resource requires Vault 2.0.1 or later.
 
 ## Security Considerations
 
