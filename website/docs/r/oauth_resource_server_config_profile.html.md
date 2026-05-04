@@ -14,8 +14,6 @@ Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These 
 
 ~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.1 or later.
 
-~> **Activation Flag Required** The OAuth Resource Server feature must be activated on each Vault instance before using this resource. Activate it using the Vault CLI: `vault write -f sys/activation-flags/oauth-resource-server/activate`. This is a one-time operation per Vault instance and must be performed outside of Terraform.
-
 ## Example Usage
 
 ### JWKS-Based Profile
