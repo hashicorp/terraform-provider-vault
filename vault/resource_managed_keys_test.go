@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -560,6 +561,139 @@ func TestManagedKeysGCP_InvalidAlgorithm(t *testing.T) {
 			},
 		},
 	})
+}
+
+type managedKeysUsagesAcceptanceTestCase struct {
+	name              string
+	providerAttr      string
+	keyType           string
+	buildConfig       func(name string, usages []string) string
+	importStateIgnore []string
+}
+
+func TestManagedKeys_Usages_GenericHarness(t *testing.T) {
+	tc := managedKeysUsagesAcceptanceTestCase{
+		name:         "aws",
+		providerAttr: consts.FieldAWS,
+		keyType:      kmsTypeAWS,
+		buildConfig:  testManagedKeysConfig_awsUsages,
+		importStateIgnore: []string{
+			"aws.0.access_key",
+			"aws.0.secret_key",
+		},
+	}
+
+	t.Run(tc.name, func(t *testing.T) {
+		testManagedKeysUsagesAcceptance(t, tc)
+	})
+}
+
+func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanceTestCase) {
+	name := acctest.RandomWithPrefix(fmt.Sprintf("%s-usages", tc.name))
+	resourceName := "vault_managed_keys.test"
+	stateUsagesPath := fmt.Sprintf("%s.0.%s", tc.providerAttr, consts.FieldUsages)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: tc.buildConfig(name, []string{"verify", "sign"}),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", tc.providerAttr), "1"),
+					resource.TestCheckResourceAttr(resourceName, stateUsagesPath+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, stateUsagesPath+".*", "sign"),
+					resource.TestCheckTypeSetElemAttr(resourceName, stateUsagesPath+".*", "verify"),
+					testManagedKeysCheckVaultUsages(resourceName, tc.keyType, name, []string{"sign", "verify"}),
+				),
+			},
+			{
+				// Reordered TypeSet values should not produce a diff.
+				Config:   tc.buildConfig(name, []string{"sign", "verify"}),
+				PlanOnly: true,
+			},
+			{
+				// Optional+Computed field should remain stable when omitted from config.
+				Config:   tc.buildConfig(name, nil),
+				PlanOnly: true,
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: tc.importStateIgnore,
+			},
+		},
+	})
+}
+
+func testManagedKeysConfig_awsUsages(name string, usages []string) string {
+	var usagesLine string
+	if len(usages) > 0 {
+		quoted := make([]string, 0, len(usages))
+		for _, usage := range usages {
+			quoted = append(quoted, fmt.Sprintf("%q", usage))
+		}
+
+		usagesLine = fmt.Sprintf("\n    usages     = [%s]", strings.Join(quoted, ", "))
+	}
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  aws {
+    name       = "%s"
+    access_key = "ASIAKBASDADA09090"
+    secret_key = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
+    key_bits   = "2048"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string"%s
+  }
+}
+`, name, usagesLine)
+}
+
+func testManagedKeysCheckVaultUsages(resourceName, keyType, name string, want []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		_, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+		path := getManagedKeysPath(keyType, name)
+
+		resp, err := client.Logical().Read(path)
+		if err != nil {
+			return fmt.Errorf("failed to read managed key %q: %w", path, err)
+		}
+
+		if resp == nil {
+			return fmt.Errorf("managed key %q not found", path)
+		}
+
+		raw, ok := resp.Data[consts.FieldUsages]
+		if !ok {
+			return fmt.Errorf("managed key %q missing %q", path, consts.FieldUsages)
+		}
+
+		normalized, err := managedKeyUsagesFromAPI(raw)
+		if err != nil {
+			return fmt.Errorf("failed to normalize %q for %q: %w", consts.FieldUsages, path, err)
+		}
+
+		gotSet := schema.NewSet(schema.HashString, normalized)
+		wantItems := make([]interface{}, 0, len(want))
+		for _, v := range want {
+			wantItems = append(wantItems, v)
+		}
+		wantSet := schema.NewSet(schema.HashString, wantItems)
+
+		if !gotSet.Equal(wantSet) {
+			return fmt.Errorf("unexpected usages for %q, got=%v want=%v", path, gotSet.List(), wantSet.List())
+		}
+
+		return nil
+	}
 }
 
 func testManagedKeysConfig_gcp(name, credentials, project, keyRing, region string) string {
