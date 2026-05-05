@@ -76,7 +76,7 @@ The following arguments are supported:
 
 * `default_auth_type` - (Required) The default authentication method displayed on the Vault UI login page. Must be one of: `github`, `jwt`, `ldap`, `oidc`, `okta`, `radius`, `saml`, `token`, or `userpass`.
 
-* `namespace_path` - (Optional) Target namespace for the configuration. Omit or leave empty to apply the configuration to the root namespace. Values `""`, `"root"`, and `"root/"` are all treated as the root namespace. Non-root namespace values have trailing slashes trimmed automatically.
+* `namespace_path` - (Optional) Target namespace for the configuration. Omit or leave empty to apply the configuration to the root namespace. Values `""`, `"root"`, and `"root/"` are all treated as the root namespace. Vault returns namespace paths with trailing slashes, which are normalized to match your configuration format.
 
 * `backup_auth_types` - (Optional) List of backup authentication methods displayed in the "Sign in with other methods" tab in the Vault UI. Each value must be a valid authentication type from the same list as `default_auth_type`. The order of methods is preserved as specified.
 

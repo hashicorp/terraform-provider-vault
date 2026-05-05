@@ -75,6 +75,7 @@ type ConfigUIDefaultAuthAPIModel struct {
 	DefaultAuthType    string   `json:"default_auth_type" mapstructure:"default_auth_type"`
 	BackupAuthTypes    []string `json:"backup_auth_types" mapstructure:"backup_auth_types"`
 	DisableInheritance bool     `json:"disable_inheritance" mapstructure:"disable_inheritance"`
+	NamespacePath      string   `json:"namespace_path" mapstructure:"namespace_path"`
 }
 
 // Metadata defines the resource name as it would appear in Terraform configurations
@@ -297,7 +298,8 @@ func (r *ConfigUIDefaultAuthResource) Read(ctx context.Context, req resource.Rea
 
 	// Normalize namespace_path to match the configured form when available.
 	// Vault returns namespace paths with a trailing slash.
-	if namespacePath, ok := configResp.Data[consts.FieldNamespacePath].(string); ok {
+	if readResp.NamespacePath != "" {
+		namespacePath := readResp.NamespacePath
 		trimmedPath := strings.TrimRight(namespacePath, "/")
 
 		if !data.NamespacePath.IsNull() {
