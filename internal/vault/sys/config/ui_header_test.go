@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
@@ -23,7 +22,6 @@ func TestAccConfigUIHeader(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -54,7 +52,6 @@ func TestAccConfigUIHeader_update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -122,7 +119,6 @@ func TestAccConfigUIHeader_contentSecurityPolicy(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion116)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{

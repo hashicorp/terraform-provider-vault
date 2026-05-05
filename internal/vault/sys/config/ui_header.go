@@ -327,24 +327,22 @@ func (r *ConfigUIHeaderResource) ImportState(ctx context.Context, req resource.I
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), req.ID)...)
 }
 
-// getRootNamespaceClient returns a Vault client configured for the root namespace.
-// UI header configuration is a global setting that must be managed from the root namespace.
+// getRootNamespaceClient validates that the provider is configured for the root namespace
+// and returns the client. UI header configuration is a global setting that must be managed
+// from the root namespace.
 func (r *ConfigUIHeaderResource) getRootNamespaceClient(ctx context.Context) (*api.Client, error) {
-	baseClient, err := client.GetClient(ctx, r.Meta(), "")
+	vaultClient, err := client.GetClient(ctx, r.Meta(), "")
 	if err != nil {
 		return nil, err
 	}
 
-	// Clone the client to avoid modifying the shared client
-	rootClient, err := baseClient.Clone()
-	if err != nil {
-		return nil, err
+	// Check if a namespace is configured
+	namespace := vaultClient.Namespace()
+	if namespace != "" {
+		return nil, fmt.Errorf("UI header configuration must be managed from the root namespace, but provider is configured with namespace %q. Please configure the provider without a namespace or use a separate provider block without namespace configuration", namespace)
 	}
 
-	// Clear any namespace to ensure we're operating in the root namespace
-	rootClient.ClearNamespace()
-
-	return rootClient, nil
+	return vaultClient, nil
 }
 
 func (r *ConfigUIHeaderResource) path(name string) string {
