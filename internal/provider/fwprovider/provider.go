@@ -246,6 +246,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		radius.NewRadiusAuthBackendConfigResource,
 		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
+		sysconfig.NewConfigUIHeaderResource,
 		sys.NewRotationPolicyResource,
 		sysconfig.NewQuotaConfigResource,
 		sys.NewPluginRuntimeResource,
@@ -295,7 +296,6 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
 	}
-
 }
 
 // DataSources returns a slice of functions to instantiate each DataSource

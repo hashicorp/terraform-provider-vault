@@ -1,6 +1,8 @@
 ## Unreleased
 
 FEATURES:
+
+* **New Resource**: `vault_config_ui_header` - Manages custom HTTP headers for the Vault UI. Supports security headers (CSP, HSTS, X-Frame-Options), CORS configuration, and custom organizational headers. Requires Vault 1.16.0+. ([#2842](https://github.com/hashicorp/terraform-provider-vault/pull/2842))
 * **New Resource**: Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
 * **New Resource**: `vault_activation_flags`  for managing Vault features that are gated by one-time flags. Requires Vault 1.16 or later. Needs Vault enterprise licence([#2861](https://github.com/hashicorp/terraform-provider-vault/pull/2861/))
 
