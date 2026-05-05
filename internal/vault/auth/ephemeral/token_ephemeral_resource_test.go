@@ -374,47 +374,12 @@ resource "echo" "test" {}
 `, policyName)
 }
 
-func testTokenConfig_withMetadata() string {
-	return `
-ephemeral "vault_token" "test" {
-  policies = ["default"]
-  ttl      = "1h"
-  metadata = {
-    user = "test-user"
-    env  = "test"
-  }
-}
-
-provider "echo" {
-  data = ephemeral.vault_token.test
-}
-
-resource "echo" "test" {}
-`
-}
-
 func testTokenConfig_orphan() string {
 	return `
 ephemeral "vault_token" "test" {
   policies  = ["default"]
   ttl       = "1h"
   no_parent = true
-}
-
-provider "echo" {
-  data = ephemeral.vault_token.test
-}
-
-resource "echo" "test" {}
-`
-}
-
-func testTokenConfig_withNumUses() string {
-	return `
-ephemeral "vault_token" "test" {
-  policies = ["default"]
-  ttl      = "1h"
-  num_uses = 5
 }
 
 provider "echo" {
@@ -453,21 +418,6 @@ provider "echo" {
 
 resource "echo" "test" {}
 `, roleName)
-}
-
-func testTokenConfig_periodic() string {
-	return `
-ephemeral "vault_token" "test" {
-  policies = ["default"]
-  period   = "24h"
-}
-
-provider "echo" {
-  data = ephemeral.vault_token.test
-}
-
-resource "echo" "test" {}
-`
 }
 
 func testTokenConfig_wrapped() string {
@@ -666,20 +616,4 @@ provider "echo" {
 
 resource "echo" "test" {}
 `, policyName)
-}
-
-func testTokenConfig_withCustomID(customID string) string {
-	return fmt.Sprintf(`
-ephemeral "vault_token" "test" {
-  id       = "%s"
-  policies = ["default"]
-  ttl      = "1h"
-}
-
-provider "echo" {
-  data = ephemeral.vault_token.test
-}
-
-resource "echo" "test" {}
-`, customID)
 }

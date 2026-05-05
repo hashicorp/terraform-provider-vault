@@ -37,16 +37,20 @@ provider "vault" {
 
 ### Token with Role
 
+~> **Important** When using ephemeral resources with regular resources, the role must be created in a separate `terraform apply` before the ephemeral token can reference it. Ephemeral resources open during the plan phase, while regular resources are created during the apply phase.
+
 ```hcl
+# Step 1: Create the role first with terraform apply
 resource "vault_token_auth_backend_role" "app_role" {
-  role_name           = "app-role"
-  allowed_policies    = ["app-policy"]
-  orphan              = true
-  token_period        = "86400"
-  renewable           = true
+  role_name              = "app-role"
+  allowed_policies       = ["app-policy"]
+  orphan                 = true
+  token_period           = "86400"
+  renewable              = true
   token_explicit_max_ttl = "115200"
 }
 
+# Step 2: After the role exists, use it with an ephemeral token
 ephemeral "vault_token" "app_token" {
   role_name = vault_token_auth_backend_role.app_role.role_name
   ttl       = "24h"
@@ -61,7 +65,6 @@ ephemeral "vault_token" "batch" {
   type     = "batch"
   policies = ["read-only"]
   ttl      = "30m"
-  num_uses = 10
 }
 ```
 
@@ -72,12 +75,6 @@ ephemeral "vault_token" "wrapped" {
   policies     = ["app-policy"]
   ttl          = "1h"
   wrapping_ttl = "5m"
-}
-
-# Access the wrapped token
-output "wrapped_token" {
-  value     = ephemeral.vault_token.wrapped.wrapped_token
-  sensitive = true
 }
 ```
 
@@ -112,20 +109,36 @@ ephemeral "vault_token" "periodic" {
 ### Token with Entity Alias
 
 ```hcl
+# Step 1: Create the auth backend, entity, alias, and role first with terraform apply
+# Create an auth backend (e.g., userpass) to associate the entity alias with
+resource "vault_auth_backend" "userpass" {
+  type = "userpass"
+  path = "userpass"
+}
+
 resource "vault_identity_entity" "app" {
   name     = "app-entity"
   policies = ["app-policy"]
 }
 
+# Entity alias must be associated with a non-token auth backend
 resource "vault_identity_entity_alias" "app_alias" {
-  name           = "app-alias"
-  mount_accessor = vault_auth_backend.token.accessor
+  name           = "app-user"
+  mount_accessor = vault_auth_backend.userpass.accessor
   canonical_id   = vault_identity_entity.app.id
 }
 
+# Token role must allow the entity alias
+resource "vault_token_auth_backend_role" "app_role" {
+  role_name              = "app-role"
+  allowed_policies       = ["app-policy"]
+  allowed_entity_aliases = [vault_identity_entity_alias.app_alias.name]
+}
+
+# Step 2: After all resources exist, use them with an ephemeral token
 ephemeral "vault_token" "with_entity" {
+  role_name    = vault_token_auth_backend_role.app_role.role_name
   entity_alias = vault_identity_entity_alias.app_alias.name
-  policies     = ["app-policy"]
   ttl          = "1h"
 }
 ```
@@ -169,6 +182,10 @@ The following arguments are supported:
 * `entity_alias` - (Optional) Name of the entity alias to associate with during token creation. This links the token to an existing identity entity.
 
 * `wrapping_ttl` - (Optional) The TTL period of the wrapped token. If set, the token will be response-wrapped. Examples: "5m", "300s".
+
+* `mount_id` - (Optional) If value is set, will defer provisioning the ephemeral resource until
+  `terraform apply`. For more details, please refer to the official documentation around
+  [using ephemeral resources in the Vault Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_ephemeral_resources).
 
 ## Required Vault Capabilities
 
@@ -218,6 +235,17 @@ Batch tokens are lightweight tokens that:
 - Are not tracked in Vault's token store
 - Cannot be revoked via API (they expire naturally)
 - Have limited functionality but better performance
+
+**Batch Token Restrictions:**
+Batch tokens cannot use the following parameters:
+- `num_uses` - Error: "batch tokens cannot have 'num_uses' set"
+- `period` - Error: "batch tokens cannot have 'period' set"
+- `explicit_max_ttl` - Error: "batch tokens cannot have 'explicit_max_ttl' set"
+
+When using batch tokens with roles, the role must be configured with:
+- `token_type = "batch"`
+- `orphan = true`
+- `renewable = false`
 
 ## Automatic Revocation
 
