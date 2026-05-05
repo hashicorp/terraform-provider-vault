@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -76,17 +75,11 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 				Required:  true,
 				Sensitive: true,
 				WriteOnly: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
 					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
 				Required: true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
-				},
 			},
 			consts.FieldScopes: schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -119,18 +112,7 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 	tflog.Debug(ctx, "Create: credentials_wo from Config", map[string]any{
 		"is_null":    data.CredentialsWO.IsNull(),
 		"is_unknown": data.CredentialsWO.IsUnknown(),
-		"length":     len(data.CredentialsWO.ValueString()),
 	})
-
-	// Validate that credentials are actually present
-	if data.CredentialsWO.IsNull() || data.CredentialsWO.IsUnknown() || data.CredentialsWO.ValueString() == "" {
-		resp.Diagnostics.AddError(
-			"Missing credentials",
-			"The credentials_wo field is required but was empty or null. "+
-				"Ensure you are providing valid GCP service account credentials.",
-		)
-		return
-	}
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -152,9 +134,7 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 
 	tflog.Debug(ctx, "Configuring GCP KMS backend", map[string]any{"path": configPath})
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
-		resp.Diagnostics.AddError(
-			"Error configuring GCP KMS backend",
-			fmt.Sprintf("Error writing %q: %s", configPath, err))
+		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
 
@@ -191,9 +171,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 	tflog.Debug(ctx, "Reading GCP KMS backend config", map[string]any{"path": configPath})
 	secret, err := cli.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading GCP KMS backend config",
-			fmt.Sprintf("Error reading %q: %s", configPath, err))
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 
@@ -249,18 +227,7 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 		tflog.Debug(ctx, "Update: credentials version changed, including credentials", map[string]any{
 			"old_version": state.CredentialsWOVersion.ValueInt64(),
 			"new_version": plan.CredentialsWOVersion.ValueInt64(),
-			"length":      len(plan.CredentialsWO.ValueString()),
 		})
-
-		// Validate that credentials are actually present
-		if plan.CredentialsWO.IsNull() || plan.CredentialsWO.IsUnknown() || plan.CredentialsWO.ValueString() == "" {
-			resp.Diagnostics.AddError(
-				"Missing credentials",
-				"The credentials_wo field is required when credentials_wo_version changes, "+
-					"but was empty or null. Ensure you are providing valid GCP service account credentials.",
-			)
-			return
-		}
 	}
 
 	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
@@ -283,9 +250,7 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 		"credentials_included": includeCredentials,
 	})
 	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating GCP KMS backend config",
-			fmt.Sprintf("Error writing %q: %s", configPath, err))
+		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
 	}
 
@@ -331,18 +296,9 @@ func buildBackendConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendM
 	configData := make(map[string]interface{})
 
 	// Only include credentials when explicitly requested
+	// Empty string is valid and tells Vault to use Default Application Credentials
 	if includeCredentials {
-		creds := data.CredentialsWO.ValueString()
-		if creds == "" {
-			diags.AddError(
-				"Missing credentials",
-				"Credentials are required but the value was empty. "+
-					"This may indicate that the write-only field was not properly read from the configuration. "+
-					"Ensure you are providing valid GCP service account credentials via the credentials_wo field.",
-			)
-			return nil, diags
-		}
-		configData["credentials"] = creds
+		configData["credentials"] = data.CredentialsWO.ValueString()
 	}
 
 	// Add scopes if provided
