@@ -136,9 +136,8 @@ The following arguments are supported:
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
-  *Available only for Vault Enterprise*.
 
-* `display_name` - (Required) The display name for the agent registration. This is used as the unique identifier for the agent. Changing this will force a new resource to be created.
+* `display_name` - (Required) The display name for the agent registration. This field must be unique per Vault namespace. Within Terraform, this is used as the unique identifier for the agent. Changing this on an existing resource will force the resource to be deleted from Vault and a new resource to be created in Vault.
 
 * `entity_id` - (Required) The ID of the identity entity to associate with this agent registration. The entity must exist before creating the agent registration.
 
