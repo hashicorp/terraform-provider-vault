@@ -12,20 +12,7 @@ Manages a user for the [Userpass auth method](https://developer.hashicorp.com/va
 
 ## API Behavior
 
-Vault exposes a primary Userpass user create/update endpoint along with separate sub-endpoints for updating a user's password and policies independently.
-
-This resource uses the primary user endpoint for create and update operations. The password-only and policies-only sub-endpoints are not modeled as separate Terraform resources because they do not represent distinct managed objects and would be redundant with the full user management flow provided by this resource.
-
-As a result:
-
-* Changes to `password_wo` or `password_hash_wo` are applied through this resource via the
-  [`POST /auth/<mount>/users/<username>`](https://developer.hashicorp.com/vault/api-docs/auth/userpass#create-update-user) endpoint.
-  To update only the password outside of Terraform, use the dedicated
-  [`POST /auth/<mount>/users/<username>/password`](https://developer.hashicorp.com/vault/api-docs/auth/userpass#update-password-on-user) endpoint (see "Updating Passwords and Policies After Creation" below).
-* Changes to token-related settings such as `token_policies`, `token_ttl`, and `token_max_ttl` are also applied through this resource via the same primary endpoint.
-  To update only policies outside of Terraform, use the dedicated
-  [`POST /auth/<mount>/users/<username>/policies`](https://developer.hashicorp.com/vault/api-docs/auth/userpass#update-policies-on-user) endpoint (see "Updating Passwords and Policies After Creation" below).
-* There is no separate Terraform resource for the password-only or policies-only sub-endpoints.
+This resource manages Userpass users via the [`POST /auth/<mount>/users/<username>`](https://developer.hashicorp.com/vault/api-docs/auth/userpass#create-update-user) endpoint for all create and update operations, including changes to passwords and token-related settings.
 
 ## Example Usage
 
@@ -177,46 +164,6 @@ For more information on token settings, see the [Token Fields documentation](/do
   "provider produced inconsistent result" errors, the provider intentionally preserves the
   configured value in Terraform state even when Vault doesn't return it.
   *Available only for Vault Enterprise*.
-
-## Updating Passwords and Policies After Creation
-
-To update a user's password or policies after the resource has been created, use the Vault CLI or API directly:
-
-**Updating the password:**
-
-Using Vault CLI:
-
-```shell
-vault write auth/<mount>/users/<username>/password password="new-password"
-```
-
-Using Vault API:
-
-```shell
-curl -X POST \
-  -H "X-Vault-Token: $VAULT_TOKEN" \
-  -d '{"password":"new-password"}' \
-  https://vault.example.com/v1/auth/<mount>/users/<username>/password
-```
-
-**Updating policies:**
-
-Using Vault CLI:
-
-```shell
-vault write auth/<mount>/users/<username>/policies token_policies="policy1,policy2"
-```
-
-Using Vault API:
-
-```shell
-curl -X POST \
-  -H "X-Vault-Token: $VAULT_TOKEN" \
-  -d '{"token_policies":"policy1,policy2"}' \
-  https://vault.example.com/v1/auth/<mount>/users/<username>/policies
-```
-
-For more details, see the [Vault Userpass API documentation](https://developer.hashicorp.com/vault/api-docs/auth/userpass).
 
 ## Import
 
