@@ -39,7 +39,7 @@ resource "vault_gcpkms_secret_backend_key" "encryption_key" {
 ephemeral "vault_gcpkms_encrypt" "data" {
   mount_id  = vault_mount.gcpkms.id
   mount     = vault_mount.gcpkms.path
-  name      = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name  = vault_gcpkms_secret_backend_key.encryption_key.name
   plaintext = base64encode("sensitive data to encrypt")
 }
 
@@ -56,7 +56,7 @@ resource "aws_ssm_parameter" "encrypted_secret" {
 ephemeral "vault_gcpkms_encrypt" "with_aad" {
   mount_id                      = vault_mount.gcpkms.id
   mount                         = vault_mount.gcpkms.path
-  name                          = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name                      = vault_gcpkms_secret_backend_key.encryption_key.name
   plaintext                     = base64encode("sensitive data")
   additional_authenticated_data = base64encode("context-info")
 }
@@ -68,7 +68,7 @@ ephemeral "vault_gcpkms_encrypt" "with_aad" {
 ephemeral "vault_gcpkms_encrypt" "versioned" {
   mount_id    = vault_mount.gcpkms.id
   mount       = vault_mount.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name    = vault_gcpkms_secret_backend_key.encryption_key.name
   plaintext   = base64encode("sensitive data")
   key_version = 2
 }
@@ -80,13 +80,13 @@ ephemeral "vault_gcpkms_encrypt" "versioned" {
 ephemeral "vault_gcpkms_encrypt" "secret" {
   mount_id  = vault_mount.gcpkms.id
   mount     = vault_mount.gcpkms.path
-  name      = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name  = vault_gcpkms_secret_backend_key.encryption_key.name
   plaintext = base64encode("my secret message")
 }
 
 ephemeral "vault_gcpkms_decrypt" "recovered" {
   mount      = vault_mount.gcpkms.path
-  name       = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name   = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.secret.ciphertext
 }
 
@@ -114,7 +114,7 @@ The following arguments are supported:
 
 * `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 
-* `name` - (Required) Name of the encryption key to use. The key must have purpose `encrypt_decrypt`.
+* `key_name` - (Required) Name of the encryption key to use. The key must have purpose `encrypt_decrypt`.
 
 * `plaintext` - (Required, Sensitive) Base64-encoded plaintext data to encrypt.
 

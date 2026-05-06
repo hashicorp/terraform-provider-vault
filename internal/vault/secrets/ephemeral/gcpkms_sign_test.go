@@ -216,7 +216,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 ephemeral "vault_gcpkms_sign" "test" {
   mount_id    = vault_mount.test.id
   mount       = vault_mount.test.path
-  name        = vault_gcpkms_secret_backend_key.test.name
+  key_name    = vault_gcpkms_secret_backend_key.test.name
   digest      = "%s"
   key_version = %s
 %s
@@ -257,7 +257,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 ephemeral "vault_gcpkms_sign" "test" {
   mount_id    = vault_mount.test.id
   mount       = vault_mount.test.path
-  name        = vault_gcpkms_secret_backend_key.test.name
+  key_name    = vault_gcpkms_secret_backend_key.test.name
   digest      = "%s"
   key_version = %s
 }
@@ -306,7 +306,7 @@ resource "vault_gcpkms_secret_backend_key" "test_p384" {
 ephemeral "vault_gcpkms_sign" "test_p256" {
   mount_id    = vault_mount.test.id
   mount       = vault_mount.test.path
-  name        = vault_gcpkms_secret_backend_key.test_p256.name
+  key_name   = vault_gcpkms_secret_backend_key.test_p256.name
   digest      = "%s"
   key_version = %s
 }
@@ -314,7 +314,7 @@ ephemeral "vault_gcpkms_sign" "test_p256" {
 ephemeral "vault_gcpkms_sign" "test_p384" {
   mount_id    = vault_mount.test.id
   mount       = vault_mount.test.path
-  name        = vault_gcpkms_secret_backend_key.test_p384.name
+  key_name   = vault_gcpkms_secret_backend_key.test_p384.name
   digest      = "%s"
   key_version = %s
 }

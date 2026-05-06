@@ -592,6 +592,7 @@ const (
 
 	FieldInput                       = "input"
 	FieldKeyVersion                  = "key_version"
+	FieldKeyVersionReturned          = "key_version_returned"
 	FieldHashAlgorithm               = "hash_algorithm"
 	FieldReference                   = "reference"
 	FieldBatchInput                  = "batch_input"

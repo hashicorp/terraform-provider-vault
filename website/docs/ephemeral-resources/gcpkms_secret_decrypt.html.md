@@ -38,7 +38,7 @@ resource "vault_gcpkms_secret_backend_key" "encryption_key" {
 
 ephemeral "vault_gcpkms_decrypt" "data" {
   mount      = vault_mount.gcpkms.path
-  name       = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name   = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = var.encrypted_data
 }
 
@@ -56,13 +56,13 @@ resource "aws_ssm_parameter" "decrypted_secret" {
 ephemeral "vault_gcpkms_encrypt" "secret" {
   mount_id  = vault_mount.gcpkms.id
   mount     = vault_mount.gcpkms.path
-  name      = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name  = vault_gcpkms_secret_backend_key.encryption_key.name
   plaintext = base64encode("my secret message")
 }
 
 ephemeral "vault_gcpkms_decrypt" "recovered" {
   mount      = vault_mount.gcpkms.path
-  name       = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name   = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.secret.ciphertext
 }
 
@@ -79,7 +79,7 @@ resource "aws_ssm_parameter" "recovered_secret" {
 ```hcl
 ephemeral "vault_gcpkms_decrypt" "with_aad" {
   mount                         = vault_mount.gcpkms.path
-  name                          = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name                      = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext                    = var.encrypted_data
   additional_authenticated_data = base64encode("context-info")
 }
@@ -90,7 +90,7 @@ ephemeral "vault_gcpkms_decrypt" "with_aad" {
 ```hcl
 ephemeral "vault_gcpkms_decrypt" "versioned" {
   mount       = vault_mount.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name    = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext  = var.encrypted_data
   key_version = 1
 }
@@ -112,7 +112,7 @@ The following arguments are supported:
 
 * `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 
-* `name` - (Required) Name of the encryption key that was used to encrypt the data. The key must have
+* `key_name` - (Required) Name of the encryption key that was used to encrypt the data. The key must have
   purpose `encrypt_decrypt`.
 
 * `ciphertext` - (Required, Sensitive) Base64-encoded ciphertext to decrypt. This should be the output

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -31,13 +32,14 @@ type GCPKMSReencryptModel struct {
 	base.BaseModelEphemeral
 
 	Mount                       types.String `tfsdk:"mount"`
-	Name                        types.String `tfsdk:"name"`
+	KeyName                     types.String `tfsdk:"key_name"`
 	Ciphertext                  types.String `tfsdk:"ciphertext"`
 	AdditionalAuthenticatedData types.String `tfsdk:"additional_authenticated_data"`
 	KeyVersion                  types.Int64  `tfsdk:"key_version"`
 
 	// Computed
-	NewCiphertext types.String `tfsdk:"new_ciphertext"`
+	NewCiphertext      types.String `tfsdk:"new_ciphertext"`
+	KeyVersionReturned types.String `tfsdk:"key_version_returned"`
 }
 
 func (r *GCPKMSReencryptEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
@@ -47,8 +49,8 @@ func (r *GCPKMSReencryptEphemeralResource) Schema(_ context.Context, _ ephemeral
 				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
 			},
-			consts.FieldName: schema.StringAttribute{
-				MarkdownDescription: "Name of the key to use for re-encryption",
+			consts.FieldKeyName: schema.StringAttribute{
+				MarkdownDescription: "Name of the Vault key to use for re-encryption",
 				Required:            true,
 			},
 			consts.FieldCiphertext: schema.StringAttribute{
@@ -68,6 +70,10 @@ func (r *GCPKMSReencryptEphemeralResource) Schema(_ context.Context, _ ephemeral
 				MarkdownDescription: "Base64-encoded re-encrypted ciphertext",
 				Computed:            true,
 				Sensitive:           true,
+			},
+			consts.FieldKeyVersionReturned: schema.StringAttribute{
+				MarkdownDescription: "Version of the key used for re-encryption, as returned by Vault",
+				Computed:            true,
 			},
 		},
 		MarkdownDescription: "Re-encrypts ciphertext using GCP KMS with the latest key version",
@@ -92,7 +98,12 @@ func (r *GCPKMSReencryptEphemeralResource) Open(ctx context.Context, req ephemer
 		return
 	}
 
-	path := fmt.Sprintf("%s/reencrypt/%s", data.Mount.ValueString(), data.Name.ValueString())
+	path := fmt.Sprintf("%s/reencrypt/%s", data.Mount.ValueString(), data.KeyName.ValueString())
+
+	tflog.Debug(ctx, "Re-encrypting with GCP KMS", map[string]interface{}{
+		"path":     path,
+		"key_name": data.KeyName.ValueString(),
+	})
 
 	requestData := map[string]interface{}{
 		consts.FieldCiphertext: data.Ciphertext.ValueString(),
@@ -108,6 +119,10 @@ func (r *GCPKMSReencryptEphemeralResource) Open(ctx context.Context, req ephemer
 
 	secret, err := c.Logical().WriteWithContext(ctx, path, requestData)
 	if err != nil {
+		tflog.Error(ctx, "Failed to re-encrypt with GCP KMS", map[string]interface{}{
+			"path":  path,
+			"error": err.Error(),
+		})
 		resp.Diagnostics.AddError(
 			"Error re-encrypting with Vault",
 			fmt.Sprintf("Error re-encrypting with GCP KMS at path %q: %s", path, err),
@@ -116,6 +131,9 @@ func (r *GCPKMSReencryptEphemeralResource) Open(ctx context.Context, req ephemer
 	}
 
 	if secret == nil {
+		tflog.Error(ctx, "No response from GCP KMS re-encryption endpoint", map[string]interface{}{
+			"path": path,
+		})
 		resp.Diagnostics.AddError(
 			"No response from re-encryption endpoint",
 			fmt.Sprintf("No response from re-encryption endpoint at path %q", path),
@@ -125,6 +143,13 @@ func (r *GCPKMSReencryptEphemeralResource) Open(ctx context.Context, req ephemer
 
 	if ciphertext, ok := secret.Data[consts.FieldCiphertext]; ok {
 		data.NewCiphertext = types.StringValue(ciphertext.(string))
+		tflog.Debug(ctx, "Successfully re-encrypted with GCP KMS", map[string]interface{}{
+			"path": path,
+		})
+	}
+
+	if keyVersion, ok := secret.Data[consts.FieldKeyVersion]; ok {
+		data.KeyVersionReturned = types.StringValue(fmt.Sprintf("%v", keyVersion))
 	}
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)

@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -31,7 +32,7 @@ type GCPKMSSignModel struct {
 	base.BaseModelEphemeral
 
 	Mount      types.String `tfsdk:"mount"`
-	Name       types.String `tfsdk:"name"`
+	KeyName    types.String `tfsdk:"key_name"`
 	Digest     types.String `tfsdk:"digest"`
 	KeyVersion types.Int64  `tfsdk:"key_version"`
 
@@ -46,8 +47,8 @@ func (r *GCPKMSSignEphemeralResource) Schema(_ context.Context, _ ephemeral.Sche
 				MarkdownDescription: "Path where the GCP KMS secrets engine is mounted.",
 				Required:            true,
 			},
-			consts.FieldName: schema.StringAttribute{
-				MarkdownDescription: "Name of the key to use for signing",
+			consts.FieldKeyName: schema.StringAttribute{
+				MarkdownDescription: "Name of the Vault key to use for signing",
 				Required:            true,
 			},
 			consts.FieldDigest: schema.StringAttribute{
@@ -85,7 +86,12 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 		return
 	}
 
-	path := fmt.Sprintf("%s/sign/%s", data.Mount.ValueString(), data.Name.ValueString())
+	path := fmt.Sprintf("%s/sign/%s", data.Mount.ValueString(), data.KeyName.ValueString())
+
+	tflog.Debug(ctx, "Signing with GCP KMS", map[string]interface{}{
+		"path":     path,
+		"key_name": data.KeyName.ValueString(),
+	})
 
 	requestData := map[string]interface{}{
 		consts.FieldDigest: data.Digest.ValueString(),
@@ -97,6 +103,10 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 
 	secret, err := c.Logical().WriteWithContext(ctx, path, requestData)
 	if err != nil {
+		tflog.Error(ctx, "Failed to sign with GCP KMS", map[string]interface{}{
+			"path":  path,
+			"error": err.Error(),
+		})
 		resp.Diagnostics.AddError(
 			"Error signing with Vault",
 			fmt.Sprintf("Error signing with GCP KMS at path %q: %s", path, err),
@@ -105,6 +115,9 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 	}
 
 	if secret == nil {
+		tflog.Error(ctx, "No response from GCP KMS signing endpoint", map[string]interface{}{
+			"path": path,
+		})
 		resp.Diagnostics.AddError(
 			"No response from signing endpoint",
 			fmt.Sprintf("No response from signing endpoint at path %q", path),
@@ -114,6 +127,9 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 
 	if signature, ok := secret.Data[consts.FieldSignature]; ok {
 		data.Signature = types.StringValue(signature.(string))
+		tflog.Debug(ctx, "Successfully signed with GCP KMS", map[string]interface{}{
+			"path": path,
+		})
 	}
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)

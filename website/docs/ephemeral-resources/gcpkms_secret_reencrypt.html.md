@@ -43,7 +43,7 @@ resource "vault_gcpkms_secret_backend_key" "encryption_key" {
 
 ephemeral "vault_gcpkms_reencrypt" "rotated" {
   mount      = vault_mount.gcpkms.path
-  name       = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name   = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = var.old_encrypted_data
 }
 
@@ -60,7 +60,7 @@ resource "aws_ssm_parameter" "rotated_secret" {
 ephemeral "vault_gcpkms_encrypt" "original" {
   mount_id    = vault_mount.gcpkms.id
   mount       = vault_mount.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name    = vault_gcpkms_secret_backend_key.encryption_key.name
   plaintext   = base64encode("sensitive data")
   key_version = 1
 }
@@ -68,7 +68,7 @@ ephemeral "vault_gcpkms_encrypt" "original" {
 # After key rotation, re-encrypt to use latest version
 ephemeral "vault_gcpkms_reencrypt" "updated" {
   mount      = vault_mount.gcpkms.path
-  name       = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name   = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext = ephemeral.vault_gcpkms_encrypt.original.ciphertext
 }
 
@@ -85,7 +85,7 @@ resource "aws_ssm_parameter" "updated_secret" {
 ```hcl
 ephemeral "vault_gcpkms_reencrypt" "with_aad" {
   mount                         = vault_mount.gcpkms.path
-  name                          = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name                      = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext                    = var.old_encrypted_data
   additional_authenticated_data = base64encode("context-info")
 }
@@ -96,7 +96,7 @@ ephemeral "vault_gcpkms_reencrypt" "with_aad" {
 ```hcl
 ephemeral "vault_gcpkms_reencrypt" "versioned" {
   mount       = vault_mount.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.encryption_key.name
+  key_name    = vault_gcpkms_secret_backend_key.encryption_key.name
   ciphertext  = var.old_encrypted_data
   key_version = 3
 }
@@ -118,7 +118,7 @@ The following arguments are supported:
 
 * `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 
-* `name` - (Required) Name of the encryption key to use for re-encryption. The key must have purpose
+* `key_name` - (Required) Name of the encryption key to use for re-encryption. The key must have purpose
   `encrypt_decrypt`.
 
 * `ciphertext` - (Required, Sensitive) Base64-encoded ciphertext to re-encrypt. This should be data

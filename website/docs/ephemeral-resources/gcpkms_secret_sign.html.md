@@ -45,7 +45,7 @@ locals {
 ephemeral "vault_gcpkms_sign" "signature" {
   mount_id    = vault_mount.gcpkms.id
   mount       = vault_mount.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.signing_key.name
+  key_name    = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
   key_version = 1
 }
@@ -75,7 +75,7 @@ locals {
 ephemeral "vault_gcpkms_sign" "create_signature" {
   mount_id    = vault_mount.gcpkms.id
   mount       = vault_mount.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.signing_key.name
+  key_name    = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
   key_version = 1
 }
@@ -89,7 +89,7 @@ resource "local_sensitive_file" "signature" {
 # On a subsequent plan, verify using the captured signature file.
 data "vault_gcpkms_verify" "check_signature" {
   mount       = vault_mount.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.signing_key.name
+  key_name    = vault_gcpkms_secret_backend_key.signing_key.name
   digest      = local.digest
   signature   = trimspace(file("${path.module}/signature.b64"))
   key_version = 1
@@ -132,7 +132,7 @@ resource "vault_gcpkms_secret_backend_key" "jwt_key" {
 ephemeral "vault_gcpkms_sign" "jwt_signature" {
   mount_id    = vault_mount.gcpkms.id
   mount       = vault_mount.gcpkms.path
-  name        = vault_gcpkms_secret_backend_key.jwt_key.name
+  key_name    = vault_gcpkms_secret_backend_key.jwt_key.name
   digest      = local.jwt_digest
   key_version = 1
 }
@@ -160,7 +160,7 @@ The following arguments are supported:
 
 * `mount` - (Required) Path where the GCP KMS secrets engine is mounted.
 
-* `name` - (Required) Name of the signing key to use. The key must have purpose `asymmetric_sign`.
+* `key_name` - (Required) Name of the signing key to use. The key must have purpose `asymmetric_sign`.
 
 * `digest` - (Required) Base64-encoded digest of the message to sign. The digest algorithm must match
   the key's configured algorithm (e.g., SHA-256 for `ec_sign_p256_sha256`).
