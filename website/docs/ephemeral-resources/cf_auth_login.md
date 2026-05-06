@@ -30,6 +30,7 @@ resource "vault_cf_auth_backend_config" "config" {
   cf_api_addr              = var.cf_api_addr
   cf_username              = var.cf_username
   cf_password_wo           = var.cf_password
+  cf_password_wo_version   = 1
 }
 
 resource "vault_cf_auth_backend_role" "role" {
