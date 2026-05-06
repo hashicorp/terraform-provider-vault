@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/pki"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -649,7 +650,7 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		// handle any special cases
 		switch {
 		case k == consts.FieldNotBeforeDuration:
-			d.Set(k, flattenVaultDuration(secret.Data[k]))
+			d.Set(k, helper.FlattenVaultDuration(secret.Data[k]))
 		case k == consts.FieldKeyBits || k == consts.FieldSignatureBits:
 			keyBits, err := secret.Data[k].(json.Number).Int64()
 			if err != nil {

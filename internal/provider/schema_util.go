@@ -182,3 +182,18 @@ func GetAutomatedRootRotationSchema() map[string]*schema.Schema {
 		},
 	}
 }
+
+// GetAutomatedRotationSchemaWithPolicy is a helper method
+// that returns the common schema parameters for automated
+// rotation and includes the rotation policy field included in Vault Ent 2.0.0
+func GetAutomatedRotationSchemaWithPolicy() map[string]*schema.Schema {
+	m := GetAutomatedRootRotationSchema()
+	m[consts.FieldRotationPolicy] = &schema.Schema{
+		Type:        schema.TypeString,
+		Optional:    true,
+		Description: "The rotation policy to use for this credential.",
+	}
+
+	return m
+
+}

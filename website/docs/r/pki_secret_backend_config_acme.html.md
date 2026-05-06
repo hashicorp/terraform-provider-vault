@@ -68,6 +68,10 @@ The following arguments are supported:
 
 * `max_ttl` - (Optional) The maximum TTL in seconds for certificates issued by ACME. **Vault 1.17.0+**
 
+* `challenge_permitted_ip_ranges` - (Optional) List of CIDR blocks specifying IP ranges that are allowed to complete ACME challenges. **Vault 1.19.16+**
+
+* `challenge_excluded_ip_ranges` - (Optional) List of CIDR blocks specifying IP ranges that are not allowed to complete ACME challenges. **Vault 1.19.16+**
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

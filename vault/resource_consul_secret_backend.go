@@ -11,7 +11,6 @@ import (
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -361,29 +360,27 @@ func consulSecretBackendConfigPath(backend string) string {
 }
 
 func consulSecretsBackendCustomizeDiff(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
-	// Check both legacy token and write-only token
 	newToken := diff.Get("token").(string)
-	isTokenValueKnown := diff.NewValueKnown("token")
-
-	// Check if using write-only token
 	newTokenWO := diff.Get(consts.FieldTokenWO).(string)
-	isTokenWOValueKnown := diff.NewValueKnown(consts.FieldTokenWO)
+	newBootstrap := diff.Get("bootstrap").(bool)
 
-	// Determine if any token is provided (legacy or write-only)
-	hasToken := newToken != "" || newTokenWO != ""
-	isAnyTokenKnown := isTokenValueKnown || isTokenWOValueKnown
+	isTokenKnown := diff.NewValueKnown("token")
+	isTokenWOKnown := diff.NewValueKnown(consts.FieldTokenWO)
 
-	// Disallow the following:
-	//   1. Bootstrap is true and any token field is set to something.
-	//   2. Bootstrap is true and no token field is set, but we don't know the final value.
-	//   3. Bootstrap is false, no token field is set, and we know this is the final value.
-	if newBootstrap := diff.Get("bootstrap").(bool); newBootstrap {
-		if hasToken ||
-			(!hasToken && !isAnyTokenKnown) {
-			return fmt.Errorf("field 'bootstrap' must be set to false when 'token' or 'token_wo' is specified")
+	hasTokenValue := newToken != "" || newTokenWO != ""
+	tokenIsDefinitelyEmpty := (isTokenKnown && newToken == "") && (isTokenWOKnown && newTokenWO == "")
+
+	if newBootstrap {
+		// CASE: Bootstrap mode is ON
+		// We disallow a token if it's explicitly provided OR if it's being computed.
+		// If bootstrap is true, the HCL should not contain token/token_wo at all.
+		if hasTokenValue || !isTokenKnown || !isTokenWOKnown {
+			return fmt.Errorf("field 'bootstrap' must be set to false when 'token' or 'token_wo' is specified or computed")
 		}
 	} else {
-		if !hasToken && isAnyTokenKnown {
+		// CASE: Bootstrap mode is OFF (Standard mode)
+		// We require a token. We only throw an error if we are 100% CERTAIN both are empty.
+		if tokenIsDefinitelyEmpty {
 			return fmt.Errorf("field 'bootstrap' must be set to true when neither 'token' nor 'token_wo' is specified")
 		}
 	}

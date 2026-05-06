@@ -96,6 +96,38 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
 			},
+			consts.FieldIdentityTokenKeyWO: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				WriteOnly:   true,
+				Sensitive:   true,
+				Description: "The key to use for signing identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenKeyWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_key_wo field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenKeyWO},
+			},
+			consts.FieldIdentityTokenAudienceWO: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				WriteOnly:   true,
+				Sensitive:   true,
+				Description: "The audience claim value for identity tokens. This is a write-only field and will not be read back from Vault.",
+			},
+			consts.FieldIdentityTokenAudienceWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "A version counter for the write-only identity_token_audience_wo field. Incrementing this value will trigger an update.",
+				RequiredWith: []string{consts.FieldIdentityTokenAudienceWO},
+			},
+			consts.FieldIdentityTokenTTL: {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "The TTL of generated tokens.",
+			},
 			consts.FieldAllowedIPv4Addresses: {
 				Type:     schema.TypeSet,
 				Optional: true,
@@ -133,6 +165,19 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 	})
 }
 
+// awsSync200WriteFields contains WIF fields sent to Vault on write (Vault 2.0.0+).
+var awsSync200WriteFields = []string{
+	consts.FieldIdentityTokenAudience,
+	consts.FieldIdentityTokenTTL,
+	consts.FieldIdentityTokenKey,
+}
+
+// awsSync200ReadFields contains WIF fields that Vault returns unmasked on read (Vault 2.0.0+).
+// Note: identity_token_audience and identity_token_key are masked by Vault on read.
+var awsSync200ReadFields = []string{
+	consts.FieldIdentityTokenTTL,
+}
+
 func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	readFields := awsSyncReadFields
 	writeFields := awsSyncWriteFields
@@ -142,6 +187,12 @@ func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 	if isVaultVersion119 {
 		writeFields = append(writeFields, awsSync119Fields...)
 		readFields = append(readFields, awsSync119Fields...)
+	}
+
+	// Add Vault 2.0.0+ WIF fields if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		writeFields = append(writeFields, awsSync200WriteFields...)
+		readFields = append(readFields, awsSync200ReadFields...)
 	}
 
 	// Fields that need TypeSet to List conversion for JSON serialization
@@ -162,6 +213,11 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 	// Add Vault 1.19+ fields only if version is supported
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
 		readFields = append(readFields, awsSync119Fields...)
+	}
+
+	// Add Vault 2.0.0+ WIF fields only if version is supported
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		readFields = append(readFields, awsSync200ReadFields...)
 	}
 
 	// since other fields come back as '******', we only set the non-sensitive region fields

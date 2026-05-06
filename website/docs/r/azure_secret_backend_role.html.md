@@ -36,6 +36,10 @@ resource "vault_azure_secret_backend_role" "generated_role" {
   tags                        = ["team:engineering","environment:development"]
   ttl                         = 300
   max_ttl                     = 600
+  metadata = {
+    team  = "test"
+    owner = "vault"
+  }
 
   azure_roles {
     role_name = "Reader"
@@ -78,6 +82,8 @@ The following arguments are supported:
   Valid values are: AzureADMyOrg, AzureADMultipleOrgs, AzureADandPersonalMicrosoftAccount, PersonalMicrosoftAccount. Requires Vault 1.16+.
 * `tags` - (Optional) - A list of Azure tags to attach to an application. Requires Vault 1.16+.
 * `persist_app` - (Optional) If set to true, persists the created service principal and application for the lifetime of the role
+* `metadata` – (Optional) A map of string key-value pairs that are stored alongside the role and returned with generated
+  credentials.
 
 ## Attributes Reference
 

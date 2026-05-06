@@ -304,6 +304,46 @@ func TestLDAPSecretBackend_automatedRotation(t *testing.T) {
 	})
 }
 
+func TestLDAPSecretBackend_selfManaged(t *testing.T) {
+	var (
+		path         = acctest.RandomWithPrefix("tf-test-ldap")
+		bindDN       = "test-bind-dn"
+		resourceType = "vault_ldap_secret_backend"
+		resourceName = resourceType + ".test"
+	)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion200)
+		}, PreventPostDestroyRefresh: true,
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				// confirm self_managed conflicts with bindpass
+				Config:      testLDAPSecretBackendConfig_selfManagedConflicting(path, "true"),
+				ExpectError: regexp.MustCompile("Invalid combination of arguments"),
+			},
+			{
+				Config: testLDAPSecretBackendConfig_selfManaged(path, "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSelfManaged, "true"),
+				),
+			},
+			// run import before failing config
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldDisableRemount),
+			{
+				// test self_managed parameter cannot be updated
+				Config:      testLDAPSecretBackendConfig_selfManaged(path, "false"),
+				ExpectError: regexp.MustCompile("self_managed parameter cannot be updated once config has been created"),
+			},
+		},
+	})
+}
+
 // testLDAPSecretBackendConfig_defaults is used to setup the backend defaults.
 func testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass string) string {
 	return fmt.Sprintf(`
@@ -398,6 +438,31 @@ resource "vault_ldap_secret_backend" "test" {
   rotation_period           = "%d"
   disable_automated_rotation = %t
 }`, path, bindDN, bindPass, schedule, window, period, disable)
+}
+
+// testLDAPSecretBackendConfig_selfManaged is used to setup a self_managed backend.
+func testLDAPSecretBackendConfig_selfManaged(path, selfManaged string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                      = "%s"
+  description               = "test description"
+  binddn                    = "test-bind-dn"
+  userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+  self_managed              = %s
+}`, path, selfManaged)
+}
+
+// testLDAPSecretBackendConfig_selfManagedConflicting is used to test conflicts on a self_managed backend.
+func testLDAPSecretBackendConfig_selfManagedConflicting(path, selfManaged string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                      = "%s"
+  description               = "test description"
+  binddn                    = "test-bind-dn"
+  bindpass                  = "password"
+  userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+  self_managed              = %s
+}`, path, selfManaged)
 }
 
 func testLDAPSecretBackendConfig_bindpassWO(path, bindDN, bindPass string, version int) string {
