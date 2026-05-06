@@ -30,9 +30,10 @@ resource "vault_mount" "alicloud" {
 }
 
 resource "vault_alicloud_secret_backend" "alicloud" {
-  mount         = vault_mount.alicloud.path
-  access_key    = var.alicloud_access_key
-  secret_key_wo = var.alicloud_secret_key
+  mount                 = vault_mount.alicloud.path
+  access_key            = var.alicloud_access_key
+  secret_key_wo         = var.alicloud_secret_key
+  secret_key_wo_version = 1
 }
 
 variable "alicloud_access_key" {
@@ -57,6 +58,8 @@ The following arguments are supported:
 * `access_key` - (Required, Sensitive) The AliCloud Access Key ID with permissions to manage RAM users and policies.
   This credential is used by Vault to create and manage dynamic AliCloud credentials.
 
+* `secret_key_wo_version` - (Required) A version counter for the write-only `secret_key_wo` field. Incrementing this value will trigger an update to the secret key in Vault. This is required to enable Terraform to detect changes to the write-only field.
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
@@ -72,9 +75,37 @@ The following attributes are write-only and will never be read back from Vault o
 
 ## Understanding the Write-Only Pattern
 
-The `secret_key_wo` field is write-only and required. It will not be stored in Terraform state or read back from Vault, so Terraform sends it to Vault on each apply.
+The `secret_key_wo` field is write-only and required. It will not be stored in Terraform state or read back from Vault.
 
-If you change `secret_key_wo` in your configuration, Terraform will send the new value to Vault on the next apply.
+### How to Update the Secret Key
+
+Because `secret_key_wo` is write-only, Terraform cannot detect changes to it directly. To update the secret key:
+
+1. Change the `secret_key_wo` value in your configuration
+2. Increment the `secret_key_wo_version` value
+3. Run `terraform apply`
+
+Example:
+
+```hcl
+# Initial configuration
+resource "vault_alicloud_secret_backend" "alicloud" {
+  mount                 = vault_mount.alicloud.path
+  access_key            = var.alicloud_access_key
+  secret_key_wo         = var.alicloud_secret_key
+  secret_key_wo_version = 1
+}
+
+# To rotate the secret key, update both fields:
+resource "vault_alicloud_secret_backend" "alicloud" {
+  mount                 = vault_mount.alicloud.path
+  access_key            = var.alicloud_access_key
+  secret_key_wo         = var.new_alicloud_secret_key  # New secret key
+  secret_key_wo_version = 2                             # Increment version
+}
+```
+
+The `secret_key_wo_version` field enables Terraform to detect when you want to update the secret key. When the version changes, Terraform will call the update operation and send the new `secret_key_wo` value to Vault.
 
 
 ## Import
@@ -82,11 +113,7 @@ If you change `secret_key_wo` in your configuration, Terraform will send the new
 AliCloud secrets engines can be imported using the `mount` path, e.g.
 
 ```
-<<<<<<< HEAD
-$ terraform import vault_alicloud_secret_backend.alicloud alicloud/config
-=======
 $ terraform import vault_alicloud_secret_backend.alicloud alicloud
->>>>>>> 47bc91c0 (AliCloud Secret Engine Resources Initial Implementation (#2809))
 ```
 
 ~> **Note:** When importing, the `secret_key_wo` field will not be populated as it is 

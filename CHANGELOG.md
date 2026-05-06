@@ -1,23 +1,83 @@
 ## Unreleased
 
+FEATURES:
+
+* **New Resource**: `vault_config_ui_header` - Manages custom HTTP headers for the Vault UI. Supports security headers (CSP, HSTS, X-Frame-Options), CORS configuration, and custom organizational headers. Requires Vault 1.16.0+. ([#2842](https://github.com/hashicorp/terraform-provider-vault/pull/2842))
+* **New Resource**: Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
+* **New Resource**: `vault_activation_flags`  for managing Vault features that are gated by one-time flags. Requires Vault 1.16 or later. Needs Vault enterprise licence([#2861](https://github.com/hashicorp/terraform-provider-vault/pull/2861/))
+* **New Resources**: `vault_userpass_auth_backend_user` for user creation, deletion, password updates, and policy updates, and ephemeral resource `vault_userpass_auth_login` for authenticating with Userpass. ([#2859](https://github.com/hashicorp/terraform-provider-vault/pull/2859))
+* `vault_managed_keys`: Added support for `usages` and `max_parallel` fields. ([#2887](https://github.com/hashicorp/terraform-provider-vault/pull/2887/))
+
+## 5.9.0 (April 22, 2026)
+
 BREAKING CHANGES:
 
 * Renamed all Vault 2.0 pki-external-ca resources from version 5.8.0 to a common prefix of `vault_pki_external_ca_`. ([#2838](https://github.com/hashicorp/terraform-provider-vault/pull/2838))
 
 FEATURES:
 
+* **New Resources**: Add support for OS Secrets Engine with `vault_os_secret_backend`, `vault_os_secret_backend_host`, and `vault_os_secret_backend_account` resources for managing operating system credentials via SSH. Requires Vault 2.0.0+. ([#2865](https://github.com/hashicorp/terraform-provider-vault/pull/2865))
 * **New Resources**: `vault_rotation_policy` for managing rotation policies. Requires Vault 2.0.0+. ([#2844](https://github.com/hashicorp/terraform-provider-vault/pull/2844))
 * Add support for `vault_quota_config` resource. ([#2837](https://github.com/hashicorp/terraform-provider-vault/pull/2837))
 * **New Resources**: Add support for Vault Key Management secrets engine with resources for managing KMS providers (AWS KMS, Azure Key Vault, GCP Cloud KMS), cryptographic keys, key distribution, replication, and rotation (Vault Enterprise). ([#2802](https://github.com/hashicorp/terraform-provider-vault/pull/2802))
-* **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858))
+* **New Resources**: `vault_alicloud_secret_backend`, `vault_alicloud_secret_backend_role`, and ephemeral resource `vault_alicloud_access_credentials` for managing AliCloud secrets engine. ([#2858](https://github.com/hashicorp/terraform-provider-vault/pull/2858), [#2874](https://github.com/hashicorp/terraform-provider-vault/pull/2874))
 * **New Resource**: `vault_plugin_runtime` for managing plugin runtimes in Vault's plugin runtimes catalog. Requires Vault 1.15 or later.([#2835](https://github.com/hashicorp/terraform-provider-vault/pull/2835/))
 * Add support for CORS configuration: `vault_sys_config_cors` resource and data source for managing and reading Vault's CORS (Cross-Origin Resource Sharing) settings. ([#2849](https://github.com/hashicorp/terraform-provider-vault/pull/2849))
+* **New Ephemeral Resource**: Add vault_generic_endpoint ephemeral resource with response field extraction from data, auth, wrap_info, and lease metadata.([#2830](https://github.com/hashicorp/terraform-provider-vault/pull/2830))
 
 IMPROVEMENTS:
 
+* `vault_cf_auth_backend_config`: Added `cf_password_wo_version` to trigger updates when only `cf_password_wo` changes.([#2878](https://github.com/hashicorp/terraform-provider-vault/pull/2878))
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
-* Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
-* `vault_managed_keys`: Added support for `usages` and `max_parallel` fields. ([#2887](https://github.com/hashicorp/terraform-provider-vault/pull/2887/))
+* Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734))
+* Add support for Enterprise Plugins in `vault_plugin` resource. ([#2707](https://github.com/hashicorp/terraform-provider-vault/pull/2707))
+* `vault_ldap_secret_backend`: Add self-managed support to ldap secrets engine. Requires Vault Enterprise 2.0+. ([#2845](https://github.com/hashicorp/terraform-provider-vault/pull/2845))
+* `azure_static_role`: Add support for importing existing credentials via new Vault import endpoint. ([#2756](https://github.com/hashicorp/terraform-provider-vault/pull/2756))
+* Updated dependencies:
+  * `cloud.google.com/go/auth` v0.18.2 -> v0.20.0
+  * `cloud.google.com/go/cloudsqlconn` v1.4.3 -> v1.20.2
+  * `cloud.google.com/go/iam` v1.7.0 -> v1.9.0
+  * `filippo.io/edwards25519` v1.1.1 -> v1.2.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.21.0 -> v1.21.1
+  * `github.com/Azure/azure-sdk-for-go/sdk/internal` v1.11.2 -> v1.12.0
+  * `github.com/aws/aws-sdk-go-v2` v1.41.5 -> v1.41.6
+  * `github.com/aws/aws-sdk-go-v2/internal/configsources` v1.4.21 -> v1.4.22
+  * `github.com/aws/aws-sdk-go-v2/internal/endpoints/v2` v2.7.21 -> v2.7.22
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.53.7 -> v1.53.8
+  * `github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding` v1.13.7 -> v1.13.8
+  * `github.com/aws/aws-sdk-go-v2/service/internal/presigned-url` v1.13.21 -> v1.13.22
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.41.10 -> v1.42.0
+  * `github.com/aws/smithy-go` v1.24.3 -> v1.25.0
+  * `github.com/docker/docker` v28.3.3+incompatible -> v28.5.2+incompatible
+  * `github.com/docker/go-connections` v0.5.0 -> v0.7.0
+  * `github.com/fatih/color` v1.18.0 -> v1.19.0
+  * `github.com/go-jose/go-jose/v3` v3.0.4 -> v3.0.5
+  * `github.com/go-jose/go-jose/v4` v4.1.3 -> v4.1.4
+  * `github.com/googleapis/gax-go/v2` v2.20.0 -> v2.21.0
+  * `github.com/hashicorp/consul/api` v1.33.7 -> v1.34.1
+  * `github.com/hashicorp/go-secure-stdlib/plugincontainer` v0.4.2 -> v0.5.0
+  * `github.com/hashicorp/terraform-plugin-mux` v0.23.0 -> v0.23.1
+  * `github.com/hashicorp/vault/sdk` v0.25.0 -> v0.25.1
+  * `github.com/jackc/pgtype` v1.14.3 -> v1.14.4
+  * `github.com/oklog/run` v1.1.0 -> v1.2.0
+  * `github.com/opencontainers/image-spec` v1.1.0 -> v1.1.1
+  * `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` v0.61.0 -> v0.67.0
+  * `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` v0.61.0 -> v0.67.0
+  * `go.opentelemetry.io/otel` v1.42.0 -> v1.43.0
+  * `go.opentelemetry.io/otel/metric` v1.42.0 -> v1.43.0
+  * `go.opentelemetry.io/otel/trace` v1.42.0 -> v1.43.0
+  * `golang.org/x/crypto` v0.49.0 -> v0.50.0
+  * `golang.org/x/mod` v0.33.0 -> v0.34.0
+  * `golang.org/x/net` v0.52.0 -> v0.53.0
+  * `golang.org/x/sys` v0.42.0 -> v0.43.0
+  * `golang.org/x/text` v0.35.0 -> v0.36.0
+  * `golang.org/x/tools` v0.42.0 -> v0.43.0
+  * `google.golang.org/api` v0.273.1 -> v0.276.0
+  * `google.golang.org/genproto` v0.0.0-20260319201613-d00831a3d3e7 -> v0.0.0-20260420184626-e10c466a9529
+  * `google.golang.org/genproto/googleapis/api` v0.0.0-20260401001100-f93e5f3e9f0f -> v0.0.0-20260414002931-afd174a4e478
+  * `google.golang.org/genproto/googleapis/rpc` v0.0.0-20260319201613-d00831a3d3e7 -> v0.0.0-20260414002931-afd174a4e478
+  * `google.golang.org/grpc` v1.79.3 -> v1.80.0
+  * `k8s.io/utils` v0.0.0-20260210185600-b8788abfbbc2 -> v0.0.0-20260319190234-28399d86e0b5
 
 BUGS:
 * `vault_consul_secret_backend`: Fixed validation logic to allow computed token values by correcting the condition that checks for token presence during plan phase. ([#2823](https://github.com/hashicorp/terraform-provider-vault/pull/2823))
@@ -27,6 +87,12 @@ BUGS:
 * `resource_database_secret_backend_connection` : Fixes a regression issue for `resource_database_secret_backend_connection` for elasticsearch. Reverted the field name from insecure_tls to insecure.
 * `vault_rabbitmq_secret_backend_role`: Fixed spurious diff issue for `vhost` and `vhost_topic` fields by changing field type from TypeList to TypeSet. ([#2872](https://github.com/hashicorp/terraform-provider-vault/pull/2872))
 * `provider/auth_aws`: Fix `auth_login_aws` to avoid an unintended second STS `AssumeRole` call during web identity credential flows, while preserving manual role assumption for explicitly configured or env-derived `aws_role_arn` values in non-web-identity setups.([#2850](https://github.com/hashicorp/terraform-provider-vault/pull/2850))
+
+Release Note:
+
+* **Vault Version Support**: The Vault provider will be dropping Vault version support for Vault <= `1.18.x`. This means that going forward only Vault server version `1.19.x` and greater will be officially tested against.
+
+
 
 ## 5.8.0 (March 12, 2026)
 
