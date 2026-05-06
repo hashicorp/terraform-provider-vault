@@ -66,7 +66,7 @@ type PKIExternalCAOrderCertificateAPIModel struct {
 }
 
 func (r *PKIExternalCAOrderCertificateResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_pki_secret_backend_external_ca_order_certificate"
+	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_order_certificate"
 }
 
 func (r *PKIExternalCAOrderCertificateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

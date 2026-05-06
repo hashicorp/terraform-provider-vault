@@ -45,7 +45,7 @@ func rabbitMQSecretBackendRoleResource() *schema.Resource {
 				Description: "Specifies a comma-separated RabbitMQ management tags.",
 			},
 			"vhost": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Specifies a map of virtual hosts to permissions.",
 				Elem: &schema.Resource{
@@ -74,13 +74,13 @@ func rabbitMQSecretBackendRoleResource() *schema.Resource {
 				},
 			},
 			"vhost_topic": {
-				Type:        schema.TypeList,
+				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Specifies a map of virtual hosts and exchanges to topic permissions. This option requires RabbitMQ 3.7.0 or later.",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"vhost": {
-							Type:        schema.TypeList,
+							Type:        schema.TypeSet,
 							Optional:    true,
 							Description: "Specifies a map of virtual hosts to permissions.",
 							Elem: &schema.Resource{
@@ -125,11 +125,11 @@ func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	name := d.Get("name").(string)
 	tags := d.Get("tags").(string)
 
-	vhostsJSON, _, err := expandRabbitMQSecretBackendRoleVhost(d.Get("vhost").([]interface{}), "host")
+	vhostsJSON, _, err := expandRabbitMQSecretBackendRoleVhost(d.Get("vhost").(*schema.Set), "host")
 	if err != nil {
 		return fmt.Errorf("error expanding vhost: %w", err)
 	}
-	vhostTopicsJSON, err := expandRabbitMQSecretBackendRoleVhostTopic(d.Get("vhost_topic").([]interface{}))
+	vhostTopicsJSON, err := expandRabbitMQSecretBackendRoleVhostTopic(d.Get("vhost_topic").(*schema.Set))
 	if err != nil {
 		return fmt.Errorf("error expanding vhost_topic: %w", err)
 	}
@@ -225,7 +225,8 @@ func rabbitMQSecretBackendRoleExists(d *schema.ResourceData, meta interface{}) (
 	return secret != nil, nil
 }
 
-func expandRabbitMQSecretBackendRoleVhost(vhost []interface{}, key string) (string, map[string]interface{}, error) {
+func expandRabbitMQSecretBackendRoleVhost(vhostSet *schema.Set, key string) (string, map[string]interface{}, error) {
+	vhost := vhostSet.List()
 	log.Printf("[DEBUG] Vhosts as list from ResourceData: %+v", vhost)
 
 	vhosts := make(map[string]interface{}, len(vhost))
@@ -258,7 +259,8 @@ func expandRabbitMQSecretBackendRoleVhost(vhost []interface{}, key string) (stri
 	return string(vhostsJSON), vhosts, nil
 }
 
-func expandRabbitMQSecretBackendRoleVhostTopic(vhost []interface{}) (string, error) {
+func expandRabbitMQSecretBackendRoleVhostTopic(vhostSet *schema.Set) (string, error) {
+	vhost := vhostSet.List()
 	log.Printf("[DEBUG] Vhosts as list from ResourceData: %+v", vhost)
 
 	vhosts := make(map[string]interface{}, len(vhost))
@@ -267,7 +269,7 @@ func expandRabbitMQSecretBackendRoleVhostTopic(vhost []interface{}) (string, err
 		vv := host.(map[string]interface{})
 		id := vv["host"].(string)
 
-		_, topics, err := expandRabbitMQSecretBackendRoleVhost(vv["vhost"].([]interface{}), "topic")
+		_, topics, err := expandRabbitMQSecretBackendRoleVhost(vv["vhost"].(*schema.Set), "topic")
 		if err != nil {
 			return "", err
 		}

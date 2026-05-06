@@ -75,6 +75,19 @@ func TestAzureSecretBackendRole_AzureRoles(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "explicit_max_ttl", "2592000"))
 	}
 
+	isVaultVersion200Ent := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion200) &&
+		testProvider.Meta().(*provider.ProviderMeta).IsEnterpriseSupported()
+	if isVaultVersion200Ent {
+		azureRoleInitialCheckFuncs = append(azureRoleInitialCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.environment", "test"),
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.team", "eco"),
+		)
+		azureRoleUpdatedCheckFuncs = append(azureRoleUpdatedCheckFuncs,
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.environment", "development"),
+			resource.TestCheckResourceAttr(resourceName+".test_azure_roles", "metadata.team", "platform"),
+		)
+	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
@@ -230,6 +243,97 @@ func TestAccAzureSecretBackendRole_PersistApp(t *testing.T) {
 	})
 }
 
+func TestAzureSecretBackendRole_Metadata(t *testing.T) {
+	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
+	if subscriptionID == "" {
+		t.Skip("ARM_SUBSCRIPTION_ID not set")
+	}
+	tenantID := os.Getenv("ARM_TENANT_ID")
+	clientID := os.Getenv("ARM_CLIENT_ID")
+	clientSecret := os.Getenv("ARM_CLIENT_SECRET")
+	resourceGroup := os.Getenv("ARM_RESOURCE_GROUP")
+
+	resourceName := "vault_azure_secret_backend_role.test_metadata"
+	path := acctest.RandomWithPrefix("tf-test-azure")
+	role := acctest.RandomWithPrefix("tf-test-azure-role")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+		},
+		CheckDestroy: testAccAzureSecretBackendRoleCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Create role without metadata
+				Config: testAzureSecretBackendRoleMetadata_noMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role", role+"-metadata"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.%"),
+				),
+			},
+			{
+				// Add metadata to existing role
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion200) || !meta.IsEnterpriseSupported(), nil
+				},
+				Config: testAzureSecretBackendRoleMetadata_withMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role", role+"-metadata"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.environment", "production"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.owner", "platform-team"),
+				),
+			},
+			{
+				// Update metadata values
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion200) || !meta.IsEnterpriseSupported(), nil
+				},
+				Config: testAzureSecretBackendRoleMetadata_updatedMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role", role+"-metadata"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "3"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.environment", "staging"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.owner", "devops-team"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.cost_center", "engineering"),
+				),
+			},
+			{
+				// Set metadata to empty map
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion200) || !meta.IsEnterpriseSupported(), nil
+				},
+				Config: testAzureSecretBackendRoleMetadata_emptyMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role", role+"-metadata"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "0"),
+				),
+			},
+			{
+				// Remove metadata block entirely
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion200) || !meta.IsEnterpriseSupported(), nil
+				},
+				Config: testAzureSecretBackendRoleMetadata_noMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "role", role+"-metadata"),
+					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.%"),
+				),
+			},
+		},
+	})
+}
+
 func testAccAzureSecretBackendRoleCheckDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_azure_secret_backend" {
@@ -276,6 +380,10 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
  description	  = "Test for Vault Provider"
  sign_in_audience = "AzureADMyOrg"
  tags             = ["team:engineering"]
+ metadata = {
+    environment = "test"
+    team        = "eco"
+  }
 
  azure_roles {
    role_name = "Reader"
@@ -328,6 +436,10 @@ resource "vault_azure_secret_backend_role" "test_azure_roles" {
   description 	   = "Test for Vault Provider"
   sign_in_audience = "AzureADMultipleOrgs"
   tags       	   = ["environment:development","project:vault_testing"]
+  metadata = {
+    environment = "development"
+    team        = "platform"
+  }
 
   azure_roles {
     role_name = "Reader"
@@ -443,4 +555,117 @@ resource "vault_azure_secret_backend_role" "test_persist_app" {
   }
 }
 `, subscriptionID, tenantID, clientID, clientSecret, path, role, ttl, persistAppLine, subscriptionID, resourceGroup)
+}
+
+func testAzureSecretBackendRoleMetadata_noMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_metadata" {
+  backend     = vault_azure_secret_backend.test.path
+  role        = "%s-metadata"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for metadata operations"
+
+  azure_roles {
+    role_name = "Reader"
+    scope     = "/subscriptions/%s/resourceGroups/%s"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, subscriptionID, resourceGroup)
+}
+
+func testAzureSecretBackendRoleMetadata_withMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_metadata" {
+  backend     = vault_azure_secret_backend.test.path
+  role        = "%s-metadata"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for metadata operations"
+
+  metadata = {
+    environment = "production"
+    owner       = "platform-team"
+  }
+
+  azure_roles {
+    role_name = "Reader"
+    scope     = "/subscriptions/%s/resourceGroups/%s"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, subscriptionID, resourceGroup)
+}
+
+func testAzureSecretBackendRoleMetadata_updatedMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_metadata" {
+  backend     = vault_azure_secret_backend.test.path
+  role        = "%s-metadata"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for metadata operations"
+
+  metadata = {
+    environment = "staging"
+    owner       = "devops-team"
+    cost_center = "engineering"
+  }
+
+  azure_roles {
+    role_name = "Reader"
+    scope     = "/subscriptions/%s/resourceGroups/%s"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, subscriptionID, resourceGroup)
+}
+
+func testAzureSecretBackendRoleMetadata_emptyMetadata(subscriptionID, tenantID, clientID, clientSecret, path, role, resourceGroup string) string {
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "test" {
+  subscription_id = "%s"
+  tenant_id       = "%s"
+  client_id       = "%s"
+  client_secret   = "%s"
+  path            = "%s"
+}
+
+resource "vault_azure_secret_backend_role" "test_metadata" {
+  backend     = vault_azure_secret_backend.test.path
+  role        = "%s-metadata"
+  ttl         = 300
+  max_ttl     = 600
+  description = "Test for metadata operations"
+
+  metadata = {}
+
+  azure_roles {
+    role_name = "Reader"
+    scope     = "/subscriptions/%s/resourceGroups/%s"
+  }
+}
+`, subscriptionID, tenantID, clientID, clientSecret, path, role, subscriptionID, resourceGroup)
 }

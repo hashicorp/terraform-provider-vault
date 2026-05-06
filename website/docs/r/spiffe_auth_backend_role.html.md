@@ -1,7 +1,7 @@
 ---
 layout: "vault"
 page_title: "Vault: vault_spiffe_auth_backend_role resource"
-sidebar_current: "docs-vault-resource-vault_spiffe_auth_backend_role"
+sidebar_current: "docs-vault-resource-vault-spiffe-auth-backend-role"
 description: |-
  Manage a named role within a SPIFFE auth backend that maps SPIFFE IDs to Vault policies.
 ---
@@ -121,5 +121,5 @@ In the case of the example above the `id` would be `auth/spiffe/role/example-rol
 where the `spiffe` component is the resource's `mount`, e.g.
 
 ```
-$ terraform import vault_spiffe_auth_backend_role.example-role auth/spiffe/role/example-role
+$ terraform import vault_spiffe_auth_backend_role.spiffe_role auth/spiffe/role/example-role
 ```

@@ -145,11 +145,11 @@ func testAccAWSAuthBackendIdentityWhitelistCheck_attrs(backend string) resource.
 		}
 
 		if respBuffer != stateBuffer {
-			return fmt.Errorf("expected safety_buffer of %q to be %q, got %q", endpoint, stateBuffer, respBuffer)
+			return fmt.Errorf("expected safety_buffer of %q to be %d, got %d", endpoint, stateBuffer, respBuffer)
 		}
 
 		if respDisable != stateDisable {
-			return fmt.Errorf("expected disable_periodic_tidy of %q to be %q, got %q", endpoint, stateBuffer, respBuffer)
+			return fmt.Errorf("expected disable_periodic_tidy of %q to be %t, got %t", endpoint, stateDisable, respDisable)
 		}
 		return nil
 	}

@@ -53,7 +53,7 @@ type PKIExternalCAOrderChallengeFulfilledModel struct {
 }
 
 func (r *PKIExternalCAOrderChallengeFulfilledResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_pki_secret_backend_external_ca_order_challenge_fulfilled"
+	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_order_challenge_fulfilled"
 }
 
 func (r *PKIExternalCAOrderChallengeFulfilledResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {

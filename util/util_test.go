@@ -907,3 +907,36 @@ func TestGetStringSliceFromSecret(t *testing.T) {
 		})
 	}
 }
+
+func TestInt64ValueOrNull(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		wantNull bool
+		wantVal  int64
+	}{
+		{"nil", nil, true, 0},
+		{"int64", int64(456), false, 456},
+		{"int", int(789), false, 789},
+		{"json.Number-valid", json.Number("999"), false, 999},
+		{"json.Number-invalid", json.Number("not-a-number"), true, 0},
+		{"string", "123", true, 0},
+		{"bool", true, true, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Int64ValueOrNull(tt.input)
+			if tt.wantNull {
+				if !got.IsNull() {
+					t.Errorf("Int64ValueOrNull() expected null, got value: %v", got)
+				}
+			} else {
+				if got.IsNull() {
+					t.Errorf("Int64ValueOrNull() expected value, got null")
+				} else if got.ValueInt64() != tt.wantVal {
+					t.Errorf("Int64ValueOrNull() = %v, want %v", got.ValueInt64(), tt.wantVal)
+				}
+			}
+		})
+	}
+}
