@@ -9,9 +9,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -396,14 +396,14 @@ func (r *RaftSnapshotAgentConfigResource) Create(ctx context.Context, req resour
 		return
 	}
 
-	log.Printf("[DEBUG] Configuring automatic snapshots: %q", name)
+	tflog.Debug(ctx, fmt.Sprintf("Configuring automatic snapshots: %q", name))
 	if _, err = vaultClient.Logical().WriteWithContext(ctx, vaultPath, config); err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultCreateErr(fmt.Errorf("error writing %q: %s", vaultPath, err)),
 		)
 		return
 	}
-	log.Printf("[DEBUG] Configured automatic snapshots: %q", name)
+	tflog.Debug(ctx, fmt.Sprintf("Configured automatic snapshots: %q", name))
 
 	data.ID = types.StringValue(name)
 
@@ -477,14 +477,14 @@ func (r *RaftSnapshotAgentConfigResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	log.Printf("[DEBUG] Updating automatic snapshots: %q", name)
+	tflog.Debug(ctx, fmt.Sprintf("Updating automatic snapshots: %q", name))
 	if _, err = vaultClient.Logical().WriteWithContext(ctx, vaultPath, config); err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultUpdateErr(fmt.Errorf("error writing %q: %s", vaultPath, err)),
 		)
 		return
 	}
-	log.Printf("[DEBUG] Updated automatic snapshots: %q", name)
+	tflog.Debug(ctx, fmt.Sprintf("Updated automatic snapshots: %q", name))
 
 	data.ID = types.StringValue(name)
 
@@ -517,11 +517,11 @@ func (r *RaftSnapshotAgentConfigResource) Delete(ctx context.Context, req resour
 	name := data.ID.ValueString()
 	path := fmt.Sprintf(raftSnapshotAutoPath, name)
 
-	log.Printf("[DEBUG] Removing Raft Snapshot Agent Config: %q", name)
+	tflog.Debug(ctx, fmt.Sprintf("Removing Raft Snapshot Agent Config: %q", name))
 
 	_, err = vaultClient.Logical().DeleteWithContext(ctx, path)
 	if err != nil && util.Is404(err) {
-		log.Printf("[WARN] %q not found, removing from state", name)
+		tflog.Warn(ctx, fmt.Sprintf("%q not found, removing from state", name))
 		return
 	}
 	if err != nil {
@@ -530,7 +530,7 @@ func (r *RaftSnapshotAgentConfigResource) Delete(ctx context.Context, req resour
 		)
 		return
 	}
-	log.Printf("[DEBUG] Removed raft snapshot agent config: %q", name)
+	tflog.Debug(ctx, fmt.Sprintf("Removed raft snapshot agent config: %q", name))
 }
 
 // writeOnlySecrets holds write-only secret values read from config.
@@ -674,11 +674,11 @@ func (r *RaftSnapshotAgentConfigResource) readIntoModel(ctx context.Context, vau
 
 	name := data.ID.ValueString()
 	configPath := fmt.Sprintf(raftSnapshotAutoPath, name)
-	log.Printf("[DEBUG] Reading %q", configPath)
+	tflog.Debug(ctx, fmt.Sprintf("Reading %q", configPath))
 
 	resp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
 	if resp == nil || (err != nil && util.Is404(err)) {
-		log.Printf("[WARN] %q not found, removing from state", name)
+		tflog.Warn(ctx, fmt.Sprintf("%q not found, removing from state", name))
 		data.ID = types.StringValue("")
 		return diags
 	}
