@@ -1,27 +1,27 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_pki_secret_backend_external_ca_order resource"
-sidebar_current: "docs-vault-resource-pki-secret-backend-external-ca-order"
+page_title: "Vault: vault_pki_external_ca_secret_backend_order resource"
+sidebar_current: "docs-vault-resource-pki-external-ca-secret-backend-order"
 description: |-
   Creates and manages ACME orders for certificate issuance via PKI External CA roles.
 ---
 
-# vault\_pki\_secret\_backend\_external\_ca\_order
+# vault\_pki\_external\_ca\_secret\_backend\_order
 
 Creates and manages ACME orders for certificate issuance via PKI External CA roles. This resource initiates the ACME certificate order process with an external Certificate Authority.
 
-~> **Note** This resource creates an ACME order but does not automatically fulfill challenges or fetch the certificate. Use `vault_pki_secret_backend_external_ca_order_challenge` data source to retrieve challenge details, `vault_pki_secret_backend_external_ca_order_challenge_fulfilled` to mark challenges as fulfilled, and `vault_pki_secret_backend_external_ca_order_certificate` to fetch the final certificate.
+~> **Note** This resource creates an ACME order but does not automatically fulfill challenges or fetch the certificate. Use `vault_pki_external_ca_secret_backend_order_challenge` data source to retrieve challenge details, `vault_pki_external_ca_secret_backend_order_challenge_fulfilled` to mark challenges as fulfilled, and `vault_pki_external_ca_secret_backend_order_certificate` to fetch the final certificate.
 
 ## Example Usage with Identifiers
 
 ```hcl
-resource "vault_mount" "pki" {
-  path = "pki"
-  type = "pki"
+resource "vault_mount" "pki-external-ca" {
+  path = "pki-external-ca"
+  type = "pki-external-ca"
 }
 
-resource "vault_pki_secret_backend_acme_account" "example" {
-  mount         = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_acme_account" "example" {
+  mount         = vault_mount.pki-external-ca.path
   name          = "my-acme-account"
   directory_url = "https://acme-v02.api.letsencrypt.org/directory"
   email_contacts = [
@@ -29,18 +29,18 @@ resource "vault_pki_secret_backend_acme_account" "example" {
   ]
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "example" {
-  mount             = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_role" "example" {
+  mount             = vault_mount.pki-external-ca.path
   name              = "example-role"
-  acme_account_name = vault_pki_secret_backend_acme_account.example.name
+  acme_account_name = vault_pki_external_ca_secret_backend_acme_account.example.name
   
   allowed_domains = ["example.com"]
   allowed_domain_options = ["bare_domains", "subdomains"]
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "example" {
-  mount     = vault_mount.pki.path
-  role_name = vault_pki_secret_backend_external_ca_role.example.name
+resource "vault_pki_external_ca_secret_backend_order" "example" {
+  mount     = vault_mount.pki-external-ca.path
+  role_name = vault_pki_external_ca_secret_backend_role.example.name
   
   identifiers = [
     "www.example.com",
@@ -70,9 +70,9 @@ resource "tls_cert_request" "example" {
   ]
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "with_csr" {
-  mount     = vault_mount.pki.path
-  role_name = vault_pki_secret_backend_external_ca_role.example.name
+resource "vault_pki_external_ca_secret_backend_order" "with_csr" {
+  mount     = vault_mount.pki-external-ca.path
+  role_name = vault_pki_external_ca_secret_backend_role.example.name
   
   csr = tls_cert_request.example.cert_request_pem
 }
@@ -131,7 +131,7 @@ In addition to the fields above, the following attributes are exported:
 PKI External CA orders can be imported using the format `<mount>/role/<role_name>/order/<order_id>`, e.g.
 
 ```
-$ terraform import vault_pki_secret_backend_external_ca_order.example pki/role/example-role/order/abc123
+$ terraform import vault_pki_external_ca_secret_backend_order.example pki-external-ca/role/example-role/order/abc123
 ```
 
 ~> **Note** Orders are immutable once created. Any changes to the configuration will require creating a new order.

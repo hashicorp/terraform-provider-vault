@@ -72,8 +72,9 @@ type AzureAccessCredentialsPrivateData struct {
 
 // AzureAccessCredentialsAPIModel describes the Vault API data model.
 type AzureAccessCredentialsAPIModel struct {
-	ClientID     string `json:"client_id" mapstructure:"client_id"`
-	ClientSecret string `json:"client_secret" mapstructure:"client_secret"`
+	ClientID     string            `json:"client_id" mapstructure:"client_id"`
+	ClientSecret string            `json:"client_secret" mapstructure:"client_secret"`
+	Metadata     map[string]string `json:"metadata" mapstructure:"metadata"`
 }
 
 // AzureAccessCredentialsModel describes the Terraform resource data model to match the
@@ -92,6 +93,7 @@ type AzureAccessCredentialsModel struct {
 	SubscriptionID           types.String `tfsdk:"subscription_id"`
 	TenantID                 types.String `tfsdk:"tenant_id"`
 	Environment              types.String `tfsdk:"environment"`
+	RequestMetadata          types.Map    `tfsdk:"request_metadata"`
 
 	// computed fields
 	ClientID       types.String `tfsdk:"client_id"`
@@ -100,6 +102,7 @@ type AzureAccessCredentialsModel struct {
 	LeaseDuration  types.Int64  `tfsdk:"lease_duration"`
 	LeaseStartTime types.String `tfsdk:"lease_start_time"`
 	LeaseRenewable types.Bool   `tfsdk:"lease_renewable"`
+	Metadata       types.Map    `tfsdk:"metadata"`
 }
 
 // Schema defines this resource's schema which is the data that is available in
@@ -168,6 +171,16 @@ func (r *AzureAccessCredentialsEphemeralResource) Schema(_ context.Context, _ ep
 				MarkdownDescription: "True if the duration of this lease can be extended through renewal.",
 				Computed:            true,
 			},
+			fieldRequestMetadata: schema.MapAttribute{
+				MarkdownDescription: "Input metadata to send with the request to Vault.",
+				ElementType:         types.StringType,
+				Optional:            true,
+			},
+			consts.FieldMetadata: schema.MapAttribute{
+				MarkdownDescription: "Metadata returned by Vault for the credentials.",
+				ElementType:         types.StringType,
+				Computed:            true,
+			},
 		},
 		MarkdownDescription: "Provides an ephemeral resource to read Azure access credentials from Vault.",
 	}
@@ -199,6 +212,22 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 	role := data.Role.ValueString()
 	credsPath := backend + "/creds/" + role
 
+	var readData map[string][]string
+	if !data.RequestMetadata.IsNull() && !data.RequestMetadata.IsUnknown() {
+		var inMeta map[string]string
+		if md := data.RequestMetadata.ElementsAs(ctx, &inMeta, false); md.HasError() {
+			resp.Diagnostics.Append(md...)
+			return
+		}
+		if len(inMeta) > 0 {
+			kvPairs := make([]string, 0, len(inMeta))
+			for k, v := range inMeta {
+				kvPairs = append(kvPairs, fmt.Sprintf("%s=%s", k, v))
+			}
+			readData = map[string][]string{"metadata": kvPairs}
+		}
+	}
+
 	// Retry logic for reading credentials from Vault with exponential backoff
 	// Azure can return rate limit errors generating credentials when multiple
 	// requests are made during plan,apply,refresh in quick succession
@@ -211,7 +240,11 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 	err = backoff.RetryNotify(
 		func() error {
 			var readErr error
-			secret, readErr = c.Logical().ReadWithContext(ctx, credsPath)
+			if readData != nil {
+				secret, readErr = c.Logical().ReadWithDataWithContext(ctx, credsPath, readData)
+			} else {
+				secret, readErr = c.Logical().ReadWithContext(ctx, credsPath)
+			}
 			if readErr != nil {
 				if respErr, ok := readErr.(*api.ResponseError); ok {
 					if respErr.StatusCode == 500 && strings.Contains(respErr.Error(), "concurrent requests being made") {
@@ -263,6 +296,10 @@ func (r *AzureAccessCredentialsEphemeralResource) Open(ctx context.Context, req 
 	data.LeaseDuration = types.Int64Value(int64(secret.LeaseDuration))
 	data.LeaseStartTime = types.StringValue(time.Now().Format(time.RFC3339))
 	data.LeaseRenewable = types.BoolValue(secret.Renewable)
+
+	metaVal, md := types.MapValueFrom(ctx, types.StringType, apiResp.Metadata)
+	resp.Diagnostics.Append(md...)
+	data.Metadata = metaVal
 
 	// Store lease information in private data for cleanup in Close
 	if secret.LeaseID != "" {

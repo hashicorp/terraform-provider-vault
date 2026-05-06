@@ -1,27 +1,27 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_pki_secret_backend_external_ca_order_challenge data source"
-sidebar_current: "docs-vault-datasource-pki-secret-backend-external-ca-order-challenge"
+page_title: "Vault: vault_pki_external_ca_secret_backend_order_challenge data source"
+sidebar_current: "docs-vault-datasource-pki-external-ca-secret-backend-order-challenge"
 description: |-
   Retrieves ACME challenge details for a specific identifier in an order.
 ---
 
-# vault\_pki\_secret\_backend\_external\_ca\_order\_challenge
+# vault\_pki\_external\_ca\_secret\_backend\_order\_challenge
 
 Retrieves ACME challenge details for a specific identifier in an order. This data source provides the information needed to fulfill ACME challenges (HTTP-01, DNS-01, or TLS-ALPN-01) for domain validation.
 
-~> **Note** This data source will poll the order status until it reaches the `awaiting-challenge-fulfillment` or `completed` state. Use this data source after creating an order with `vault_pki_secret_backend_external_ca_order`.
+~> **Note** This data source will poll the order status until it reaches the `awaiting-challenge-fulfillment` or `completed` state. Use this data source after creating an order with `vault_pki_external_ca_secret_backend_order`.
 
 ## Example Usage with HTTP-01 Challenge
 
 ```hcl
-resource "vault_mount" "pki" {
-  path = "pki"
-  type = "pki"
+resource "vault_mount" "pki-external-ca" {
+  path = "pki-external-ca"
+  type = "pki-external-ca"
 }
 
-resource "vault_pki_secret_backend_acme_account" "example" {
-  mount         = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_acme_account" "example" {
+  mount         = vault_mount.pki-external-ca.path
   name          = "my-acme-account"
   directory_url = "https://acme-v02.api.letsencrypt.org/directory"
   email_contacts = [
@@ -29,45 +29,45 @@ resource "vault_pki_secret_backend_acme_account" "example" {
   ]
 }
 
-resource "vault_pki_secret_backend_external_ca_role" "example" {
-  mount             = vault_mount.pki.path
+resource "vault_pki_external_ca_secret_backend_role" "example" {
+  mount             = vault_mount.pki-external-ca.path
   name              = "example-role"
-  acme_account_name = vault_pki_secret_backend_acme_account.example.name
+  acme_account_name = vault_pki_external_ca_secret_backend_acme_account.example.name
   
   allowed_domains = ["example.com"]
   allowed_domain_options  = ["bare_domains", "subdomains"]
   allowed_challenge_types = ["http-01"]
 }
 
-resource "vault_pki_secret_backend_external_ca_order" "example" {
-  mount     = vault_mount.pki.path
-  role_name = vault_pki_secret_backend_external_ca_role.example.name
+resource "vault_pki_external_ca_secret_backend_order" "example" {
+  mount     = vault_mount.pki-external-ca.path
+  role_name = vault_pki_external_ca_secret_backend_role.example.name
   
   identifiers = ["www.example.com"]
 }
 
 # Retrieve HTTP-01 challenge details
-data "vault_pki_secret_backend_external_ca_order_challenge" "http" {
-  mount          = vault_mount.pki.path
-  role_name      = vault_pki_secret_backend_external_ca_role.example.name
-  order_id       = vault_pki_secret_backend_external_ca_order.example.order_id
+data "vault_pki_external_ca_secret_backend_order_challenge" "http" {
+  mount          = vault_mount.pki-external-ca.path
+  role_name      = vault_pki_external_ca_secret_backend_role.example.name
+  order_id       = vault_pki_external_ca_secret_backend_order.example.order_id
   challenge_type = "http-01"
   identifier     = "www.example.com"
 }
 
 # Deploy the challenge file
 resource "local_file" "acme_challenge" {
-  filename = "/var/www/html/.well-known/acme-challenge/${data.vault_pki_secret_backend_external_ca_order_challenge.http.token}"
-  content  = data.vault_pki_secret_backend_external_ca_order_challenge.http.key_authorization
+  filename = "/var/www/html/.well-known/acme-challenge/${data.vault_pki_external_ca_secret_backend_order_challenge.http.token}"
+  content  = data.vault_pki_external_ca_secret_backend_order_challenge.http.key_authorization
 }
 
 # Output challenge details for manual deployment
 output "challenge_token" {
-  value = data.vault_pki_secret_backend_external_ca_order_challenge.http.token
+  value = data.vault_pki_external_ca_secret_backend_order_challenge.http.token
 }
 
 output "challenge_url" {
-  value = "http://www.example.com/.well-known/acme-challenge/${data.vault_pki_secret_backend_external_ca_order_challenge.http.token}"
+  value = "http://www.example.com/.well-known/acme-challenge/${data.vault_pki_external_ca_secret_backend_order_challenge.http.token}"
 }
 ```
 
@@ -75,10 +75,10 @@ output "challenge_url" {
 
 ```hcl
 # Retrieve DNS-01 challenge details
-data "vault_pki_secret_backend_external_ca_order_challenge" "dns" {
-  mount          = vault_mount.pki.path
-  role_name      = vault_pki_secret_backend_external_ca_role.example.name
-  order_id       = vault_pki_secret_backend_external_ca_order.example.order_id
+data "vault_pki_external_ca_secret_backend_order_challenge" "dns" {
+  mount          = vault_mount.pki-external-ca.path
+  role_name      = vault_pki_external_ca_secret_backend_role.example.name
+  order_id       = vault_pki_external_ca_secret_backend_order.example.order_id
   challenge_type = "dns-01"
   identifier     = "www.example.com"
 }
@@ -89,7 +89,7 @@ resource "aws_route53_record" "acme_challenge" {
   name    = "_acme-challenge.www.example.com"
   type    = "TXT"
   ttl     = 60
-  records = [data.vault_pki_secret_backend_external_ca_order_challenge.dns.key_authorization]
+  records = [data.vault_pki_external_ca_secret_backend_order_challenge.dns.key_authorization]
 }
 
 # Output DNS record details
@@ -98,7 +98,7 @@ output "dns_record_name" {
 }
 
 output "dns_record_value" {
-  value     = data.vault_pki_secret_backend_external_ca_order_challenge.dns.key_authorization
+  value     = data.vault_pki_external_ca_secret_backend_order_challenge.dns.key_authorization
   sensitive = true
 }
 ```
@@ -107,17 +107,17 @@ output "dns_record_value" {
 
 ```hcl
 # Retrieve TLS-ALPN-01 challenge details
-data "vault_pki_secret_backend_external_ca_order_challenge" "tls_alpn" {
-  mount          = vault_mount.pki.path
-  role_name      = vault_pki_secret_backend_external_ca_role.example.name
-  order_id       = vault_pki_secret_backend_external_ca_order.example.order_id
+data "vault_pki_external_ca_secret_backend_order_challenge" "tls_alpn" {
+  mount          = vault_mount.pki-external-ca.path
+  role_name      = vault_pki_external_ca_secret_backend_role.example.name
+  order_id       = vault_pki_external_ca_secret_backend_order.example.order_id
   challenge_type = "tls-alpn-01"
   identifier     = "www.example.com"
 }
 
 # Output challenge details for TLS configuration
 output "tls_alpn_key_auth" {
-  value     = data.vault_pki_secret_backend_external_ca_order_challenge.tls_alpn.key_authorization
+  value     = data.vault_pki_external_ca_secret_backend_order_challenge.tls_alpn.key_authorization
   sensitive = true
 }
 ```

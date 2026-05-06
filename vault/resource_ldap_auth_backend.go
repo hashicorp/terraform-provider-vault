@@ -88,7 +88,6 @@ func ldapAuthBackendResource() *schema.Resource {
 		consts.FieldBindPass: {
 			Type:          schema.TypeString,
 			Optional:      true,
-			Computed:      true,
 			Sensitive:     true,
 			ConflictsWith: []string{consts.FieldBindPassWO},
 		},

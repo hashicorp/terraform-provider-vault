@@ -148,7 +148,7 @@ func pkiSecretBackendConfigScepWrite(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
-	log.Printf("[DEBUG] Updating SCEP config on PKI secret backend %q:\n%v", backend, data)
+	log.Printf("[DEBUG] Updating SCEP config on PKI secret backend %q", backend)
 	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error updating SCEP config for PKI secret backend %q: %s", backend, err)

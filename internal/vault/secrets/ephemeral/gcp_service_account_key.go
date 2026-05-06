@@ -230,8 +230,7 @@ func (r *GCPServiceAccountKeyEphemeralResource) Open(ctx context.Context, req ep
 
 	// Store the decoded JSON string (not base64-encoded)
 	jsonStr := string(decodedKey)
-	log.Printf("[DEBUG] Decoded private_key_data length: %d bytes", len(jsonStr))
-	log.Printf("[DEBUG] First 100 chars of decoded JSON: %s", jsonStr[:min(100, len(jsonStr))])
+	log.Printf("[DEBUG] Successfully decoded private_key_data")
 	data.PrivateKeyData = types.StringValue(jsonStr)
 
 	// Set optional fields if present

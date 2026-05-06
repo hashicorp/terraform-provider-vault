@@ -36,9 +36,9 @@ var acmeAccountIDRe = regexp.MustCompile(`^([^/]+)/` + acmeAccountAffix + `/([^/
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
 var _ resource.ResourceWithConfigure = &PKIACMEAccountResource{}
 
-// NewPKIACMEAccountResource returns the implementation for this resource to be
+// NewPKIExternalCAACMEAccountResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
-func NewPKIACMEAccountResource() resource.Resource {
+func NewPKIExternalCAACMEAccountResource() resource.Resource {
 	return &PKIACMEAccountResource{}
 }
 
@@ -82,7 +82,7 @@ type PKIACMEAccountAPIModel struct {
 }
 
 func (r *PKIACMEAccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_pki_secret_backend_acme_account"
+	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_acme_account"
 }
 
 func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -127,7 +127,7 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_key": schema.StringAttribute{
-				MarkdownDescription: "A standard base64 encoded external binding token to create the initial account.",
+				MarkdownDescription: "An url base64 encoded external binding token to create the initial account.",
 				Optional:            true,
 				Sensitive:           true,
 				WriteOnly:           true,
@@ -152,7 +152,8 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 // https://developer.hashicorp.com/terraform/plugin/framework/resources/create
 func (r *PKIACMEAccountResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data PKIACMEAccountModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Use req.Config to read in Write only fields instead of Plan which will not have them set.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

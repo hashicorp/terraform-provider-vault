@@ -34,6 +34,8 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 				Config: testGCPKMSSecretBackend_initialConfig(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
+					// credentials_wo is write-only and must never appear in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCredentialsWO),
 				),
 			},
 			{
@@ -41,6 +43,8 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldScopes+".#", "2"),
+					// credentials_wo must remain absent from state after update too
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCredentialsWO),
 				),
 			},
 			{
@@ -74,6 +78,8 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "1"),
+					// credentials_wo is write-only and must never appear in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCredentialsWO),
 				),
 			},
 			{
@@ -81,6 +87,8 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCredentialsWOVersion, "2"),
+					// credentials_wo must remain absent from state after credential rotation
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCredentialsWO),
 				),
 			},
 		},

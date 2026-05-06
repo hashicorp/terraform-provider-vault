@@ -73,6 +73,9 @@ The following arguments are supported:
 
 * `environment` - (Optional) The Azure environment to use during credential validation. Defaults to the Azure Public Cloud. Some possible values: AzurePublicCloud, AzureUSGovernmentCloud.
 
+* `request_metadata` - (Optional) Request-time map of key-value pairs to associate with the static role and include in the credential response.
+  These key-value pairs are merged with the role's configured metadata.
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
@@ -88,3 +91,6 @@ In addition to the arguments above, the following attributes are exported:
 * `lease_start_time` - The time when the lease was read, in RFC3339 format.
 
 * `lease_renewable` - True if the lease can be renewed.
+
+* `metadata` - Computed map of key-value pairs that combines the role's metadata with the metadata
+  sent in the request. If a key exists in both, the value from the role's metadata takes precedence.

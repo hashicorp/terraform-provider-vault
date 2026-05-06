@@ -93,8 +93,7 @@ The following arguments are supported:
 
 * `signature` - (Required) Base64-encoded signature to verify against the digest.
 
-* `key_version` - (Required) Specific version of the key to use for verification. If not specified, Vault 
-  will use the key's primary version.
+* `key_version` - (Required) Specific version of the key to use for verification.
 
 ## Attributes Reference
 

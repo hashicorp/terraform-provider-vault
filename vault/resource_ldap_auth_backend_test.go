@@ -247,6 +247,52 @@ func TestLDAPAuthBackend_bindpassWO(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_bindpassToBindpassWOMigration(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-migration")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPAuthBackendConfig_bindpass(path, "initialsecret"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify bindpass is set in state
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, "initialsecret"),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_bindpassWO(path, "wosecret", 1),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify bindpass is cleared from state after migration
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "1"),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_bindpassWO(path, "updatewosecret", 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "path", path),
+					// Verify bindpass remains empty after subsequent updates
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPass, ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindPassWOVersion, "2"),
+				),
+			},
+		},
+	})
+}
+
 func TestLDAPAuthBackend_bindpassConflict(t *testing.T) {
 	t.Parallel()
 
@@ -870,6 +916,18 @@ resource "vault_ldap_auth_backend" "test" {
 `, path)
 }
 
+func testLDAPAuthBackendConfig_bindpass(path, bindpass string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path        = "%s"
+    url         = "ldaps://example.org"
+    binddn      = "cn=example.com"
+    bindpass    = "%s"
+    description = "Test LDAP auth backend for bindpass migration"
+}
+`, path, bindpass)
+}
+
 func testLDAPAuthBackendConfig_bindpassWO(path, bindpass string, version int) string {
 	return fmt.Sprintf(`
 resource "vault_ldap_auth_backend" "test" {
@@ -878,7 +936,7 @@ resource "vault_ldap_auth_backend" "test" {
     binddn             = "cn=example.com"
     bindpass_wo        = "%s"
     bindpass_wo_version = %d
-    description        = "Test LDAP auth backend with write-only bindpass"
+    description        = "Test LDAP auth backend for bindpass migration"
 }
 `, path, bindpass, version)
 }

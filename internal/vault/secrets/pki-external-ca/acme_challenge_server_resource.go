@@ -6,8 +6,10 @@ package pki_external_ca
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,6 +18,11 @@ import (
 
 var (
 	_ resource.Resource = (*acmeChallengeServerResource)(nil)
+
+	// globalACMEServers tracks running servers across provider instantiations
+	// during acceptance tests to prevent port-holding goroutine leaks.
+	globalACMEServers   = make(map[string]*http.Server)
+	globalACMEServersMu sync.Mutex
 )
 
 func NewACMEChallengeServerResource() resource.Resource {
@@ -23,8 +30,6 @@ func NewACMEChallengeServerResource() resource.Resource {
 }
 
 type acmeChallengeServerResource struct {
-	servers map[string]*http.Server
-	mu      sync.Mutex
 }
 
 type acmeChallengeServerResourceModel struct {
@@ -70,12 +75,8 @@ func (r *acmeChallengeServerResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if r.servers == nil {
-		r.servers = make(map[string]*http.Server)
-	}
+	globalACMEServersMu.Lock()
+	defer globalACMEServersMu.Unlock()
 
 	port := plan.Port.ValueInt64()
 	token := plan.Token.ValueString()
@@ -98,14 +99,36 @@ func (r *acmeChallengeServerResource) Create(ctx context.Context, req resource.C
 		Handler: mux,
 	}
 
+	// 1. Synchronously attempt to bind the port with a retry loop
+	var listener net.Listener
+	var err error
+
+	// Try for up to 5 seconds to acquire the port from the OS
+	for i := 0; i < 10; i++ {
+		listener, err = net.Listen("tcp", addr)
+		if err == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	// If we still can't bind the port, fail the resource creation loudly!
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to start ACME Challenge Server",
+			fmt.Sprintf("Could not bind to port %d: %v", port, err),
+		)
+		return
+	}
+
 	// Start server in background
 	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			// Log error but don't fail - server might already be stopped
 		}
 	}()
 
-	r.servers[id] = server
+	globalACMEServers[id] = server
 
 	plan.ID = types.StringValue(id)
 
@@ -141,11 +164,11 @@ func (r *acmeChallengeServerResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	globalACMEServersMu.Lock()
+	defer globalACMEServersMu.Unlock()
 
 	id := state.ID.ValueString()
-	if server, ok := r.servers[id]; ok {
+	if server, ok := globalACMEServers[id]; ok {
 		// Shutdown the server
 		if err := server.Shutdown(ctx); err != nil {
 			resp.Diagnostics.AddWarning(
@@ -153,6 +176,6 @@ func (r *acmeChallengeServerResource) Delete(ctx context.Context, req resource.D
 				fmt.Sprintf("Error shutting down server: %s", err),
 			)
 		}
-		delete(r.servers, id)
+		delete(globalACMEServers, id)
 	}
 }
