@@ -254,6 +254,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		sys.NewPluginRuntimeResource,
 		config.NewSysConfigCORSResource,
 		sysconfig.NewControlGroupConfigResource,
+		sys.NewRaftSnapshotAgentConfigResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
