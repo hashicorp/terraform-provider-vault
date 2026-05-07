@@ -7,7 +7,6 @@ FEATURES:
 * **New Resource**: Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
 * **New Resource**: `vault_activation_flags`  for managing Vault features that are gated by one-time flags. Requires Vault 1.16 or later. Needs Vault enterprise licence([#2861](https://github.com/hashicorp/terraform-provider-vault/pull/2861/))
 * **New Resources**: `vault_userpass_auth_backend_user` for user creation, deletion, password updates, and policy updates, and ephemeral resource `vault_userpass_auth_login` for authenticating with Userpass. ([#2859](https://github.com/hashicorp/terraform-provider-vault/pull/2859))
-* `vault_transform_transformation`: Added `mapping_mode`, `stores` and `convergent` fields to the resource. ([#2820] https://github.com/hashicorp/terraform-provider-vault/pull/2820/)
 
 ## 5.9.0 (April 22, 2026)
 
