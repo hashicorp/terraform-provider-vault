@@ -73,6 +73,7 @@ const (
 	FieldWriteDataJSON                      = "write_data_json"
 	FieldPathWrapTTL                        = "path_wrap_ttl"
 	FieldName                               = "name"
+	FieldValues                             = "values"
 	FieldVersion                            = "version"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
@@ -123,7 +124,6 @@ const (
 	FieldSKID                               = "skid"
 	FieldUsePSS                             = "use_pss"
 	FieldForceRWSession                     = "force_rw_session"
-	FieldValues                             = "values"
 	FieldAccessKey                          = "access_key"
 	FieldSecretKey                          = "secret_key"
 	FieldSecretKeyWO                        = "secret_key_wo"
@@ -828,6 +828,8 @@ const (
 	FieldAzureAuthMode             = "azure_auth_mode"
 	FieldSelfManaged               = "self_managed"
 	FieldRotationPolicy            = "rotation_policy"
+	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
+	FieldSecretsWOVersion          = "secrets_wo_version"
 
 	/*
 		ephemeral resource constants and write-only attributes
@@ -836,7 +838,9 @@ const (
 	FieldMountID = "mount_id"
 
 	FieldPasswordWO                 = "password_wo"
+	FieldPasswordHashWO             = "password_hash_wo"
 	FieldPasswordWOVersion          = "password_wo_version"
+	FieldPasswordHashWOVersion      = "password_hash_wo_version"
 	FieldCredentialsWO              = "credentials_wo"
 	FieldCredentialsWOVersion       = "credentials_wo_version"
 	FieldDataJSONWO                 = "data_json_wo"
