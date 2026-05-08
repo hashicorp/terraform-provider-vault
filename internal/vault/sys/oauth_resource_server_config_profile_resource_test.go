@@ -243,7 +243,12 @@ func TestAccOAuthResourceServerConfigProfile_algorithms(t *testing.T) {
 
 func testAccOAuthResourceServerConfigProfileConfig_jwks(profileName string) string {
 	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
 resource "vault_oauth_resource_server_config_profile" "test" {
+  depends_on   = [vault_activation_flags.oauth]
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
@@ -254,7 +259,12 @@ resource "vault_oauth_resource_server_config_profile" "test" {
 
 func testAccOAuthResourceServerConfigProfileConfig_jwksUpdated(profileName string) string {
 	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
 resource "vault_oauth_resource_server_config_profile" "test" {
+  depends_on        = [vault_activation_flags.oauth]
   profile_name      = "%s"
   issuer_id         = "https://example.com"
   use_jwks          = true
@@ -268,7 +278,12 @@ resource "vault_oauth_resource_server_config_profile" "test" {
 
 func testAccOAuthResourceServerConfigProfileConfig_pem(profileName, publicKeyPEM string) string {
 	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
 resource "vault_oauth_resource_server_config_profile" "test" {
+  depends_on   = [vault_activation_flags.oauth]
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = false
@@ -285,7 +300,12 @@ EOT
 
 func testAccOAuthResourceServerConfigProfileConfig_withAudiences(profileName string) string {
 	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
 resource "vault_oauth_resource_server_config_profile" "test" {
+  depends_on   = [vault_activation_flags.oauth]
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
@@ -297,11 +317,16 @@ resource "vault_oauth_resource_server_config_profile" "test" {
 
 func testAccOAuthResourceServerConfigProfileConfig_namespace(ns, profileName string) string {
 	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
 resource "vault_namespace" "test" {
   path = "%s"
 }
 
 resource "vault_oauth_resource_server_config_profile" "test" {
+  depends_on   = [vault_activation_flags.oauth]
   namespace    = vault_namespace.test.path
   profile_name = "%s"
   issuer_id    = "https://example.com"
@@ -313,7 +338,12 @@ resource "vault_oauth_resource_server_config_profile" "test" {
 
 func testAccOAuthResourceServerConfigProfileConfig_algorithms(profileName string) string {
 	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
 resource "vault_oauth_resource_server_config_profile" "test" {
+  depends_on            = [vault_activation_flags.oauth]
   profile_name          = "%s"
   issuer_id             = "https://example.com"
   use_jwks              = true
