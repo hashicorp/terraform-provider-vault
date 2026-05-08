@@ -198,11 +198,19 @@ func rabbitMQSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, me
 	if d.HasChanges(consts.FieldConnectionURI, consts.FieldUsername, consts.FieldPassword, consts.FieldPasswordWOVersion, consts.FieldVerifyConnection, consts.FieldUsernameTemplate, consts.FieldPasswordPolicy) {
 		log.Printf("[DEBUG] Updating connection credentials at %q", path+"/config/connection")
 
-		// Handle password and password_wo
+		// Handle password and password_wo.
+		//
+		// NOTE: The `<mount>/config/connection` endpoint is full-replace and
+		// rejects an empty `password`. Previously this branch only re-sent the
+		// WO value when `password_wo_version` changed, so any other field
+		// change (e.g. `connection_uri`, `username`, `verify_connection`)
+		// caused the apply to fail with `missing password`. Re-resolve the
+		// password from config on every update so the WO value is always sent.
+		// See https://github.com/hashicorp/terraform-provider-vault/issues/2900.
 		var password string
 		if v, ok := d.GetOk(consts.FieldPassword); ok {
 			password = v.(string)
-		} else if d.HasChange(consts.FieldPasswordWOVersion) {
+		} else {
 			woVal := d.GetRawConfig().GetAttr(consts.FieldPasswordWO)
 			if !woVal.IsNull() {
 				password = woVal.AsString()
