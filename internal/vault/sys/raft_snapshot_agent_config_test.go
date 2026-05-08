@@ -1,31 +1,30 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package vault
+package sys_test
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_basic(name),
@@ -108,13 +107,12 @@ func TestAccRaftSnapshotAgentConfig_basic(t *testing.T) {
 func TestAccRaftSnapshotAgentConfig_azureManagedIdentity(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
 		},
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_azureManagedIdentity(name),
@@ -126,8 +124,9 @@ func TestAccRaftSnapshotAgentConfig_azureManagedIdentity(t *testing.T) {
 			},
 			{
 				SkipFunc: func() (bool, error) {
-					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !provider.IsAPISupported(meta, provider.VaultVersion121), nil
+					acctestutil.PreCheck(t)
+					pm := acctestutil.TestProvider.Meta().(*provider.ProviderMeta)
+					return !pm.IsAPISupported(provider.VaultVersion121), nil
 				},
 				Config: testAccRaftSnapshotAgentConfig_azureManagedIdentityWithAutoload(name),
 				Check: resource.ComposeTestCheckFunc(
@@ -147,13 +146,12 @@ func TestAccRaftSnapshotAgentConfig_azureManagedIdentity(t *testing.T) {
 func TestAccRaftSnapshotAgentConfig_azureEnvironment(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
 		},
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_azureEnvironment(name),
@@ -175,13 +173,12 @@ func TestAccRaftSnapshotAgentConfig_azureEnvironment(t *testing.T) {
 func TestAccRaftSnapshotAgentConfig_azureAuthModeNegative(t *testing.T) {
 	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
 	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion118)
 		},
-		CheckDestroy: testAccRaftSnapshotAgentConfigCheckDestroy,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccRaftSnapshotAgentConfig_azureSharedMissingKey(name),
@@ -204,10 +201,9 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
-			testutil.TestEntPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 		},
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		CheckDestroy:             testAccRaftSnapshotAgentConfigCheckDestroy,
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccRaftSnapshotAgentConfig_basic(name),
@@ -230,26 +226,92 @@ func TestAccRaftSnapshotAgentConfig_import(t *testing.T) {
 	})
 }
 
-func testAccRaftSnapshotAgentConfigCheckDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "vault_raft_snapshot_agent_config" {
-			continue
-		}
+// TestAccRaftSnapshotAgentConfig_awsWriteOnly tests the write-only aws_secret_access_key_wo
+// field with automatic change detection via private data hash comparison
+func TestAccRaftSnapshotAgentConfig_awsWriteOnly(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			acctestutil.TestEntPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				// Step 1: Create with write-only secret, auto-managed version
+				Config: testAccRaftSnapshotAgentConfig_awsWriteOnly(name, "secret-v1"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldName, name),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldStorageType, "aws-s3"),
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldSecretsWOVersion, "1"),
+					// Write-only field should not be in state
+					resource.TestCheckNoResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldAWSSecretAccessKeyWO),
+					// Legacy field should not be set
+					resource.TestCheckNoResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldAWSSecretAccessKey),
+				),
+			},
+			{
+				// Step 2: Change the secret, version should auto-increment
+				Config: testAccRaftSnapshotAgentConfig_awsWriteOnly(name, "secret-v2"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo", consts.FieldSecretsWOVersion, "2"),
+				),
+			},
+			{
+				// Step 3: Same secret, should be a no-op
+				Config:   testAccRaftSnapshotAgentConfig_awsWriteOnly(name, "secret-v2"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
 
-		client, e := provider.GetClient(rs.Primary, testProvider.Meta())
-		if e != nil {
-			return e
-		}
+// TestAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion tests the write-only field
+// with a manually managed secrets_wo_version.
+func TestAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			acctestutil.TestEntPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				// Step 1: Create with explicit version
+				Config: testAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion(name, "secret-v1", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo_manual", consts.FieldSecretsWOVersion, "1"),
+				),
+			},
+			{
+				// Step 2: Bump version to trigger update
+				Config: testAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion(name, "secret-v2", 3),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_raft_snapshot_agent_config.aws_wo_manual", consts.FieldSecretsWOVersion, "3"),
+				),
+			},
+		},
+	})
+}
 
-		snapshot, err := client.Logical().Read(rs.Primary.ID)
-		if err != nil {
-			return err
-		}
-		if snapshot != nil {
-			return fmt.Errorf("library %q still exists", rs.Primary.ID)
-		}
-	}
-	return nil
+// TestAccRaftSnapshotAgentConfig_awsWriteOnlyConflict tests that aws_secret_access_key
+// and aws_secret_access_key_wo cannot be set simultaneously.
+func TestAccRaftSnapshotAgentConfig_awsWriteOnlyConflict(t *testing.T) {
+	name := acctest.RandomWithPrefix("tf-test-raft-snapshot")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			testutil.SkipTestEnvSet(t, "SKIP_RAFT_TESTS")
+			acctestutil.TestEntPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccRaftSnapshotAgentConfig_awsWriteOnlyConflict(name),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Combination`),
+			},
+		},
+	})
 }
 
 func testAccRaftSnapshotAgentConfig_basic(name string) string {
@@ -398,6 +460,55 @@ resource "vault_raft_snapshot_agent_config" "azure_invalid_auth_mode" {
   azure_account_name = "azure-account-name"
   azure_blob_environment = "azure-env"
   azure_auth_mode = "invalid-mode"
+}`, name)
+}
+
+// Write only tests for AWS S3 storage type.
+// requires Vault Enterprise 1.21.0+
+func testAccRaftSnapshotAgentConfig_awsWriteOnly(name, secret string) string {
+	return fmt.Sprintf(`
+resource "vault_raft_snapshot_agent_config" "aws_wo" {
+  name                    = "%s"
+  interval_seconds        = 7200
+  retain                  = 1
+  path_prefix             = "wo/%s"
+  storage_type            = "aws-s3"
+  aws_s3_bucket           = "my-bucket"
+  aws_s3_region           = "us-east-1"
+  aws_access_key_id       = "aws-access-key-id"
+  aws_secret_access_key_wo = "%s"
+}`, name, name, secret)
+}
+
+func testAccRaftSnapshotAgentConfig_awsWriteOnlyManualVersion(name, secret string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_raft_snapshot_agent_config" "aws_wo_manual" {
+  name                    = "%s"
+  interval_seconds        = 7200
+  retain                  = 1
+  path_prefix             = "wo-manual/%s"
+  storage_type            = "aws-s3"
+  aws_s3_bucket           = "my-bucket"
+  aws_s3_region           = "us-east-1"
+  aws_access_key_id       = "aws-access-key-id"
+  aws_secret_access_key_wo = "%s"
+  secrets_wo_version      = %d
+}`, name, name, secret, version)
+}
+
+func testAccRaftSnapshotAgentConfig_awsWriteOnlyConflict(name string) string {
+	return fmt.Sprintf(`
+resource "vault_raft_snapshot_agent_config" "aws_wo_conflict" {
+  name                    = "%s"
+  interval_seconds        = 7200
+  retain                  = 1
+  path_prefix             = "path/in/bucket/conflict"
+  storage_type            = "aws-s3"
+  aws_s3_bucket           = "my-bucket"
+  aws_s3_region           = "us-east-1"
+  aws_access_key_id       = "aws-access-key-id"
+  aws_secret_access_key   = "legacy-secret"
+  aws_secret_access_key_wo = "wo-secret"
 }`, name)
 }
 
