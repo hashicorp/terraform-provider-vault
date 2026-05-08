@@ -204,8 +204,6 @@ $ terraform import vault_oauth_resource_server_config_profile.example applicatio
 
 * **Clock Skew**: Use `clock_skew_leeway` to handle clock differences between systems. A value of 30-60 seconds is typically sufficient for most environments.
 
-* **Activation Flag**: The OAuth Resource Server feature must be activated on each Vault instance before using this resource. Use the Vault CLI to activate: `vault write -f sys/activation-flags/oauth-resource-server/activate`. This is a one-time operation per Vault instance and cannot be performed through Terraform.
-
 * **Enterprise Feature**: OAuth Resource Server Configuration is only available in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
 
 * **Version Requirement**: This resource requires Vault 2.0.1 or later.
