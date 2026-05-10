@@ -24,10 +24,22 @@ import (
 )
 
 const (
+	// sequentialSuccessesRequired is the number of times the test of an eventually consistent
+	// credential must succeed before we return it for use.
 	sequentialSuccessesRequired = 5
-	sequentialSuccessTimeLimit  = time.Minute
-	retryTimeOut                = 30 * time.Second
-	propagationBuffer           = 5 * time.Second
+
+	// sequentialSuccessTimeLimit is how long we'll wait for eventually consistent AWS creds
+	// to propagate before giving up. In real life, we've seen it take up to 15 seconds, so
+	// this is ample and if it's unsuccessful there's something else wrong.
+	sequentialSuccessTimeLimit = time.Minute
+
+	// retryTimeOut is how long we'll wait before timing out when we're retrying credentials.
+	// This corresponds to Vault's default 30-second request timeout.
+	retryTimeOut = 30 * time.Second
+
+	// propagationBuffer is the added buffer of time we'll wait after N sequential successes
+	// before returning credentials for use.
+	propagationBuffer = 5 * time.Second
 
 	// AWS error codes used in credential validation
 	awsErrorAccessDenied       = "AccessDenied"
@@ -71,7 +83,7 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 			"region": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Region the read credentials belong to.",
+				Description: "Region the read credentials belong to. Defaults to us-east-1 if unset.",
 			},
 			"access_key": {
 				Type:        schema.TypeString,
@@ -191,6 +203,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	if credType == "sts" {
 		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
 
+		// Create a cancellable context with timeout for the STS call
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
@@ -205,6 +218,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	validateCreds := func() *retry.RetryError {
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
 
+		// Create a cancellable context with timeout for each IAM validation call
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
