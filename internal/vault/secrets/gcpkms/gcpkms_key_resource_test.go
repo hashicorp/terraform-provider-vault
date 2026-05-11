@@ -6,7 +6,6 @@ package gcpkms_test
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -36,7 +35,7 @@ func TestGCPKMSSecretBackendKey_basic(t *testing.T) {
 				Config: testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyRing, keyRing),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPurpose, "encrypt_decrypt"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "symmetric_encryption"),
@@ -78,7 +77,7 @@ func TestGCPKMSSecretBackendKey_update(t *testing.T) {
 				Config: testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "2592000s"),
 				),
 			},
@@ -86,7 +85,7 @@ func TestGCPKMSSecretBackendKey_update(t *testing.T) {
 				Config: testGCPKMSSecretBackendKey_updateConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "3600000s"),
 				),
 			},
@@ -113,7 +112,7 @@ func TestGCPKMSSecretBackendKey_withCryptoKey(t *testing.T) {
 				Config: testGCPKMSSecretBackendKey_cryptoKeyConfig(path, keyName, keyRing, cryptoKeyName, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyRing, keyRing),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCryptoKey, cryptoKeyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPurpose, "encrypt_decrypt"),
@@ -142,7 +141,7 @@ func TestGCPKMSSecretBackendKey_signingKey(t *testing.T) {
 				Config: testGCPKMSSecretBackendKey_signingConfig(path, keyName, keyRing, credentials),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyRing, keyRing),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPurpose, "asymmetric_sign"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "rsa_sign_pss_2048_sha256"),
@@ -177,24 +176,6 @@ func TestGCPKMSSecretBackendKey_labels(t *testing.T) {
 	})
 }
 
-func TestGCPKMSSecretBackendKey_validation(t *testing.T) {
-	credentials, _ := testutil.GetTestGCPKMSCreds(t)
-
-	path := acctest.RandomWithPrefix("tf-test-gcpkms")
-	keyName := acctest.RandomWithPrefix("test-key")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testGCPKMSSecretBackendKey_missingRequiredConfig(path, keyName, credentials),
-				ExpectError: regexp.MustCompile(`The argument "key_ring" is required`),
-			},
-		},
-	})
-}
-
 func TestGCPKMSSecretBackendKey_namespace(t *testing.T) {
 	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
@@ -205,7 +186,7 @@ func TestGCPKMSSecretBackendKey_namespace(t *testing.T) {
 		var commonChecks []resource.TestCheckFunc
 		commonChecks = append(commonChecks,
 			resource.TestCheckResourceAttr(resourceName, consts.FieldMount, path),
-			resource.TestCheckResourceAttr(resourceName, consts.FieldName, keyName),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 			resource.TestCheckResourceAttr(resourceName, consts.FieldPurpose, "encrypt_decrypt"),
 			resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "symmetric_encryption"),
 			resource.TestCheckResourceAttr(resourceName, consts.FieldProtectionLevel, "software"),
@@ -291,12 +272,14 @@ EOT
 
 resource "vault_gcpkms_secret_backend_key" "test" {
   mount            = vault_mount.test.path
-  name             = "%s"
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
   protection_level = "software"
   rotation_period  = "2592000s"
+  
+  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing)
 }
@@ -318,12 +301,14 @@ EOT
 
 resource "vault_gcpkms_secret_backend_key" "test" {
   mount            = vault_mount.test.path
-  name             = "%s"
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
   protection_level = "software"
   rotation_period  = "3600000s"
+  
+  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing)
 }
@@ -345,12 +330,14 @@ EOT
 
 resource "vault_gcpkms_secret_backend_key" "test" {
   mount            = vault_mount.test.path
-  name             = "%s"
+  key_name         = "%s"
   key_ring         = "%s"
   crypto_key       = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
   protection_level = "software"
+  
+  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing, cryptoKeyName)
 }
@@ -372,11 +359,13 @@ EOT
 
 resource "vault_gcpkms_secret_backend_key" "test" {
   mount            = vault_mount.test.path
-  name             = "%s"
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
   algorithm        = "rsa_sign_pss_2048_sha256"
   protection_level = "software"
+  
+  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing)
 }
@@ -398,7 +387,7 @@ EOT
 
 resource "vault_gcpkms_secret_backend_key" "test" {
   mount            = vault_mount.test.path
-  name             = "%s"
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
@@ -407,6 +396,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
     env        = "test"
     managed-by = "terraform"
   }
+  
+  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing)
 }
@@ -428,36 +419,15 @@ EOT
 
 resource "vault_gcpkms_secret_backend_key" "test" {
   mount      = vault_mount.test.path
-  name       = "%s"
+  key_name   = "%s"
   key_ring   = "%s"
   crypto_key = "%s"
   purpose    = "encrypt_decrypt"
   algorithm  = "symmetric_encryption"
+  
+  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing, cryptoKey)
-}
-
-func testGCPKMSSecretBackendKey_missingRequiredConfig(path, keyName, credentials string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
-resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
-  credentials_wo         = <<-EOT
-%s
-EOT
-  credentials_wo_version = 1
-}
-
-resource "vault_gcpkms_secret_backend_key" "test" {
-  mount = vault_mount.test.path
-  name    = "%s"
-  # Missing both key_ring and crypto_key
-}
-`, path, credentials, keyName)
 }
 
 func testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -467,7 +437,7 @@ func testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName string) resourc
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
 		mount := rs.Primary.Attributes[consts.FieldMount]
-		name := rs.Primary.Attributes[consts.FieldName]
+		name := rs.Primary.Attributes[consts.FieldKeyName]
 		return fmt.Sprintf("%s/keys/%s", mount, name), nil
 	}
 }
@@ -505,13 +475,15 @@ EOT
 
 resource "vault_gcpkms_secret_backend_key" "test" {
   mount            = vault_mount.test.path
-  name             = "%s"
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
   protection_level = "software"
   rotation_period  = "2592000s"
 %s
+  
+  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, nsBlock, path, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr)
 }

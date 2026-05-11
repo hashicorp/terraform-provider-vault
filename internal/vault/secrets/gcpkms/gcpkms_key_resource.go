@@ -49,7 +49,7 @@ type GCPKMSSecretBackendKeyModel struct {
 	base.BaseModel
 
 	Mount                   types.String `tfsdk:"mount"`
-	Name                    types.String `tfsdk:"name"`
+	KeyName                 types.String `tfsdk:"key_name"`
 	KeyRing                 types.String `tfsdk:"key_ring"`
 	CryptoKey               types.String `tfsdk:"crypto_key"`
 	Purpose                 types.String `tfsdk:"purpose"`
@@ -77,7 +77,7 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			consts.FieldName: schema.StringAttribute{
+			consts.FieldKeyName: schema.StringAttribute{
 				MarkdownDescription: "Name of the key.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
@@ -100,7 +100,7 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 				},
 			},
 			consts.FieldPurpose: schema.StringAttribute{
-				MarkdownDescription: "Purpose of the key. Valid values: ENCRYPT_DECRYPT, ASYMMETRIC_SIGN, ASYMMETRIC_DECRYPT.",
+				MarkdownDescription: "Purpose of the key. Valid values: encrypt_decrypt, asymmetric_sign, asymmetric_decrypt.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
@@ -176,7 +176,7 @@ func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resourc
 	}
 
 	backend := data.Mount.ValueString()
-	name := data.Name.ValueString()
+	name := data.KeyName.ValueString()
 	keyPath := buildKeyPath(backend, name)
 
 	// Build the key configuration from the model
@@ -188,10 +188,7 @@ func (r *GCPKMSSecretBackendKeyResource) Create(ctx context.Context, req resourc
 
 	tflog.Debug(ctx, "Creating GCP KMS key", map[string]any{"path": keyPath})
 	if _, err := cli.Logical().WriteWithContext(ctx, keyPath, keyData); err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating GCP KMS key",
-			fmt.Sprintf("Error creating GCP KMS key at path %q: %s", keyPath, err),
-		)
+		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
 
@@ -223,16 +220,13 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 	}
 
 	backend := data.Mount.ValueString()
-	name := data.Name.ValueString()
+	name := data.KeyName.ValueString()
 	keyPath := buildKeyPath(backend, name)
 
 	tflog.Debug(ctx, "Reading GCP KMS key", map[string]any{"path": keyPath})
 	secret, err := cli.Logical().ReadWithContext(ctx, keyPath)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading GCP KMS key",
-			fmt.Sprintf("Error reading GCP KMS key from path %q: %s", keyPath, err),
-		)
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 
@@ -251,6 +245,30 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 	}
 	if v, ok := secret.Data[consts.FieldProtectionLevel].(string); ok {
 		data.ProtectionLevel = types.StringValue(v)
+	}
+
+	// Map labels from API response back into state
+	if labelsRaw, ok := secret.Data[consts.FieldLabels]; ok && labelsRaw != nil {
+		if labelsMap, ok := labelsRaw.(map[string]interface{}); ok {
+			// Convert map[string]interface{} to map[string]string
+			labels := make(map[string]string)
+			for k, v := range labelsMap {
+				if strVal, ok := v.(string); ok {
+					labels[k] = strVal
+				}
+			}
+			if len(labels) > 0 {
+				labelsValue, diags := types.MapValueFrom(ctx, types.StringType, labels)
+				resp.Diagnostics.Append(diags...)
+				if !resp.Diagnostics.HasError() {
+					data.Labels = labelsValue
+				}
+			} else {
+				data.Labels = types.MapNull(types.StringType)
+			}
+		}
+	} else {
+		data.Labels = types.MapNull(types.StringType)
 	}
 
 	// Vault returns purpose in lowercase (e.g. "asymmetric_sign"), but users may configure
@@ -321,7 +339,7 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 	}
 
 	backend := plan.Mount.ValueString()
-	name := plan.Name.ValueString()
+	name := plan.KeyName.ValueString()
 	keyPath := buildKeyPath(backend, name)
 
 	// Check what fields have changed
@@ -361,10 +379,7 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 	if hasChanges && len(updateData) > 0 {
 		tflog.Debug(ctx, "Updating GCP KMS key", map[string]any{"path": keyPath})
 		if _, err := cli.Logical().WriteWithContext(ctx, keyPath, updateData); err != nil {
-			resp.Diagnostics.AddError(
-				"Error updating GCP KMS key",
-				fmt.Sprintf("Error updating GCP KMS key at path %q: %s", keyPath, err),
-			)
+			resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 			return
 		}
 	}
@@ -397,7 +412,7 @@ func (r *GCPKMSSecretBackendKeyResource) Delete(ctx context.Context, req resourc
 	}
 
 	backend := data.Mount.ValueString()
-	name := data.Name.ValueString()
+	name := data.KeyName.ValueString()
 	keyPath := buildKeyPath(backend, name)
 
 	tflog.Debug(ctx, "Deleting GCP KMS key", map[string]any{"path": keyPath})
@@ -417,10 +432,7 @@ func (r *GCPKMSSecretBackendKeyResource) Delete(ctx context.Context, req resourc
 			return
 		}
 
-		resp.Diagnostics.AddError(
-			"Error deleting GCP KMS key",
-			fmt.Sprintf("Error deleting GCP KMS key at path %q: %s", keyPath, err),
-		)
+		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 		return
 	}
 }
@@ -437,7 +449,7 @@ func (r *GCPKMSSecretBackendKeyResource) ImportState(ctx context.Context, req re
 	}
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldKeyName), matches[2])...)
 
 	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)

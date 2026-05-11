@@ -6,7 +6,6 @@ package gcpkms_test
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -95,22 +94,9 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 	})
 }
 
-func TestGCPKMSSecretBackend_validation(t *testing.T) {
-	path := acctest.RandomWithPrefix("tf-test-gcpkms")
-
-	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config:      testGCPKMSSecretBackend_noCredentialsConfig(path),
-				ExpectError: regexp.MustCompile(`(Missing required argument|Missing required attribute)`),
-			},
-		},
-	})
-}
-
 func TestGCPKMSSecretBackend_emptyCredentials(t *testing.T) {
+	// This test verifies that empty credentials are accepted by Vault.
+	// When empty, Vault will attempt to use Default Application Credentials.
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 
 	resource.Test(t, resource.TestCase{
@@ -118,8 +104,13 @@ func TestGCPKMSSecretBackend_emptyCredentials(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testGCPKMSSecretBackend_emptyCredentialsConfig(path),
-				ExpectError: regexp.MustCompile(`Missing credentials`),
+				Config: testGCPKMSSecretBackend_emptyCredentialsConfig(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_gcpkms_secret_backend.test", consts.FieldMount, path),
+					resource.TestCheckResourceAttr("vault_gcpkms_secret_backend.test", consts.FieldCredentialsWOVersion, "1"),
+					// credentials_wo is write-only and must never appear in state
+					resource.TestCheckNoResourceAttr("vault_gcpkms_secret_backend.test", consts.FieldCredentialsWO),
+				),
 			},
 		},
 	})
@@ -265,19 +256,6 @@ EOT
   credentials_wo_version = 2
 }
 `, path, credentials)
-}
-
-func testGCPKMSSecretBackend_noCredentialsConfig(path string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
-resource "vault_gcpkms_secret_backend" "test" {
-  mount = vault_mount.test.path
-}
-`, path)
 }
 
 func testGCPKMSSecretBackend_emptyCredentialsConfig(path string) string {

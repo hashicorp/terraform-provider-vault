@@ -71,7 +71,8 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 			},
 			consts.FieldCredentialsWO: schema.StringAttribute{
 				MarkdownDescription: "JSON-encoded GCP service account credentials. Write-only — never " +
-					"stored in Terraform state. Requires Terraform 1.11+.",
+					"stored in Terraform state. Leave this blank (`\"\"`) to use Default Application Credentials " +
+					"or instance metadata authentication. Requires Terraform 1.11+.",
 				Required:  true,
 				Sensitive: true,
 				WriteOnly: true,
@@ -182,7 +183,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 	}
 
 	// Only update scopes if they're in the response
-	if scopes, ok := secret.Data["scopes"].([]interface{}); ok && len(scopes) > 0 {
+	if scopes, ok := secret.Data[consts.FieldScopes].([]interface{}); ok && len(scopes) > 0 {
 		scopeList := make([]string, len(scopes))
 		for i, s := range scopes {
 			scopeList[i] = s.(string)
@@ -274,9 +275,22 @@ func (r *GCPKMSSecretBackendResource) Delete(ctx context.Context, req resource.D
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// This resource owns only the /config endpoint.
-	// The mount lifecycle (create/destroy) is managed by vault_mount.
-	tflog.Debug(ctx, "vault_gcpkms_secret_backend config deleted (mount managed by vault_mount)", map[string]any{"mount": data.Mount.ValueString()})
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	mountPath := data.Mount.ValueString()
+	configPath := fmt.Sprintf("%s/config", mountPath)
+
+	// Delete the config endpoint. The mount itself is managed by vault_mount.
+	tflog.Debug(ctx, "Deleting GCP KMS backend config", map[string]any{"path": configPath})
+	if _, err := cli.Logical().DeleteWithContext(ctx, configPath); err != nil {
+		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
+		return
+	}
 }
 
 func (r *GCPKMSSecretBackendResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -298,7 +312,7 @@ func buildBackendConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendM
 	// Only include credentials when explicitly requested
 	// Empty string is valid and tells Vault to use Default Application Credentials
 	if includeCredentials {
-		configData["credentials"] = data.CredentialsWO.ValueString()
+		configData[consts.FieldCredentials] = data.CredentialsWO.ValueString()
 	}
 
 	// Add scopes if provided
@@ -308,7 +322,7 @@ func buildBackendConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendM
 		if diags.HasError() {
 			return nil, diags
 		}
-		configData["scopes"] = scopes
+		configData[consts.FieldScopes] = scopes
 	}
 
 	return configData, diags
