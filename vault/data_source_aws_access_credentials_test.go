@@ -260,8 +260,7 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region string) resour
 		credType := iState.Attributes["type"]
 		securityToken := iState.Attributes["security_token"]
 
-		// CHANGED: replaced aws.Config + session.NewSession with config.LoadDefaultConfig
-		cfg, err := config.LoadDefaultConfig(context.TODO(),
+		cfg, err := config.LoadDefaultConfig(context.Background(),
 			config.WithCredentialsProvider(
 				credentials.NewStaticCredentialsProvider(accessKey, secretKey, securityToken),
 			),
@@ -274,19 +273,15 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region string) resour
 
 		switch credType {
 		case "creds":
-			// CHANGED: replaced iam.New(sess) with iam.NewFromConfig(cfg)
-			// CHANGED: added context.TODO() as first argument to GetUser
 			conn := iam.NewFromConfig(cfg)
-			user, err := conn.GetUser(context.TODO(), nil)
+			user, err := conn.GetUser(context.Background(), nil)
 			if err != nil {
 				return fmt.Errorf("error retrieving credentials user: %s", err)
 			}
 			log.Printf("[DEBUG] User: %+v", user)
 		case "sts":
-			// CHANGED: replaced sts.New(sess) with sts.NewFromConfig(cfg)
-			// CHANGED: added context.TODO() as first argument to GetCallerIdentity
 			conn := sts.NewFromConfig(cfg)
-			resp, err := conn.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
+			resp, err := conn.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
 			if err != nil {
 				return fmt.Errorf("error retrieving STS user: %s", err)
 			}

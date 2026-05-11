@@ -28,7 +28,7 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 
 	region := testutil.GetTestAWSRegion(t)
 	cfg, err := config.LoadDefaultConfig(
-		context.TODO(),
+		t.Context(),
 		config.WithRegion(region),
 	)
 	if err != nil {
@@ -37,13 +37,13 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 
 	stsClient := sts.NewFromConfig(cfg)
 
-	testIdentity, err := stsClient.GetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
+	testIdentity, err := stsClient.GetCallerIdentity(t.Context(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		t.Fatalf("Error obtaining identity document: %s", err)
 	}
 
 	presignClient := sts.NewPresignClient(stsClient)
-	presignedReq, err := presignClient.PresignGetCallerIdentity(context.TODO(), &sts.GetCallerIdentityInput{})
+	presignedReq, err := presignClient.PresignGetCallerIdentity(t.Context(), &sts.GetCallerIdentityInput{})
 	if err != nil {
 		t.Fatalf("Error presigning GetCallerIdentity request: %s", err)
 	}
@@ -83,7 +83,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 
 	region := testutil.GetTestAWSRegion(t)
 	cfg, err := config.LoadDefaultConfig(
-		context.TODO(),
+		t.Context(),
 		config.WithRegion(region),
 	)
 	if err != nil {
@@ -92,25 +92,25 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 
 	metadataClient := imds.NewFromConfig(cfg)
 
-	_, err = metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
+	_, err = metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
 
-	iamInfoOutput, err := metadataClient.GetIAMInfo(context.TODO(), &imds.GetIAMInfoInput{})
+	iamInfoOutput, err := metadataClient.GetIAMInfo(t.Context(), &imds.GetIAMInfoInput{})
 	if err != nil {
 		t.Errorf("Error retrieving IAM info for instance: %s", err)
 	}
 	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
-	docOutput, err := metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
+	docOutput, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Errorf("Error retrieving instance identity document: %s", err)
 	}
 	ami := docOutput.ImageID
 	account := docOutput.AccountID
 
-	pkcs7Output, err := metadataClient.GetDynamicData(context.TODO(), &imds.GetDynamicDataInput{
+	pkcs7Output, err := metadataClient.GetDynamicData(t.Context(), &imds.GetDynamicDataInput{
 		Path: "instance-identity/pkcs7",
 	})
 
@@ -150,7 +150,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 
 	region := testutil.GetTestAWSRegion(t)
 	cfg, err := config.LoadDefaultConfig(
-		context.TODO(),
+		t.Context(),
 		config.WithRegion(region),
 	)
 	if err != nil {
@@ -159,25 +159,25 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 
 	metadataClient := imds.NewFromConfig(cfg)
 
-	_, err = metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
+	_, err = metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
 
-	iamInfoOutput, err := metadataClient.GetIAMInfo(context.TODO(), &imds.GetIAMInfoInput{})
+	iamInfoOutput, err := metadataClient.GetIAMInfo(t.Context(), &imds.GetIAMInfoInput{})
 	if err != nil {
 		t.Errorf("Error retrieving IAM info for instance: %s", err)
 	}
 	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
-	docOutput, err := metadataClient.GetInstanceIdentityDocument(context.TODO(), &imds.GetInstanceIdentityDocumentInput{})
+	docOutput, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Errorf("Error retrieving instance identity document: %s", err)
 	}
 	ami := docOutput.ImageID
 	account := docOutput.AccountID
 
-	identityOutput, err := metadataClient.GetDynamicData(context.TODO(), &imds.GetDynamicDataInput{
+	identityOutput, err := metadataClient.GetDynamicData(t.Context(), &imds.GetDynamicDataInput{
 		Path: "instance-identity/document",
 	})
 	if err != nil {
@@ -194,7 +194,7 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	}
 	identity := base64.StdEncoding.EncodeToString(identityBytes)
 
-	sigOutput, err := metadataClient.GetDynamicData(context.TODO(), &imds.GetDynamicDataInput{
+	sigOutput, err := metadataClient.GetDynamicData(t.Context(), &imds.GetDynamicDataInput{
 		Path: "instance-identity/signature",
 	})
 	if err != nil {

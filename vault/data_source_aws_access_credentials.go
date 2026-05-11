@@ -144,6 +144,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	path := backend + "/" + credType + "/" + role
 
 	arn := d.Get("role_arn").(string)
+	// If the ARN is empty and only one is specified in the role definition, this should work without issue
 	data := map[string][]string{
 		"role_arn": {arn},
 	}
@@ -155,7 +156,7 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Reading %q from Vault with data %#v", path, data)
 	secret, err := client.Logical().ReadWithData(path, data)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return fmt.Errorf("error reading AWS credentials from Vault: %w", err)
 	}
 	log.Printf("[DEBUG] Read %q from Vault", path)
 
@@ -186,39 +187,53 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 		config.WithHTTPClient(cleanhttp.DefaultClient()),
 	}
 
+	// Default to us-east-1 when no region is provided, since IAM and STS are global services
+	// and require a region to be set in the AWS SDK v2 configuration.
 	region := d.Get("region").(string)
 	if region == "" {
 		region = "us-east-1"
 	}
 	optFns = append(optFns, config.WithRegion(region))
 
-	cfg, err := config.LoadDefaultConfig(context.TODO(), optFns...)
+	cfg, err := config.LoadDefaultConfig(context.Background(), optFns...)
 	if err != nil {
-		return fmt.Errorf("error creating AWS config: %s", err)
+		return fmt.Errorf("failed to load AWS SDK configuration: %w", err)
 	}
 
 	iamconn := iam.NewFromConfig(cfg)
 	stsconn := sts.NewFromConfig(cfg)
 
+	// Different types of AWS credentials have different behavior around consistency.
+	// See https://www.vaultproject.io/docs/secrets/aws/index.html#usage for more.
 	if credType == "sts" {
+		// STS credentials are immediately consistent. Let's ensure they're working.
 		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
 
-		// Create a cancellable context with timeout for the STS call
+		// Use a bounded timeout for STS validation.
+		// GetCallerIdentity is typically sub‑second but can be delayed by network
+		// latency or throttling; 10 seconds provides sufficient headroom while
+		// preventing indefinite hangs in the provider.
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		if _, err := stsconn.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{}); err != nil {
-			return err
+			return fmt.Errorf("error validating STS credentials: %w", err)
 		}
 		return nil
 	}
 
+	// Other types of credentials are eventually consistent. Let's check credential
+	// validity and slow down to give credentials time to propagate before we return
+	// them. We'll wait for at least 5 sequential successes before giving creds back
+	// to the user.
 	sequentialSuccesses := 0
 
+	// validateCreds is a retry function, which will be retried until it succeeds.
 	validateCreds := func() *retry.RetryError {
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
 
-		// Create a cancellable context with timeout for each IAM validation call
+		// Use a timeout context to bound each individual IAM validation attempt.
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
@@ -239,10 +254,14 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	start := time.Now()
 	for sequentialSuccesses < sequentialSuccessesRequired {
 		if time.Since(start) > sequentialSuccessTimeLimit {
-			return fmt.Errorf("unable to get %d sequential successes within %.f seconds", sequentialSuccessesRequired, sequentialSuccessTimeLimit.Seconds())
+			return fmt.Errorf(
+				"AWS credentials did not become consistent after %d successful validations within %.f seconds",
+				sequentialSuccessesRequired,
+				sequentialSuccessTimeLimit.Seconds(),
+			)
 		}
 		if err := retry.Retry(retryTimeOut, validateCreds); err != nil {
-			return fmt.Errorf("error checking if credentials are valid: %s", err)
+			return fmt.Errorf("AWS credentials validation failed after retries: %w", err)
 		}
 	}
 

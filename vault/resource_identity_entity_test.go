@@ -218,6 +218,8 @@ resource "vault_identity_entity" "entity" {
 
 func TestReadEntity(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		path            string
