@@ -211,10 +211,10 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 
 	// Set default values only if null or known empty string (not if unknown)
 	if data.DisplayName.IsNull() || (!data.DisplayName.IsUnknown() && data.DisplayName.ValueString() == "") {
-		data.DisplayName = types.StringValue("token")
+		data.DisplayName = types.StringValue(consts.FieldToken)
 	}
 	if data.Type.IsNull() || (!data.Type.IsUnknown() && data.Type.ValueString() == "") {
-		data.Type = types.StringValue("service")
+		data.Type = types.StringValue(consts.FieldService)
 	}
 
 	// Get Vault client

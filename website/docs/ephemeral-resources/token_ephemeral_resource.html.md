@@ -37,10 +37,7 @@ provider "vault" {
 
 ### Token with Role
 
-~> **Important** When using ephemeral resources with regular resources, the role must be created in a separate `terraform apply` before the ephemeral token can reference it. Ephemeral resources open during the plan phase, while regular resources are created during the apply phase.
-
 ```hcl
-# Step 1: Create the role first with terraform apply
 resource "vault_token_auth_backend_role" "app_role" {
   role_name              = "app-role"
   allowed_policies       = ["app-policy"]
@@ -50,11 +47,13 @@ resource "vault_token_auth_backend_role" "app_role" {
   token_explicit_max_ttl = "115200"
 }
 
-# Step 2: After the role exists, use it with an ephemeral token
 ephemeral "vault_token" "app_token" {
   role_name = vault_token_auth_backend_role.app_role.role_name
   ttl       = "24h"
   renewable = true
+  
+  # Defer ephemeral resource evaluation until the role is created
+  mount_id = vault_token_auth_backend_role.app_role.id
 }
 ```
 
@@ -109,7 +108,6 @@ ephemeral "vault_token" "periodic" {
 ### Token with Entity Alias
 
 ```hcl
-# Step 1: Create the auth backend, entity, alias, and role first with terraform apply
 # Create an auth backend (e.g., userpass) to associate the entity alias with
 resource "vault_auth_backend" "userpass" {
   type = "userpass"
@@ -135,11 +133,13 @@ resource "vault_token_auth_backend_role" "app_role" {
   allowed_entity_aliases = [vault_identity_entity_alias.app_alias.name]
 }
 
-# Step 2: After all resources exist, use them with an ephemeral token
 ephemeral "vault_token" "with_entity" {
   role_name    = vault_token_auth_backend_role.app_role.role_name
   entity_alias = vault_identity_entity_alias.app_alias.name
   ttl          = "1h"
+  
+  # Defer ephemeral resource evaluation until dependencies are created
+  mount_id = vault_identity_entity_alias.app_alias.id
 }
 ```
 

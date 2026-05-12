@@ -142,11 +142,6 @@ func TestAccToken_withRole(t *testing.T) {
 			"echo": echoprovider.NewProviderServer(),
 		},
 		Steps: []resource.TestStep{
-			// Step 1: Create the role first
-			{
-				Config: testTokenConfig_roleOnly(roleName),
-			},
-			// Step 2: Use the role with ephemeral token
 			{
 				Config: testTokenConfig_withRole(roleName),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -233,11 +228,6 @@ func TestAccToken_withEntityAlias(t *testing.T) {
 			"echo": echoprovider.NewProviderServer(),
 		},
 		Steps: []resource.TestStep{
-			// Step 1: Create all dependencies first
-			{
-				Config: testTokenConfig_entityAliasSetup(roleName, entityName, aliasName, policyName, authBackendPath),
-			},
-			// Step 2: Use the role and entity alias with ephemeral token
 			{
 				Config: testTokenConfig_withEntityAlias(roleName, entityName, aliasName, policyName, authBackendPath),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -263,11 +253,6 @@ func TestAccToken_batchTokenAutoDetectionViaRole(t *testing.T) {
 			"echo": echoprovider.NewProviderServer(),
 		},
 		Steps: []resource.TestStep{
-			// Step 1: Create the batch role first
-			{
-				Config: testTokenConfig_batchRoleOnly(roleName, policyName),
-			},
-			// Step 2: Use the batch role with ephemeral token
 			{
 				Config: testTokenConfig_batchTokenAutoDetectionViaRole(roleName, policyName),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -311,6 +296,33 @@ func TestAccToken_full(t *testing.T) {
 
 					// Token policies should exist (validates policies were set)
 					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldTokenPolicies), knownvalue.NotNull()),
+				},
+			},
+		},
+	})
+}
+
+// TestAccToken_namespace confirms that a token can be created in a namespace
+// This test requires Vault Enterprise with namespace support
+func TestAccToken_namespace(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
+	namespaceName := acctest.RandomWithPrefix("test-ns")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testTokenConfig_namespace(namespaceName),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldClientToken), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldAccessor), knownvalue.NotNull()),
+					// Verify the accessor includes the namespace suffix
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey(consts.FieldAccessor), knownvalue.StringRegexp(regexp.MustCompile("\\.[a-zA-Z0-9]+$"))),
 				},
 			},
 		},
@@ -410,6 +422,7 @@ resource "vault_token_auth_backend_role" "test" {
 
 ephemeral "vault_token" "test" {
   role_name = vault_token_auth_backend_role.test.role_name
+  mount_id  = vault_token_auth_backend_role.test.id
 }
 
 provider "echo" {
@@ -522,6 +535,7 @@ resource "vault_token_auth_backend_role" "test" {
 ephemeral "vault_token" "test" {
   role_name    = vault_token_auth_backend_role.test.role_name
   entity_alias = vault_identity_entity_alias.test.name
+  mount_id     = vault_identity_entity_alias.test.id
 }
 
 provider "echo" {
@@ -574,6 +588,7 @@ resource "vault_token_auth_backend_role" "batch" {
 
 ephemeral "vault_token" "test" {
   role_name = vault_token_auth_backend_role.batch.role_name
+  mount_id  = vault_token_auth_backend_role.batch.id
 }
 
 provider "echo" {
@@ -616,4 +631,25 @@ provider "echo" {
 
 resource "echo" "test" {}
 `, policyName)
+}
+
+func testTokenConfig_namespace(namespaceName string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+
+ephemeral "vault_token" "test" {
+  namespace = vault_namespace.test.path
+  mount_id  = vault_namespace.test.id
+  policies  = ["default"]
+  ttl       = "1h"
+}
+
+provider "echo" {
+  data = ephemeral.vault_token.test
+}
+
+resource "echo" "test" {}
+`, namespaceName)
 }
