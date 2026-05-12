@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package ephemeralsecrets_test
+package gcpkms_test
 
 import (
 	"fmt"

@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package ephemeralsecrets_test
+package gcpkms_test
 
 import (
 	"fmt"
@@ -20,11 +20,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-// GCP KMS Reencrypt Tests
+// GCP KMS Encrypt Tests
 //
 // These tests require actual GCP KMS infrastructure and Vault's GCP KMS secrets engine.
-// The reencrypt endpoint is provided by Vault's GCP KMS plugin and requires real connectivity
-// to Google Cloud KMS.
+// The operational endpoints (encrypt, decrypt, sign, verify, reencrypt) are provided by
+// Vault's GCP KMS plugin and require real connectivity to Google Cloud KMS.
 //
 // To run these tests, set the following environment variables:
 // - GOOGLE_CREDENTIALS: GCP service account JSON credentials with KMS permissions
@@ -32,14 +32,15 @@ import (
 //
 // Without these environment variables, the tests will be skipped.
 //
-// Note: These tests create real GCP KMS keys and perform actual reencryption operations,
-// which may incur GCP costs.
+// Note: These tests create real GCP KMS keys and perform actual encryption operations.
 
-func TestAccGCPKMSReencrypt_basic(t *testing.T) {
+func TestAccGCPKMSEncrypt_basic(t *testing.T) {
 	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("test-key")
+
+	plaintext := "dGVzdC1wbGFpbnRleHQ=" // base64 encoded "test-plaintext"
 	aad := "dGVzdC1hYWQ="
 	keyVersion := "1"
 
@@ -51,28 +52,30 @@ func TestAccGCPKMSReencrypt_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAccGCPKMSReencryptConfig(backend, keyName, aad, keyVersion, credentials, keyRing),
+				Config: testAccGCPKMSEncryptConfig(backend, keyName, plaintext, aad, keyVersion, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpBase64)),
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("key_version_returned"), knownvalue.StringExact(keyVersion)),
+					statecheck.ExpectKnownValue("echo.ciphertext", tfjsonpath.New("data").AtMapKey("ciphertext"), knownvalue.StringRegexp(testutil.RegexpBase64)),
+					statecheck.ExpectKnownValue("echo.ciphertext", tfjsonpath.New("data").AtMapKey("ciphertext"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.ciphertext", tfjsonpath.New("data").AtMapKey("key_version_returned"), knownvalue.StringExact(keyVersion)),
 				},
 			},
 		},
 	})
 }
 
-func TestAccGCPKMSReencrypt_namespace(t *testing.T) {
+func TestAccGCPKMSEncrypt_namespace(t *testing.T) {
 	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
+
+	plaintext := "dGVzdC1wbGFpbnRleHQ=" // base64 encoded "test-plaintext"
 
 	getSteps := func(backend, keyName, ns, credentials, keyRing string) []resource.TestStep {
 		return []resource.TestStep{
 			{
-				Config: testAccGCPKMSReencryptNsConfig(backend, keyName, ns, credentials, keyRing),
+				Config: testAccGCPKMSEncryptNsConfig(backend, keyName, plaintext, ns, credentials, keyRing),
 				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpBase64)),
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("new_ciphertext"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
-					statecheck.ExpectKnownValue("echo.new_ciphertext", tfjsonpath.New("data").AtMapKey("key_version_returned"), knownvalue.StringExact("1")),
+					statecheck.ExpectKnownValue("echo.ciphertext", tfjsonpath.New("data").AtMapKey("ciphertext"), knownvalue.StringRegexp(testutil.RegexpBase64)),
+					statecheck.ExpectKnownValue("echo.ciphertext", tfjsonpath.New("data").AtMapKey("ciphertext"), knownvalue.StringRegexp(testutil.RegexpNonEmpty)),
+					statecheck.ExpectKnownValue("echo.ciphertext", tfjsonpath.New("data").AtMapKey("key_version_returned"), knownvalue.StringExact("1")),
 				},
 			},
 		}
@@ -106,7 +109,7 @@ func TestAccGCPKMSReencrypt_namespace(t *testing.T) {
 	})
 }
 
-func testAccGCPKMSReencryptNsConfig(backend, keyName, ns, credentials, keyRing string) string {
+func testAccGCPKMSEncryptNsConfig(backend, keyName, plaintext, ns, credentials, keyRing string) string {
 	nsBlock := ""
 	namespaceAttr := ""
 	if ns != "" {
@@ -149,26 +152,19 @@ ephemeral "vault_gcpkms_encrypt" "test" {
   mount_id  = vault_mount.test.id
   mount     = vault_mount.test.path
   key_name  = vault_gcpkms_secret_backend_key.test.name
-  plaintext = base64encode("test plaintext data")
-%s
-}
-
-ephemeral "vault_gcpkms_reencrypt" "test" {
-  mount      = vault_mount.test.path
-  key_name   = vault_gcpkms_secret_backend_key.test.name
-  ciphertext = ephemeral.vault_gcpkms_encrypt.test.ciphertext
+  plaintext = "%s"
 %s
 }
 
 provider "echo" {
-  data = ephemeral.vault_gcpkms_reencrypt.test
+  data = ephemeral.vault_gcpkms_encrypt.test
 }
 
-resource "echo" "new_ciphertext" {}
-`, nsBlock, backend, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, namespaceAttr, namespaceAttr)
+resource "echo" "ciphertext" {}
+`, nsBlock, backend, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, plaintext, namespaceAttr)
 }
 
-func testAccGCPKMSReencryptConfig(backend, keyName, aad, keyVersion, credentials, keyRing string) string {
+func testAccGCPKMSEncryptConfig(backend, keyName, plaintext, aad, keyVersion, credentials, keyRing string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path = "%s"
@@ -192,28 +188,19 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   protection_level = "software"
 }
 
-# First encrypt some data with AAD to get a real ciphertext
 ephemeral "vault_gcpkms_encrypt" "test" {
   mount_id                      = vault_mount.test.id
   mount                         = vault_mount.test.path
   key_name                      = vault_gcpkms_secret_backend_key.test.name
-  plaintext                     = base64encode("test plaintext data")
-  additional_authenticated_data = "%s"
-}
-
-# Then reencrypt it using the same AAD and a specific key version
-ephemeral "vault_gcpkms_reencrypt" "test" {
-  mount                         = vault_mount.test.path
-  key_name                      = vault_gcpkms_secret_backend_key.test.name
-  ciphertext                    = ephemeral.vault_gcpkms_encrypt.test.ciphertext
+  plaintext                     = "%s"
   additional_authenticated_data = "%s"
   key_version                   = %s
 }
 
 provider "echo" {
-  data = ephemeral.vault_gcpkms_reencrypt.test
+  data = ephemeral.vault_gcpkms_encrypt.test
 }
 
-resource "echo" "new_ciphertext" {}
-`, backend, credentials, keyName, keyRing, aad, aad, keyVersion)
+resource "echo" "ciphertext" {}
+`, backend, credentials, keyName, keyRing, plaintext, aad, keyVersion)
 }

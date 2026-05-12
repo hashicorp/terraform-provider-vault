@@ -296,15 +296,15 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
 		radius.NewRadiusAuthLoginEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
-		ephemeralsecrets.NewGCPKMSEncryptEphemeralResource,
-		ephemeralsecrets.NewGCPKMSDecryptEphemeralResource,
-		ephemeralsecrets.NewGCPKMSReencryptEphemeralResource,
-		ephemeralsecrets.NewGCPKMSSignEphemeralResource,
 		cloudfoundry.NewCFAuthLoginEphemeralResource,
 		userpass.NewUserpassAuthLoginEphemeralResource,
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
+		gcpkms.NewGCPKMSEncryptEphemeralResource,
+		gcpkms.NewGCPKMSDecryptEphemeralResource,
+		gcpkms.NewGCPKMSReencryptEphemeralResource,
+		gcpkms.NewGCPKMSSignEphemeralResource,
 	}
 }
 
