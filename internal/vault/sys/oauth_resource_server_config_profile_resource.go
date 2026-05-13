@@ -6,7 +6,7 @@ package sys
 import (
 	"context"
 	"fmt"
-	"strings"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -387,21 +387,17 @@ func (r *OAuthResourceServerConfigProfileResource) Delete(ctx context.Context, r
 
 // ImportState implements resource.ResourceWithImportState
 func (r *OAuthResourceServerConfigProfileResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import by profile_name, optionally with namespace prefix
-	// Format: profile_name or namespace/profile_name
-	profileName := req.ID
-	namespace := ""
-
-	if strings.Contains(req.ID, "/") {
-		parts := strings.SplitN(req.ID, "/", 2)
-		if len(parts) == 2 {
-			namespace = parts[0]
-			profileName = parts[1]
-		}
-	}
+	namespace, profileName := base.ParseImportID(req.ID)
 
 	var data OAuthResourceServerConfigProfileModel
 	data.ProfileName = types.StringValue(profileName)
+
+	// Fall back to the TERRAFORM_VAULT_NAMESPACE_IMPORT env var if no
+	// namespace was provided in the import ID, matching the behaviour of
+	// base.WithImportByID.
+	if namespace == "" {
+		namespace = os.Getenv(consts.EnvVarVaultNamespaceImport)
+	}
 
 	if namespace != "" {
 		data.Namespace = types.StringValue(namespace)
