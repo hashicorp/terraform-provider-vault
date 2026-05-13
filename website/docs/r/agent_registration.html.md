@@ -183,6 +183,8 @@ $ terraform import vault_agent_registration.example application/my-agent
 
 * **Display Name Uniqueness**: The `display_name` must be unique within the namespace. Attempting to create multiple agent registrations with the same display name will result in an error.
 
+* **Display Name Restrictions**: The `display_name` must not contain forward slashes (`/`), as `/` is used as a delimiter to separate the namespace from the display name during import.
+
 * **Immutable Display Name**: Changing the `display_name` requires destroying and recreating the agent registration, as it serves as the unique identifier.
 
 * **Enterprise Feature**: Agent registration is only available in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.

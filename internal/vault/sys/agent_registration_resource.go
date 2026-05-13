@@ -6,7 +6,7 @@ package sys
 import (
 	"context"
 	"fmt"
-	"strings"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -361,22 +361,17 @@ func (r *AgentRegistrationResource) Delete(ctx context.Context, req resource.Del
 
 // ImportState implements the resource.ResourceWithImportState interface.
 func (r *AgentRegistrationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Import by display_name, optionally with namespace prefix
-	// Format: display_name or namespace/display_name
-	displayName := req.ID
-	namespace := ""
-
-	// Check if ID contains namespace prefix
-	if strings.Contains(req.ID, "/") {
-		parts := strings.SplitN(req.ID, "/", 2)
-		if len(parts) == 2 {
-			namespace = parts[0]
-			displayName = parts[1]
-		}
-	}
+	namespace, displayName := base.ParseImportID(req.ID)
 
 	var data AgentRegistrationModel
 	data.DisplayName = types.StringValue(displayName)
+
+	// Fall back to the TERRAFORM_VAULT_NAMESPACE_IMPORT env var if no
+	// namespace was provided in the import ID, matching the behaviour of
+	// base.WithImportByID.
+	if namespace == "" {
+		namespace = os.Getenv(consts.EnvVarVaultNamespaceImport)
+	}
 
 	if namespace != "" {
 		data.Namespace = types.StringValue(namespace)
