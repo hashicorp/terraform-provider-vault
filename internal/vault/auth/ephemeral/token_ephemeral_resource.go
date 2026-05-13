@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
@@ -387,12 +386,9 @@ func (r *TokenEphemeralResource) Open(ctx context.Context, req ephemeral.OpenReq
 		leaseID = tokenResp.LeaseID
 		data.LeaseDuration = types.Int64Value(int64(tokenResp.Auth.LeaseDuration))
 
-		// Handle batch tokens (no accessor)
-		// Batch tokens don't have an accessor field in the Auth response, but we use
-		// the RequestID as a unique identifier for tracking purposes. This is not used
-		// for revocation since batch tokens cannot be revoked via API.
-		if accessor == "" && tokenResp.Auth.ClientToken != "" && strings.HasPrefix(tokenResp.Auth.ClientToken, "hvb.") {
-			accessor = tokenResp.RequestID
+		// Batch tokens don't have an accessor field in the Auth response.
+		// If accessor is empty, it's a batch token.
+		if accessor == "" {
 			tokenType = "batch"
 			data.Type = types.StringValue("batch")
 		} else {

@@ -402,16 +402,6 @@ resource "echo" "test" {}
 `
 }
 
-func testTokenConfig_roleOnly(roleName string) string {
-	return fmt.Sprintf(`
-resource "vault_token_auth_backend_role" "test" {
-  role_name        = "%s"
-  allowed_policies = ["default"]
-  orphan           = true
-}
-`, roleName)
-}
-
 func testTokenConfig_withRole(roleName string) string {
 	return fmt.Sprintf(`
 resource "vault_token_auth_backend_role" "test" {
