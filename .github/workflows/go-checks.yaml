@@ -4,6 +4,10 @@ on:
     paths-ignore:
       - 'website/**'
       - 'CHANGELOG.md'
+
+permissions:
+  contents: read
+
 jobs:
   go-checks:
     # using `main` as the ref will keep your workflow up-to-date

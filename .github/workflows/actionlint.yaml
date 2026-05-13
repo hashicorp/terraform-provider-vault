@@ -3,6 +3,10 @@ on:
   push:
     paths:
     - '.github/**'
+
+permissions:
+  contents: read
+
 jobs:
   actionlint:
     # using `main` as the ref will keep your workflow up-to-date
