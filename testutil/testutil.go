@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -47,6 +48,13 @@ const (
 	// Environment variable names for GCP KMS testing
 	EnvVarGoogleCredentials = "GOOGLE_CREDENTIALS"
 	EnvVarGoogleKMSKeyRing  = "GOOGLE_KMS_KEY_RING"
+)
+
+var (
+	// RegexpBase64 matches base64-like strings used in test assertions.
+	RegexpBase64 = regexp.MustCompile(`^[A-Za-z0-9+/]+=*$`)
+	// RegexpNonEmpty matches any non-empty string for test assertions.
+	RegexpNonEmpty = regexp.MustCompile(`.+`)
 )
 
 // Deprecated: use acctestutil.TestAccPreCheck instead, this is here for

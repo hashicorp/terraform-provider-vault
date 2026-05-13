@@ -301,6 +301,10 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
+		gcpkms.NewGCPKMSEncryptEphemeralResource,
+		gcpkms.NewGCPKMSDecryptEphemeralResource,
+		gcpkms.NewGCPKMSReencryptEphemeralResource,
+		gcpkms.NewGCPKMSSignEphemeralResource,
 	}
 }
 
