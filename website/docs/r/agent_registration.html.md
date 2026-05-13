@@ -8,7 +8,7 @@ description: |-
 
 # vault\_agent\_registration
 
-~> **Alpha feature:** This feature is available in a private Alpha release. **We strongly discourage using prerelease features in production deployments of Vault.**
+~> **Preview feature:** This feature is currently available as a private preview. This feature is available only to select customers, and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
 
 Manages agent registrations in Vault Enterprise. Agent registration allows you to register Vault agents with specific identity entities and configure ceiling policies that limit the maximum permissions an agent can obtain.
 
