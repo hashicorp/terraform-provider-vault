@@ -7,11 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -643,7 +643,7 @@ func handleKeyProviderRequired(d *schema.ResourceData, providerType string, err 
 	return nil
 }
 
-func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerType string) diag.Diagnostics {
+func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *api.Client, providerType string) diag.Diagnostics {
 	config, err := getManagedKeyConfig(providerType)
 	if err != nil {
 		return diag.FromErr(err)
@@ -694,7 +694,7 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 		}
 		path := getManagedKeysPath(config.keyType, keyName)
 
-		log.Printf("[DEBUG] Writing data to Vault at %s", path)
+		tflog.Debug(ctx, "Writing data to Vault", map[string]interface{}{"path": path})
 		if _, err := client.Logical().Write(path, data); err != nil {
 			return diag.Errorf("error writing managed key %q, err=%s", path, err)
 		}
@@ -708,7 +708,7 @@ func writeManagedKeysData(d *schema.ResourceData, client *api.Client, providerTy
 	for k := range oldKeySet {
 		if !newKeySet[k] {
 			// Delete single key type
-			if diags := deleteSingleManagedKey(client, config.keyType, k); diags != nil {
+			if diags := deleteSingleManagedKey(ctx, client, config.keyType, k); diags != nil {
 				return diags
 			}
 		}
@@ -738,31 +738,31 @@ func createUpdateManagedKeys(ctx context.Context, d *schema.ResourceData, meta i
 	}
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		if diags := writeManagedKeysData(d, client, consts.FieldAWS); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, client, consts.FieldAWS); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		if diags := writeManagedKeysData(d, client, consts.FieldPKCS); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, client, consts.FieldPKCS); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		if diags := writeManagedKeysData(d, client, consts.FieldAzure); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, client, consts.FieldAzure); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldGCP); ok {
-		if diags := writeManagedKeysData(d, client, consts.FieldGCP); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, client, consts.FieldGCP); diags != nil {
 			return diags
 		}
 	}
 
 	// set ID to 'default'
-	d.SetId("default")
+	d.SetId(consts.FieldDefault)
 
 	return readManagedKeys(ctx, d, meta)
 }
@@ -779,7 +779,7 @@ func updateRedactedFields(d *schema.ResourceData, providerType, name string,
 	}
 }
 
-func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerType string,
+func readAndSetManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client, providerType string,
 	sm map[string]string, redactedFields []string,
 ) error {
 	config, err := getManagedKeyConfig(providerType)
@@ -788,7 +788,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 	}
 
 	p := getManagedKeysPathPrefix(config.keyType)
-	log.Printf("[DEBUG] Listing data from Vault at %s", p)
+	tflog.Debug(ctx, "Listing managed keys from Vault", map[string]interface{}{"path": p})
 	resp, err := client.Logical().List(p)
 	if err != nil {
 		if err := handleKeyProviderRequired(d, providerType, err); err != nil {
@@ -809,7 +809,7 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 			updateRedactedFields(d, providerType, name.(string), redactedFields, m)
 
 			path := getManagedKeysPath(config.keyType, name.(string))
-			log.Printf("[DEBUG] Reading from Vault at %s", path)
+			tflog.Debug(ctx, "Reading managed key from Vault", map[string]interface{}{"path": path})
 			resp, err := client.Logical().Read(path)
 			if err != nil {
 				return err
@@ -843,7 +843,12 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 						if id, ok := d.GetOk(stateKey); ok && id.(string) != "" {
 							// check if UUID in TF state is different
 							if id.(string) != v.(string) {
-								log.Printf("[DEBUG] Out-of-band change detected for %q,  vault has %s, was %s for path=%q", stateKey, v, id, path)
+								tflog.Debug(ctx, "Out-of-band managed key UUID change detected", map[string]interface{}{
+									"state_key": stateKey,
+									"vault":     v,
+									"state":     id,
+									"path":      path,
+								})
 							}
 						}
 					}
@@ -869,9 +874,9 @@ func readAndSetManagedKeys(d *schema.ResourceData, client *api.Client, providerT
 	return nil
 }
 
-func readAWSManagedKeys(d *schema.ResourceData, client *api.Client) error {
+func readAWSManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client) error {
 	redacted := []string{consts.FieldAccessKey, consts.FieldSecretKey}
-	if err := readAndSetManagedKeys(d, client, consts.FieldAWS,
+	if err := readAndSetManagedKeys(ctx, d, client, consts.FieldAWS,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -879,9 +884,9 @@ func readAWSManagedKeys(d *schema.ResourceData, client *api.Client) error {
 	return nil
 }
 
-func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
+func readAzureManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client) error {
 	var redacted []string
-	if err := readAndSetManagedKeys(d, client, consts.FieldAzure,
+	if err := readAndSetManagedKeys(ctx, d, client, consts.FieldAzure,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -889,9 +894,9 @@ func readAzureManagedKeys(d *schema.ResourceData, client *api.Client) error {
 	return nil
 }
 
-func readPKCSManagedKeys(d *schema.ResourceData, client *api.Client) error {
+func readPKCSManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client) error {
 	redacted := []string{consts.FieldPin, consts.FieldKeyID}
-	if err := readAndSetManagedKeys(d, client, consts.FieldPKCS,
+	if err := readAndSetManagedKeys(ctx, d, client, consts.FieldPKCS,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -899,10 +904,10 @@ func readPKCSManagedKeys(d *schema.ResourceData, client *api.Client) error {
 	return nil
 }
 
-func readGCPManagedKeys(d *schema.ResourceData, client *api.Client) error {
+func readGCPManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client) error {
 	// credentials is a sensitive field preserved from config
 	redacted := []string{consts.FieldCredentials}
-	if err := readAndSetManagedKeys(d, client, consts.FieldGCP,
+	if err := readAndSetManagedKeys(ctx, d, client, consts.FieldGCP,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -910,7 +915,7 @@ func readGCPManagedKeys(d *schema.ResourceData, client *api.Client) error {
 	return nil
 }
 
-func readManagedKeys(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func readManagedKeys(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
@@ -918,28 +923,28 @@ func readManagedKeys(_ context.Context, d *schema.ResourceData, meta interface{}
 
 	diags := diag.Diagnostics{}
 
-	if err := readAWSManagedKeys(d, client); err != nil {
+	if err := readAWSManagedKeys(ctx, d, client); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read AWS Managed Keys, err=%s", err),
 		})
 	}
 
-	if err := readPKCSManagedKeys(d, client); err != nil {
+	if err := readPKCSManagedKeys(ctx, d, client); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read PKCS Managed Keys, err=%s", err),
 		})
 	}
 
-	if err := readAzureManagedKeys(d, client); err != nil {
+	if err := readAzureManagedKeys(ctx, d, client); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read Azure Managed Keys, err=%s", err),
 		})
 	}
 
-	if err := readGCPManagedKeys(d, client); err != nil {
+	if err := readGCPManagedKeys(ctx, d, client); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read GCP Cloud KMS Managed Keys, err=%s", err),
@@ -949,19 +954,19 @@ func readManagedKeys(_ context.Context, d *schema.ResourceData, meta interface{}
 	return diags
 }
 
-func deleteSingleManagedKey(client *api.Client, keyType, name string) diag.Diagnostics {
+func deleteSingleManagedKey(ctx context.Context, client *api.Client, keyType, name string) diag.Diagnostics {
 	path := getManagedKeysPath(keyType, name)
-	log.Printf("[DEBUG] Deleting managed key %s", path)
+	tflog.Debug(ctx, "Deleting managed key", map[string]interface{}{"path": path})
 	_, err := client.Logical().Delete(path)
 	if err != nil {
 		return diag.Errorf("error deleting managed key %s", path)
 	}
-	log.Printf("[DEBUG] Deleted managed key %q", path)
+	tflog.Debug(ctx, "Deleted managed key", map[string]interface{}{"path": path})
 
 	return nil
 }
 
-func deleteManagedKeyType(client *api.Client, keyType string) diag.Diagnostics {
+func deleteManagedKeyType(ctx context.Context, client *api.Client, keyType string) diag.Diagnostics {
 	p := fmt.Sprintf("%s/%s", "sys/managed-keys", keyType)
 	resp, err := client.Logical().List(p)
 	if err != nil {
@@ -974,7 +979,7 @@ func deleteManagedKeyType(client *api.Client, keyType string) diag.Diagnostics {
 
 	if v, ok := resp.Data["keys"]; ok {
 		for _, name := range v.([]interface{}) {
-			if diags := deleteSingleManagedKey(client, keyType, name.(string)); diags != nil {
+			if diags := deleteSingleManagedKey(ctx, client, keyType, name.(string)); diags != nil {
 				return diags
 			}
 		}
@@ -983,32 +988,32 @@ func deleteManagedKeyType(client *api.Client, keyType string) diag.Diagnostics {
 	return nil
 }
 
-func deleteManagedKeys(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func deleteManagedKeys(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return diag.FromErr(e)
 	}
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		if diags := deleteManagedKeyType(client, kmsTypeAWS); diags != nil {
+		if diags := deleteManagedKeyType(ctx, client, kmsTypeAWS); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		if diags := deleteManagedKeyType(client, kmsTypePKCS); diags != nil {
+		if diags := deleteManagedKeyType(ctx, client, kmsTypePKCS); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		if diags := deleteManagedKeyType(client, kmsTypeAzure); diags != nil {
+		if diags := deleteManagedKeyType(ctx, client, kmsTypeAzure); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldGCP); ok {
-		if diags := deleteManagedKeyType(client, kmsTypeGCP); diags != nil {
+		if diags := deleteManagedKeyType(ctx, client, kmsTypeGCP); diags != nil {
 			return diags
 		}
 	}
