@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -49,7 +50,7 @@ const (
 
 func awsAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: provider.ReadWrapper(awsAccessCredentialsDataSourceRead),
+		ReadContext: provider.ReadContextWrapper(awsAccessCredentialsDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -132,10 +133,10 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 	}
 }
 
-func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -156,12 +157,12 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Reading %q from Vault with data %#v", path, data)
 	secret, err := client.Logical().ReadWithData(path, data)
 	if err != nil {
-		return fmt.Errorf("error reading AWS credentials from Vault: %w", err)
+		return diag.FromErr(fmt.Errorf("error reading AWS credentials from Vault: %w", err))
 	}
 	log.Printf("[DEBUG] Read %q from Vault", path)
 
 	if secret == nil {
-		return fmt.Errorf("no role found at path %q", path)
+		return diag.FromErr(fmt.Errorf("no role found at path %q", path))
 	}
 
 	accessKey := secret.Data["access_key"].(string)
@@ -195,9 +196,9 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	}
 	optFns = append(optFns, config.WithRegion(region))
 
-	cfg, err := config.LoadDefaultConfig(context.Background(), optFns...)
+	cfg, err := config.LoadDefaultConfig(ctx, optFns...) // LINE 166: changed context.Background() -> ctx
 	if err != nil {
-		return fmt.Errorf("failed to load AWS SDK configuration: %w", err)
+		return diag.FromErr(fmt.Errorf("failed to load AWS SDK configuration: %w", err))
 	}
 
 	iamconn := iam.NewFromConfig(cfg)
@@ -214,11 +215,11 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 		// latency or throttling; 10 seconds provides sufficient headroom while
 		// preventing indefinite hangs in the provider.
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		stsCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		if _, err := stsconn.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{}); err != nil {
-			return fmt.Errorf("error validating STS credentials: %w", err)
+		if _, err := stsconn.GetCallerIdentity(stsCtx, &sts.GetCallerIdentityInput{}); err != nil {
+			return diag.FromErr(fmt.Errorf("error validating STS credentials: %w", err))
 		}
 		return nil
 	}
@@ -234,10 +235,10 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
 
 		// Use a timeout context to bound each individual IAM validation attempt.
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		iamCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 
-		if _, err := iamconn.GetUser(ctx, nil); err != nil && isAWSAuthError(err) {
+		if _, err := iamconn.GetUser(iamCtx, nil); err != nil && isAWSAuthError(err) {
 			sequentialSuccesses = 0
 			log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
 			wrappedErr := fmt.Errorf("AWS credentials validation failed (retryable): %w", err)
@@ -254,14 +255,14 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	start := time.Now()
 	for sequentialSuccesses < sequentialSuccessesRequired {
 		if time.Since(start) > sequentialSuccessTimeLimit {
-			return fmt.Errorf(
+			return diag.FromErr(fmt.Errorf(
 				"AWS credentials did not become consistent after %d successful validations within %.f seconds",
 				sequentialSuccessesRequired,
 				sequentialSuccessTimeLimit.Seconds(),
-			)
+			))
 		}
 		if err := retry.Retry(retryTimeOut, validateCreds); err != nil {
-			return fmt.Errorf("AWS credentials validation failed after retries: %w", err)
+			return diag.FromErr(fmt.Errorf("AWS credentials validation failed after retries: %w", err))
 		}
 	}
 
