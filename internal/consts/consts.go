@@ -68,7 +68,12 @@ const (
 	FieldPathsFQ                            = "paths_fq"
 	FieldData                               = "data"
 	FieldDisableRead                        = "disable_read"
+	FieldWriteFields                        = "write_fields"
+	FieldWriteData                          = "write_data"
+	FieldWriteDataJSON                      = "write_data_json"
+	FieldPathWrapTTL                        = "path_wrap_ttl"
 	FieldName                               = "name"
+	FieldValues                             = "values"
 	FieldVersion                            = "version"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
@@ -287,7 +292,10 @@ const (
 	FieldWithLeaseStartTime                 = "with_lease_start_time"
 	FieldClientToken                        = "client_token"
 	FieldWrappedToken                       = "wrapped_token"
+	FieldWarnings                           = "warnings"
 	FieldOrphan                             = "orphan"
+	FieldMFARequirement                     = "mfa_requirement"
+	FieldIdentityPolicies                   = "identity_policies"
 	FieldVaultVersionOverride               = "vault_version_override"
 	FieldSkipGetVaultVersion                = "skip_get_vault_version"
 	FieldMemberEntityIDs                    = "member_entity_ids"
@@ -307,6 +315,13 @@ const (
 	FieldRedundancyZonesJSON                = "redundancy_zones_json"
 	FieldServers                            = "servers"
 	FieldServersJSON                        = "servers_json"
+	FieldMaskingCharacter                   = "masking_character"
+	FieldTemplate                           = "template"
+	FieldTemplates                          = "templates"
+	FieldTweakSource                        = "tweak_source"
+	FieldMappingMode                        = "mapping_mode"
+	FieldStores                             = "stores"
+	FieldConvergent                         = "convergent"
 	FieldUpgradeInfo                        = "upgrade_info"
 	FieldUpgradeInfoJSON                    = "upgrade_info_json"
 	FieldMaxVersions                        = "max_versions"
@@ -517,6 +532,14 @@ const (
 	FieldSecretID                           = "secret_id"
 	FieldSecretIDWO                         = "secret_id_wo"
 	FieldSecretIDWOVersion                  = "secret_id_wo_version"
+	FieldSecretWO                           = "secret_wo"
+	FieldSecretWOVersion                    = "secret_wo_version"
+	FieldUnregisteredUserPolicies           = "unregistered_user_policies"
+	FieldDialTimeout                        = "dial_timeout"
+	FieldReadTimeout                        = "read_timeout"
+	FieldNASPort                            = "nas_port"
+	FieldNASIdentifier                      = "nas_identifier"
+	FieldHost                               = "host"
 	FieldWrappingToken                      = "wrapping_token"
 	FieldWithWrappedAccessor                = "with_wrapped_accessor"
 	FieldExternalID                         = "external_id"
@@ -652,6 +675,11 @@ const (
 	FieldTokenBoundCIDRs          = "token_bound_cidrs"
 	FieldLocalSecretIDs           = "local_secret_ids"
 	FieldTokenNumUses             = "token_num_uses"
+	// OS Secrets Engine fields
+	FieldSSHHostKey                = "ssh_host_key"
+	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
+	FieldParentAccountRef          = "parent_account_ref"
+	FieldNextVaultRotation         = "next_vault_rotation"
 
 	FieldIntervalDuration                     = "interval_duration"
 	FieldMaintainStoredCertificateCounts      = "maintain_stored_certificate_counts"
@@ -682,6 +710,7 @@ const (
 	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
 	FieldAnonymousGroupSearch                 = "anonymous_group_search"
 	FieldAliasNameSource                      = "alias_name_source"
+	FieldAliasMetadata                        = "alias_metadata"
 	FieldBoundServiceAccountNames             = "bound_service_account_names"
 	FieldBoundServiceAccountNamespaces        = "bound_service_account_namespaces"
 	FieldBoundServiceAccountNamespaceSelector = "bound_service_account_namespace_selector"
@@ -807,6 +836,8 @@ const (
 	FieldAzureAuthMode             = "azure_auth_mode"
 	FieldSelfManaged               = "self_managed"
 	FieldRotationPolicy            = "rotation_policy"
+	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
+	FieldSecretsWOVersion          = "secrets_wo_version"
 
 	/*
 		ephemeral resource constants and write-only attributes
@@ -815,7 +846,9 @@ const (
 	FieldMountID = "mount_id"
 
 	FieldPasswordWO                 = "password_wo"
+	FieldPasswordHashWO             = "password_hash_wo"
 	FieldPasswordWOVersion          = "password_wo_version"
+	FieldPasswordHashWOVersion      = "password_hash_wo_version"
 	FieldCredentialsWO              = "credentials_wo"
 	FieldCredentialsWOVersion       = "credentials_wo_version"
 	FieldDataJSONWO                 = "data_json_wo"
@@ -824,6 +857,8 @@ const (
 	FieldPrivateKeyWOVersion        = "private_key_wo_version"
 	FieldClientKeyWO                = "client_key_wo"
 	FieldClientKeyWOVersion         = "client_key_wo_version"
+	FieldActivatedFlags             = "activated_flags"
+	FieldUnactivatedFlags           = "unactivated_flags"
 	FieldOIDCClientSecretWO         = "oidc_client_secret_wo"
 	FieldOIDCClientSecretWOVersion  = "oidc_client_secret_wo_version"
 	FieldServiceAccountJWTWO        = "service_account_jwt_wo"
@@ -902,6 +937,7 @@ const (
 	MountTypeSAML         = "saml"
 	MountTypeOkta         = "okta"
 	MountTypeTransit      = "transit"
+	MountTypeOS           = "os"
 	MountTypeKeyMgmt      = "keymgmt"
 	MountTypeAliCloud     = "alicloud"
 
@@ -935,6 +971,7 @@ const (
 	FieldIdentityCACertificates   = "identity_ca_certificates"
 	FieldCFInstanceCert           = "cf_instance_cert"
 	FieldCFPasswordWO             = "cf_password_wo"
+	FieldCFPasswordWOVersion      = "cf_password_wo_version"
 	FieldCFTimeout                = "cf_timeout"
 	FieldCFUsername               = "cf_username"
 	FieldLoginMaxSecsNotAfter     = "login_max_seconds_not_after"
@@ -944,7 +981,6 @@ const (
 	FieldBoundOrganizationIDs     = "bound_organization_ids"
 	FieldBoundInstanceIDs         = "bound_instance_ids"
 	FieldDisableIPMatching        = "disable_ip_matching"
-	FieldAliasMetadata            = "alias_metadata"
 	FieldSigningTime              = "signing_time"
 
 	/*
@@ -967,4 +1003,16 @@ const (
 	PathDelim        = "/"
 	VaultAPIV1Root   = "/v1"
 	SysNamespaceRoot = "sys/namespaces/"
+
+	/*
+		GenericNameRegex is a reusable name pattern fragment for Vault names.
+		Callers should wrap this with ^ and $ when validating an entire value.
+		Pattern: \w(?:(?:[\w-.]+)?\w)?
+		- Must start with an ASCII word character (letter, digit, or underscore)
+		- Optionally can have middle characters (word chars, hyphens, dots) followed by ending word char
+		- Single character names are valid (the entire optional group can be omitted)
+		- No leading/trailing hyphens or dots allowed
+		- Uses non-capturing groups (?:...) to avoid extra capture groups in regex matches
+	*/
+	GenericNameRegex = `\w(?:(?:[\w-.]+)?\w)?`
 )
