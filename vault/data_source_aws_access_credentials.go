@@ -196,7 +196,7 @@ func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 	}
 	optFns = append(optFns, config.WithRegion(region))
 
-	cfg, err := config.LoadDefaultConfig(ctx, optFns...) // LINE 166: changed context.Background() -> ctx
+	cfg, err := config.LoadDefaultConfig(ctx, optFns...)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("failed to load AWS SDK configuration: %w", err))
 	}
