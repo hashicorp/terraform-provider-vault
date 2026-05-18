@@ -53,6 +53,7 @@ type CFAuthBackendConfigModel struct {
 	CFApiAddr                types.String `tfsdk:"cf_api_addr"`
 	CFUsername               types.String `tfsdk:"cf_username"`
 	CFPasswordWO             types.String `tfsdk:"cf_password_wo"`
+	CFPasswordWOVersion      types.Int64  `tfsdk:"cf_password_wo_version"`
 	CFApiTrustedCertificates types.Set    `tfsdk:"cf_api_trusted_certificates"`
 	LoginMaxSecsNotBefore    types.Int64  `tfsdk:"login_max_seconds_not_before"`
 	LoginMaxSecsNotAfter     types.Int64  `tfsdk:"login_max_seconds_not_after"`
@@ -97,10 +98,14 @@ func (r *CFAuthBackendConfigResource) Schema(_ context.Context, _ resource.Schem
 				Required:            true,
 			},
 			consts.FieldCFPasswordWO: schema.StringAttribute{
-				MarkdownDescription: "The password for authenticating to the CF API. This is a write-only field and will not be read back from Vault.",
+				MarkdownDescription: "The password for authenticating to the CF API. This attribute is write-only and is never stored in Terraform state.",
 				Required:            true,
 				Sensitive:           true,
 				WriteOnly:           true,
+			},
+			consts.FieldCFPasswordWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version counter for 'cf_password_wo'. Increment this value to trigger an update when only the write-only password changes.",
+				Required:            true,
 			},
 			consts.FieldCFApiTrustedCertificates: schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -140,12 +145,18 @@ func (r *CFAuthBackendConfigResource) Create(ctx context.Context, req resource.C
 	}
 
 	// Read write-only cf_password_wo directly from config (not stored in state).
+	// On create, always send the password if provided.
 	var cfPasswordWO types.String
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCFPasswordWO), &cfPasswordWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	v := cfPasswordWO.ValueString()
+
+	var cfPassword *string
+	if !cfPasswordWO.IsNull() && !cfPasswordWO.IsUnknown() {
+		v := cfPasswordWO.ValueString()
+		cfPassword = &v
+	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -153,7 +164,7 @@ func (r *CFAuthBackendConfigResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	vaultRequest, diagErr := r.getAPIModel(ctx, &data, &v)
+	vaultRequest, diagErr := r.getAPIModel(ctx, &data, cfPassword)
 	if diagErr.HasError() {
 		resp.Diagnostics.Append(diagErr...)
 		return
@@ -212,14 +223,19 @@ func (r *CFAuthBackendConfigResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	// Always read the write-only password from config and send it to Vault.
+	// Always read and send the password from config on updates.
+	// The password is sent on every update regardless of version changes.
 	var cfPasswordWO types.String
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCFPasswordWO), &cfPasswordWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	v := cfPasswordWO.ValueString()
-	cfPassword := &v
+
+	var cfPassword *string
+	if !cfPasswordWO.IsNull() && !cfPasswordWO.IsUnknown() {
+		v := cfPasswordWO.ValueString()
+		cfPassword = &v
+	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -363,6 +379,7 @@ func (r *CFAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Conte
 	data.CFUsername = types.StringValue(readResp.CFUsername)
 
 	// cf_password_wo is write-only and never returned by Vault; leave it untouched in state.
+	// cf_password_wo_version is managed by Terraform and persisted in state automatically.
 
 	if readResp.LoginMaxSecsNotBefore != 0 {
 		data.LoginMaxSecsNotBefore = types.Int64Value(readResp.LoginMaxSecsNotBefore)
