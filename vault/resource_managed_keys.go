@@ -510,30 +510,41 @@ func normalizeManagedKeyUsageValue(v string) string {
 	return strings.TrimSpace(strings.ToLower(v))
 }
 
-func managedKeyUsageFromInt(v interface{}) (string, error) {
-	var i int
+func parseManagedKeyUsageIndexFromString(s string) (int, error) {
+	n, err := strconv.Atoi(strings.TrimSpace(s))
+	if err != nil {
+		return 0, fmt.Errorf("invalid numeric usage value %q", s)
+	}
 
+	return n, nil
+}
+
+func parseManagedKeyUsageIndex(v interface{}) (int, error) {
 	switch n := v.(type) {
 	case int:
-		i = n
+		return n, nil
 	case int64:
-		i = int(n)
+		return int(n), nil
 	case float64:
-		i = int(n)
+		// Vault responses decoded through map[string]interface{} often produce float64.
+		i := int(n)
+		if n != float64(i) {
+			return 0, fmt.Errorf("invalid numeric usage value %v", n)
+		}
+		return i, nil
 	case json.Number:
-		num, err := n.Int64()
-		if err != nil {
-			return "", fmt.Errorf("invalid numeric usage value %q", n.String())
-		}
-		i = int(num)
+		return parseManagedKeyUsageIndexFromString(n.String())
 	case string:
-		num, err := strconv.Atoi(n)
-		if err != nil {
-			return "", fmt.Errorf("invalid numeric usage value %q", n)
-		}
-		i = num
+		return parseManagedKeyUsageIndexFromString(n)
 	default:
-		return "", fmt.Errorf("unsupported usages value type %T", v)
+		return 0, fmt.Errorf("unsupported usages value type %T", v)
+	}
+}
+
+func managedKeyUsageFromInt(v interface{}) (string, error) {
+	i, err := parseManagedKeyUsageIndex(v)
+	if err != nil {
+		return "", err
 	}
 
 	usage, ok := managedKeyUsageByIndex[i]
