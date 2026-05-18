@@ -316,6 +316,13 @@ const (
 	FieldRedundancyZonesJSON                = "redundancy_zones_json"
 	FieldServers                            = "servers"
 	FieldServersJSON                        = "servers_json"
+	FieldMaskingCharacter                   = "masking_character"
+	FieldTemplate                           = "template"
+	FieldTemplates                          = "templates"
+	FieldTweakSource                        = "tweak_source"
+	FieldMappingMode                        = "mapping_mode"
+	FieldStores                             = "stores"
+	FieldConvergent                         = "convergent"
 	FieldUpgradeInfo                        = "upgrade_info"
 	FieldUpgradeInfoJSON                    = "upgrade_info_json"
 	FieldMaxVersions                        = "max_versions"
@@ -830,6 +837,8 @@ const (
 	FieldAzureAuthMode             = "azure_auth_mode"
 	FieldSelfManaged               = "self_managed"
 	FieldRotationPolicy            = "rotation_policy"
+	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
+	FieldSecretsWOVersion          = "secrets_wo_version"
 
 	/*
 		ephemeral resource constants and write-only attributes

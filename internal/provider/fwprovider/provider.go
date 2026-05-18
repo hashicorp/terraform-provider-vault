@@ -25,6 +25,7 @@ import (
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
+	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -35,7 +36,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
-	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 )
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
@@ -253,6 +253,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		sysconfig.NewQuotaConfigResource,
 		sys.NewPluginRuntimeResource,
 		config.NewSysConfigCORSResource,
+		sysconfig.NewControlGroupConfigResource,
+		sys.NewRaftSnapshotAgentConfigResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
