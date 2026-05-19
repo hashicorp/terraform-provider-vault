@@ -321,7 +321,7 @@ func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
-		//resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pem"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
