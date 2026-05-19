@@ -48,6 +48,8 @@ type certFields struct {
 	revokeWithKey        bool
 }
 
+// TestPkiSecretBackendCert_basic tests the vault_pki_secret_backend_cert resource
+// including certificate issuance, revocation, auto-renewal, remove_roots_from_chain, and format options (PKCS12, JKS).
 func TestPkiSecretBackendCert_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())

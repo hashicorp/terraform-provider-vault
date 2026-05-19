@@ -86,7 +86,9 @@ func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
 }
 
-func TestPkiSecretBackendRootCertificate_pkcs12Format(t *testing.T) {
+// TestPkiSecretBackendRootCertificate_pkcs12Bundle tests generating a root certificate
+// in PKCS#12 bundle format with custom password and encoder settings.
+func TestPkiSecretBackendRootCertificate_pkcs12Bundle(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
@@ -108,7 +110,9 @@ func TestPkiSecretBackendRootCertificate_pkcs12Format(t *testing.T) {
 	})
 }
 
-func TestPkiSecretBackendRootCertificate_jksFormat(t *testing.T) {
+// TestPkiSecretBackendRootCertificate_jksBundle tests generating a root certificate
+// in JKS (Java KeyStore) bundle format with custom password and alias settings.
+func TestPkiSecretBackendRootCertificate_jksBundle(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"

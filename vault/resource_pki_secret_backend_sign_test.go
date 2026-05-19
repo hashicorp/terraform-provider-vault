@@ -22,6 +22,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+// TestPkiSecretBackendSign_basic tests the vault_pki_secret_backend_sign resource
+// including CSR signing, issuer references, and format options (PKCS12, JKS).
 func TestPkiSecretBackendSign_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())

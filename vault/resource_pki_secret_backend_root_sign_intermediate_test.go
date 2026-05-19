@@ -282,6 +282,8 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 	})
 }
 
+// TestPkiSecretBackendRootSignIntermediate_pkcs12_bundle tests signing an intermediate certificate
+// and returning it in PKCS#12 bundle format with custom password and encoder settings.
 func TestPkiSecretBackendRootSignIntermediate_pkcs12_bundle(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
@@ -309,6 +311,8 @@ func TestPkiSecretBackendRootSignIntermediate_pkcs12_bundle(t *testing.T) {
 	})
 }
 
+// TestPkiSecretBackendRootSignIntermediate_jks_bundle tests signing an intermediate certificate
+// and returning it in JKS (Java KeyStore) bundle format with custom password and alias settings.
 func TestPkiSecretBackendRootSignIntermediate_jks_bundle(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
