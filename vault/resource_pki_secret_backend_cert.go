@@ -142,8 +142,8 @@ integrity format (PBMAC1).`,
 				Description: `The entry alias in the Java keystore (JKS) when format is set to "jks_bundle" 
 				and bundle contains a single PrivateKeyEntry. This field is case-sensitive, but relying
 			on case-only differences for unique aliases is not recommended. Defaults to "1".
-			This parameter is ignored by endpoints that return multiple TrustedCertificateEntry values
-			(trust stores), and entry aliases are assigned incrementing numeric strings starting at "1".`,
+			This parameter is ignored by endpoints that return TrustedCertificateEntry values
+			(JKS trust stores), and entry aliases are assigned incrementing numeric strings starting at "1".`,
 				ForceNew: true,
 				Default:  "1",
 			},

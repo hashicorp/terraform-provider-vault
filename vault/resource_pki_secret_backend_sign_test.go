@@ -64,6 +64,36 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "ca_chain.#"),
 				),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion210), nil
+				},
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath,
+					`format = "pkcs12_bundle"
+					 pkcs12_password = "test-password-123"
+				   pkcs12_encoder = "modern2023"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pkcs12_bundle"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Password, "test-password-123"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Encoder, "modern2023"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion210), nil
+				},
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath,
+					`format = "jks_bundle"
+					 jks_password = "jks-secure-pass"
+					 jks_alias = "myapp-cert"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "jks-secure-pass"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSAlias, "myapp-cert"),
+				),
+			},
 		},
 	})
 }
