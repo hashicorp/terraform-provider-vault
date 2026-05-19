@@ -74,7 +74,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, &certFields{}),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevoke, "false"),
@@ -85,7 +85,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert, expect a new one is re-issued
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, &certFields{revoke: true}),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{revoke: true}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevoke, "true"),
@@ -96,7 +96,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// remove the cert to test revocation flow (expect no revocation)
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, &certFields{}),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					testPKICertRevocation(intermediatePath, store),
 				),
@@ -106,14 +106,14 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion113), nil
 				},
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, &certFields{}),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserIds+".0", "foo"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserIds+".1", "bar"),
 				),
 			},
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, &certFields{notAfter: notAfter}),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{notAfter: notAfter}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfter),
 					testCapturePKICert(resourceName, store),
@@ -121,7 +121,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert with key
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, &certFields{revoke: true, revokeWithKey: true}),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{revoke: true, revokeWithKey: true}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevokeWithKey, "true"),
@@ -132,7 +132,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// test remove_roots_from_chain = false
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, &certFields{}),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "false"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
@@ -140,7 +140,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// test remove_roots_from_chain = true
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, &certFields{removeRootsFromChain: true}),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{removeRootsFromChain: true}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "true"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
@@ -152,7 +152,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					return !meta.IsAPISupported(provider.VaultVersion210), nil
 				},
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
-					&certFields{format: "pkcs12_bundle", pkcs12Password: "123-secure-password", pkcs12Encoder: "modern2023"}),
+					certFields{format: "pkcs12_bundle", pkcs12Password: "123-secure-password", pkcs12Encoder: "modern2023"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pkcs12_bundle"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Password, "123-secure-password"),
@@ -165,7 +165,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					return !meta.IsAPISupported(provider.VaultVersion210), nil
 				},
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
-					&certFields{format: "jks_bundle", jksPassword: "super-secure-password", jksAlias: "myapp"}),
+					certFields{format: "jks_bundle", jksPassword: "super-secure-password", jksAlias: "myapp"}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "super-secure-password"),
@@ -176,7 +176,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert bool, certFields *certFields) string {
+func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert bool, certFields certFields) string {
 	fragments := []string{
 		fmt.Sprintf(`
 resource "vault_mount" "test-root" {
