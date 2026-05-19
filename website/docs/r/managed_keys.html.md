@@ -120,7 +120,7 @@ The following arguments are supported:
 
 * `access_key` - (Required) The AWS access key to use.
 
-* `secret_key` - (Required) The AWS access key to use.
+* `secret_key` - (Required) The AWS secret key to use.
 
 * `key_bits` - (Required) The size in bits for an RSA key.
 
