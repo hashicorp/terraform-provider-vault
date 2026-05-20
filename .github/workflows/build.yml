@@ -156,7 +156,7 @@ jobs:
         - "vault-enterprise:1.19.16-ent"
         - "vault-enterprise:1.20.10-ent"
         - "vault-enterprise:1.21.5-ent"
-        - "vault-enterprise:2.0.0-ent"
+        - "vault-enterprise:2.0.1-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
@@ -173,7 +173,8 @@ jobs:
           VAULT_LOCAL_CONFIG: |
             {"plugin_directory": "/vault/plugins"}
         options: >-
-          --cap-add=IPC_LOCK
+          --cap-add IPC_LOCK
+          --cap-add SETFCAP
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
           --health-timeout 5s
