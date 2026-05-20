@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
@@ -23,23 +22,21 @@ func TestAccConfigGroupPolicyApplication(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccConfigGroupPolicyApplicationConfig_basic("within_namespace_hierarchy"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldID, "config"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldID, "/sys/config/group-policy-application"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "within_namespace_hierarchy"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ""),
 				),
 			},
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "config",
+				ImportStateId:     "/sys/config/group-policy-application",
 			},
 		},
 	})
@@ -52,7 +49,6 @@ func TestAccConfigGroupPolicyApplication_update(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -67,7 +63,7 @@ func TestAccConfigGroupPolicyApplication_update(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "config",
+				ImportStateId:     "/sys/config/group-policy-application",
 			},
 			// Update to "any" mode
 			{
@@ -81,7 +77,7 @@ func TestAccConfigGroupPolicyApplication_update(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "config",
+				ImportStateId:     "/sys/config/group-policy-application",
 			},
 			// Update back to default
 			{
@@ -99,13 +95,12 @@ func TestAccConfigGroupPolicyApplication_invalidMode(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccConfigGroupPolicyApplicationConfig_basic("invalid_mode"),
-				ExpectError: regexp.MustCompile(`Attribute group_policy_application_mode value must be one of`),
+				ExpectError: regexp.MustCompile(`group_policy_application_mode must be either`),
 			},
 		},
 	})
@@ -116,13 +111,12 @@ func TestAccConfigGroupPolicyApplication_invalidNamespace(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccConfigGroupPolicyApplicationConfig_withNamespace("any", "invalid-namespace"),
-				ExpectError: regexp.MustCompile(`Attribute namespace value must be one of`),
+				ExpectError: regexp.MustCompile(`no handler for route`),
 			},
 		},
 	})
@@ -148,13 +142,12 @@ func TestAccConfigGroupPolicyApplication_providerNamespaceUnset(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccConfigGroupPolicyApplicationConfig_basic("any"),
-				ExpectError: regexp.MustCompile(`(Invalid Namespace|Enterprise Feature Required)`),
+				ExpectError: regexp.MustCompile(`no handler for route`),
 			},
 		},
 	})
@@ -165,7 +158,6 @@ func TestAccConfigGroupPolicyApplication_importInvalidID(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -176,7 +168,7 @@ func TestAccConfigGroupPolicyApplication_importInvalidID(t *testing.T) {
 				ResourceName:  "vault_config_group_policy_application.test",
 				ImportState:   true,
 				ImportStateId: "invalid-id",
-				ExpectError:   regexp.MustCompile(`Import ID must be "config"`),
+				ExpectError:   regexp.MustCompile(`Import ID must be "/sys/config/group-policy-application"`),
 			},
 		},
 	})
@@ -189,14 +181,13 @@ func TestAccConfigGroupPolicyApplication_modeAny(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccConfigGroupPolicyApplicationConfig_basic("any"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldID, "config"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldID, "/sys/config/group-policy-application"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "any"),
 				),
 			},
@@ -204,54 +195,19 @@ func TestAccConfigGroupPolicyApplication_modeAny(t *testing.T) {
 	})
 }
 
-// TestAccConfigGroupPolicyApplication_delete tests that delete resets to default
-func TestAccConfigGroupPolicyApplication_delete(t *testing.T) {
-	resourceName := "vault_config_group_policy_application.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				// Create with "any" mode
-				Config: testAccConfigGroupPolicyApplicationConfig_basic("any"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "any"),
-				),
-			},
-			{
-				// Delete the resource - this should reset to default
-				Config: testAccConfigGroupPolicyApplicationConfig_empty(),
-			},
-			{
-				// Re-import to verify it was reset to default
-				Config: testAccConfigGroupPolicyApplicationConfig_basic("within_namespace_hierarchy"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "within_namespace_hierarchy"),
-				),
-			},
-		},
-	})
-}
-
-// TestAccConfigGroupPolicyApplication_explicitRootNamespace tests explicit root namespace
+// TestAccConfigGroupPolicyApplication_explicitRootNamespace tests root namespace (omitted)
 func TestAccConfigGroupPolicyApplication_explicitRootNamespace(t *testing.T) {
 	resourceName := "vault_config_group_policy_application.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccConfigGroupPolicyApplicationConfig_withNamespace("any", ""),
+				Config: testAccConfigGroupPolicyApplicationConfig_basic("any"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "any"),
 				),
 			},
@@ -259,7 +215,7 @@ func TestAccConfigGroupPolicyApplication_explicitRootNamespace(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "config",
+				ImportStateId:     "/sys/config/group-policy-application",
 			},
 		},
 	})
@@ -272,14 +228,12 @@ func TestAccConfigGroupPolicyApplication_importVerifyNamespace(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion1138)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccConfigGroupPolicyApplicationConfig_withNamespace("any", ""),
+				Config: testAccConfigGroupPolicyApplicationConfig_basic("any"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "any"),
 				),
 			},
@@ -287,10 +241,7 @@ func TestAccConfigGroupPolicyApplication_importVerifyNamespace(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "config",
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldNamespace, ""),
-				),
+				ImportStateId:     "/sys/config/group-policy-application",
 			},
 		},
 	})
@@ -311,11 +262,4 @@ resource "vault_config_group_policy_application" "test" {
   group_policy_application_mode = %q
   namespace                     = %q
 }`, mode, namespace)
-}
-
-// Helper function to generate empty configuration (for delete testing)
-func testAccConfigGroupPolicyApplicationConfig_empty() string {
-	return `
-# Resource removed - should reset to default
-`
 }

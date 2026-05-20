@@ -19,39 +19,12 @@ Manages the global group policy application mode for Vault Enterprise. This reso
 ### Basic Usage (Root Namespace)
 
 ```hcl
-terraform {
-  required_providers {
-    vault = {
-      source = "hashicorp/vault"
-    }
-  }
-}
-
-provider "vault" {
-  # Configuration is read from environment variables:
-  # VAULT_ADDR, VAULT_TOKEN, VAULT_NAMESPACE
-  # Example: export VAULT_ADDR="http://127.0.0.1:8200"
-  # Example: export VAULT_TOKEN="your-token-here"
-}
-
 # Configure group policy application mode in root namespace
 # Using the default mode
 resource "vault_config_group_policy_application" "test" {
   group_policy_application_mode = "within_namespace_hierarchy"
 }
 
-# Outputs
-output "mode" {
-  value = vault_config_group_policy_application.test.group_policy_application_mode
-}
-
-output "id" {
-  value = vault_config_group_policy_application.test.id
-}
-
-output "namespace" {
-  value = vault_config_group_policy_application.test.namespace
-}
 ```
 
 ### Using "any" Mode
@@ -73,39 +46,12 @@ resource "vault_config_group_policy_application" "config" {
 
 ### Administrative Namespace
 
-When working with an administrative namespace, you can specify it either in the provider configuration or via the `VAULT_NAMESPACE` environment variable:
+When working with an administrative namespace, you can specify it directly in the resource:
 
 ```hcl
-provider "vault" {
-  # Configuration can be read from environment variables:
-  # VAULT_ADDR, VAULT_TOKEN, VAULT_NAMESPACE
-  # Or specified directly:
-  address   = "http://127.0.0.1:8200"
-  token     = "your-token-here"
-  namespace = "admin"
-}
-
 resource "vault_config_group_policy_application" "config" {
   group_policy_application_mode = "within_namespace_hierarchy"
-  # namespace is inherited from provider configuration
-}
-```
-
-Alternatively, using environment variables:
-
-```bash
-export VAULT_ADDR="http://127.0.0.1:8200"
-export VAULT_TOKEN="your-token-here"
-export VAULT_NAMESPACE="admin"
-```
-
-```hcl
-provider "vault" {
-  # Configuration is read from environment variables
-}
-
-resource "vault_config_group_policy_application" "config" {
-  group_policy_application_mode = "within_namespace_hierarchy"
+  namespace                     = "admin"
 }
 ```
 
@@ -125,16 +71,14 @@ The following arguments are supported:
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The resource ID (always `"config"`).
-
-* `namespace` - The namespace where the configuration is managed.
+* `id` - The resource ID (always `"/sys/config/group-policy-application"`).
 
 ## Import
 
-The group policy application configuration can be imported using the ID `config`:
+The group policy application configuration can be imported using the path `/sys/config/group-policy-application`:
 
 ```
-$ terraform import vault_config_group_policy_application.config config
+$ terraform import vault_config_group_policy_application.config /sys/config/group-policy-application
 ```
 
 ## Behavior Notes
@@ -155,34 +99,6 @@ This resource can only be managed from:
 
 Attempting to manage this resource from any other namespace will result in an error.
 
-### Administrative Namespace
-
-When using Vault with an administrative namespace configured (via `administrative_namespace_path` in the Vault server configuration), you can manage this resource from the admin namespace by setting `namespace = "admin"` or by configuring the provider's namespace.
-
-Example Vault server configuration with administrative namespace:
-
-```hcl
-ui = true
-api_addr = "http://127.0.0.1:8200"
-cluster_addr = "http://127.0.0.1:8201"
-disable_mlock = true
-
-# Configure administrative namespace
-administrative_namespace_path = "admin/"
-
-listener "tcp" {
-  address = "127.0.0.1:8200"
-  cluster_address = "127.0.0.1:8201"
-  tls_disable = 1
-}
-
-storage "raft" {
-  path = "./vault-data/raft"
-  node_id = "node1"
-}
-```
-
 ## Version Requirements
 
-- Requires Vault Enterprise 1.13.8 or later
-- This resource uses the Terraform Plugin Framework and is only available in provider versions that support it
+- Requires Vault Enterprise 1.15.0 or later (TFVP support)
