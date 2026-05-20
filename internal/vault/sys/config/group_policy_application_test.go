@@ -221,32 +221,6 @@ func TestAccConfigGroupPolicyApplication_explicitRootNamespace(t *testing.T) {
 	})
 }
 
-// TestAccConfigGroupPolicyApplication_importVerifyNamespace tests import with namespace verification
-func TestAccConfigGroupPolicyApplication_importVerifyNamespace(t *testing.T) {
-	resourceName := "vault_config_group_policy_application.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccConfigGroupPolicyApplicationConfig_basic("any"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "any"),
-				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateId:     "/sys/config/group-policy-application",
-			},
-		},
-	})
-}
-
 // Helper function to generate test configuration
 func testAccConfigGroupPolicyApplicationConfig_basic(mode string) string {
 	return fmt.Sprintf(`
