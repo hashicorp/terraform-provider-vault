@@ -40,7 +40,6 @@ resource "vault_config_group_policy_application" "config" {
 ```hcl
 resource "vault_config_group_policy_application" "config" {
   group_policy_application_mode = "within_namespace_hierarchy"
-  namespace                     = ""
 }
 ```
 
@@ -94,7 +93,7 @@ When this resource is destroyed via `terraform destroy`, it does not delete the 
 ### Namespace Requirements
 
 This resource can only be managed from:
-- The root namespace (empty string `""`)
+- The root namespace
 - The administrative namespace (`"admin"`)
 
 Attempting to manage this resource from any other namespace will result in an error.
