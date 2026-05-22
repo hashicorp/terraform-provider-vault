@@ -42,7 +42,7 @@ The following arguments are supported:
 
 * `url` - (Required) The URL of the LDAP server
 
-* `starttls` - (Optional) Control use of TLS when conecting to LDAP
+* `starttls` - (Optional) Control use of TLS when connecting to LDAP
 
 * `case_sensitive_names` - (Optional) Control case senstivity of objects fetched from LDAP, this is used for object matching in vault
 
