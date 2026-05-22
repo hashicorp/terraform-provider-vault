@@ -10,6 +10,7 @@ FEATURES:
 * Add support for write only paramters for s3 backends for `vault_raft_snapshot_agent_config` by @drewmullen ([#2825]https://github.com/hashicorp/terraform-provider-vault/pull/2825)
 * `vault_transform_transformation`: Added `mapping_mode`, `stores` and `convergent` fields to the resource. ([#2820] https://github.com/hashicorp/terraform-provider-vault/pull/2820/)
 * **New Ephemeral Resource**: `vault_token` for creating Vault tokens with automatic revocation. Supports service and batch tokens, as well as entity alias association, which was not supported in the SDKv2 resource. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
+* **New Resource**: `vault_config_group_policy_application` - Manages the global group policy application mode for Vault Enterprise. Controls how policies attached to identity groups are applied across namespace boundaries. Supports `within_namespace_hierarchy` (default) and `any` modes. Requires Vault Enterprise 1.13.8+. ([#2863](https://github.com/hashicorp/terraform-provider-vault/pull/2863))
 
 IMPROVEMENTS: 
 
@@ -23,7 +24,6 @@ BREAKING CHANGES:
 
 FEATURES:
 
-* **New Resource**: `vault_config_group_policy_application` - Manages the global group policy application mode for Vault Enterprise. Controls how policies attached to identity groups are applied across namespace boundaries. Supports `within_namespace_hierarchy` (default) and `any` modes. Requires Vault Enterprise 1.13.8+. ([#2863](https://github.com/hashicorp/terraform-provider-vault/pull/2863))
 * **New Resources**: Add support for OS Secrets Engine with `vault_os_secret_backend`, `vault_os_secret_backend_host`, and `vault_os_secret_backend_account` resources for managing operating system credentials via SSH. Requires Vault 2.0.0+. ([#2865](https://github.com/hashicorp/terraform-provider-vault/pull/2865))
 * **New Resources**: `vault_rotation_policy` for managing rotation policies. Requires Vault 2.0.0+. ([#2844](https://github.com/hashicorp/terraform-provider-vault/pull/2844))
 * Add support for `vault_quota_config` resource. ([#2837](https://github.com/hashicorp/terraform-provider-vault/pull/2837))
