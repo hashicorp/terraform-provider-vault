@@ -71,8 +71,6 @@ The following arguments are supported:
 
 * `userfilter` - (Optional) LDAP user search filter
 
-* `upndomain` - (Optional) The userPrincipalDomain used to construct UPN string
-
 * `discoverdn`: (Optional) Use anonymous bind to discover the bind DN of a user.
 
 * `deny_null_bind`: (Optional) Prevents users from bypassing authentication when providing an empty password.
