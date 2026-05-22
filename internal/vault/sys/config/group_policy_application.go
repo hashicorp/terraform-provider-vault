@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	// Singleton resource ID - uses the full path for consistency with Vault API
-	configGroupPolicyApplicationID = "/sys/config/group-policy-application"
+	// ConfigGroupPolicyApplicationPath is the singleton resource path for Vault API and resource ID
+	ConfigGroupPolicyApplicationPath = "sys/config/group-policy-application"
 
 	// Valid modes
 	modeWithinNamespaceHierarchy = "within_namespace_hierarchy"
@@ -71,7 +71,7 @@ func (r *ConfigGroupPolicyApplicationResource) Schema(ctx context.Context, req r
 		Attributes: map[string]schema.Attribute{
 			consts.FieldID: schema.StringAttribute{
 				Computed:            true,
-				MarkdownDescription: "The resource ID (always \"/sys/config/group-policy-application\").",
+				MarkdownDescription: "The resource ID (always \"sys/config/group-policy-application\").",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -108,8 +108,7 @@ func (r *ConfigGroupPolicyApplicationResource) writeGroupPolicyConfig(ctx contex
 		consts.FieldGroupPolicyApplicationMode: mode,
 	}
 
-	endpointPath := r.path()
-	_, err := vaultClient.Logical().WriteWithContext(ctx, endpointPath, vaultRequest)
+	_, err := vaultClient.Logical().WriteWithContext(ctx, ConfigGroupPolicyApplicationPath, vaultRequest)
 	if err != nil {
 		diagnostics.AddError(errorFunc(err))
 		return false
@@ -147,7 +146,7 @@ func (r *ConfigGroupPolicyApplicationResource) Create(ctx context.Context, req r
 	}
 
 	// Set the singleton ID
-	data.ID = types.StringValue(configGroupPolicyApplicationID)
+	data.ID = types.StringValue(ConfigGroupPolicyApplicationPath)
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -174,8 +173,7 @@ func (r *ConfigGroupPolicyApplicationResource) Read(ctx context.Context, req res
 		return
 	}
 
-	endpointPath := r.path()
-	configResp, err := vaultClient.Logical().ReadWithContext(ctx, endpointPath)
+	configResp, err := vaultClient.Logical().ReadWithContext(ctx, ConfigGroupPolicyApplicationPath)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			errutil.VaultReadErr(err),
@@ -193,7 +191,7 @@ func (r *ConfigGroupPolicyApplicationResource) Read(ctx context.Context, req res
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Invalid Vault API response",
-			fmt.Sprintf("Missing %q in response for %q", consts.FieldGroupPolicyApplicationMode, endpointPath),
+			fmt.Sprintf("Missing %q in response for %q", consts.FieldGroupPolicyApplicationMode, ConfigGroupPolicyApplicationPath),
 		)
 		return
 	}
@@ -202,7 +200,7 @@ func (r *ConfigGroupPolicyApplicationResource) Read(ctx context.Context, req res
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Invalid Vault API response",
-			fmt.Sprintf("Expected %q to be a string in response for %q, got %T", consts.FieldGroupPolicyApplicationMode, endpointPath, modeRaw),
+			fmt.Sprintf("Expected %q to be a string in response for %q, got %T", consts.FieldGroupPolicyApplicationMode, ConfigGroupPolicyApplicationPath, modeRaw),
 		)
 		return
 	}
@@ -285,16 +283,16 @@ func (r *ConfigGroupPolicyApplicationResource) Delete(ctx context.Context, req r
 // ImportState implements the import functionality for this resource
 func (r *ConfigGroupPolicyApplicationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// The import ID should always be the full path
-	if req.ID != configGroupPolicyApplicationID {
+	if req.ID != ConfigGroupPolicyApplicationPath {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID",
-			fmt.Sprintf("Import ID must be %q, got: %q", configGroupPolicyApplicationID, req.ID),
+			fmt.Sprintf("Import ID must be %q, got: %q", ConfigGroupPolicyApplicationPath, req.ID),
 		)
 		return
 	}
 
 	// Set the ID attribute
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), configGroupPolicyApplicationID)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldID), ConfigGroupPolicyApplicationPath)...)
 
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), types.StringNull())...)
 
@@ -306,8 +304,4 @@ func (r *ConfigGroupPolicyApplicationResource) ImportState(ctx context.Context, 
 		)
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
 	}
-}
-
-func (r *ConfigGroupPolicyApplicationResource) path() string {
-	return "sys/config/group-policy-application"
 }

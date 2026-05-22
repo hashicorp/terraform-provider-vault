@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 )
 
 // TestAccConfigGroupPolicyApplication tests basic resource creation and import
@@ -28,7 +29,7 @@ func TestAccConfigGroupPolicyApplication(t *testing.T) {
 			{
 				Config: testAccConfigGroupPolicyApplicationConfig_basic("within_namespace_hierarchy"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldID, "/sys/config/group-policy-application"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldID, config.ConfigGroupPolicyApplicationPath),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "within_namespace_hierarchy"),
 				),
 			},
@@ -36,7 +37,7 @@ func TestAccConfigGroupPolicyApplication(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "/sys/config/group-policy-application",
+				ImportStateId:     config.ConfigGroupPolicyApplicationPath,
 			},
 		},
 	})
@@ -63,7 +64,7 @@ func TestAccConfigGroupPolicyApplication_update(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "/sys/config/group-policy-application",
+				ImportStateId:     config.ConfigGroupPolicyApplicationPath,
 			},
 			// Update to "any" mode
 			{
@@ -77,7 +78,7 @@ func TestAccConfigGroupPolicyApplication_update(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "/sys/config/group-policy-application",
+				ImportStateId:     config.ConfigGroupPolicyApplicationPath,
 			},
 			// Update back to default
 			{
@@ -168,7 +169,7 @@ func TestAccConfigGroupPolicyApplication_importInvalidID(t *testing.T) {
 				ResourceName:  "vault_config_group_policy_application.test",
 				ImportState:   true,
 				ImportStateId: "invalid-id",
-				ExpectError:   regexp.MustCompile(`Import ID must be "/sys/config/group-policy-application"`),
+				ExpectError:   regexp.MustCompile(fmt.Sprintf(`Import ID must be "%s"`, config.ConfigGroupPolicyApplicationPath)),
 			},
 		},
 	})
@@ -187,7 +188,7 @@ func TestAccConfigGroupPolicyApplication_modeAny(t *testing.T) {
 			{
 				Config: testAccConfigGroupPolicyApplicationConfig_basic("any"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldID, "/sys/config/group-policy-application"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldID, config.ConfigGroupPolicyApplicationPath),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "any"),
 				),
 			},
@@ -215,7 +216,7 @@ func TestAccConfigGroupPolicyApplication_explicitRootNamespace(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
-				ImportStateId:     "/sys/config/group-policy-application",
+				ImportStateId:     config.ConfigGroupPolicyApplicationPath,
 			},
 		},
 	})
