@@ -300,6 +300,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		userpass.NewUserpassAuthLoginEphemeralResource,
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
+		ephemeralauth.NewTokenEphemeralResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
 	}
 }
