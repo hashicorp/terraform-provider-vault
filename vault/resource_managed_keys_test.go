@@ -567,28 +567,56 @@ type managedKeysUsagesAcceptanceTestCase struct {
 	name              string
 	providerAttr      string
 	keyType           string
-	buildConfig       func(name string, usages []string) string
+	buildConfig       func(t *testing.T, name string, usages []string) string
 	importStateIgnore []string
+	preCheck          func(t *testing.T)
 }
 
 func TestManagedKeys_Usages_GenericHarness(t *testing.T) {
-	tc := managedKeysUsagesAcceptanceTestCase{
-		name:         "aws",
-		providerAttr: consts.FieldAWS,
-		keyType:      kmsTypeAWS,
-		buildConfig:  testManagedKeysConfig_awsUsages,
-		importStateIgnore: []string{
-			"aws.0.access_key",
-			"aws.0.secret_key",
+	testCases := []managedKeysUsagesAcceptanceTestCase{
+		{
+			name:         "aws",
+			providerAttr: consts.FieldAWS,
+			keyType:      kmsTypeAWS,
+			buildConfig: func(_ *testing.T, name string, usages []string) string {
+				return testManagedKeysConfig_awsUsages(name, usages)
+			},
+			importStateIgnore: []string{
+				"aws.0.access_key",
+				"aws.0.secret_key",
+			},
+		},
+		{
+			name:         "pkcs",
+			providerAttr: consts.FieldPKCS,
+			keyType:      kmsTypePKCS,
+			buildConfig: func(t *testing.T, name string, usages []string) string {
+				library, slot, pin := testutil.GetTestPKCSCreds(t)
+				return testManagedKeysConfig_pkcsUsages(name, library, slot, pin, usages)
+			},
+			importStateIgnore: []string{
+				"pkcs.0.pin",
+				"pkcs.0.key_id",
+			},
+			preCheck: func(t *testing.T) {
+				testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+			},
 		},
 	}
 
-	t.Run(tc.name, func(t *testing.T) {
-		testManagedKeysUsagesAcceptance(t, tc)
-	})
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			testManagedKeysUsagesAcceptance(t, tc)
+		})
+	}
 }
 
 func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanceTestCase) {
+	if tc.preCheck != nil {
+		tc.preCheck(t)
+	}
+
 	name := acctest.RandomWithPrefix(fmt.Sprintf("%s-usages", tc.name))
 	resourceName := "vault_managed_keys.test"
 	stateUsagesPath := fmt.Sprintf("%s.0.%s", tc.providerAttr, consts.FieldUsages)
@@ -598,7 +626,7 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
-				Config: tc.buildConfig(name, []string{"verify", "sign"}),
+				Config: tc.buildConfig(t, name, []string{"verify", "sign"}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", tc.providerAttr), "1"),
 					resource.TestCheckResourceAttr(resourceName, stateUsagesPath+".#", "2"),
@@ -609,12 +637,12 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 			},
 			{
 				// Reordered TypeSet values should not produce a diff.
-				Config:   tc.buildConfig(name, []string{"sign", "verify"}),
+				Config:   tc.buildConfig(t, name, []string{"sign", "verify"}),
 				PlanOnly: true,
 			},
 			{
 				// Optional+Computed field should remain stable when omitted from config.
-				Config:   tc.buildConfig(name, nil),
+				Config:   tc.buildConfig(t, name, nil),
 				PlanOnly: true,
 			},
 			{
@@ -650,6 +678,31 @@ resource "vault_managed_keys" "test" {
   }
 }
 `, name, usagesLine)
+}
+
+func testManagedKeysConfig_pkcsUsages(name, library, slot, pin string, usages []string) string {
+	var usagesLine string
+	if len(usages) > 0 {
+		quoted := make([]string, 0, len(usages))
+		for _, usage := range usages {
+			quoted = append(quoted, fmt.Sprintf("%q", usage))
+		}
+
+		usagesLine = fmt.Sprintf("\n    usages      = [%s]", strings.Join(quoted, ", "))
+	}
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  pkcs {
+    name       = "%s"
+		library    = "%s"
+    key_label  = "kms-intermediate"
+    mechanism  = "0x0001"
+		slot       = "%s"
+		pin        = "%s"%s
+  }
+}
+`, name, library, slot, pin, usagesLine)
 }
 
 func testManagedKeysCheckVaultUsages(resourceName, keyType, name string, want []string) resource.TestCheckFunc {
