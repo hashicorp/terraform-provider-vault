@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -510,32 +509,14 @@ func normalizeManagedKeyUsageValue(v string) string {
 	return strings.TrimSpace(strings.ToLower(v))
 }
 
-func parseManagedKeyUsageIndexFromString(s string) (int, error) {
-	n, err := strconv.Atoi(strings.TrimSpace(s))
-	if err != nil {
-		return 0, fmt.Errorf("invalid numeric usage value %q", s)
-	}
-
-	return n, nil
-}
-
 func parseManagedKeyUsageIndex(v interface{}) (int, error) {
 	switch n := v.(type) {
-	case int:
-		return n, nil
-	case int64:
-		return int(n), nil
-	case float64:
-		// Vault responses decoded through map[string]interface{} often produce float64.
-		i := int(n)
-		if n != float64(i) {
-			return 0, fmt.Errorf("invalid numeric usage value %v", n)
-		}
-		return i, nil
 	case json.Number:
-		return parseManagedKeyUsageIndexFromString(n.String())
-	case string:
-		return parseManagedKeyUsageIndexFromString(n)
+		i, err := n.Int64()
+		if err != nil {
+			return 0, fmt.Errorf("invalid numeric usage value %q", n.String())
+		}
+		return int(i), nil
 	default:
 		return 0, fmt.Errorf("unsupported usages value type %T", v)
 	}
