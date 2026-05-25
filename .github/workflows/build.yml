@@ -309,7 +309,7 @@ jobs:
 
           echo "Waiting for Vault..."
 
-          for i in {1..60}; do
+          for _ in {1..60}; do
             if curl -s http://localhost:8200/v1/sys/health | grep -q '"initialized":true'; then
               echo "Vault is up"
               break
