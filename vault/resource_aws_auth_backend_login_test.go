@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -21,12 +22,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
-	mountPath := acctest.RandomWithPrefix("tf-test-aws")
-	roleName := acctest.RandomWithPrefix("tf-test")
-	accessKey, secretKey := testutil.GetTestAWSCreds(t)
-
-	region := testutil.GetTestAWSRegion(t)
+// newAWSConfig creates an AWS config with the given region.
+// Extracted as a helper to avoid repeating config setup across test functions.
+func newAWSConfig(t *testing.T, region string) aws.Config {
+	t.Helper()
 	cfg, err := config.LoadDefaultConfig(
 		t.Context(),
 		config.WithRegion(region),
@@ -34,6 +33,15 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error creating AWS config: %s", err)
 	}
+	return cfg
+}
+
+func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
+	mountPath := acctest.RandomWithPrefix("tf-test-aws")
+	roleName := acctest.RandomWithPrefix("tf-test")
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+
+	cfg := newAWSConfig(t, testutil.GetTestAWSRegion(t))
 
 	stsClient := sts.NewFromConfig(cfg)
 
@@ -58,6 +66,8 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	}
 	reqHeaders := base64.StdEncoding.EncodeToString(headerBytes)
 
+	// The IAM GetCallerIdentity request does not require a body; an empty body
+	// is expected and accepted by both STS and Vault's AWS auth backend.
 	reqBody := base64.StdEncoding.EncodeToString([]byte(""))
 
 	resource.Test(t, resource.TestCase{
@@ -81,18 +91,11 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	region := testutil.GetTestAWSRegion(t)
-	cfg, err := config.LoadDefaultConfig(
-		t.Context(),
-		config.WithRegion(region),
-	)
-	if err != nil {
-		t.Fatalf("Error creating AWS config: %s", err)
-	}
+	cfg := newAWSConfig(t, testutil.GetTestAWSRegion(t))
 
 	metadataClient := imds.NewFromConfig(cfg)
 
-	_, err = metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
+	_, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
@@ -148,18 +151,11 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	region := testutil.GetTestAWSRegion(t)
-	cfg, err := config.LoadDefaultConfig(
-		t.Context(),
-		config.WithRegion(region),
-	)
-	if err != nil {
-		t.Fatalf("Error creating AWS config: %s", err)
-	}
+	cfg := newAWSConfig(t, testutil.GetTestAWSRegion(t))
 
 	metadataClient := imds.NewFromConfig(cfg)
 
-	_, err = metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
+	_, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
