@@ -295,9 +295,14 @@ jobs:
 
       - name: Start Vault container with IPC_LOCK
         run: |
+          # Join the same Docker network as the service containers so Vault
+          # can resolve hostnames like mysql, postgres, consul, openldap, etc.
+          NETWORK=$(docker inspect mysql --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}')
+
           docker run -d \
             --name vault \
             --cap-add=IPC_LOCK \
+            --network "$NETWORK" \
             -e VAULT_DEV_ROOT_TOKEN_ID=root \
             -e VAULT_LICENSE="${{ secrets.VAULT_LICENSE }}" \
             -e VAULT_AUTH_CONFIG_GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
@@ -309,7 +314,7 @@ jobs:
 
           echo "Waiting for Vault..."
 
-          for _ in {1..60}; do
+          for _i in {1..60}; do
             if curl -s http://localhost:8200/v1/sys/health | grep -q '"initialized":true'; then
               echo "Vault is up"
               break
