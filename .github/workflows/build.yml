@@ -5,8 +5,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  # Permission for checking out code
   contents: read
+
 env:
   PKG_NAME: "terraform-provider-vault"
 
@@ -16,15 +16,10 @@ jobs:
     outputs:
       version: ${{ steps.go-version.outputs.version }}
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
       - id: go-version
         run: echo "version=$(cat .go-version)" >> "$GITHUB_OUTPUT"
 
-  # Parses the version/VERSION file. Reference: https://github.com/hashicorp/actions-set-product-version/blob/main/README.md
-  #
-  # > This action should be implemented in product repo `build.yml` files. The action is intended to grab the version
-  # > from the version file at the beginning of the build, then passes those versions (along with metadata, where
-  # > necessary) to any workflow jobs that need version information.
   set-product-version:
     name: "Parse version file"
     runs-on: ubuntu-latest
@@ -34,14 +29,11 @@ jobs:
       product-prerelease-version: ${{ steps.set-product-version.outputs.prerelease-product-version }}
       product-minor-version: ${{ steps.set-product-version.outputs.minor-product-version }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - name: Set variables
         id: set-product-version
         uses: hashicorp/actions-set-product-version@v2
 
-  # Creates metadata.json file containing build metadata for consumption by CRT workflows.
-  #
-  # Reference: https://github.com/hashicorp/actions-generate-metadata/blob/main/README.md
   generate-metadata-file:
     needs: set-product-version
     runs-on: ubuntu-latest
@@ -49,7 +41,7 @@ jobs:
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
     steps:
       - name: "Checkout directory"
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - name: Generate metadata file
         id: generate-metadata-file
         uses: hashicorp/actions-generate-metadata@v1
@@ -58,7 +50,7 @@ jobs:
           product: ${{ env.PKG_NAME }}
           repositoryOwner: "hashicorp"
           repository: "terraform-provider-vault"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
@@ -67,20 +59,18 @@ jobs:
     needs: [go-version]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7
         with:
           go-version-file: '.go-version'
           cache: false
-      # setup-terraform is used to install the Terraform CLI. If we don't do
-      # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: '1.12.*'
           terraform_wrapper: false
 
       - name: Cache go build
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
           path: |
             ~/.cache/go-build
@@ -91,7 +81,6 @@ jobs:
             ${{ runner.os }}-golang-
 
       - name: Run unit tests
-        # here to short-circuit the acceptance tests, in the case of a failure.
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
@@ -122,7 +111,7 @@ jobs:
 
     name: Go ${{ needs.go-version.outputs.version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - uses: hashicorp/actions-go-build@v1
         env:
           CGO_ENABLED: 0
@@ -153,41 +142,28 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.19.16-ent"
-        - "vault-enterprise:1.20.10-ent"
-        - "vault-enterprise:1.21.5-ent"
-        - "vault-enterprise:2.0.0-ent"
-        - "vault:1.18.6"
+          - "vault-enterprise:1.19.16-ent"
+          - "vault-enterprise:1.19.17-ent"
+          - "vault-enterprise:1.20.10-ent"
+          - "vault-enterprise:1.20.11-ent"
+          - "vault-enterprise:1.21.5-ent"
+          - "vault-enterprise:1.21.6-ent"
+          - "vault-enterprise:2.0.0-ent"
+          - "vault-enterprise:2.0.1-ent"
+          - "vault:latest"
         terraform_version:
-        - "latest" # always test against the latest stable, which might be a duplicate matrix member.
-        - "1.12.2"
-        - "1.11.4"
-        #- "1.10.5" # tests do not seem to pass with this version set, skipping for now.
+          - "latest"
+          - "1.12.2"
+          - "1.11.4"
+
     services:
-      vault:
-        image: hashicorp/${{ matrix.image }}
-        env:
-          VAULT_DEV_ROOT_TOKEN_ID: root
-          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
-          VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SKIP_SETCAP: "true"
-          VAULT_LOCAL_CONFIG: |
-            {"plugin_directory": "/vault/plugins", "disable_mlock": true}
-        options: >-
-          --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 8200:8200
-        volumes:
-          - ${{ github.workspace }}:/vault/plugins
       mysql:
         image: docker.mirror.hashicorp.services/mysql:latest
         env:
           MYSQL_ROOT_PASSWORD: mysql
         ports:
           - 3306:3306
+
       mssql:
         image: mcr.microsoft.com/mssql/server:2017-latest-ubuntu
         env:
@@ -195,6 +171,7 @@ jobs:
           SA_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
         ports:
           - 1433:1433
+
       mongo:
         image: mongo:latest
         env:
@@ -203,6 +180,7 @@ jobs:
           MONGO_INITDB_DATABASE: admin
         ports:
           - 27017:27017
+
       postgres:
         image: docker.mirror.hashicorp.services/postgres:latest
         env:
@@ -210,6 +188,7 @@ jobs:
           POSTGRES_DB: database
         ports:
           - 5432:5432
+
       couchbase:
         image: docker.io/couchbase/server-sandbox:7.1.1
         ports:
@@ -228,6 +207,7 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 60
+
       consul:
         image: docker.mirror.hashicorp.services/hashicorp/consul:latest
         env:
@@ -240,6 +220,7 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 5
+
       openldap:
         image: osixia/openldap:1.5.0
         ports:
@@ -249,32 +230,60 @@ jobs:
           --health-interval 1s
           --health-timeout 30s
           --health-retries 30
+
       pebble:
         image: ghcr.io/letsencrypt/pebble:2.8.0
         options: --add-host=host.docker.internal:host-gateway
         ports:
           - 14000:14000
+
     steps:
       - name: Update apt cache
-        run:
+        run: |
           sudo apt-get update
         timeout-minutes: 2
+
       - name: install ldap utils
-        run:
+        run: |
           sudo apt-get install -y ldap-utils
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+
+      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
+      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7
         with:
           go-version-file: '.go-version'
           cache: false
-      # setup-terraform is used to install the Terraform CLI. If we don't do
-      # this then the terraform-plugin-sdk will attempt to download it for each test!
+
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ matrix.terraform_version }}
           terraform_wrapper: false
+
       - name: Check Terraform CLI version
         run: terraform --version
+
+      - name: Start Vault container with IPC_LOCK
+        run: |
+          docker run -d \
+            --name vault \
+            --cap-add=IPC_LOCK \
+            -e VAULT_DEV_ROOT_TOKEN_ID=root \
+            -e VAULT_LOCAL_CONFIG='{"plugin_directory": "/vault/plugins", "disable_mlock": true}' \
+            -p 8200:8200 \
+            -v ${{ github.workspace }}:/vault/plugins \
+            hashicorp/${{ matrix.image }} \
+            server -dev
+
+          echo "Waiting for Vault..."
+
+          for i in {1..30}; do
+            if curl -s http://localhost:8200/v1/sys/health > /dev/null; then
+              echo "Vault is up"
+              break
+            fi
+            sleep 2
+          done
+
       - name: Download external plugin
         id: plugin
         env:
@@ -285,8 +294,10 @@ jobs:
           SHA256SUMS="${PLUGIN}_${VERSION}_SHA256SUMS"
           curl -sO "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/{${ZIP},${SHA256SUMS}}"
           shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
-          unzip "${ZIP}"; rm "${ZIP}" "${SHA256SUMS}"
+          unzip "${ZIP}"
+          rm "${ZIP}" "${SHA256SUMS}"
           echo "command=${PLUGIN}" >> "${GITHUB_OUTPUT}"
+
       - name: Download OS secrets plugin
         id: os_plugin
         env:
@@ -295,18 +306,16 @@ jobs:
         run: |
           ZIP="${PLUGIN}_${VERSION}_linux_amd64.zip"
           DIR="${PLUGIN}_${VERSION}_linux_amd64"
-          
-          # Download the plugin
+
           curl -fsSL -O "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/${ZIP}"
-          
-          # Create directory and extract into it
+
           mkdir -p "${DIR}"
           unzip "${ZIP}" -d "${DIR}"
           rm "${ZIP}"
           chmod -R a+r "${DIR}/metadata.json.sig"
-          
-          # Set output to indicate successful download
+
           echo "downloaded=true" >> "${GITHUB_OUTPUT}"
+
       - name: Download external Enterprise plugin
         id: plugin_enterprise
         env:
@@ -317,18 +326,25 @@ jobs:
           ZIP="${PLUGIN}_${VERSION}_linux_amd64.zip"
           ZIP_DIR="${PLUGIN}_${VERSION}_linux_amd64"
           SHA256SUMS="${PLUGIN}_${VERSION}_SHA256SUMS"
+
           curl -sO "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/{${ZIP},${SHA256SUMS}}"
+
           shasum -a 256 -c "${PLUGIN}_${VERSION}_SHA256SUMS" --ignore-missing
-          unzip "${ZIP}" -d "${ZIP_DIR}"; rm "${ZIP}" "${SHA256SUMS}"
+
+          unzip "${ZIP}" -d "${ZIP_DIR}"
+
+          rm "${ZIP}" "${SHA256SUMS}"
+
           chmod a+r "${ZIP_DIR}/metadata.json.sig"
+
           {
-          echo "type=${TYPE}"
-          echo "name=${PLUGIN}"
-          echo "version=${VERSION}"
+            echo "type=${TYPE}"
+            echo "name=${PLUGIN}"
+            echo "version=${VERSION}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Cache go build
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
           path: |
             ~/.cache/go-build
@@ -342,7 +358,6 @@ jobs:
         env:
           VAULT_TOKEN: "root"
           VAULT_ADDR: "http://localhost:8200"
-          # RUNS_IN_CONTAINER is false if not using jobs.<job_id>.container
           RUNS_IN_CONTAINER: "false"
           MYSQL_URL: "root:mysql@tcp(mysql:3306)/"
           MYSQL_CONNECTION_URL: "{{username}}:{{password}}@tcp(mysql:3306)/"
@@ -350,15 +365,8 @@ jobs:
           MYSQL_CONNECTION_PASSWORD: "mysql"
           MONGODB_URL: "mongodb://root:mongodb@mongo:27017/admin?ssl=false"
           MSSQL_URL: "sqlserver://sa:${{ secrets.MSSQL_SA_PASSWORD }}@mssql:1433"
-          # POSTGRES_URL is the standard root conn URL for Vault
           POSTGRES_URL: "postgres://postgres:secret@postgres:5432/database?sslmode=disable"
-          # POSTGRES_URL_TEST is used by the TFVP test to connect directly to
-          # the postgres container so that it can create static users.
-          # Note: the host is "localhost" because the TFVP tests do not run in
-          # the same docker network.
           POSTGRES_URL_TEST: "postgres://postgres:secret@localhost:5432/database?sslmode=disable"
-          # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres
-          # container for "rootless" static roles".
           POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
@@ -367,45 +375,45 @@ jobs:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           LDAP_BINDDN: "cn=admin,dc=example,dc=org"
           LDAP_BINDPASS: "admin"
-          # host and port of the openldap container, from the pov of the github runner
           LDAP_HOST_URL: "ldap://0.0.0.0:10389"
-          # service URL of accessible from the Vault container
           LDAP_URL: "ldap://openldap:389"
           VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
-          VAULT_PLUGIN_ENT_TYPE:  ${{ steps.plugin_enterprise.outputs.type }}
-          VAULT_PLUGIN_ENT_NAME:  ${{ steps.plugin_enterprise.outputs.name }}
-          VAULT_PLUGIN_ENT_VERSION:  ${{ steps.plugin_enterprise.outputs.version }}
+          VAULT_PLUGIN_ENT_TYPE: ${{ steps.plugin_enterprise.outputs.type }}
+          VAULT_PLUGIN_ENT_NAME: ${{ steps.plugin_enterprise.outputs.name }}
+          VAULT_PLUGIN_ENT_VERSION: ${{ steps.plugin_enterprise.outputs.version }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
           else
             target="testacc"
           fi
+
           if [ -n "${{ env.LDAP_HOST_URL }}" ]; then
             cat testdata/openldap/ldif/*.ldif | ldapadd -x -H ${{ env.LDAP_HOST_URL }} -D "${{ env.LDAP_BINDDN }}" -w "${{ env.LDAP_BINDPASS }}"
           fi
+
           make $target TESTARGS='-test.v -tags=testonly' SKIP_MSSQL_MULTI_CI=true SKIP_RAFT_TESTS=true SKIP_VAULT_NEXT_TESTS=true TF_ACC_K8S_SKIP_IN_CLUSTER=true
+
       - name: "Generate Vault API Path Coverage Report"
         run: |
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
-          #
 
-  # Uploads an Actions artifact named terraform-registry-manifest.json.zip.
-  #
-  # The artifact contains a single file with a filename that Terraform Registry expects
-  # (example: terraform-provider-crt-example_2.3.6-alpha1_manifest.json). The file contents
-  # are identical to the terraform-registry-manifest.json file in the source repository.
+      - name: Debug Vault logs
+        if: failure()
+        run: docker logs vault
+
   upload-terraform-registry-manifest-artifact:
     needs:
-    - set-product-version
-    - build
-    - acceptance
+      - set-product-version
+      - build
+      - acceptance
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout directory"
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           path: ${{ env.PKG_NAME }}
+
       - name: "Copy manifest from checkout directory to a file with the desired name"
         id: terraform-registry-manifest
         run: |
@@ -416,14 +424,15 @@ jobs:
           destination="${name}_${version}_manifest.json"
 
           cp "$source" "$destination"
-          echo "filename=$destination" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+
+          echo "filename=$destination" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: terraform-registry-manifest.json
           path: ${{ steps.terraform-registry-manifest.outputs.filename }}
           if-no-files-found: error
 
-  # This job is used as a requirement for the repo's branch protection setup.
   build-done:
     runs-on: ubuntu-latest
     if: always()
@@ -432,13 +441,16 @@ jobs:
       - acceptance
       - upload-terraform-registry-manifest-artifact
       - generate-metadata-file
+
     steps:
-    - name: cancelled
-      if: ${{ (contains(needs.*.result, 'cancelled')) }}
-      run: exit 2
-    - name: passed
-      if: ${{ !(contains(needs.*.result, 'failure')) }}
-      run: exit 0
-    - name: failed
-      if: ${{ contains(needs.*.result, 'failure') }}
-      run: exit 1
+      - name: cancelled
+        if: ${{ contains(needs.*.result, 'cancelled') }}
+        run: exit 2
+
+      - name: passed
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+
+      - name: failed
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
