@@ -617,6 +617,12 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 		tc.preCheck(t)
 	}
 
+	namePrefix := fmt.Sprintf("%s-usages", tc.name)
+	cleanupManagedKeysByPrefix(t, tc.keyType, namePrefix)
+	t.Cleanup(func() {
+		cleanupManagedKeysByPrefix(t, tc.keyType, namePrefix)
+	})
+
 	name := acctest.RandomWithPrefix(fmt.Sprintf("%s-usages", tc.name))
 	resourceName := "vault_managed_keys.test"
 	stateUsagesPath := fmt.Sprintf("%s.0.%s", tc.providerAttr, consts.FieldUsages)
@@ -653,6 +659,46 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 			},
 		},
 	})
+}
+
+func cleanupManagedKeysByPrefix(t *testing.T, keyType, prefix string) {
+	t.Helper()
+
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+	listPath := getManagedKeysPathPrefix(keyType)
+	resp, err := client.Logical().List(listPath)
+	if err != nil {
+		if isUnsupportedKeyTypeError(err) {
+			return
+		}
+		t.Fatalf("failed to list managed keys at %q during cleanup: %s", listPath, err)
+	}
+
+	if resp == nil {
+		return
+	}
+
+	rawKeys, ok := resp.Data["keys"]
+	if !ok {
+		return
+	}
+
+	for _, item := range rawKeys.([]interface{}) {
+		name, ok := item.(string)
+		if !ok {
+			continue
+		}
+
+		name = strings.TrimSuffix(name, "/")
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+
+		path := getManagedKeysPath(keyType, name)
+		if _, err := client.Logical().Delete(path); err != nil {
+			t.Fatalf("failed to clean up managed key %q: %s", path, err)
+		}
+	}
 }
 
 func testManagedKeysConfig_awsUsages(name string, usages []string) string {
@@ -887,18 +933,13 @@ func TestManagedKeyUsagesFromAPI(t *testing.T) {
 			want:  "encrypt,decrypt,wrap,unwrap",
 		},
 		{
-			name:  "vault pre-2 list of ints",
-			input: []interface{}{1, 2, 5, 6},
+			name:  "vault pre-2 list of json.Number",
+			input: []interface{}{json.Number("1"), json.Number("2"), json.Number("5"), json.Number("6")},
 			want:  "encrypt,decrypt,wrap,unwrap",
 		},
 		{
-			name:  "vault pre-2 list of json.Number",
-			input: []interface{}{json.Number("1"), json.Number("2")},
-			want:  "encrypt,decrypt",
-		},
-		{
 			name:    "unknown usage index",
-			input:   []interface{}{99},
+			input:   []interface{}{json.Number("99")},
 			wantErr: true,
 		},
 	}
