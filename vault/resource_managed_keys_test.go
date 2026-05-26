@@ -619,12 +619,26 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 		tc.preCheck(t)
 	}
 
-	cleanupAllManagedKeys(t)
-	t.Cleanup(func() {
-		cleanupAllManagedKeys(t)
-	})
+	// Pre-run: remove any stale keys from previous runs of this sub-test.
+	// Scoped to the namePrefix across all key types so we don't disturb
+	// keys belonging to other tests.
+	namePrefix := fmt.Sprintf("%s-usages", tc.name)
+	for _, c := range managedKeyProviders {
+		cleanupManagedKeysByPrefix(t, c.keyType, namePrefix)
+	}
 
-	name := acctest.RandomWithPrefix(fmt.Sprintf("%s-usages", tc.name))
+	name := acctest.RandomWithPrefix(namePrefix)
+
+	// Post-run: delete only the specific key this test run created.
+	// resource.Test's destroy step handles Terraform-managed resources;
+	// this is a safety net for cases where destroy did not complete.
+	t.Cleanup(func() {
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+		path := getManagedKeysPath(tc.keyType, name)
+		if _, err := client.Logical().Delete(path); err != nil {
+			t.Errorf("cleanup: failed to delete managed key %q: %s", path, err)
+		}
+	})
 	resourceName := "vault_managed_keys.test"
 	stateUsagesPath := fmt.Sprintf("%s.0.%s", tc.providerAttr, consts.FieldUsages)
 
@@ -660,16 +674,6 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 			},
 		},
 	})
-}
-
-// cleanupAllManagedKeys deletes all managed keys across every provider type.
-// Used as a pre- and post-run sweep so that stale keys from any previous test
-// run cannot trigger the "managed keys already exist" guard in writeManagedKeysData.
-func cleanupAllManagedKeys(t *testing.T) {
-	t.Helper()
-	for _, c := range managedKeyProviders {
-		cleanupManagedKeysByPrefix(t, c.keyType, "")
-	}
 }
 
 func cleanupManagedKeysByPrefix(t *testing.T, keyType, prefix string) {
