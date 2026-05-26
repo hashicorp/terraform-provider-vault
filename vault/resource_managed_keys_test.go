@@ -573,6 +573,8 @@ type managedKeysUsagesAcceptanceTestCase struct {
 }
 
 func TestManagedKeys_Usages_GenericHarness(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
 	testCases := []managedKeysUsagesAcceptanceTestCase{
 		{
 			name:         "aws",
@@ -617,10 +619,9 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 		tc.preCheck(t)
 	}
 
-	namePrefix := fmt.Sprintf("%s-usages", tc.name)
-	cleanupManagedKeysByPrefix(t, tc.keyType, namePrefix)
+	cleanupAllManagedKeys(t)
 	t.Cleanup(func() {
-		cleanupManagedKeysByPrefix(t, tc.keyType, namePrefix)
+		cleanupAllManagedKeys(t)
 	})
 
 	name := acctest.RandomWithPrefix(fmt.Sprintf("%s-usages", tc.name))
@@ -659,6 +660,16 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 			},
 		},
 	})
+}
+
+// cleanupAllManagedKeys deletes all managed keys across every provider type.
+// Used as a pre- and post-run sweep so that stale keys from any previous test
+// run cannot trigger the "managed keys already exist" guard in writeManagedKeysData.
+func cleanupAllManagedKeys(t *testing.T) {
+	t.Helper()
+	for _, c := range managedKeyProviders {
+		cleanupManagedKeysByPrefix(t, c.keyType, "")
+	}
 }
 
 func cleanupManagedKeysByPrefix(t *testing.T, keyType, prefix string) {
