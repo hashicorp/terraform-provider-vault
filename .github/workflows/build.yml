@@ -70,13 +70,13 @@ jobs:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
-          go-version-file: ".go-version"
+          go-version-file: '.go-version'
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
       - uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: "1.12.*"
+          terraform_version: '1.12.*'
           terraform_wrapper: false
 
       - name: Cache go build
@@ -106,8 +106,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        goos: [freebsd, windows, linux, darwin]
-        goarch: ["386", "amd64", "arm", "arm64"]
+        goos: [ freebsd, windows, linux, darwin ]
+        goarch: [ "386", "amd64", "arm", "arm64" ]
         exclude:
           - goos: freebsd
             goarch: arm64
@@ -153,15 +153,15 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - "vault-enterprise:1.19.17-ent"
-          - "vault-enterprise:1.20.11-ent"
-          - "vault-enterprise:1.21.6-ent"
-          - "vault-enterprise:2.0.1-ent"
-          - "vault:latest"
+        - "vault-enterprise:1.19.17-ent"
+        - "vault-enterprise:1.20.11-ent"
+        - "vault-enterprise:1.21.6-ent"
+        - "vault-enterprise:2.0.1-ent"
+        - "vault:latest"
         terraform_version:
-          - "latest" # always test against the latest stable, which might be a duplicate matrix member.
-          - "1.12.2"
-          - "1.11.4"
+        - "latest" # always test against the latest stable, which might be a duplicate matrix member.
+        - "1.12.2"
+        - "1.11.4"
         #- "1.10.5" # tests do not seem to pass with this version set, skipping for now.
     services:
       vault:
@@ -231,7 +231,7 @@ jobs:
       consul:
         image: docker.mirror.hashicorp.services/hashicorp/consul:latest
         env:
-          CONSUL_LOCAL_CONFIG: '{"acl":{"enabled":true}}'
+          CONSUL_LOCAL_CONFIG: "{\"acl\":{\"enabled\":true}}"
         ports:
           - 8500:8500
           - 8600:8600
@@ -256,14 +256,16 @@ jobs:
           - 14000:14000
     steps:
       - name: Update apt cache
-        run: sudo apt-get update
+        run:
+          sudo apt-get update
         timeout-minutes: 2
       - name: install ldap utils
-        run: sudo apt-get install -y ldap-utils
+        run:
+          sudo apt-get install -y ldap-utils
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
       - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
-          go-version-file: ".go-version"
+          go-version-file: '.go-version'
           cache: false
       # setup-terraform is used to install the Terraform CLI. If we don't do
       # this then the terraform-plugin-sdk will attempt to download it for each test!
@@ -293,16 +295,16 @@ jobs:
         run: |
           ZIP="${PLUGIN}_${VERSION}_linux_amd64.zip"
           DIR="${PLUGIN}_${VERSION}_linux_amd64"
-
+          
           # Download the plugin
           curl -fsSL -O "https://releases.hashicorp.com/${PLUGIN}/${VERSION}/${ZIP}"
-
+          
           # Create directory and extract into it
           mkdir -p "${DIR}"
           unzip "${ZIP}" -d "${DIR}"
           rm "${ZIP}"
           chmod -R a+r "${DIR}/metadata.json.sig"
-
+          
           # Set output to indicate successful download
           echo "downloaded=true" >> "${GITHUB_OUTPUT}"
       - name: Download external Enterprise plugin
@@ -370,9 +372,9 @@ jobs:
           # service URL of accessible from the Vault container
           LDAP_URL: "ldap://openldap:389"
           VAULT_PLUGIN_COMMAND: ${{ steps.plugin.outputs.command }}
-          VAULT_PLUGIN_ENT_TYPE: ${{ steps.plugin_enterprise.outputs.type }}
-          VAULT_PLUGIN_ENT_NAME: ${{ steps.plugin_enterprise.outputs.name }}
-          VAULT_PLUGIN_ENT_VERSION: ${{ steps.plugin_enterprise.outputs.version }}
+          VAULT_PLUGIN_ENT_TYPE:  ${{ steps.plugin_enterprise.outputs.type }}
+          VAULT_PLUGIN_ENT_NAME:  ${{ steps.plugin_enterprise.outputs.name }}
+          VAULT_PLUGIN_ENT_VERSION:  ${{ steps.plugin_enterprise.outputs.version }}
         run: |
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
@@ -395,9 +397,9 @@ jobs:
   # are identical to the terraform-registry-manifest.json file in the source repository.
   upload-terraform-registry-manifest-artifact:
     needs:
-      - set-product-version
-      - build
-      - acceptance
+    - set-product-version
+    - build
+    - acceptance
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout directory"
@@ -431,12 +433,12 @@ jobs:
       - upload-terraform-registry-manifest-artifact
       - generate-metadata-file
     steps:
-      - name: cancelled
-        if: ${{ (contains(needs.*.result, 'cancelled')) }}
-        run: exit 2
-      - name: passed
-        if: ${{ !(contains(needs.*.result, 'failure')) }}
-        run: exit 0
-      - name: failed
-        if: ${{ contains(needs.*.result, 'failure') }}
-        run: exit 1
+    - name: cancelled
+      if: ${{ (contains(needs.*.result, 'cancelled')) }}
+      run: exit 2
+    - name: passed
+      if: ${{ !(contains(needs.*.result, 'failure')) }}
+      run: exit 0
+    - name: failed
+      if: ${{ contains(needs.*.result, 'failure') }}
+      run: exit 1
