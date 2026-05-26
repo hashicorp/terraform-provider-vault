@@ -982,3 +982,42 @@ func TestManagedKeyUsagesToAPI(t *testing.T) {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
+
+func TestFirstUnsupportedManagedKeyUsagePreVault200(t *testing.T) {
+	tests := []struct {
+		name    string
+		usages  string
+		want    string
+		wantBad bool
+	}{
+		{
+			name:    "contains generate_random",
+			usages:  "sign,generate_random,verify",
+			want:    "generate_random",
+			wantBad: true,
+		},
+		{
+			name:    "contains mac with spacing",
+			usages:  "encrypt, mac ,decrypt",
+			want:    "mac",
+			wantBad: true,
+		},
+		{
+			name:    "supported values only",
+			usages:  "encrypt,decrypt,sign,verify,wrap,unwrap",
+			wantBad: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, bad := firstUnsupportedManagedKeyUsagePreVault200(tc.usages)
+			if bad != tc.wantBad {
+				t.Fatalf("bad=%v, wantBad=%v", bad, tc.wantBad)
+			}
+			if got != tc.want {
+				t.Fatalf("got=%q, want=%q", got, tc.want)
+			}
+		})
+	}
+}

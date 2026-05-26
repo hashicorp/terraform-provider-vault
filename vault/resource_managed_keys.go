@@ -82,6 +82,7 @@ func managedKeysResource() *schema.Resource {
 		DeleteContext: deleteManagedKeys,
 		ReadContext:   readManagedKeys,
 		UpdateContext: createUpdateManagedKeys,
+		CustomizeDiff: validateManagedKeysUsagesCustomizeDiff,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -127,6 +128,72 @@ func managedKeysResource() *schema.Resource {
 	}
 }
 
+func managedKeyUsagesToCSV(v interface{}) (string, error) {
+	switch t := v.(type) {
+	case *schema.Set:
+		return managedKeyUsagesToAPI(t)
+	case []interface{}:
+		vals := make([]string, 0, len(t))
+		for _, raw := range t {
+			s, ok := raw.(string)
+			if !ok {
+				return "", fmt.Errorf("invalid usage value type %T", raw)
+			}
+			if s = normalizeManagedKeyUsageValue(s); s != "" {
+				vals = append(vals, s)
+			}
+		}
+		if len(vals) == 0 {
+			return "", nil
+		}
+		sort.Strings(vals)
+		return strings.Join(vals, ","), nil
+	case nil:
+		return "", nil
+	default:
+		return "", fmt.Errorf("invalid usages type %T", v)
+	}
+}
+
+func validateManagedKeysUsagesCustomizeDiff(_ context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		return nil
+	}
+
+	for _, config := range managedKeyProviders {
+		raw := diff.Get(config.providerType)
+		set, ok := raw.(*schema.Set)
+		if !ok || set == nil {
+			continue
+		}
+
+		for _, item := range set.List() {
+			block, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			rawUsages, ok := block[consts.FieldUsages]
+			if !ok {
+				continue
+			}
+
+			usages, err := managedKeyUsagesToCSV(rawUsages)
+			if err != nil {
+				return fmt.Errorf("failed to validate %s for provider %q: %w", consts.FieldUsages, config.providerType, err)
+			}
+
+			if usage, unsupported := firstUnsupportedManagedKeyUsagePreVault200(usages); unsupported {
+				name, _ := block[consts.FieldName].(string)
+				return fmt.Errorf("%q is not supported in %s for Vault versions below 2.0 (managed key %q)",
+					usage, consts.FieldUsages, name)
+			}
+		}
+	}
+
+	return nil
+}
+
 func hashManagedKeys(v interface{}) int {
 	var result int
 	if m, ok := v.(map[string]interface{}); ok {
@@ -149,6 +216,11 @@ var managedKeyUsageByIndex = map[int]string{
 	6: "unwrap",
 	7: "mac",
 	8: "generate_random",
+}
+
+var unsupportedManagedKeyUsagesBeforeVault200 = map[string]struct{}{
+	"mac":             {},
+	"generate_random": {},
 }
 
 func getCommonManagedKeysSchema() schemaMap {
@@ -603,6 +675,17 @@ func toUsageInterfaces(values []string) []interface{} {
 	return result
 }
 
+func firstUnsupportedManagedKeyUsagePreVault200(usages string) (string, bool) {
+	for _, raw := range strings.Split(usages, ",") {
+		usage := normalizeManagedKeyUsageValue(raw)
+		if _, ok := unsupportedManagedKeyUsagesBeforeVault200[usage]; ok {
+			return usage, true
+		}
+	}
+
+	return "", false
+}
+
 func getManagedKeysPathPrefix(keyType string) string {
 	return fmt.Sprintf("sys/managed-keys/%s", keyType)
 }
@@ -635,7 +718,7 @@ func handleKeyProviderRequired(d *schema.ResourceData, providerType string, err 
 	return nil
 }
 
-func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *api.Client, providerType string) diag.Diagnostics {
+func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, meta interface{}, client *api.Client, providerType string) diag.Diagnostics {
 	config, err := getManagedKeyConfig(providerType)
 	if err != nil {
 		return diag.FromErr(err)
@@ -684,6 +767,16 @@ func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *a
 		if err := validateConfigData(providerType, data); err != nil {
 			return diag.Errorf("bad configuration for %s: %v", keyName, err)
 		}
+
+		if !provider.IsAPISupported(meta, provider.VaultVersion200) {
+			if usages, ok := data[consts.FieldUsages].(string); ok {
+				if usage, unsupported := firstUnsupportedManagedKeyUsagePreVault200(usages); unsupported {
+					return diag.Errorf("%q is not supported in %s for Vault versions below 2.0 (managed key %q)",
+						usage, consts.FieldUsages, keyName)
+				}
+			}
+		}
+
 		path := getManagedKeysPath(config.keyType, keyName)
 
 		tflog.Debug(ctx, "Writing data to Vault", map[string]interface{}{"path": path})
@@ -730,25 +823,25 @@ func createUpdateManagedKeys(ctx context.Context, d *schema.ResourceData, meta i
 	}
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		if diags := writeManagedKeysData(ctx, d, client, consts.FieldAWS); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, meta, client, consts.FieldAWS); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		if diags := writeManagedKeysData(ctx, d, client, consts.FieldPKCS); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, meta, client, consts.FieldPKCS); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		if diags := writeManagedKeysData(ctx, d, client, consts.FieldAzure); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, meta, client, consts.FieldAzure); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldGCP); ok {
-		if diags := writeManagedKeysData(ctx, d, client, consts.FieldGCP); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, meta, client, consts.FieldGCP); diags != nil {
 			return diags
 		}
 	}
