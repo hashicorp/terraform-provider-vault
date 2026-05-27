@@ -35,6 +35,7 @@ func policyResource() *schema.Resource {
 				Required:    true,
 				Description: "The policy document",
 			},
+
 			"allow_overwrite": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -121,6 +122,14 @@ func policyRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("policy", policy)
 	d.Set("name", name)
+
+	allowOverwrite := true
+	if rawConfig := d.GetRawConfig(); !rawConfig.IsNull() {
+		if v := rawConfig.GetAttr("allow_overwrite"); !v.IsNull() {
+			allowOverwrite = d.Get("allow_overwrite").(bool)
+		}
+	}
+	d.Set("allow_overwrite", allowOverwrite)
 
 	return nil
 }

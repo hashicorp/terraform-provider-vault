@@ -24,10 +24,9 @@ func TestAccPolicy_importBasic(t *testing.T) {
 				Check:  testResourcePolicy_initialCheck(name),
 			},
 			{
-				ResourceName:            "vault_policy.test",
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"allow_overwrite"},
+				ResourceName:      "vault_policy.test",
+				ImportState:       true,
+				ImportStateVerify: true,
 			},
 		},
 	})
