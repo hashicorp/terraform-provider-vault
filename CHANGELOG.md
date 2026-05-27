@@ -10,11 +10,12 @@ FEATURES:
 * Add support for write only paramters for s3 backends for `vault_raft_snapshot_agent_config` by @drewmullen ([#2825]https://github.com/hashicorp/terraform-provider-vault/pull/2825)
 * `vault_transform_transformation`: Added `mapping_mode`, `stores` and `convergent` fields to the resource. ([#2820] https://github.com/hashicorp/terraform-provider-vault/pull/2820/)
 * **New Ephemeral Resource**: `vault_token` for creating Vault tokens with automatic revocation. Supports service and batch tokens, as well as entity alias association, which was not supported in the SDKv2 resource. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
-* Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
+
 
 IMPROVEMENTS: 
 
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
+* Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
 
 ## 5.9.0 (April 22, 2026)
 
