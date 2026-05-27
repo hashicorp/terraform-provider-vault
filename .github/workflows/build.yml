@@ -153,10 +153,10 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.19.16-ent"
-        - "vault-enterprise:1.20.10-ent"
-        - "vault-enterprise:1.21.5-ent"
-        - "vault-enterprise:2.0.0-ent"
+        - "vault-enterprise:1.19.17-ent"
+        - "vault-enterprise:1.20.11-ent"
+        - "vault-enterprise:1.21.6-ent"
+        - "vault-enterprise:2.0.1-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
@@ -170,10 +170,10 @@ jobs:
           VAULT_DEV_ROOT_TOKEN_ID: root
           VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
           VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SKIP_SETCAP: "true"
           VAULT_LOCAL_CONFIG: |
-            {"plugin_directory": "/vault/plugins", "disable_mlock": true}
+            {"plugin_directory": "/vault/plugins"}
         options: >-
+          --cap-add IPC_LOCK
           --health-cmd "VAULT_ADDR=http://127.0.0.1:8200 vault status"
           --health-interval 1s
           --health-timeout 5s
