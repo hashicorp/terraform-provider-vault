@@ -1,6 +1,6 @@
 ---
 layout: "vault"
-page_title: "Vault: ephemeral vault_aws_access_credentials data resource"
+page_title: "Vault: ephemeral vault_aws_access_credentials resource"
 sidebar_current: "docs-vault-ephemeral-aws-access-credentials"
 description: |-
   Generate ephemeral AWS credentials from the Vault AWS Secrets engine
@@ -31,9 +31,9 @@ resource "vault_aws_secret_backend" "aws" {
 
 resource "vault_aws_secret_backend_role" "example" {
   backend         = vault_aws_secret_backend.aws.path
-  name           = "my-role"
+  name            = "my-role"
   credential_type = "iam_user"
-  
+
   policy_document = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -48,10 +48,10 @@ resource "vault_aws_secret_backend_role" "example" {
 }
 
 ephemeral "vault_aws_access_credentials" "example" {
-  backend = vault_aws_secret_backend.aws.path
-  role    = vault_aws_secret_backend_role.example.name
-  type    = "creds"
-  region  = "us-east-1"
+  mount  = vault_aws_secret_backend.aws.path
+  role   = vault_aws_secret_backend_role.example.name
+  type   = "creds"
+  region = "us-east-1"
 }
 ```
 
@@ -65,17 +65,17 @@ The following arguments are supported:
   configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `backend` - (Required) Path to the mounted AWS Secrets Engine where the role resides.
+* `mount` - (Required) Path to the mounted AWS Secrets Engine where the role resides.
 
 * `role` - (Required) The name of the AWS secrets engine role to generate credentials for.
 
-* `type` - (Optional) Type of credentials to generate. Must be either `creds` for IAM user credentials or `sts` for STS tokens. If not specified, defaults to the role's default credential type.
+* `type` - (Optional) Type of credentials to generate. Must be either `creds` for IAM user credentials or `sts` for STS tokens. If not specified, defaults to `creds`.
 
-* `role_arn` - (Optional) ARN of the role to assume when `credential_type` is `assumed_role`. Required if the role has multiple ARNs configured.
+* `role_arn` - (Optional) Specific AWS ARN to use from the configured role. Required if the role has multiple ARNs configured.
 
 * `region` - (Optional) AWS region for the generated credentials. If not specified, uses the region configured on the AWS secrets engine.
 
-* `ttl` - (Optional) Time-to-live for STS tokens. Only applicable when `type` is `sts`. Uses the role's `default_sts_ttl` if not specified. Format: `30m`, `1h`, `3600s`, etc.
+* `ttl` - (Optional) Time-to-live to request for generated credentials. Only applicable when `type` is `sts`.  For STS tokens, Vault uses the role's `default_sts_ttl` if not specified. Format: `30m`, `1h`, `3600s`, etc.
 
 ## Attributes Reference
 
