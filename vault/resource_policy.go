@@ -35,6 +35,12 @@ func policyResource() *schema.Resource {
 				Required:    true,
 				Description: "The policy document",
 			},
+			"allow_overwrite": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Allow overwriting an existing policy. Defaults to `true` for backwards compatibility purposes.",
+			},
 		},
 	}
 }
@@ -46,13 +52,17 @@ func policyCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	name := d.Get("name").(string)
+	allowOverwrite := d.Get("allow_overwrite").(bool)
 
 	existing, err := client.Sys().GetPolicy(name)
-	if err != nil {
+
+	// ignore GetPolicy errors if allowOverwrite is true, for backwards compatibility
+	if err != nil && !allowOverwrite {
 		return fmt.Errorf("error checking for existing policy %q: %s", name, err)
 	}
-	if existing != "" {
-		return fmt.Errorf("policy %q already exists; use terraform import to manage it", name)
+
+	if existing != "" && !allowOverwrite {
+		return fmt.Errorf("policy %q already exists; use terraform import to manage it or set allow_overwrite = true", name)
 	}
 
 	return policyWrite(d, meta)
