@@ -12,14 +12,12 @@ FEATURES:
 * **New Ephemeral Resource**: `vault_token` for creating Vault tokens with automatic revocation. Supports service and batch tokens, as well as entity alias association, which was not supported in the SDKv2 resource. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * **New Resource**: `vault_config_group_policy_application` - Manages the global group policy application mode for Vault Enterprise. Controls how policies attached to identity groups are applied across namespace boundaries. Supports `within_namespace_hierarchy` (default) and `any` modes. Requires Vault Enterprise 1.13.8+. ([#2863](https://github.com/hashicorp/terraform-provider-vault/pull/2863))
 * Add support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
+* `vault_policy`: Added `allow_overwrite` to optionally prevent overwriting Vault policies.([#2895](https://github.com/hashicorp/terraform-provider-vault/pull/2895))
 
 IMPROVEMENTS: 
 
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
-
-BUGS:
-* `vault_policy`: Vault policy would overwrite pre-existing policies of the same name if they were managed out of band.([#2895](https://github.com/hashicorp/terraform-provider-vault/pull/2895))
 
 ## 5.9.0 (April 22, 2026)
 
