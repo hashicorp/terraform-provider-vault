@@ -40,7 +40,7 @@ IMPROVEMENTS:
 * Add support for Enterprise Plugins in `vault_plugin` resource. ([#2707](https://github.com/hashicorp/terraform-provider-vault/pull/2707))
 * `vault_ldap_secret_backend`: Add self-managed support to ldap secrets engine. Requires Vault Enterprise 2.0+. ([#2845](https://github.com/hashicorp/terraform-provider-vault/pull/2845))
 * `azure_static_role`: Add support for importing existing credentials via new Vault import endpoint. ([#2756](https://github.com/hashicorp/terraform-provider-vault/pull/2756))
-* Migrated AWS provider dependency from `aws-sdk-go` (v1) to `aws-sdk-go-v2` for improved performance and maintainability. ([#YOUR_PR_NUMBER](https://github.com/hashicorp/terraform-provider-vault/pull/2882)) 
+* Migrated AWS provider dependency from `aws-sdk-go` (v1) to `aws-sdk-go-v2` for improved performance and maintainability. ([#2882](https://github.com/hashicorp/terraform-provider-vault/pull/2882))
 * Updated dependencies:
   * `cloud.google.com/go/auth` v0.18.2 -> v0.20.0
   * `cloud.google.com/go/cloudsqlconn` v1.4.3 -> v1.20.2

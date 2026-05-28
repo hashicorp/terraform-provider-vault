@@ -9,10 +9,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -50,25 +53,55 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 		t.Fatalf("Error obtaining identity document: %s", err)
 	}
 
-	presignClient := sts.NewPresignClient(stsClient)
-	presignedReq, err := presignClient.PresignGetCallerIdentity(t.Context(), &sts.GetCallerIdentityInput{})
+	// Construct STS GetCallerIdentity request matching Vault IAM auth expectations.
+	stsBody := "Action=GetCallerIdentity&Version=2011-06-15"
+	stsEndpoint := "https://sts.amazonaws.com/"
+
+	req, err := http.NewRequest("POST", stsEndpoint, strings.NewReader(stsBody))
 	if err != nil {
-		t.Fatalf("Error presigning GetCallerIdentity request: %s", err)
+		t.Fatalf("Error creating STS request: %s", err)
 	}
 
-	reqMethod := presignedReq.Method
+	// STS expects form-encoded request body.
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	reqURL := base64.StdEncoding.EncodeToString([]byte(presignedReq.URL))
-
-	headerBytes, err := json.Marshal(presignedReq.SignedHeader)
+	creds, err := cfg.Credentials.Retrieve(t.Context())
 	if err != nil {
-		t.Fatalf("error marshaling signed headers: %s", err)
+		t.Fatalf("Error retrieving credentials: %s", err)
 	}
+
+	signer := v4.NewSigner()
+
+	// Precomputed SHA256 hash of stsBody, required for SigV4 signing.
+	bodyHash := "b6359072c78d70ebee1e81adcbab4f01bf2c23245fa365ef83fe8f1f955085e2"
+
+	// Sign the request using AWS SigV4 (Authorization header-based signing).
+	err = signer.SignHTTP(
+		t.Context(),
+		creds,
+		req,
+		bodyHash,
+		"sts",
+		testutil.GetTestAWSRegion(t),
+		time.Now(),
+	)
+	if err != nil {
+		t.Fatalf("Error signing request: %s", err)
+	}
+
+	// Encode request components for Vault AWS auth login.
+	reqMethod := req.Method
+
+	reqURL := base64.StdEncoding.EncodeToString([]byte(req.URL.String()))
+
+	headerBytes, err := json.Marshal(req.Header)
+	if err != nil {
+		t.Fatalf("Error marshaling headers: %s", err)
+	}
+
 	reqHeaders := base64.StdEncoding.EncodeToString(headerBytes)
 
-	// The IAM GetCallerIdentity request does not require a body; an empty body
-	// is expected and accepted by both STS and Vault's AWS auth backend.
-	reqBody := base64.StdEncoding.EncodeToString([]byte(""))
+	reqBody := base64.StdEncoding.EncodeToString([]byte(stsBody))
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
