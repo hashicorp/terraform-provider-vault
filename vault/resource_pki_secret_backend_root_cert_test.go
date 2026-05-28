@@ -117,9 +117,9 @@ func TestPkiSecretBackendRootCertificate_jksBundle(t *testing.T) {
 
 	resourceName := "vault_pki_secret_backend_root_cert.test"
 	config := testPkiSecretBackendRootCertificateConfig_basic(path, `
-  format            = "jks_bundle"
-  jks_password      = "super-secure-password"
-  jks_alias         = "myapp"`)
+  format                 = "jks_bundle"
+  jks_password           = "super-secure-password"
+  jks_private_key_alias  = "myapp"`)
 
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),

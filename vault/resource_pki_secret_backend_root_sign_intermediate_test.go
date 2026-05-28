@@ -328,12 +328,10 @@ func TestPkiSecretBackendRootSignIntermediate_jks_bundle(t *testing.T) {
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
 					`format       = "jks_bundle"
-					 jks_password = "jks-password-123"
-					 jks_alias    = "intermediate-ca"`),
+					 jks_password = "jks-password-123"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldFormat, "jks_bundle"),
 					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldJKSPassword, "jks-password-123"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldJKSAlias, "intermediate-ca"),
 				),
 			},
 		},

@@ -298,7 +298,7 @@ resource "vault_pki_secret_backend_cert" "test" {
 		}
 
 		if certFields.jksAlias != "" {
-			withCertBlock += fmt.Sprintf(`  jks_alias             = "%s"
+			withCertBlock += fmt.Sprintf(`  jks_private_key_alias             = "%s"
 		`, certFields.jksAlias)
 		}
 

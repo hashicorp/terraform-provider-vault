@@ -139,17 +139,6 @@ integrity format (PBMAC1).`,
 				ForceNew: true,
 				Default:  "changeit",
 			},
-			consts.FieldJKSAlias: {
-				Type:     schema.TypeString,
-				Optional: true,
-				Description: `The entry alias in the Java keystore (JKS) when format is set to "jks_bundle" 
-				and bundle contains a single PrivateKeyEntry. This field is case-sensitive, but relying
-			on case-only differences for unique aliases is not recommended. Defaults to "1".
-			This parameter is ignored by endpoints that return TrustedCertificateEntry values
-			(JKS trust stores), and entry aliases are assigned incrementing numeric strings starting at "1".`,
-				ForceNew: true,
-				Default:  "1",
-			},
 			consts.FieldMaxPathLength: {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -405,8 +394,7 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		intermediateSignAPIFields = append(intermediateSignAPIFields,
 			consts.FieldPKCS12Password,
 			consts.FieldPKCS12Encoder,
-			consts.FieldJKSPassword,
-			consts.FieldJKSAlias)
+			consts.FieldJKSPassword)
 	}
 
 	intermediateSignBooleanAPIFields := []string{

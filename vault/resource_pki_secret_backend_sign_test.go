@@ -87,13 +87,11 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 					return !meta.IsAPISupported(provider.VaultVersion210), nil
 				},
 				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath,
-					`format = "jks_bundle"
-					 jks_password = "jks-secure-pass"
-					 jks_alias = "myapp-cert"`),
+					`format       = "jks_bundle"
+					 jks_password = "jks-secure-pass"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "jks-secure-pass"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSAlias, "myapp-cert"),
 				),
 			},
 		},
