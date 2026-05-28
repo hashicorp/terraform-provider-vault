@@ -112,7 +112,7 @@ func kvSecretBackendV2Read(_ context.Context, d *schema.ResourceData, meta inter
 
 	if _, ok := d.GetOk(consts.FieldMount); !ok {
 		// ensure that mount is set on import
-		if err := d.Set(consts.FieldMount, strings.TrimRight(path, "/config")); err != nil {
+		if err := d.Set(consts.FieldMount, strings.TrimSuffix(path, "/config")); err != nil {
 			return diag.FromErr(err)
 		}
 	}
