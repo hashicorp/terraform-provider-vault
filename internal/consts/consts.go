@@ -421,7 +421,7 @@ const (
 	FieldPKCS12Password                     = "pkcs12_password"
 	FieldPKCS12Encoder                      = "pkcs12_encoder"
 	FieldJKSPassword                        = "jks_password"
-	FieldJKSAlias                           = "jks_private_key_alias"
+	FieldJKSPrivateKeyAlias                 = "jks_private_key_alias"
 	FieldOu                                 = "ou"
 	FieldIssuingCA                          = "issuing_ca"
 	FieldSerial                             = "serial"

@@ -212,7 +212,7 @@ integrity format (PBMAC1).`,
 				ForceNew: true,
 				Default:  "changeit",
 			},
-			consts.FieldJKSAlias: {
+			consts.FieldJKSPrivateKeyAlias: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `The entry alias in the Java keystore (JKS) when format is set to "jks_bundle" 
@@ -556,7 +556,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 			consts.FieldPKCS12Password,
 			consts.FieldPKCS12Encoder,
 			consts.FieldJKSPassword,
-			consts.FieldJKSAlias)
+			consts.FieldJKSPrivateKeyAlias)
 	}
 
 	// Whether name constraints fields (other than permitted_dns_domains), are supported,

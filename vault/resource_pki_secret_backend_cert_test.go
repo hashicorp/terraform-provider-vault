@@ -169,7 +169,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "super-secure-password"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSAlias, "myapp"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPrivateKeyAlias, "myapp"),
 				),
 			},
 		},

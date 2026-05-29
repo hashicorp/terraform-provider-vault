@@ -125,7 +125,7 @@ func TestPkiSecretBackendRootCertificate_jksBundle(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "super-secure-password"),
-		resource.TestCheckResourceAttr(resourceName, consts.FieldJKSAlias, "myapp"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPrivateKeyAlias, "myapp"),
 		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
 	}
 

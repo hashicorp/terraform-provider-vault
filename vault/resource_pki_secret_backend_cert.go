@@ -136,7 +136,7 @@ integrity format (PBMAC1).`,
 				ForceNew: true,
 				Default:  "changeit",
 			},
-			consts.FieldJKSAlias: {
+			consts.FieldJKSPrivateKeyAlias: {
 				Type:     schema.TypeString,
 				Optional: true,
 				Description: `The entry alias in the Java keystore (JKS) when format is set to "jks_bundle" 
@@ -286,7 +286,7 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 			consts.FieldPKCS12Password,
 			consts.FieldPKCS12Encoder,
 			consts.FieldJKSPassword,
-			consts.FieldJKSAlias)
+			consts.FieldJKSPrivateKeyAlias)
 	}
 
 	certBooleanAPIFields := []string{
