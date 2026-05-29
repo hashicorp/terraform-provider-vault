@@ -37,7 +37,7 @@ The following arguments are supported:
 
 * `policy` - (Required) String containing a Vault policy
 
-* `allow_overwrite` - (Optional) Allow overwriting policies with the same name. Defaults to `true`. 
+* `allow_overwrite` - (Optional) Allow overwriting policies with the same name. Defaults to `true`. This will be removed in the next major release and the default behavior will be not overwrite policies. 
 
 ## Attributes Reference
 

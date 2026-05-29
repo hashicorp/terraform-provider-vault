@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -36,11 +37,12 @@ func policyResource() *schema.Resource {
 				Description: "The policy document",
 			},
 
-			"allow_overwrite": {
+			consts.FieldAllowOverwrite: {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
 				Description: "Allow overwriting an existing policy. Defaults to `true` for backwards compatibility purposes.",
+				Deprecated:  "Deprecated. Overwriting pre-existing policies will soon be removed. Use 'terraform import' to manage existing policies.",
 			},
 		},
 	}
@@ -53,12 +55,11 @@ func policyCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	name := d.Get("name").(string)
-	allowOverwrite := d.Get("allow_overwrite").(bool)
+	allowOverwrite := d.Get(consts.FieldAllowOverwrite).(bool)
 
 	existing, err := client.Sys().GetPolicy(name)
 
-	// ignore GetPolicy errors if allowOverwrite is true, for backwards compatibility
-	if err != nil && !allowOverwrite {
+	if err != nil {
 		return fmt.Errorf("error checking for existing policy %q: %s", name, err)
 	}
 
@@ -125,8 +126,8 @@ func policyRead(d *schema.ResourceData, meta interface{}) error {
 
 	allowOverwrite := true
 	if rawConfig := d.GetRawConfig(); !rawConfig.IsNull() {
-		if v := rawConfig.GetAttr("allow_overwrite"); !v.IsNull() {
-			allowOverwrite = d.Get("allow_overwrite").(bool)
+		if v := rawConfig.GetAttr(consts.FieldAllowOverwrite); !v.IsNull() {
+			allowOverwrite = d.Get(consts.FieldAllowOverwrite).(bool)
 		}
 	}
 	d.Set("allow_overwrite", allowOverwrite)

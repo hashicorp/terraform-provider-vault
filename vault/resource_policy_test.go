@@ -101,6 +101,28 @@ EOT
 
 `
 
+func TestResourcePolicy_defaultOverwrite(t *testing.T) {
+	name := acctest.RandomWithPrefix("test-")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					if err := client.Sys().PutPolicy(name, "path \"secret/*\" { capabilities = [\"read\"] }"); err != nil {
+						t.Fatalf("failed to pre-create policy %q: %s", name, err)
+					}
+				},
+				Config: testResourcePolicy_defaultOverwriteConfig(name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_policy.test", "name", name),
+				),
+			},
+		},
+	})
+}
+
 func TestResourcePolicy_allowOverwrite(t *testing.T) {
 	name := acctest.RandomWithPrefix("test-")
 	resource.Test(t, resource.TestCase{
@@ -172,6 +194,19 @@ func testResourcePolicy_updateCheck(s *terraform.State) error {
 	}
 
 	return nil
+}
+
+func testResourcePolicy_defaultOverwriteConfig(name string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "test" {
+  name            = "%s"
+  policy          = <<EOT
+path "secret/*" {
+  capabilities = ["read"]
+}
+EOT
+}
+`, name)
 }
 
 func testResourcePolicy_allowOverwriteConfig(name string) string {
