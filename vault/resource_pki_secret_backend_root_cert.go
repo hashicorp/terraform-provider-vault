@@ -45,6 +45,10 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 		},
 		SchemaVersion: 1,
 		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			if err := pkiValidateFormatField(d, meta); err != nil {
+				return err
+			}
+
 			key := consts.FieldSerialNumber
 			o, _ := d.GetChange(key)
 			// skip on new resource
@@ -172,7 +176,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  "The format of data.",
+				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion210),
 				ForceNew:     true,
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, false),

@@ -26,6 +26,9 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendRootSignIntermediateRead),
 		UpdateContext: pkiSecretBackendRootSignIntermediateUpdate,
 		DeleteContext: pkiSecretBackendCertDelete,
+		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			return pkiValidateFormatField(d, meta)
+		},
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -103,7 +106,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  "The format of data.",
+				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion210),
 				ForceNew:     true,
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, false),

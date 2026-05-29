@@ -26,7 +26,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendCertRead),
 		UpdateContext: pkiSecretBackendCertUpdate,
 		DeleteContext: pkiSecretBackendCertDelete,
-		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
+		CustomizeDiff: pkiCertResourceCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
@@ -92,7 +92,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  "The format of data.",
+				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion210),
 				ForceNew:     true,
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, false),
@@ -380,10 +380,22 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
-func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	// The Create and Read functions will both set renew_pending if
-	// the current time is after the min_seconds_remaining timestamp. During
-	// planning we respond to that by proposing automatic renewal, if enabled.
+func pkiCertResourceCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	if err := pkiValidateFormatField(d, meta); err != nil {
+		return err
+	}
+
+	if err := pkiCertPlanAutoRenewal(d); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// pkiCertPlanAutoRenewal proposes automatic renewal during planning (if enabled)
+// because the Create and Read functions will both set renew_pending if
+// the current time is after the min_seconds_remaining timestamp.
+func pkiCertPlanAutoRenewal(d *schema.ResourceDiff) error {
 	if d.Id() == "" || !d.Get(consts.FieldAutoRenew).(bool) {
 		return nil
 	}
