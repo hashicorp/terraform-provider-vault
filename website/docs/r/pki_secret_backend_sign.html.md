@@ -84,15 +84,15 @@ The following arguments are supported:
 
 * `ttl` - (Optional) Time to live
 
-* `format` - (Optional) The format of data
+* `format` - (Optional) The format of data. Valid values are "pem", "pem_bundle", "der", "pkcs12_bundle" or "jks_bundle". Values "pkcs12_bundle" and "jks_bundle" require Vault 2.1+. 
 
-* `pkcs12_password` - (Optional) Password for encrypting the PKCS#12 archive when format is set to "pkcs12_bundle". If not provided, defaults to "changeit". It is recommended to use the default password and protect the file using other means or use a high-entropy password.
+* `pkcs12_password` - (Optional) Password for encrypting the PKCS#12 archive when format is set to "pkcs12_bundle". If not provided, defaults to "changeit". It is recommended to use the default password and protect the file using other means or use a high-entropy password. Requires Vault 2.1+.
 
-* `pkcs12_encoder` - (Optional) Encoder profile to use for PKCS#12 archives when format is set to "pkcs12_bundle". Valid values are "modern2026" and "modern2023". Defaults to "modern2026", which uses the newer PKCS#12 integrity format (PBMAC1).
+* `pkcs12_encoder` - (Optional) Encoder profile to use for PKCS#12 archives when format is set to "pkcs12_bundle". Valid values are "modern2026" and "modern2023". Defaults to "modern2026", which uses the newer PKCS#12 integrity format (PBMAC1). Requires Vault 2.1+.
 
 **NOTE**: The `jks_bundle` format is provided only for compatibility with legacy systems and should be avoided for new usage. Prefer `pkcs12_bundle`.
 
-* `jks_password` - (Optional) Password for encrypting the Java keystore when format is set to "jks_bundle". If not provided, defaults to "changeit". It is recommended to use the default password and protect the file using other means or use a high-entropy password.
+* `jks_password` - (Optional) Password for encrypting the Java keystore when format is set to "jks_bundle". If not provided, defaults to "changeit". It is recommended to use the default password and protect the file using other means or use a high-entropy password. Requires Vault 2.1+.
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
 
