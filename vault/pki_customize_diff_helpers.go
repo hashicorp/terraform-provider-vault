@@ -26,7 +26,7 @@ func pkiValidateFormatField(d *schema.ResourceDiff, meta interface{}) error {
 	formatStr := format.(string)
 	switch formatStr {
 	case "pkcs12_bundle", "jks_bundle":
-		return fmt.Errorf("%q format is only supported on Vault %s or newer", formatStr, consts.VaultVersion210)
+		return fmt.Errorf("%q format is only supported on Vault %s or later", formatStr, consts.VaultVersion210)
 	default:
 		return nil
 	}

@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 
 	"net/http"
 	"strconv"
@@ -171,6 +172,35 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "super-secure-password"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPrivateKeyAlias, "myapp"),
 				),
+			},
+		},
+	})
+}
+
+// TestPkiSecretBackendCert_customizeDiffFormatVersionGate tests version-gating behavior for the format parameter.
+func TestPkiSecretBackendCert_customizeDiffFormatVersionGate(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+
+	skipVersion210OrLater := func() (bool, error) {
+		meta := testProvider.Meta().(*provider.ProviderMeta)
+		return meta.IsAPISupported(provider.VaultVersion210), nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				SkipFunc:    skipVersion210OrLater,
+				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "pkcs12_bundle"}),
+				ExpectError: regexp.MustCompile(`"pkcs12_bundle" format is only supported on Vault 2.1.0 or later`),
+			},
+			{
+				SkipFunc:    skipVersion210OrLater,
+				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "jks_bundle"}),
+				ExpectError: regexp.MustCompile(`"jks_bundle" format is only supported on Vault 2.1.0 or later`),
 			},
 		},
 	})
