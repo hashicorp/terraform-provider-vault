@@ -273,6 +273,7 @@ const (
 	FieldProviderConfig                     = "provider_config"
 	FieldNamespaceInState                   = "namespace_in_state"
 	FieldIdentityGroupIDs                   = "identity_group_ids"
+	FieldEntityAlias                        = "entity_alias"
 	FieldIdentityEntityIDs                  = "identity_entity_ids"
 	FieldWrappingAccessor                   = "wrapping_accessor"
 	FieldRoleName                           = "role_name"
@@ -315,6 +316,13 @@ const (
 	FieldRedundancyZonesJSON                = "redundancy_zones_json"
 	FieldServers                            = "servers"
 	FieldServersJSON                        = "servers_json"
+	FieldMaskingCharacter                   = "masking_character"
+	FieldTemplate                           = "template"
+	FieldTemplates                          = "templates"
+	FieldTweakSource                        = "tweak_source"
+	FieldMappingMode                        = "mapping_mode"
+	FieldStores                             = "stores"
+	FieldConvergent                         = "convergent"
 	FieldUpgradeInfo                        = "upgrade_info"
 	FieldUpgradeInfoJSON                    = "upgrade_info_json"
 	FieldMaxVersions                        = "max_versions"
@@ -411,6 +419,10 @@ const (
 	FieldAltNames                           = "alt_names"
 	FieldFormat                             = "format"
 	FieldPrivateKeyFormat                   = "private_key_format"
+	FieldPKCS12Password                     = "pkcs12_password"
+	FieldPKCS12Encoder                      = "pkcs12_encoder"
+	FieldJKSPassword                        = "jks_password"
+	FieldJKSPrivateKeyAlias                 = "jks_private_key_alias"
 	FieldOu                                 = "ou"
 	FieldIssuingCA                          = "issuing_ca"
 	FieldSerial                             = "serial"
@@ -842,6 +854,8 @@ const (
 	FieldAzureAuthMode             = "azure_auth_mode"
 	FieldSelfManaged               = "self_managed"
 	FieldRotationPolicy            = "rotation_policy"
+	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
+	FieldSecretsWOVersion          = "secrets_wo_version"
 
 	/*
 		ephemeral resource constants and write-only attributes
@@ -967,6 +981,7 @@ const (
 	VaultVersion121  = "1.21.0"
 	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
+	VaultVersion210  = "2.1.0"
 
 	/*
 		CloudFoundry auth backend field names
