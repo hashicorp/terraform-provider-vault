@@ -124,13 +124,5 @@ func policyRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("policy", policy)
 	d.Set("name", name)
 
-	allowOverwrite := true
-	if rawConfig := d.GetRawConfig(); !rawConfig.IsNull() {
-		if v := rawConfig.GetAttr(consts.FieldAllowOverwrite); !v.IsNull() {
-			allowOverwrite = d.Get(consts.FieldAllowOverwrite).(bool)
-		}
-	}
-	d.Set("allow_overwrite", allowOverwrite)
-
 	return nil
 }
