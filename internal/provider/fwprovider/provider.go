@@ -301,6 +301,10 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
+		gcpkms.NewGCPKMSEncryptEphemeralResource,
+		gcpkms.NewGCPKMSDecryptEphemeralResource,
+		gcpkms.NewGCPKMSReencryptEphemeralResource,
+		gcpkms.NewGCPKMSSignEphemeralResource,
 	}
 }
 
@@ -313,6 +317,7 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 	return []func() datasource.DataSource{
 		sys.NewActivationFlagsDataSource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
+		gcpkms.NewGCPKMSVerifyDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
 	}

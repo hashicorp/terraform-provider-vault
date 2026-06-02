@@ -641,6 +641,7 @@ const (
 
 	FieldInput                       = "input"
 	FieldKeyVersion                  = "key_version"
+	FieldKeyVersionReturned          = "key_version_returned"
 	FieldHashAlgorithm               = "hash_algorithm"
 	FieldReference                   = "reference"
 	FieldBatchInput                  = "batch_input"
@@ -670,6 +671,9 @@ const (
 	FieldNextRotationTimeSeconds     = "next_rotation_time_seconds"
 	FieldPrimaryVersion              = "primary_version"
 	FieldAdditionalAuthenticatedData = "additional_authenticated_data"
+	FieldPlaintext                   = "plaintext"
+	FieldCiphertext                  = "ciphertext"
+	FieldNewCiphertext               = "new_ciphertext"
 	FieldBindSecretID                = "bind_secret_id"
 	FieldSecretIDBoundCIDRs          = "secret_id_bound_cidrs"
 	FieldSecretIDNumUses             = "secret_id_num_uses"
