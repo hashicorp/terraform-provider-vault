@@ -23,6 +23,15 @@ func policyResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
+		SchemaVersion: 1,
+		StateUpgraders: []schema.StateUpgrader{
+			{
+				Type:    resourcePolicyResourceV0().CoreConfigSchema().ImpliedType(),
+				Upgrade: resourcePolicyUpgradeV0,
+				Version: 0,
+			},
+		},
+
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
