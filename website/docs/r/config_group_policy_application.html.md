@@ -58,7 +58,7 @@ resource "vault_config_group_policy_application" "config" {
 
 The following arguments are supported:
 
-* `group_policy_application_mode` - (Optional) Mode for group policy application. Must be either `within_namespace_hierarchy` or `any`. Defaults to `within_namespace_hierarchy`.
+* `group_policy_application_mode` - (Required) Mode for group policy application. Must be either `within_namespace_hierarchy` or `any`. Defaults to `within_namespace_hierarchy`.
   - `within_namespace_hierarchy`: Policies only apply when the token authorizing a request was created in the same namespace as the group, or a descendant namespace.
   - `any`: Group policies apply to all members of a group, regardless of what namespace the request token came from.
 
@@ -70,11 +70,11 @@ The following arguments are supported:
 
 In addition to the arguments above, the following attributes are exported:
 
-* `id` - The resource ID (always `"/sys/config/group-policy-application"`).
+* `id` - The resource ID (always `"sys/config/group-policy-application"`).
 
 ## Import
 
-The group policy application configuration can be imported using the path `/sys/config/group-policy-application`:
+The group policy application configuration can be imported using the path `sys/config/group-policy-application`:
 
 ```
 $ terraform import vault_config_group_policy_application.config /sys/config/group-policy-application
@@ -97,6 +97,14 @@ This resource can only be managed from:
 - The administrative namespace (`"admin"`)
 
 Attempting to manage this resource from any other namespace will result in an error.
+
+### Policy Application Scope
+
+**Important:** The group policy application mode only applies to ACL policies and no longer affects Sentinel RGPs for Vault ≥ 1.13.8, 1.14.4, 1.15.0.
+
+### Replication Behavior
+
+This configuration will be replicated between primary and secondary clusters. Primaries cannot have a different mode than secondaries.
 
 ## Version Requirements
 

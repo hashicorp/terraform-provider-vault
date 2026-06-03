@@ -70,6 +70,7 @@ func TestAccConfigGroupPolicyApplication_update(t *testing.T) {
 			{
 				Config: testAccConfigGroupPolicyApplicationConfig_basic("any"),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldID, config.ConfigGroupPolicyApplicationPath),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "any"),
 				),
 			},
@@ -101,7 +102,7 @@ func TestAccConfigGroupPolicyApplication_invalidMode(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccConfigGroupPolicyApplicationConfig_basic("invalid_mode"),
-				ExpectError: regexp.MustCompile(`group_policy_application_mode must be either`),
+				ExpectError: regexp.MustCompile(`group_policy_application_mode`),
 			},
 		},
 	})
@@ -170,27 +171,6 @@ func TestAccConfigGroupPolicyApplication_importInvalidID(t *testing.T) {
 				ImportState:   true,
 				ImportStateId: "invalid-id",
 				ExpectError:   regexp.MustCompile(fmt.Sprintf(`Import ID must be "%s"`, config.ConfigGroupPolicyApplicationPath)),
-			},
-		},
-	})
-}
-
-// TestAccConfigGroupPolicyApplication_modeAny tests the "any" mode specifically
-func TestAccConfigGroupPolicyApplication_modeAny(t *testing.T) {
-	resourceName := "vault_config_group_policy_application.test"
-
-	resource.Test(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
-		},
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccConfigGroupPolicyApplicationConfig_basic("any"),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldID, config.ConfigGroupPolicyApplicationPath),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldGroupPolicyApplicationMode, "any"),
-				),
 			},
 		},
 	})

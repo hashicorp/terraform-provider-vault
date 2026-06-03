@@ -84,9 +84,10 @@ func (r *ConfigGroupPolicyApplicationResource) Schema(ctx context.Context, req r
 			},
 		},
 		MarkdownDescription: "Manages the global group policy application mode for Vault Enterprise. " +
-			"This resource controls how policies attached to identity groups are applied across namespace boundaries. " +
+			"This resource controls how ACL policies attached to identity groups are applied across namespace boundaries. " +
 			"**Important:** This is a singleton resource - only one instance per Vault cluster. " +
-			"Must be managed from root or administrative namespace.",
+			"Must be managed from root or administrative namespace. " +
+			"This configuration will be replicated between primary and secondaries - primaries cannot have a different policy application mode than secondaries.",
 	}
 
 	base.MustAddBaseSchema(&resp.Schema)
@@ -264,7 +265,7 @@ func (r *ConfigGroupPolicyApplicationResource) Delete(ctx context.Context, req r
 	}
 
 	// Reset to default value instead of deleting
-	if !r.writeGroupPolicyConfig(ctx, vaultClient, modeWithinNamespaceHierarchy, &resp.Diagnostics, errutil.VaultUpdateErr) {
+	if !r.writeGroupPolicyConfig(ctx, vaultClient, modeWithinNamespaceHierarchy, &resp.Diagnostics, errutil.VaultDeleteErr) {
 		return
 	}
 
