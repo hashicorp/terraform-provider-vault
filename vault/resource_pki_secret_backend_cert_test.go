@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 
 	"net/http"
 	"strconv"
@@ -36,6 +37,20 @@ type testPKICertStore struct {
 	revokeWithKey    bool
 }
 
+type certFields struct {
+	format               string
+	jksAlias             string
+	jksPassword          string
+	notAfter             string
+	pkcs12Encoder        string
+	pkcs12Password       string
+	removeRootsFromChain bool
+	revoke               bool
+	revokeWithKey        bool
+}
+
+// TestPkiSecretBackendCert_basic tests the vault_pki_secret_backend_cert resource
+// including certificate issuance, revocation, auto-renewal, remove_roots_from_chain, and format options (PKCS12, JKS).
 func TestPkiSecretBackendCert_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
@@ -60,7 +75,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevoke, "false"),
@@ -71,7 +86,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert, expect a new one is re-issued
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{revoke: true}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevoke, "true"),
@@ -82,7 +97,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// remove the cert to test revocation flow (expect no revocation)
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", false, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					testPKICertRevocation(intermediatePath, store),
 				),
@@ -92,14 +107,14 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion113), nil
 				},
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserIds+".0", "foo"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserIds+".1", "bar"),
 				),
 			},
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, notAfter, true, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{notAfter: notAfter}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfter),
 					testCapturePKICert(resourceName, store),
@@ -107,7 +122,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert with key
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, true, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{revoke: true, revokeWithKey: true}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevokeWithKey, "true"),
@@ -118,7 +133,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// test remove_roots_from_chain = false
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "false"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
@@ -126,17 +141,72 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// test remove_roots_from_chain = true
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, true),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{removeRootsFromChain: true}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "true"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion210), nil
+				},
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
+					certFields{format: "pkcs12_bundle", pkcs12Password: "123-secure-password", pkcs12Encoder: "modern2023"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pkcs12_bundle"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Password, "123-secure-password"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Encoder, "modern2023"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion210), nil
+				},
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
+					certFields{format: "jks_bundle", jksPassword: "super-secure-password", jksAlias: "myapp"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "super-secure-password"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPrivateKeyAlias, "myapp"),
 				),
 			},
 		},
 	})
 }
 
-func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, notAfter string, withCert, revoke bool, revokeWithKey bool, removeRootsFromChain bool) string {
+// TestPkiSecretBackendCert_customizeDiffFormatVersionGate tests version-gating behavior for the format parameter.
+func TestPkiSecretBackendCert_customizeDiffFormatVersionGate(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+
+	skipVersion210OrLater := func() (bool, error) {
+		meta := testProvider.Meta().(*provider.ProviderMeta)
+		return meta.IsAPISupported(provider.VaultVersion210), nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				SkipFunc:    skipVersion210OrLater,
+				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "pkcs12_bundle"}),
+				ExpectError: regexp.MustCompile(`"pkcs12_bundle" format is only supported on Vault 2.1.0 or later`),
+			},
+			{
+				SkipFunc:    skipVersion210OrLater,
+				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "jks_bundle"}),
+				ExpectError: regexp.MustCompile(`"jks_bundle" format is only supported on Vault 2.1.0 or later`),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert bool, certFields certFields) string {
 	fragments := []string{
 		fmt.Sprintf(`
 resource "vault_mount" "test-root" {
@@ -219,22 +289,47 @@ resource "vault_pki_secret_backend_cert" "test" {
   min_seconds_remaining = 60
 `
 
-		if notAfter != "" {
+		if certFields.notAfter != "" {
 			withCertBlock += fmt.Sprintf(`  not_after             = "%s"
-`, notAfter)
+`, certFields.notAfter)
 		}
 
-		if revokeWithKey {
+		if certFields.revokeWithKey {
 			withCertBlock += `  revoke_with_key       = true
 `
 		} else {
 			withCertBlock += fmt.Sprintf(`  revoke                = %t
-`, revoke)
+`, certFields.revoke)
 		}
 
-		if removeRootsFromChain {
+		if certFields.removeRootsFromChain {
 			withCertBlock += `  remove_roots_from_chain = true
 `
+		}
+
+		if certFields.format != "" {
+			withCertBlock += fmt.Sprintf(`  format                = "%s"
+		`, certFields.format)
+		}
+
+		if certFields.pkcs12Password != "" {
+			withCertBlock += fmt.Sprintf(`  pkcs12_password       = "%s"
+		`, certFields.pkcs12Password)
+		}
+
+		if certFields.pkcs12Encoder != "" {
+			withCertBlock += fmt.Sprintf(`  pkcs12_encoder        = "%s"
+		`, certFields.pkcs12Encoder)
+		}
+
+		if certFields.jksPassword != "" {
+			withCertBlock += fmt.Sprintf(`  jks_password          = "%s"
+		`, certFields.jksPassword)
+		}
+
+		if certFields.jksAlias != "" {
+			withCertBlock += fmt.Sprintf(`  jks_private_key_alias             = "%s"
+		`, certFields.jksAlias)
 		}
 
 		withCertBlock += "}"

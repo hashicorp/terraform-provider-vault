@@ -26,7 +26,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendCertRead),
 		UpdateContext: pkiSecretBackendCertUpdate,
 		DeleteContext: pkiSecretBackendCertDelete,
-		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
+		CustomizeDiff: pkiCertResourceCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
@@ -92,10 +92,10 @@ func pkiSecretBackendCertResource() *schema.Resource {
 			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  "The format of data.",
+				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion210),
 				ForceNew:     true,
 				Default:      "pem",
-				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, false),
 			},
 			consts.FieldPrivateKeyFormat: {
 				Type:         schema.TypeString,
@@ -104,6 +104,48 @@ func pkiSecretBackendCertResource() *schema.Resource {
 				ForceNew:     true,
 				Default:      "der",
 				ValidateFunc: validation.StringInSlice([]string{"der", "pkcs8"}, false),
+			},
+			consts.FieldPKCS12Password: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Password for encrypting the PKCS#12 
+		archive when format is set to "pkcs12_bundle". If not provided, 
+		defaults to "changeit". It is recommended to use the default password
+		and protect the file using other means or use a high-entropy password.`,
+				ForceNew: true,
+				Default:  "changeit",
+			},
+			consts.FieldPKCS12Encoder: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Encoder profile to use for PKCS#12 archives when 
+format is set to "pkcs12_bundle". Valid values are "modern2026" and 
+"modern2023". Defaults to "modern2026", which uses the newer PKCS#12 
+integrity format (PBMAC1).`,
+				ForceNew:     true,
+				Default:      "modern2026",
+				ValidateFunc: validation.StringInSlice([]string{"modern2026", "modern2023"}, false),
+			},
+			consts.FieldJKSPassword: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Password for encrypting the Java keystore
+		when format is set to "jks_bundle". If not provided, 
+		defaults to "changeit". It is recommended to use the default password
+		and protect the file using other means or use a high-entropy password.`,
+				ForceNew: true,
+				Default:  "changeit",
+			},
+			consts.FieldJKSPrivateKeyAlias: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `The entry alias in the Java keystore (JKS) when format is set to "jks_bundle" 
+				and bundle contains a single PrivateKeyEntry. This field is case-sensitive, but relying
+			on case-only differences for unique aliases is not recommended. Defaults to "1".
+			This parameter is ignored by endpoints that return TrustedCertificateEntry values
+			(JKS trust stores), and entry aliases are assigned incrementing numeric strings starting at "1".`,
+				ForceNew: true,
+				Default:  "1",
 			},
 			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
@@ -238,6 +280,14 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldPrivateKeyFormat,
 		consts.FieldNotAfter,
 	}
+	// Only add additional format parameters if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		certAPIFields = append(certAPIFields,
+			consts.FieldPKCS12Password,
+			consts.FieldPKCS12Encoder,
+			consts.FieldJKSPassword,
+			consts.FieldJKSPrivateKeyAlias)
+	}
 
 	certBooleanAPIFields := []string{
 		consts.FieldExcludeCNFromSans,
@@ -330,33 +380,15 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
-func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	// The Create and Read functions will both set renew_pending if
-	// the current time is after the min_seconds_remaining timestamp. During
-	// planning we respond to that by proposing automatic renewal, if enabled.
-	if d.Id() == "" || !d.Get(consts.FieldAutoRenew).(bool) {
-		return nil
-	}
-	if d.Get(consts.FieldRenewPending).(bool) {
-		log.Printf("[DEBUG] certificate %q is due for renewal", d.Id())
-		if err := d.SetNewComputed(consts.FieldCertificate); err != nil {
-			return err
-		}
-
-		if err := d.ForceNew(consts.FieldCertificate); err != nil {
-			return err
-		}
-
-		// Renewing the certificate will reset the value of renew_pending
-		d.SetNewComputed(consts.FieldRenewPending)
-		if err := d.ForceNew(consts.FieldRenewPending); err != nil {
-			return err
-		}
-
-		return nil
+func pkiCertResourceCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	if err := pkiValidateFormatField(d, meta); err != nil {
+		return err
 	}
 
-	log.Printf("[DEBUG] certificate %q is not due for renewal", d.Id())
+	if err := pkiCertPlanAutoRenewal(d); err != nil {
+		return err
+	}
+
 	return nil
 }
 

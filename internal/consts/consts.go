@@ -418,6 +418,10 @@ const (
 	FieldAltNames                           = "alt_names"
 	FieldFormat                             = "format"
 	FieldPrivateKeyFormat                   = "private_key_format"
+	FieldPKCS12Password                     = "pkcs12_password"
+	FieldPKCS12Encoder                      = "pkcs12_encoder"
+	FieldJKSPassword                        = "jks_password"
+	FieldJKSPrivateKeyAlias                 = "jks_private_key_alias"
 	FieldOu                                 = "ou"
 	FieldIssuingCA                          = "issuing_ca"
 	FieldSerial                             = "serial"
@@ -962,6 +966,7 @@ const (
 	VaultVersion121  = "1.21.0"
 	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
+	VaultVersion210  = "2.1.0"
 
 	/*
 		CloudFoundry auth backend field names
