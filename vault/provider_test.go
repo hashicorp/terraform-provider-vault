@@ -6,12 +6,13 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"io/ioutil"
 	"os"
 	"path"
 	"sync"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -287,17 +288,10 @@ resource "vault_auth_backend" "approle" {
 	path = "approle"
 }
 
-resource "vault_policy" "admin" {
-    name = "admin"
-	policy = <<EOT
-path "*" { capabilities = ["create", "read", "update", "delete", "list", "sudo"] }
-EOT
-}
-
 resource "vault_approle_auth_backend_role" "admin" {
     backend = vault_auth_backend.approle.path
 	role_name = "admin"
-	token_policies = [vault_policy.admin.name]
+	token_policies = ["default"]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "admin" {

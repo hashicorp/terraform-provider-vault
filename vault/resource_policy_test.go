@@ -28,6 +28,12 @@ func TestResourcePolicy(t *testing.T) {
 				Check:  testResourcePolicy_initialCheck(name),
 			},
 			{
+				ResourceName:            "vault_policy.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"allow_overwrite"},
+			},
+			{
 				Config: testResourcePolicy_updateConfig,
 				Check:  testResourcePolicy_updateCheck,
 			},

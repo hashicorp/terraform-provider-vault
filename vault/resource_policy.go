@@ -23,15 +23,6 @@ func policyResource() *schema.Resource {
 			State: schema.ImportStatePassthrough,
 		},
 
-		SchemaVersion: 1,
-		StateUpgraders: []schema.StateUpgrader{
-			{
-				Type:    resourcePolicyResourceV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: resourcePolicyUpgradeV0,
-				Version: 0,
-			},
-		},
-
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
@@ -49,6 +40,7 @@ func policyResource() *schema.Resource {
 			consts.FieldAllowOverwrite: {
 				Type:        schema.TypeBool,
 				Optional:    true,
+				Default:     true,
 				Description: "Allow overwriting an existing policy. Defaults to `true` for backwards compatibility purposes.",
 				Deprecated:  "Deprecated. Overwriting pre-existing policies will soon be removed. Use 'terraform import' to manage existing policies.",
 			},
@@ -64,10 +56,7 @@ func policyCreate(d *schema.ResourceData, meta interface{}) error {
 
 	name := d.Get("name").(string)
 
-	allowOverwrite := true
-	if v, ok := d.GetOk(consts.FieldAllowOverwrite); ok {
-		allowOverwrite = v.(bool)
-	}
+	allowOverwrite := d.Get(consts.FieldAllowOverwrite).(bool)
 
 	existing, err := client.Sys().GetPolicy(name)
 
