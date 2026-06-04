@@ -44,6 +44,7 @@ func TestManagedKeys(t *testing.T) {
 						consts.FieldKeyBits:   "2048",
 						consts.FieldKeyType:   "RSA",
 						consts.FieldKMSKey:    "alias/test_identifier_string",
+						consts.FieldUsages:    "sign,unwrap,verify,wrap",
 					}
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
@@ -130,6 +131,7 @@ func TestManagedKeys(t *testing.T) {
 						consts.FieldKeyBits:   "4096",
 						consts.FieldKeyType:   "RSA",
 						consts.FieldKMSKey:    "alias/test_identifier_string_2",
+						consts.FieldUsages:    "sign,unwrap,verify,wrap",
 					}
 
 					_, err = client.Logical().Write(p, data)
@@ -225,6 +227,7 @@ resource "vault_managed_keys" "test" {
     key_bits   = "2048"
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string"
+	usages     = ["sign", "verify", "wrap", "unwrap"]
   }
 
   aws {
@@ -234,6 +237,7 @@ resource "vault_managed_keys" "test" {
     key_bits   = "4096"
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string_2"
+	usages     = ["sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name0, name1)
@@ -249,6 +253,7 @@ resource "vault_managed_keys" "test" {
     key_bits   = "4096"
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string_2"
+	usages     = ["sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name)
@@ -266,6 +271,7 @@ resource "vault_managed_keys" "test" {
     pin                = "%s"
     mechanism          = "0x0001"
     max_parallel       = 2
+		usages             = ["sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, library, slot, pin)
@@ -281,6 +287,7 @@ resource "vault_managed_keys" "test" {
     slot               = "%s"
     pin                = "%s"
     mechanism          = "0x0001"
+		usages             = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, library, slot, pin)
@@ -344,6 +351,7 @@ func TestManagedKeysGCP(t *testing.T) {
 						consts.FieldRegion:      region,
 						consts.FieldCryptoKey:   "test-crypto-key",
 						consts.FieldAlgorithm:   "ec_sign_p256_sha256",
+						consts.FieldUsages:      "decrypt,encrypt,sign,unwrap,verify,wrap",
 					}
 					if _, err := client.Logical().Write(p, data); err != nil {
 						t.Fatalf("failed to recreate GCP managed key %q: %s", p, err)
@@ -393,6 +401,7 @@ func TestManagedKeysGCP_PreExistingConflict(t *testing.T) {
 						consts.FieldRegion:      region,
 						consts.FieldCryptoKey:   "existing-key",
 						consts.FieldAlgorithm:   "ec_sign_p256_sha256",
+						consts.FieldUsages:      "decrypt,encrypt,sign,unwrap,verify,wrap",
 					}
 					if _, err := client.Logical().Write(p, data); err != nil {
 						t.Fatalf("failed to pre-create GCP managed key %q: %s", p, err)
@@ -823,6 +832,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key"
     algorithm   = "ec_sign_p256_sha256"
+		usages      = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -846,6 +856,7 @@ GCPCREDS
     allow_replace_key  = true
     allow_store_key    = true
     any_mount          = true
+		usages             = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -864,6 +875,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-update"
     algorithm   = "ec_sign_p256_sha256"
+		usages      = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -882,6 +894,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-update-2"
     algorithm   = "rsa_sign_pkcs1_2048_sha256"
+		usages      = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -900,6 +913,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-0"
     algorithm   = "ec_sign_p256_sha256"
+		usages      = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 
   gcp {
@@ -912,6 +926,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-1"
     algorithm   = "rsa_sign_pkcs1_2048_sha256"
+		usages      = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name0, credentials, project, keyRing, region, name1, credentials, project, keyRing, region)
@@ -930,6 +945,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-invalid"
     algorithm   = "invalid_algorithm_12345"
+		usages      = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
