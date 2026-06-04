@@ -88,3 +88,30 @@ The following attributes are exported in addition to the above:
   (for ex.
   `{kv_624bea/aws-token/dev: "2024-03-21T12:42:02.558533-07:00",
   kv_624bea/aws-token/prod: "2024-03-21T12:42:02.558533-07:00"}`).
+
+## Import
+
+~> **Important:** This resource only supports identity-based import and requires Terraform v1.12.0 or later. Traditional ID string-based import is not supported.
+
+Secrets sync associations can be imported using the identity-based import block:
+
+```hcl
+import {
+  to = vault_secrets_sync_association.gh_token
+  identity = {
+    type        = "gh"
+    name        = "gh-dest"
+    mount       = "kvv2"
+    secret_name = "token"
+  }
+}
+
+resource "vault_secrets_sync_association" "gh_token" {
+  name        = "gh-dest"
+  type        = "gh"
+  mount       = "kvv2"
+  secret_name = "token"
+}
+```
+
+**Note:** All four identity fields (`type`, `name`, `mount`, `secret_name`) are required for identity-based import.

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -19,8 +18,6 @@ import (
 	syncutil "github.com/hashicorp/terraform-provider-vault/internal/sync"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
-
-var syncAssociationFieldsFromIDRegex = regexp.MustCompile("^(.+)/dest/(.+)/mount/(.+)/secret/(.+)$")
 
 const (
 	fieldSecretName = "secret_name"
@@ -35,7 +32,62 @@ func secretsSyncAssociationResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(secretsSyncAssociationRead),
 		DeleteContext: secretsSyncAssociationDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: func(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+				// Check if user is trying to use traditional ID-based import
+				if d.Id() != "" {
+					return nil, fmt.Errorf("traditional ID-based import is not supported. Please use identity-based import with the following format:\n\n"+
+						"import {\n"+
+						"  to = vault_secrets_sync_association.example\n"+
+						"  identity = {\n"+
+						"    type        = \"destination-type\"  # e.g., \"gh\", \"aws-sm\", \"vercel-project\"\n"+
+						"    name        = \"destination-name\"  # e.g., \"my-destination\"\n"+
+						"    mount       = \"mount-path\"        # e.g., \"kvv2\"\n"+
+						"    secret_name = \"secret-name\"       # e.g., \"my-secret\"\n"+
+						"  }\n"+
+						"}\n\n"+
+						"For your import ID %q, use:\n"+
+						"  type        = Extract from your ID\n"+
+						"  name        = Extract from your ID\n"+
+						"  mount       = Extract from your ID\n"+
+						"  secret_name = Extract from your ID", d.Id())
+				}
+
+				// Only support identity-based import
+				identity, err := d.Identity()
+				if err != nil {
+					return nil, fmt.Errorf("error getting identity: %s", err)
+				}
+
+				// Get all fields from identity
+				destType := identity.Get(consts.FieldType).(string)
+				name := identity.Get(consts.FieldName).(string)
+				mount := identity.Get(consts.FieldMount).(string)
+				secretName := identity.Get(fieldSecretName).(string)
+
+				// Validate that all required fields are provided
+				if destType == "" || name == "" || mount == "" || secretName == "" {
+					return nil, fmt.Errorf("all identity fields are required: type, name, mount, and secret_name must be provided")
+				}
+
+				// Set all identity fields to state
+				if err := d.Set(consts.FieldType, destType); err != nil {
+					return nil, err
+				}
+				if err := d.Set(consts.FieldName, name); err != nil {
+					return nil, err
+				}
+				if err := d.Set(consts.FieldMount, mount); err != nil {
+					return nil, err
+				}
+				if err := d.Set(fieldSecretName, secretName); err != nil {
+					return nil, err
+				}
+
+				// Set the ID
+				d.SetId(fmt.Sprintf("%s/dest/%s/mount/%s/secret/%s", destType, name, mount, secretName))
+
+				return []*schema.ResourceData{d}, nil
+			},
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -89,6 +141,28 @@ func secretsSyncAssociationResource() *schema.Resource {
 				},
 			},
 		},
+		Identity: &schema.ResourceIdentity{
+			SchemaFunc: func() map[string]*schema.Schema {
+				return map[string]*schema.Schema{
+					consts.FieldType: {
+						Type:              schema.TypeString,
+						RequiredForImport: true,
+					},
+					consts.FieldName: {
+						Type:              schema.TypeString,
+						RequiredForImport: true,
+					},
+					consts.FieldMount: {
+						Type:              schema.TypeString,
+						RequiredForImport: true,
+					},
+					fieldSecretName: {
+						Type:              schema.TypeString,
+						RequiredForImport: true,
+					},
+				}
+			},
+		},
 	}
 }
 
@@ -122,6 +196,7 @@ func secretsSyncAssociationWrite(ctx context.Context, d *schema.ResourceData, me
 	id := fmt.Sprintf("%s/dest/%s/mount/%s/secret/%s", destType, name, mount, secretName)
 	d.SetId(id)
 
+	// Identity data will be set by the Read function
 	return secretsSyncAssociationRead(ctx, d, meta)
 }
 
@@ -131,16 +206,11 @@ func secretsSyncAssociationRead(ctx context.Context, d *schema.ResourceData, met
 		return diag.FromErr(e)
 	}
 
-	id := d.Id()
-	fields, err := syncAssociationFieldsFromID(id)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	typ := fields[0]
-	destName := fields[1]
-	mount := fields[2]
-	secretName := fields[3]
+	// Get fields from resource data instead of parsing ID
+	typ := d.Get(consts.FieldType).(string)
+	destName := d.Get(consts.FieldName).(string)
+	mount := d.Get(consts.FieldMount).(string)
+	secretName := d.Get(fieldSecretName).(string)
 
 	if err := d.Set(fieldSecretName, secretName); err != nil {
 		return diag.FromErr(err)
@@ -155,6 +225,28 @@ func secretsSyncAssociationRead(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	if err := d.Set(consts.FieldMount, mount); err != nil {
+		return diag.FromErr(err)
+	}
+
+	// Update identity data during read
+	identity, err := d.Identity()
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := identity.Set(consts.FieldType, typ); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := identity.Set(consts.FieldName, destName); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := identity.Set(consts.FieldMount, mount); err != nil {
+		return diag.FromErr(err)
+	}
+
+	if err := identity.Set(fieldSecretName, secretName); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -205,16 +297,11 @@ func secretsSyncAssociationDelete(ctx context.Context, d *schema.ResourceData, m
 		return diag.FromErr(e)
 	}
 
-	id := d.Id()
-	fields, err := syncAssociationFieldsFromID(id)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	destType := fields[0]
-	destName := fields[1]
-	mount := fields[2]
-	secretName := fields[3]
+	// Get fields from resource data instead of parsing ID
+	destType := d.Get(consts.FieldType).(string)
+	destName := d.Get(consts.FieldName).(string)
+	mount := d.Get(consts.FieldMount).(string)
+	secretName := d.Get(fieldSecretName).(string)
 
 	path := secretsSyncAssociationDeletePath(destName, destType)
 
@@ -224,7 +311,7 @@ func secretsSyncAssociationDelete(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	log.Printf("[DEBUG] Removing association from %q", path)
-	_, err = client.Logical().WriteWithContext(ctx, path, data)
+	_, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
 		return diag.Errorf("error removing secrets sync association %q: %s", path, err)
 	}
@@ -287,19 +374,4 @@ func getSyncAssociationModelFromResponse(resp *api.Secret) (*syncAssociationMode
 	}
 
 	return model, nil
-}
-
-func syncAssociationFieldsFromID(id string) ([]string, error) {
-	if !syncAssociationFieldsFromIDRegex.MatchString(id) {
-		return nil, fmt.Errorf("regex did not match")
-	}
-	res := syncAssociationFieldsFromIDRegex.FindStringSubmatch(id)
-	// 5 matches
-	// full string itself
-	// 4 desired fields
-	if len(res) != 5 {
-		return nil, fmt.Errorf("unexpected number of matches (%d) for fields; "+""+
-			"format=:type/dest/:destination/mount/:mount/secret/:secretName", len(res))
-	}
-	return res[1:], nil
 }
