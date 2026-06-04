@@ -77,7 +77,7 @@ In addition to the arguments above, the following attributes are exported:
 The group policy application configuration can be imported using the path `sys/config/group-policy-application`:
 
 ```
-$ terraform import vault_config_group_policy_application.config /sys/config/group-policy-application
+$ terraform import vault_config_group_policy_application.config sys/config/group-policy-application
 ```
 
 ## Behavior Notes
