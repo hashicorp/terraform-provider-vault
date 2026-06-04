@@ -718,8 +718,8 @@ func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *a
 }
 
 // atLeastOne doesn't work in SDKv2 if the fields in question are in a nested block
-func validateConfigData(name string, data map[string]interface{}) error {
-	if name != consts.FieldPKCS {
+func validateConfigData(providerType string, data map[string]interface{}) error {
+	if providerType != consts.FieldPKCS {
 		return nil
 	}
 	_, okID := data[consts.FieldKeyID]
