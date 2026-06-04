@@ -12,9 +12,9 @@ FEATURES:
 * **New Ephemeral Resource**: `vault_token` for creating Vault tokens with automatic revocation. Supports service and batch tokens, as well as entity alias association, which was not supported in the SDKv2 resource. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Add support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
 
-IMPROVEMENTS:
+IMPROVEMENTS: 
 
-* Added Plugin Framework helper functions for Vault mount operations to support incremental migration from SDKv2. These internal helpers provide CRUD operations for mounts using Plugin Framework types.
+* Added Plugin Framework `mount_helpers` for Vault mount operations to support incremental migration from SDKv2. These internal helpers provide CRUD operations for self managing mounts for resources using Plugin Framework types. ([#2917](https://github.com/hashicorp/terraform-provider-vault/pull/2917))
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
 
