@@ -262,10 +262,6 @@ func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 
 	start := time.Now()
 
-	// TODO: Retry loop does not respect user cancellation due to schema SDK limitations.
-	// This should be addressed when migrating to the Terraform Plugin Framework,
-	// which provides context-aware Read operations.
-
 	for sequentialSuccesses < sequentialSuccessesRequired {
 		if time.Since(start) > sequentialSuccessTimeLimit {
 			return diag.FromErr(fmt.Errorf(
@@ -279,11 +275,15 @@ func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 		}
 	}
 
-	// TODO: This sleep does not respect user cancellation due to schema SDK limitations.
-	// Address this when migrating to the Terraform Plugin Framework.
-
+	// Use select instead of time.Sleep so that user cancellation (e.g. Ctrl+C)
+	// is honoured during the propagation wait. time.Sleep blocks unconditionally
+	// and cannot be interrupted by context cancellation.
 	log.Printf("[DEBUG] Waiting an additional %.f seconds for new credentials to propagate...", propagationBuffer.Seconds())
-	time.Sleep(propagationBuffer)
+	select {
+	case <-ctx.Done():
+		return diag.FromErr(fmt.Errorf("propagation wait cancelled: %w", ctx.Err()))
+	case <-time.After(propagationBuffer):
+	}
 	return nil
 }
 
