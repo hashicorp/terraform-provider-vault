@@ -74,6 +74,7 @@ const (
 	FieldPathWrapTTL                        = "path_wrap_ttl"
 	FieldName                               = "name"
 	FieldValues                             = "values"
+	FieldGroupPolicyApplicationMode         = "group_policy_application_mode"
 	FieldVersion                            = "version"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
