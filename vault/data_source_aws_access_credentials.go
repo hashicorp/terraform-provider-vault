@@ -188,17 +188,25 @@ func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 		config.WithHTTPClient(cleanhttp.DefaultClient()),
 	}
 
-	// Default to us-east-1 when no region is provided, since IAM and STS are global services
-	// and require a region to be set in the AWS SDK v2 configuration.
+	// If a region is explicitly provided, use it. Otherwise, allow the AWS SDK to
+	// resolve the region from the environment or shared config. As a last resort,
+	// fall back to us-east-1 since IAM and STS require a region in SDK v2.
+
 	region := d.Get("region").(string)
-	if region == "" {
-		region = "us-east-1"
+
+	// Only set region if user explicitly provided it
+	if region != "" {
+		optFns = append(optFns, config.WithRegion(region))
 	}
-	optFns = append(optFns, config.WithRegion(region))
 
 	cfg, err := config.LoadDefaultConfig(ctx, optFns...)
 	if err != nil {
 		return diag.FromErr(fmt.Errorf("failed to load AWS SDK configuration: %w", err))
+	}
+
+	// Fallback only if NOTHING provided a region
+	if cfg.Region == "" {
+		cfg.Region = "us-east-1"
 	}
 
 	iamconn := iam.NewFromConfig(cfg)
@@ -253,6 +261,11 @@ func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 	}
 
 	start := time.Now()
+
+	// TODO: Retry loop does not respect user cancellation due to schema SDK limitations.
+	// This should be addressed when migrating to the Terraform Plugin Framework,
+	// which provides context-aware Read operations.
+
 	for sequentialSuccesses < sequentialSuccessesRequired {
 		if time.Since(start) > sequentialSuccessTimeLimit {
 			return diag.FromErr(fmt.Errorf(
@@ -265,6 +278,9 @@ func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 			return diag.FromErr(fmt.Errorf("AWS credentials validation failed after retries: %w", err))
 		}
 	}
+
+	// TODO: This sleep does not respect user cancellation due to schema SDK limitations.
+	// Address this when migrating to the Terraform Plugin Framework.
 
 	log.Printf("[DEBUG] Waiting an additional %.f seconds for new credentials to propagate...", propagationBuffer.Seconds())
 	time.Sleep(propagationBuffer)

@@ -55,7 +55,8 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 
 	// Construct STS GetCallerIdentity request matching Vault IAM auth expectations.
 	stsBody := "Action=GetCallerIdentity&Version=2011-06-15"
-	stsEndpoint := "https://sts.amazonaws.com/"
+	region := testutil.GetTestAWSRegion(t)
+	stsEndpoint := fmt.Sprintf("https://sts.%s.amazonaws.com", region)
 
 	req, err := http.NewRequest("POST", stsEndpoint, strings.NewReader(stsBody))
 	if err != nil {
@@ -94,7 +95,12 @@ func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 
 	reqURL := base64.StdEncoding.EncodeToString([]byte(req.URL.String()))
 
-	headerBytes, err := json.Marshal(req.Header)
+	headers := req.Header.Clone()
+	if headers.Get("Host") == "" {
+		headers.Set("Host", req.URL.Host)
+	}
+	headerBytes, err := json.Marshal(headers)
+
 	if err != nil {
 		t.Fatalf("Error marshaling headers: %s", err)
 	}
@@ -135,13 +141,13 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 
 	iamInfoOutput, err := metadataClient.GetIAMInfo(t.Context(), &imds.GetIAMInfoInput{})
 	if err != nil {
-		t.Errorf("Error retrieving IAM info for instance: %s", err)
+		t.Fatalf("Error retrieving IAM info for instance: %s", err)
 	}
 	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
 	docOutput, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
-		t.Errorf("Error retrieving instance identity document: %s", err)
+		t.Fatalf("Error retrieving instance identity document: %s", err)
 	}
 	ami := docOutput.ImageID
 	account := docOutput.AccountID
@@ -159,7 +165,7 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 
 	pkcs7Bytes, err := io.ReadAll(pkcs7Output.Content)
 	if err != nil {
-		t.Errorf("Error reading pkcs7 content: %s", err)
+		t.Fatalf("Error reading pkcs7 content: %s", err)
 	}
 	pkcs7 := strings.Replace(string(pkcs7Bytes), "\n", "", -1)
 
@@ -195,13 +201,13 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 
 	iamInfoOutput, err := metadataClient.GetIAMInfo(t.Context(), &imds.GetIAMInfoInput{})
 	if err != nil {
-		t.Errorf("Error retrieving IAM info for instance: %s", err)
+		t.Fatalf("Error retrieving IAM info for instance: %s", err)
 	}
 	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
 	docOutput, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
-		t.Errorf("Error retrieving instance identity document: %s", err)
+		t.Fatalf("Error retrieving instance identity document: %s", err)
 	}
 	ami := docOutput.ImageID
 	account := docOutput.AccountID
