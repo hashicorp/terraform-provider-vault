@@ -6,14 +6,18 @@ package sys
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/vault/api"
 
@@ -24,6 +28,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+// Regex to validate display_name doesn't contain forward slashes
+// Forward slashes are not allowed because they are used as delimiters during import
+var displayNameRegexp = regexp.MustCompile(`^[^/]+$`)
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
 var _ resource.ResourceWithConfigure = &AgentRegistrationResource{}
@@ -92,6 +100,9 @@ func (r *AgentRegistrationResource) Schema(ctx context.Context, req resource.Sch
 			consts.FieldDisplayName: schema.StringAttribute{
 				MarkdownDescription: "Human-readable name for the agent registration.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(displayNameRegexp, "must not contain forward slashes (/)"),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -249,7 +260,30 @@ func (r *AgentRegistrationResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	r.readFromVault(ctx, client, &data, &resp.Diagnostics, true)
+	// Prefer reading by ID, fall back to display_name for import
+	var path string
+	if !data.ID.IsNull() && !data.ID.IsUnknown() && data.ID.ValueString() != "" {
+		path = r.registrationByIDPath(data.ID.ValueString())
+	} else {
+		path = r.registrationByNamePath(data.DisplayName.ValueString())
+	}
+
+	readResp, err := client.Logical().ReadWithContext(ctx, path)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			errutil.VaultReadErr(err),
+		)
+		return
+	}
+
+	// If resource no longer exists in Vault, remove from state
+	if readResp == nil || readResp.Data == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	// Parse the response into the model
+	r.parseVaultResponse(ctx, readResp.Data, &data, &resp.Diagnostics, true)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -412,15 +446,20 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 		return
 	}
 
-	if readResp == nil {
+	if readResp == nil || readResp.Data == nil {
 		diags.AddError(
 			errutil.VaultReadResponseNil(),
 		)
 		return
 	}
 
+	r.parseVaultResponse(ctx, readResp.Data, data, diags, updateTimestamps)
+}
+
+// parseVaultResponse parses Vault API response data into the model
+func (r *AgentRegistrationResource) parseVaultResponse(ctx context.Context, vaultData map[string]interface{}, data *AgentRegistrationModel, diags *diag.Diagnostics, updateTimestamps bool) {
 	var apiModel AgentRegistrationAPIModel
-	err = model.ToAPIModel(readResp.Data, &apiModel)
+	err := model.ToAPIModel(vaultData, &apiModel)
 	if err != nil {
 		diags.AddError("Unable to translate Vault response data", err.Error())
 		return
@@ -473,7 +512,7 @@ func (r *AgentRegistrationResource) registerPath() string {
 }
 
 func (r *AgentRegistrationResource) registrationByNamePath(name string) string {
-	return fmt.Sprintf("agent-registry/registration/display-name/%s", name)
+	return fmt.Sprintf("agent-registry/registration/display-name/%s", url.PathEscape(name))
 }
 
 func (r *AgentRegistrationResource) registrationByIDPath(id string) string {
