@@ -12,6 +12,7 @@ FEATURES:
 * **New Ephemeral Resource**: `vault_token` for creating Vault tokens with automatic revocation. Supports service and batch tokens, as well as entity alias association, which was not supported in the SDKv2 resource. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * **New Resource**: `vault_config_group_policy_application` - Manages the global group policy application mode for Vault Enterprise. Controls how policies attached to identity groups are applied across namespace boundaries. Supports `within_namespace_hierarchy` (default) and `any` modes. Requires Vault Enterprise 1.13.8+. ([#2863](https://github.com/hashicorp/terraform-provider-vault/pull/2863))
 * Add support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
+* Add support for `use_private_ip` for private CloudSQL instances (PostgreSQL) ([#2833](https://github.com/hashicorp/terraform-provider-vault/pull/2833))
 
 IMPROVEMENTS: 
 
