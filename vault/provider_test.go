@@ -288,10 +288,17 @@ resource "vault_auth_backend" "approle" {
 	path = "approle"
 }
 
+resource "vault_policy" "admin" {
+    name = "admin"
+	policy = <<EOT
+path "*" { capabilities = ["create", "read", "update", "delete", "list", "sudo"] }
+EOT
+}
+
 resource "vault_approle_auth_backend_role" "admin" {
     backend = vault_auth_backend.approle.path
 	role_name = "admin"
-	token_policies = ["default"]
+	token_policies = [vault_policy.admin.name]
 }
 
 resource "vault_approle_auth_backend_role_secret_id" "admin" {
