@@ -242,6 +242,7 @@ const (
 	FieldAlgorithm                          = "algorithm"
 	FieldDigits                             = "digits"
 	FieldSkew                               = "skew"
+	FieldEnableSelfEnrollment               = "enable_self_enrollment"
 	FieldMaxValidationAttempts              = "max_validation_attempts"
 	FieldOrgName                            = "org_name"
 	FieldAPIToken                           = "api_token"
