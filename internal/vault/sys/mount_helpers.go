@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/vault/api"
 
@@ -34,7 +35,10 @@ func GetMountAttributes(excludes ...string) map[string]schema.Attribute {
 		},
 		consts.FieldType: schema.StringAttribute{
 			MarkdownDescription: "Type of the backend, such as 'aws'",
-			Computed:            true,
+			Required:            true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.RequiresReplace(),
+			},
 		},
 		consts.FieldDescription: schema.StringAttribute{
 			MarkdownDescription: "Human-friendly description of the mount",
