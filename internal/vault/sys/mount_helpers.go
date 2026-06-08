@@ -11,6 +11,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/vault/api"
 
@@ -19,60 +23,227 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
-// MountInput contains the configuration for creating or updating a mount.
-// This mirrors the structure used in SDKv2 but uses Plugin Framework types.
-type MountInput struct {
-	Path                      types.String
-	Type                      types.String
-	Description               types.String
-	DefaultLeaseTTLSeconds    types.Int64
-	MaxLeaseTTLSeconds        types.Int64
-	ForceNoCache              types.Bool
-	AuditNonHMACRequestKeys   types.List
-	AuditNonHMACResponseKeys  types.List
-	ListingVisibility         types.String
-	PassthroughRequestHeaders types.List
-	AllowedResponseHeaders    types.List
-	PluginVersion             types.String
-	AllowedManagedKeys        types.Set
-	DelegatedAuthAccessors    types.List
-	IdentityTokenKey          types.String
-	Options                   types.Map
-	SealWrap                  types.Bool
-	ExternalEntropyAccess     types.Bool
-	Local                     types.Bool
+// GetMountAttributes returns all mount configuration schema attributes for Plugin Framework resources.
+// Resources can use this to get a consistent set of mount fields and then add their backend-specific fields.
+// The excludes parameter allows resources to exclude fields they define themselves with custom configurations.
+func GetMountAttributes(excludes ...string) map[string]schema.Attribute {
+	s := map[string]schema.Attribute{
+		consts.FieldPath: schema.StringAttribute{
+			MarkdownDescription: "Where the secret backend will be mounted",
+			Required:            true,
+		},
+		consts.FieldType: schema.StringAttribute{
+			MarkdownDescription: "Type of the backend, such as 'aws'",
+			Computed:            true,
+		},
+		consts.FieldDescription: schema.StringAttribute{
+			MarkdownDescription: "Human-friendly description of the mount",
+			Optional:            true,
+		},
+		consts.FieldDefaultLeaseTTLSeconds: schema.Int64Attribute{
+			MarkdownDescription: "Default lease duration for tokens and secrets in seconds",
+			Optional:            true,
+			Computed:            true,
+		},
+		consts.FieldMaxLeaseTTLSeconds: schema.Int64Attribute{
+			MarkdownDescription: "Maximum possible lease duration for tokens and secrets in seconds",
+			Optional:            true,
+			Computed:            true,
+		},
+		consts.FieldForceNoCache: schema.BoolAttribute{
+			MarkdownDescription: "If set to true, disables caching",
+			Optional:            true,
+			Computed:            true,
+		},
+		consts.FieldAuditNonHMACRequestKeys: schema.ListAttribute{
+			ElementType:         types.StringType,
+			MarkdownDescription: "Specifies the list of keys that will not be HMAC'd by audit devices in the request data object",
+			Optional:            true,
+			Computed:            true,
+		},
+		consts.FieldAuditNonHMACResponseKeys: schema.ListAttribute{
+			ElementType:         types.StringType,
+			MarkdownDescription: "Specifies the list of keys that will not be HMAC'd by audit devices in the response data object",
+			Optional:            true,
+			Computed:            true,
+		},
+		consts.FieldListingVisibility: schema.StringAttribute{
+			MarkdownDescription: "Specifies whether to show this mount in the UI-specific listing endpoint",
+			Optional:            true,
+		},
+		consts.FieldPassthroughRequestHeaders: schema.ListAttribute{
+			ElementType:         types.StringType,
+			MarkdownDescription: "List of headers to allow and pass from the request to the plugin",
+			Optional:            true,
+		},
+		consts.FieldAllowedResponseHeaders: schema.ListAttribute{
+			ElementType:         types.StringType,
+			MarkdownDescription: "List of headers to allow and pass from the plugin to the request",
+			Optional:            true,
+		},
+		consts.FieldPluginVersion: schema.StringAttribute{
+			MarkdownDescription: "Specifies the semantic version of the plugin to use, e.g. 'v1.0.0'",
+			Optional:            true,
+		},
+		consts.FieldAllowedManagedKeys: schema.SetAttribute{
+			ElementType:         types.StringType,
+			MarkdownDescription: "List of managed key registry entry names that the mount in question is allowed to access",
+			Optional:            true,
+		},
+		consts.FieldDelegatedAuthAccessors: schema.ListAttribute{
+			ElementType:         types.StringType,
+			MarkdownDescription: "List of auth accessor IDs that can delegate authentication to this mount",
+			Optional:            true,
+		},
+		consts.FieldIdentityTokenKey: schema.StringAttribute{
+			MarkdownDescription: "The key to use for signing plugin workload identity tokens",
+			Optional:            true,
+		},
+		consts.FieldOptions: schema.MapAttribute{
+			ElementType:         types.StringType,
+			MarkdownDescription: "Specifies mount type specific options that are passed to the backend",
+			Optional:            true,
+		},
+		consts.FieldSealWrap: schema.BoolAttribute{
+			MarkdownDescription: "Enable seal wrapping for the mount, causing values stored by the mount to be wrapped by the seal's encryption capability",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers: []planmodifier.Bool{
+				boolplanmodifier.RequiresReplace(),
+			},
+		},
+		consts.FieldExternalEntropyAccess: schema.BoolAttribute{
+			MarkdownDescription: "Enable the secrets engine to access Vault's external entropy source",
+			Optional:            true,
+			Computed:            true,
+			Default:             booldefault.StaticBool(false),
+			PlanModifiers: []planmodifier.Bool{
+				boolplanmodifier.RequiresReplace(),
+			},
+		},
+		consts.FieldLocal: schema.BoolAttribute{
+			MarkdownDescription: "Local mount flag that can be explicitly set to true to enforce local mount in HA environment",
+			Optional:            true,
+			Computed:            true,
+			PlanModifiers: []planmodifier.Bool{
+				boolplanmodifier.RequiresReplace(),
+			},
+		},
+		consts.FieldAccessor: schema.StringAttribute{
+			MarkdownDescription: "Accessor of the mount",
+			Computed:            true,
+		},
+	}
+
+	// Remove excluded fields
+	for _, exclude := range excludes {
+		delete(s, exclude)
+	}
+
+	return s
 }
 
-// MountOutput contains the mount information read from Vault.
-// This mirrors the structure used in SDKv2 but uses Plugin Framework types.
-type MountOutput struct {
-	Path                      types.String
-	Type                      types.String
-	Description               types.String
-	DefaultLeaseTTLSeconds    types.Int64
-	MaxLeaseTTLSeconds        types.Int64
-	ForceNoCache              types.Bool
-	AuditNonHMACRequestKeys   types.List
-	AuditNonHMACResponseKeys  types.List
-	ListingVisibility         types.String
-	PassthroughRequestHeaders types.List
-	AllowedResponseHeaders    types.List
-	PluginVersion             types.String
-	AllowedManagedKeys        types.Set
-	DelegatedAuthAccessors    types.List
-	IdentityTokenKey          types.String
-	Options                   types.Map
-	SealWrap                  types.Bool
-	ExternalEntropyAccess     types.Bool
-	Local                     types.Bool
-	Accessor                  types.String
+// MustAddMountSchema adds the mount configuration schema attributes to the
+// given schema. It panics if any mount field collides with a field that
+// already exists in the schema, surfacing the conflict at startup. Resources
+// can pass excludes to omit mount fields they define themselves.
+//
+// This should be called from a resource's Schema() method.
+func MustAddMountSchema(s *schema.Schema, excludes ...string) {
+	for k, v := range GetMountAttributes(excludes...) {
+		if _, ok := s.Attributes[k]; ok {
+			panic(fmt.Sprintf("cannot add mount schema field %q, already exists in the Schema map", k))
+		}
+
+		s.Attributes[k] = v
+	}
+}
+
+// MountModel holds the Terraform state/plan values for the mount configuration
+// fields shared by all self-managing secret backend resources. Embed it into a
+// resource model alongside base.BaseModel and the backend-specific fields. The
+// Plugin Framework flattens embedded structs when reading the tfsdk tags, so the
+// field names below must match the attributes returned by GetMountAttributes.
+//
+// Embedding this type (together with MustAddMountSchema for the schema) lets a
+// resource reuse the mount fields, schema, and Vault conversions without copying
+// per-resource boilerplate.
+type MountModel struct {
+	Path                      types.String `tfsdk:"path"`
+	Type                      types.String `tfsdk:"type"`
+	Description               types.String `tfsdk:"description"`
+	DefaultLeaseTTLSeconds    types.Int64  `tfsdk:"default_lease_ttl_seconds"`
+	MaxLeaseTTLSeconds        types.Int64  `tfsdk:"max_lease_ttl_seconds"`
+	ForceNoCache              types.Bool   `tfsdk:"force_no_cache"`
+	AuditNonHMACRequestKeys   types.List   `tfsdk:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  types.List   `tfsdk:"audit_non_hmac_response_keys"`
+	ListingVisibility         types.String `tfsdk:"listing_visibility"`
+	PassthroughRequestHeaders types.List   `tfsdk:"passthrough_request_headers"`
+	AllowedResponseHeaders    types.List   `tfsdk:"allowed_response_headers"`
+	PluginVersion             types.String `tfsdk:"plugin_version"`
+	AllowedManagedKeys        types.Set    `tfsdk:"allowed_managed_keys"`
+	DelegatedAuthAccessors    types.List   `tfsdk:"delegated_auth_accessors"`
+	IdentityTokenKey          types.String `tfsdk:"identity_token_key"`
+	Options                   types.Map    `tfsdk:"options"`
+	SealWrap                  types.Bool   `tfsdk:"seal_wrap"`
+	ExternalEntropyAccess     types.Bool   `tfsdk:"external_entropy_access"`
+	Local                     types.Bool   `tfsdk:"local"`
+	Accessor                  types.String `tfsdk:"accessor"`
+}
+
+// HasMountChanges reports whether any tunable/replaceable mount field differs
+// between the receiver (typically the plan) and other (typically the prior
+// state). Resources can use this to decide whether a mount update is needed
+// before calling UpdateMount. path, type, and accessor are excluded: path/type
+// are not tunable and accessor is computed.
+func (m *MountModel) HasMountChanges(other *MountModel) bool {
+	return !m.Description.Equal(other.Description) ||
+		!m.DefaultLeaseTTLSeconds.Equal(other.DefaultLeaseTTLSeconds) ||
+		!m.MaxLeaseTTLSeconds.Equal(other.MaxLeaseTTLSeconds) ||
+		!m.ForceNoCache.Equal(other.ForceNoCache) ||
+		!m.AuditNonHMACRequestKeys.Equal(other.AuditNonHMACRequestKeys) ||
+		!m.AuditNonHMACResponseKeys.Equal(other.AuditNonHMACResponseKeys) ||
+		!m.ListingVisibility.Equal(other.ListingVisibility) ||
+		!m.PassthroughRequestHeaders.Equal(other.PassthroughRequestHeaders) ||
+		!m.AllowedResponseHeaders.Equal(other.AllowedResponseHeaders) ||
+		!m.PluginVersion.Equal(other.PluginVersion) ||
+		!m.AllowedManagedKeys.Equal(other.AllowedManagedKeys) ||
+		!m.DelegatedAuthAccessors.Equal(other.DelegatedAuthAccessors) ||
+		!m.IdentityTokenKey.Equal(other.IdentityTokenKey) ||
+		!m.Options.Equal(other.Options) ||
+		!m.Local.Equal(other.Local) ||
+		!m.SealWrap.Equal(other.SealWrap) ||
+		!m.ExternalEntropyAccess.Equal(other.ExternalEntropyAccess)
+}
+
+// ApplyMountOutput copies the mount-level attributes read back from Vault into
+// the mount model. plugin_version is intentionally not overwritten because Vault
+// does not return it on read (see ReadMount); the configured/state value is kept.
+func (m *MountModel) ApplyMountOutput(out *MountModel) {
+	m.Type = out.Type
+	m.Accessor = out.Accessor
+	m.Description = out.Description
+	m.DefaultLeaseTTLSeconds = out.DefaultLeaseTTLSeconds
+	m.MaxLeaseTTLSeconds = out.MaxLeaseTTLSeconds
+	m.ForceNoCache = out.ForceNoCache
+	m.AuditNonHMACRequestKeys = out.AuditNonHMACRequestKeys
+	m.AuditNonHMACResponseKeys = out.AuditNonHMACResponseKeys
+	m.ListingVisibility = out.ListingVisibility
+	m.PassthroughRequestHeaders = out.PassthroughRequestHeaders
+	m.AllowedResponseHeaders = out.AllowedResponseHeaders
+	m.AllowedManagedKeys = out.AllowedManagedKeys
+	m.DelegatedAuthAccessors = out.DelegatedAuthAccessors
+	m.IdentityTokenKey = out.IdentityTokenKey
+	m.Options = out.Options
+	m.SealWrap = out.SealWrap
+	m.ExternalEntropyAccess = out.ExternalEntropyAccess
+	m.Local = out.Local
 }
 
 // CreateMount creates a new mount in Vault using the provided configuration.
 // This is the Plugin Framework equivalent of the SDKv2 createMount() function.
-func CreateMount(ctx context.Context, client *api.Client, data *MountInput, meta interface{}) error {
+func CreateMount(ctx context.Context, client *api.Client, data *MountModel, mountType string, meta interface{}) error {
 	path := data.Path.ValueString()
-	mountType := data.Type.ValueString()
 
 	input := &api.MountInput{
 		Type:        mountType,
@@ -185,7 +356,7 @@ func CreateMount(ctx context.Context, client *api.Client, data *MountInput, meta
 // UpdateMount updates an existing mount in Vault with the provided configuration.
 // This is the Plugin Framework equivalent of the SDKv2 updateMount() function.
 // It compares the new data with the previous state to only send changed fields.
-func UpdateMount(ctx context.Context, client *api.Client, path string, data *MountInput, state *MountInput, meta interface{}) error {
+func UpdateMount(ctx context.Context, client *api.Client, path string, data *MountModel, state *MountModel, meta interface{}) error {
 	// Build tune configuration. SDKv2 parity: always include options so that
 	// clearing all options is persisted to Vault.
 	options := make(map[string]string)
@@ -314,9 +485,9 @@ func UpdateMount(ctx context.Context, client *api.Client, path string, data *Mou
 	return nil
 }
 
-// ReadMount reads mount information from Vault and returns it as MountOutput.
+// ReadMount reads mount information from Vault and returns it as a MountModel.
 // This is the Plugin Framework equivalent of the SDKv2 readMount() function.
-func ReadMount(ctx context.Context, client *api.Client, path string) (*MountOutput, error) {
+func ReadMount(ctx context.Context, client *api.Client, path string) (*MountModel, error) {
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
 	mount, err := mountutil.GetMount(ctx, client, path)
@@ -328,7 +499,7 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountOutp
 		return nil, err
 	}
 
-	output := &MountOutput{
+	output := &MountModel{
 		Path:                   types.StringValue(path),
 		Type:                   types.StringValue(mount.Type),
 		DefaultLeaseTTLSeconds: types.Int64Value(int64(mount.Config.DefaultLeaseTTL)),
@@ -459,6 +630,21 @@ func DeleteMount(ctx context.Context, client *api.Client, path string) error {
 
 	if err := client.Sys().UnmountWithContext(ctx, path); err != nil {
 		return fmt.Errorf("error deleting from Vault: %s", err)
+	}
+
+	return nil
+}
+
+// RemountMount moves a mount from oldPath to newPath in Vault. This is the
+// Plugin Framework equivalent of the SDKv2 resource_mount remount handling and
+// lets resources support in-place path changes instead of destroy/recreate.
+// Callers should drop RequiresReplace() from the path attribute and invoke this
+// from Update when the planned path differs from the prior state path.
+func RemountMount(ctx context.Context, client *api.Client, oldPath, newPath string) error {
+	log.Printf("[DEBUG] Remount %s to %s in Vault", oldPath, newPath)
+
+	if err := client.Sys().RemountWithContext(ctx, oldPath, newPath); err != nil {
+		return fmt.Errorf("error remounting in Vault: %s", err)
 	}
 
 	return nil

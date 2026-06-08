@@ -6,8 +6,11 @@ package sys
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -20,6 +23,16 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+// TestMain suppresses log output during tests to reduce noise.
+// Log messages can still be seen by setting the VAULT_LOG environment variable.
+func TestMain(m *testing.M) {
+	// Suppress log output unless explicitly requested
+	if os.Getenv("VAULT_LOG") == "" {
+		log.SetOutput(io.Discard)
+	}
+	os.Exit(m.Run())
+}
 
 // mockProviderMeta creates a mock provider meta for testing.
 func mockProviderMeta(t *testing.T) interface{} {
@@ -44,13 +57,13 @@ func TestMountHelper_CreateMount(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		input          *MountInput
+		input          *MountModel
 		validateServer func(t *testing.T, r *http.Request)
 		wantErr        bool
 	}{
 		{
 			name: "basic-mount",
-			input: &MountInput{
+			input: &MountModel{
 				Path:                      types.StringValue("test-mount"),
 				Type:                      types.StringValue("kv"),
 				Description:               types.StringValue("test description"),
@@ -84,12 +97,12 @@ func TestMountHelper_CreateMount(t *testing.T) {
 		},
 		{
 			name: "with-options",
-			input: func() *MountInput {
+			input: func() *MountModel {
 				optionsMap, _ := types.MapValue(types.StringType, map[string]attr.Value{
 					"version":      types.StringValue("2"),
 					"cas_required": types.StringValue("true"),
 				})
-				return &MountInput{
+				return &MountModel{
 					Path:                      types.StringValue("test-mount"),
 					Type:                      types.StringValue("kv"),
 					Description:               types.StringValue("test"),
@@ -122,11 +135,11 @@ func TestMountHelper_CreateMount(t *testing.T) {
 		},
 		{
 			name: "with-audit-keys",
-			input: func() *MountInput {
+			input: func() *MountModel {
 				ctx := context.Background()
 				requestKeys, _ := types.ListValueFrom(ctx, types.StringType, []string{"key1", "key2"})
 				responseKeys, _ := types.ListValueFrom(ctx, types.StringType, []string{"response_key"})
-				return &MountInput{
+				return &MountModel{
 					Path:                      types.StringValue("test-mount"),
 					Type:                      types.StringValue("kv"),
 					Description:               types.StringValue("test"),
@@ -182,7 +195,7 @@ func TestMountHelper_CreateMount(t *testing.T) {
 			meta := mockProviderMeta(t)
 			ctx := context.Background()
 
-			err = CreateMount(ctx, client, tt.input, meta)
+			err = CreateMount(ctx, client, tt.input, tt.input.Type.ValueString(), meta)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -197,14 +210,14 @@ func TestMountHelper_UpdateMount(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		data           *MountInput
-		state          *MountInput
+		data           *MountModel
+		state          *MountModel
 		validateServer func(t *testing.T, r *http.Request)
 		wantErr        bool
 	}{
 		{
 			name: "basic-update",
-			state: &MountInput{
+			state: &MountModel{
 				DefaultLeaseTTLSeconds:    types.Int64Value(3600),
 				MaxLeaseTTLSeconds:        types.Int64Value(7200),
 				Options:                   types.MapNull(types.StringType),
@@ -219,7 +232,7 @@ func TestMountHelper_UpdateMount(t *testing.T) {
 				PluginVersion:             types.StringNull(),
 				IdentityTokenKey:          types.StringNull(),
 			},
-			data: &MountInput{
+			data: &MountModel{
 				DefaultLeaseTTLSeconds:    types.Int64Value(7200),
 				MaxLeaseTTLSeconds:        types.Int64Value(14400),
 				Options:                   types.MapNull(types.StringType),
@@ -244,7 +257,7 @@ func TestMountHelper_UpdateMount(t *testing.T) {
 		},
 		{
 			name: "only-changed-fields",
-			state: &MountInput{
+			state: &MountModel{
 				DefaultLeaseTTLSeconds:    types.Int64Value(3600),
 				MaxLeaseTTLSeconds:        types.Int64Value(7200),
 				Options:                   types.MapNull(types.StringType),
@@ -259,7 +272,7 @@ func TestMountHelper_UpdateMount(t *testing.T) {
 				PluginVersion:             types.StringNull(),
 				IdentityTokenKey:          types.StringNull(),
 			},
-			data: &MountInput{
+			data: &MountModel{
 				DefaultLeaseTTLSeconds:    types.Int64Value(3600),
 				MaxLeaseTTLSeconds:        types.Int64Value(7200),
 				Options:                   types.MapNull(types.StringType),
@@ -328,7 +341,7 @@ func TestMountHelper_ReadMount(t *testing.T) {
 		name           string
 		path           string
 		serverResponse func(w http.ResponseWriter, r *http.Request)
-		wantOutput     *MountOutput
+		wantOutput     *MountModel
 		wantErr        bool
 	}{
 		{
@@ -356,7 +369,7 @@ func TestMountHelper_ReadMount(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				json.NewEncoder(w).Encode(response)
 			},
-			wantOutput: &MountOutput{
+			wantOutput: &MountModel{
 				Path:                   types.StringValue("test-mount"),
 				Type:                   types.StringValue("kv"),
 				Description:            types.StringValue("test mount"),
@@ -481,6 +494,104 @@ func TestMountHelper_DeleteMount(t *testing.T) {
 	}
 }
 
+func TestMountHelper_RemountMount(t *testing.T) {
+	t.Parallel()
+
+	const migrationID = "test-migration-id"
+
+	tests := []struct {
+		name            string
+		oldPath         string
+		newPath         string
+		migrationStatus string
+		startStatusCode int
+		wantErr         bool
+	}{
+		{
+			name:            "successful-remount",
+			oldPath:         "old-mount",
+			newPath:         "new-mount",
+			migrationStatus: "success",
+			startStatusCode: http.StatusOK,
+			wantErr:         false,
+		},
+		{
+			name:            "failed-migration",
+			oldPath:         "old-mount",
+			newPath:         "new-mount",
+			migrationStatus: "failure",
+			startStatusCode: http.StatusOK,
+			wantErr:         true,
+		},
+		{
+			name:            "start-remount-error",
+			oldPath:         "old-mount",
+			newPath:         "new-mount",
+			startStatusCode: http.StatusInternalServerError,
+			wantErr:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/v1/sys/remount" && r.Method == http.MethodPost:
+					var body map[string]interface{}
+					require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+					assert.Equal(t, tt.oldPath, body["from"])
+					assert.Equal(t, tt.newPath, body["to"])
+
+					if tt.startStatusCode != http.StatusOK {
+						w.WriteHeader(tt.startStatusCode)
+						json.NewEncoder(w).Encode(map[string]interface{}{
+							"errors": []string{"internal server error"},
+						})
+						return
+					}
+
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"data": map[string]interface{}{
+							"migration_id": migrationID,
+						},
+					})
+					return
+				case r.URL.Path == "/v1/sys/remount/status/"+migrationID && r.Method == http.MethodGet:
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"data": map[string]interface{}{
+							"migration_id": migrationID,
+							"migration_info": map[string]interface{}{
+								"source_mount": tt.oldPath,
+								"target_mount": tt.newPath,
+								"status":       tt.migrationStatus,
+							},
+						},
+					})
+					return
+				}
+				http.NotFound(w, r)
+			}))
+			defer server.Close()
+
+			config := api.DefaultConfig()
+			config.Address = server.URL
+			client, err := api.NewClient(config)
+			require.NoError(t, err)
+
+			ctx := context.Background()
+			err = RemountMount(ctx, client, tt.oldPath, tt.newPath)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestMountHelper_TuneMountWithMap(t *testing.T) {
 	t.Parallel()
 
@@ -535,7 +646,7 @@ func TestMountHelper_UpdateMount_RetryLogic(t *testing.T) {
 	client, err := api.NewClient(config)
 	require.NoError(t, err)
 
-	state := &MountInput{
+	state := &MountModel{
 		DefaultLeaseTTLSeconds:    types.Int64Value(3600),
 		MaxLeaseTTLSeconds:        types.Int64Value(7200),
 		Options:                   types.MapNull(types.StringType),
@@ -551,7 +662,7 @@ func TestMountHelper_UpdateMount_RetryLogic(t *testing.T) {
 		IdentityTokenKey:          types.StringNull(),
 	}
 
-	data := &MountInput{
+	data := &MountModel{
 		DefaultLeaseTTLSeconds:    types.Int64Value(7200),
 		MaxLeaseTTLSeconds:        types.Int64Value(14400),
 		Options:                   types.MapNull(types.StringType),
