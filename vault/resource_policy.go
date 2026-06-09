@@ -40,7 +40,7 @@ func policyResource() *schema.Resource {
 			consts.FieldAllowOverwrite: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
+				Computed:    true,
 				Description: "Allow overwriting an existing policy. Defaults to `true` for backwards compatibility purposes.",
 				Deprecated:  "Deprecated. Overwriting pre-existing policies will soon be removed. Use 'terraform import' to manage existing policies.",
 			},
@@ -56,7 +56,11 @@ func policyCreate(d *schema.ResourceData, meta interface{}) error {
 
 	name := d.Get("name").(string)
 
-	allowOverwrite := d.Get(consts.FieldAllowOverwrite).(bool)
+	// allowOverwrite := d.Get(consts.FieldAllowOverwrite).(bool)
+	allowOverwrite := true
+	if v := d.GetRawConfig().GetAttr(consts.FieldAllowOverwrite); !v.IsNull() {
+		allowOverwrite = v.True()
+	}
 
 	existing, err := client.Sys().GetPolicy(name)
 
