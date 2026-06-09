@@ -312,6 +312,42 @@ func TestAccAgentRegistration_multiplePolicies(t *testing.T) {
 	})
 }
 
+// TestAccAgentRegistration_duplicateDisplayNameAcrossNamespaces tests that the same
+// display_name can be used in different namespaces (namespace-scoped uniqueness).
+// This test creates two separate registrations with the same display_name in different
+// namespaces to prove that display_name uniqueness is scoped to the namespace.
+func TestAccAgentRegistration_duplicateDisplayNameAcrossNamespaces(t *testing.T) {
+	displayName := acctest.RandomWithPrefix("test-agent")
+	ns1 := acctest.RandomWithPrefix("ns1")
+	ns2 := acctest.RandomWithPrefix("ns2")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Create two registrations with the same display_name in different namespaces
+				// This should succeed, proving namespace-scoped uniqueness
+				Config: testAccAgentRegistrationConfig_twoNamespaces(ns1, ns2, displayName),
+				Check: resource.ComposeTestCheckFunc(
+					// Verify first registration exists in ns1
+					resource.TestCheckResourceAttr("vault_agent_registration.test1", consts.FieldNamespace, ns1),
+					resource.TestCheckResourceAttr("vault_agent_registration.test1", consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttrSet("vault_agent_registration.test1", consts.FieldID),
+					// Verify second registration exists in ns2 with same display_name
+					resource.TestCheckResourceAttr("vault_agent_registration.test2", consts.FieldNamespace, ns2),
+					resource.TestCheckResourceAttr("vault_agent_registration.test2", consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttrSet("vault_agent_registration.test2", consts.FieldID),
+				),
+			},
+		},
+	})
+}
+
 // Config helper functions
 
 func testAccAgentRegistrationConfig_basic(displayName string) string {
@@ -399,6 +435,45 @@ resource "vault_agent_registration" "test" {
   entity_id    = vault_identity_entity.test.id
 }
 `, ns, displayName, displayName)
+}
+
+func testAccAgentRegistrationConfig_twoNamespaces(ns1, ns2, displayName string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test1" {
+  path = "%s"
+}
+
+resource "vault_namespace" "test2" {
+  path = "%s"
+}
+
+resource "vault_identity_entity" "test1" {
+  namespace = vault_namespace.test1.path
+  name      = "%s-entity-1"
+  policies  = ["default"]
+}
+
+resource "vault_identity_entity" "test2" {
+  namespace = vault_namespace.test2.path
+  name      = "%s-entity-2"
+  policies  = ["default"]
+}
+
+# First registration with display_name in namespace 1
+resource "vault_agent_registration" "test1" {
+  namespace    = vault_namespace.test1.path
+  display_name = "%s"
+  entity_id    = vault_identity_entity.test1.id
+}
+
+# Second registration with same display_name in namespace 2
+# This should succeed because display_name uniqueness is namespace-scoped
+resource "vault_agent_registration" "test2" {
+  namespace    = vault_namespace.test2.path
+  display_name = "%s"
+  entity_id    = vault_identity_entity.test2.id
+}
+`, ns1, ns2, displayName, displayName, displayName, displayName)
 }
 
 func testAccAgentRegistrationConfig_multiplePolicies(displayName, policy1, policy2 string) string {
