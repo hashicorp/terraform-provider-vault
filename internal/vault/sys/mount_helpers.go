@@ -503,6 +503,13 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountMode
 		return nil, err
 	}
 
+	// TODO: this helper does not implement the kv-v2 special handling that the
+	// SDKv2 resource_mount readMount() does (see vault/resource_mount.go). Vault
+	// reports a kv-v2 mount as type "kv" with options["version"] == "2", so
+	// without reconciling that here a self-managing kv-v2 resource would see
+	// perpetual drift on the type/options fields. When a kv-v2 resource is
+	// migrated to a self-managing mount on the Plugin Framework, port that
+	// kv-v2 -> kv alias handling (and the version option omission) into here.
 	output := &MountModel{
 		Path:                   types.StringValue(path),
 		Type:                   types.StringValue(mount.Type),
