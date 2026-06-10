@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -223,8 +224,12 @@ func (r *AgentRegistrationResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	// Read back the full registration to get computed fields (including timestamps)
-	r.readFromVault(ctx, client, &data, &resp.Diagnostics, true)
+	found := r.readFromVault(ctx, client, &data, &resp.Diagnostics, true)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
 		return
 	}
 
@@ -251,8 +256,14 @@ func (r *AgentRegistrationResource) Read(ctx context.Context, req resource.ReadR
 		return
 	}
 
-	r.readFromVault(ctx, client, &data, &resp.Diagnostics, true)
+	found := r.readFromVault(ctx, client, &data, &resp.Diagnostics, true)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !found {
+		tflog.Warn(ctx, "Agent Registry record not found, removing from state")
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -318,8 +329,12 @@ func (r *AgentRegistrationResource) Update(ctx context.Context, req resource.Upd
 	}
 
 	// Read back the updated registration (don't update timestamps to avoid inconsistency)
-	r.readFromVault(ctx, client, &data, &resp.Diagnostics, false)
+	found := r.readFromVault(ctx, client, &data, &resp.Diagnostics, false)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
 		return
 	}
 
@@ -388,17 +403,26 @@ func (r *AgentRegistrationResource) ImportState(ctx context.Context, req resourc
 		return
 	}
 
-	r.readFromVault(ctx, client, &data, &resp.Diagnostics, true)
+	found := r.readFromVault(ctx, client, &data, &resp.Diagnostics, true)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !found {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
 		return
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-// readFromVault reads the agent registration from Vault and updates the model
+// readFromVault reads the agent registration from Vault into data. It reports
+// whether the record was found: a nil/empty Vault response returns false
+// without adding an error, so callers can decide whether a missing record is an
+// error (create, update, and import read-back) or a signal to remove the
+// resource from state (read). Genuine read or decode failures are recorded in
+// diags and return false.
 // updateTimestamps controls whether to update creation_time and last_updated_time fields
-func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *api.Client, data *AgentRegistrationModel, diags *diag.Diagnostics, updateTimestamps bool) {
+func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *api.Client, data *AgentRegistrationModel, diags *diag.Diagnostics, updateTimestamps bool) bool {
 	// Prefer reading by ID (more robust), fall back to display_name for import
 	var path string
 	if !data.ID.IsNull() && !data.ID.IsUnknown() && data.ID.ValueString() != "" {
@@ -414,21 +438,20 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 		diags.AddError(
 			errutil.VaultReadErr(err),
 		)
-		return
+		return false
 	}
 
 	if readResp == nil || readResp.Data == nil {
-		diags.AddError(
-			errutil.VaultReadResponseNil(),
-		)
-		return
+		// The record does not exist in Vault. Report "not found" without an
+		// error so the caller can decide how to handle it.
+		return false
 	}
 
 	var apiModel AgentRegistrationAPIModel
 	err = model.ToAPIModel(readResp.Data, &apiModel)
 	if err != nil {
 		diags.AddError("Unable to translate Vault response data", err.Error())
-		return
+		return false
 	}
 
 	// Update model with API response
@@ -471,6 +494,8 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 			data.LastUpdatedTime = types.StringValue(apiModel.LastUpdatedTime)
 		}
 	}
+
+	return true
 }
 
 func (r *AgentRegistrationResource) registerPath() string {
