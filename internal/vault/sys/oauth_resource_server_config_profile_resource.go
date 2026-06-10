@@ -251,40 +251,12 @@ func (r *OAuthResourceServerConfigProfileResource) Create(ctx context.Context, r
 	if !provider.IsEnterpriseSupported(r.Meta()) {
 		resp.Diagnostics.AddError(
 			"Enterprise Feature Required",
-			"OAuth Resource Server Configuration is only available in Vault Enterprise",
+			"OAuth Resource Server Configuration is available only in Vault Enterprise",
 		)
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	// Build the request payload
-	vaultRequest := r.buildVaultRequest(ctx, &data, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Validate mutual exclusivity
-	if err := r.validateConfiguration(&data, &resp.Diagnostics); err != nil {
-		resp.Diagnostics.AddError("Configuration Validation Error", err.Error())
-		return
-	}
-
-	path := r.profilePath(data.ProfileName.ValueString())
-	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			errutil.VaultCreateErr(err),
-		)
-		return
-	}
-
-	// Read back to get computed fields including config_id
-	r.readFromVault(ctx, client, &data, &resp.Diagnostics)
+	r.writeProfile(ctx, &data, &resp.Diagnostics, errutil.VaultCreateErr)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -317,43 +289,14 @@ func (r *OAuthResourceServerConfigProfileResource) Read(ctx context.Context, req
 
 // Update is called during terraform apply
 func (r *OAuthResourceServerConfigProfileResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, state OAuthResourceServerConfigProfileModel
+	var plan OAuthResourceServerConfigProfileModel
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	client, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	// Build the request payload
-	vaultRequest := r.buildVaultRequest(ctx, &plan, &resp.Diagnostics)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	// Validate mutual exclusivity
-	if err := r.validateConfiguration(&plan, &resp.Diagnostics); err != nil {
-		resp.Diagnostics.AddError("Configuration Validation Error", err.Error())
-		return
-	}
-
-	path := r.profilePath(plan.ProfileName.ValueString())
-	_, err = client.Logical().WriteWithContext(ctx, path, vaultRequest)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			errutil.VaultUpdateErr(err),
-		)
-		return
-	}
-
-	// Read back the updated profile
-	r.readFromVault(ctx, client, &plan, &resp.Diagnostics)
+	r.writeProfile(ctx, &plan, &resp.Diagnostics, errutil.VaultUpdateErr)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -413,6 +356,38 @@ func (r *OAuthResourceServerConfigProfileResource) ImportState(ctx context.Conte
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+// writeProfile configures a client, validates the configuration, writes the
+// profile to Vault, and reads the result back into data. writeErr wraps a write
+// failure so callers can distinguish create from update. Errors are reported via
+// diags; callers should check diags.HasError after calling.
+func (r *OAuthResourceServerConfigProfileResource) writeProfile(ctx context.Context, data *OAuthResourceServerConfigProfileModel, diags *diag.Diagnostics, writeErr func(error) (string, string)) {
+	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	// Validate mutual exclusivity before building the request payload.
+	if err := r.validateConfiguration(data, diags); err != nil {
+		diags.AddError("Configuration Validation Error", err.Error())
+		return
+	}
+
+	vaultRequest := r.buildVaultRequest(ctx, data, diags)
+	if diags.HasError() {
+		return
+	}
+
+	path := r.profilePath(data.ProfileName.ValueString())
+	if _, err := client.Logical().WriteWithContext(ctx, path, vaultRequest); err != nil {
+		diags.AddError(writeErr(err))
+		return
+	}
+
+	// Read back to get computed fields including config_id.
+	r.readFromVault(ctx, client, data, diags)
 }
 
 // readFromVault reads the profile from Vault and updates the model
