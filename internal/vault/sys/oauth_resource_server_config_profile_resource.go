@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -279,8 +280,14 @@ func (r *OAuthResourceServerConfigProfileResource) Read(ctx context.Context, req
 		return
 	}
 
-	r.readFromVault(ctx, client, &data, &resp.Diagnostics)
+	found := r.readFromVault(ctx, client, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !found {
+		tflog.Warn(ctx, "OAuth Resource Server Configuration profile not found, removing from state")
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -350,8 +357,13 @@ func (r *OAuthResourceServerConfigProfileResource) ImportState(ctx context.Conte
 		return
 	}
 
-	r.readFromVault(ctx, client, &data, &resp.Diagnostics)
+	found := r.readFromVault(ctx, client, &data, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !found {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
 		return
 	}
 
@@ -386,12 +398,24 @@ func (r *OAuthResourceServerConfigProfileResource) writeProfile(ctx context.Cont
 		return
 	}
 
-	// Read back to get computed fields including config_id.
-	r.readFromVault(ctx, client, data, diags)
+	// Read back to get computed fields including config_id. A missing profile
+	// immediately after a successful write is a real inconsistency, so treat it
+	// as an error rather than silently dropping the resource.
+	found := r.readFromVault(ctx, client, data, diags)
+	if diags.HasError() {
+		return
+	}
+	if !found {
+		diags.AddError(errutil.VaultReadResponseNil())
+	}
 }
 
-// readFromVault reads the profile from Vault and updates the model
-func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Context, client *api.Client, data *OAuthResourceServerConfigProfileModel, diags *diag.Diagnostics) {
+// readFromVault reads the profile from Vault into data. It reports whether the
+// profile was found: a nil/empty Vault response returns false without adding an
+// error, so callers can decide whether a missing profile is an error (create,
+// update, and import read-back) or a signal to remove the resource from state
+// (read). Genuine read or decode failures are recorded in diags and return false.
+func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Context, client *api.Client, data *OAuthResourceServerConfigProfileModel, diags *diag.Diagnostics) bool {
 	path := r.profilePath(data.ProfileName.ValueString())
 
 	readResp, err := client.Logical().ReadWithContext(ctx, path)
@@ -399,21 +423,20 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 		diags.AddError(
 			errutil.VaultReadErr(err),
 		)
-		return
+		return false
 	}
 
 	if readResp == nil || readResp.Data == nil {
-		diags.AddError(
-			errutil.VaultReadResponseNil(),
-		)
-		return
+		// The profile does not exist in Vault. Report "not found" without an
+		// error so the caller can decide how to handle it.
+		return false
 	}
 
 	var apiModel OAuthResourceServerConfigProfileAPIModel
 	err = model.ToAPIModel(readResp.Data, &apiModel)
 	if err != nil {
 		diags.AddError("Unable to translate Vault response data", err.Error())
-		return
+		return false
 	}
 
 	// Update model with API response
@@ -497,6 +520,8 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 
 	// Clock skew leeway
 	data.ClockSkewLeeway = types.Int64Value(int64(apiModel.ClockSkewLeeway))
+
+	return true
 }
 
 // buildVaultRequest builds the Vault API request from the Terraform model
