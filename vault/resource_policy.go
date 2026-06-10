@@ -56,7 +56,6 @@ func policyCreate(d *schema.ResourceData, meta interface{}) error {
 
 	name := d.Get("name").(string)
 
-	// allowOverwrite := d.Get(consts.FieldAllowOverwrite).(bool)
 	allowOverwrite := true
 	if v := d.GetRawConfig().GetAttr(consts.FieldAllowOverwrite); !v.IsNull() {
 		allowOverwrite = v.True()
