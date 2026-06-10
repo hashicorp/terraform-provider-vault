@@ -6,6 +6,7 @@ package sys
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -146,7 +147,7 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Optional:            true,
 				MarkdownDescription: "The JWKS URI to fetch public keys from. Required when use_jwks=true.",
 			},
-			consts.FieldJwksCaPem: schema.StringAttribute{
+			consts.FieldJWKSCAPEM: schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "Optional CA certificate (PEM format) for JWKS URI TLS validation.",
 			},
@@ -429,7 +430,7 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 		return
 	}
 
-	if readResp == nil {
+	if readResp == nil || readResp.Data == nil {
 		diags.AddError(
 			errutil.VaultReadResponseNil(),
 		)
@@ -539,7 +540,7 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 	}
 
 	if !data.JwksCaPem.IsNull() && !data.JwksCaPem.IsUnknown() {
-		vaultRequest[consts.FieldJwksCaPem] = data.JwksCaPem.ValueString()
+		vaultRequest[consts.FieldJWKSCAPEM] = data.JwksCaPem.ValueString()
 	}
 
 	// Public keys
@@ -629,5 +630,5 @@ func (r *OAuthResourceServerConfigProfileResource) validateConfiguration(data *O
 
 // profilePath returns the Vault API path for a profile
 func (r *OAuthResourceServerConfigProfileResource) profilePath(profileName string) string {
-	return fmt.Sprintf("sys/config/oauth-resource-server/%s", profileName)
+	return fmt.Sprintf("sys/config/oauth-resource-server/%s", url.PathEscape(profileName))
 }

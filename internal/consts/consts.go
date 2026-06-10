@@ -266,7 +266,6 @@ const (
 	FieldJWKSURL                            = "jwks_url"
 	FieldJWKSURI                            = "jwks_uri"
 	FieldJWKSCAPEM                          = "jwks_ca_pem"
-	FieldJwksCaPem                          = "jwks_ca_pem"
 	FieldJWKSPairs                          = "jwks_pairs"
 	FieldJWTValidationPubkeys               = "jwt_validation_pubkeys"
 	FieldBoundIssuer                        = "bound_issuer"
@@ -974,6 +973,7 @@ const (
 	VaultVersion121  = "1.21.0"
 	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
+	VaultVersion201  = "2.0.1"
 
 	/*
 		CloudFoundry auth backend field names
