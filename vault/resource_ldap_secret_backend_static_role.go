@@ -62,6 +62,11 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Description:  "Version counter for write-only password.",
 			RequiredWith: []string{consts.FieldPasswordWO},
 		},
+		consts.FieldPasswordPolicy: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Name of the password policy to use to generate passwords for this role.",
+		},
 	}
 	resource := &schema.Resource{
 		CreateContext: createUpdateLDAPStaticRoleResource,
@@ -85,6 +90,7 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldDN,
 	consts.FieldRotationPeriod,
 	consts.FieldSkipImportRotation,
+	consts.FieldPasswordPolicy,
 }
 
 func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

@@ -69,6 +69,49 @@ func TestAccLDAPSecretBackendDynamicRole(t *testing.T) {
 	})
 }
 
+func TestAccLDAPSecretBackendDynamicRole_PasswordPolicy(t *testing.T) {
+	roleName := acctest.RandomWithPrefix("tf-test-ldap-dynamic-role")
+	bindDN, bindPass, _ := testutil.GetTestLDAPCreds(t)
+	resourceType := "vault_ldap_secret_backend_dynamic_role"
+	resourceName := resourceType + ".role"
+	passwordPolicy := "test-password-policy"
+	updatedPasswordPolicy := "updated-password-policy"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendDynamicRoleConfig_passwordPolicy(roleName, bindDN, bindPass, "10", "20", passwordPolicy),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCreationLDIF, creationLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionLDIF, deletionLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRollbackLDIF, rollbackLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultTTL, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "20"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordPolicy, passwordPolicy),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendDynamicRoleConfig_passwordPolicy(roleName, bindDN, bindPass, "10", "20", updatedPasswordPolicy),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCreationLDIF, creationLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionLDIF, deletionLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRollbackLDIF, rollbackLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultTTL, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "20"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordPolicy, updatedPasswordPolicy),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
+		},
+	})
+}
+
 // testLDAPSecretBackendDynamicRoleConfig_defaults sets up default and required
 // fields.
 func testLDAPSecretBackendDynamicRoleConfig_defaults(roleName, bindDN, bindPass string) string {
@@ -118,4 +161,31 @@ EOT
   max_ttl       = %s
 }
 `, bindDN, bindPass, roleName, creationLDIF, deletionLDIF, rollbackLDIF, defaultTTL, maxTTL)
+}
+
+func testLDAPSecretBackendDynamicRoleConfig_passwordPolicy(roleName, bindDN, bindPass, defaultTTL, maxTTL, passwordPolicy string) string {
+	return fmt.Sprintf(`
+		resource "vault_ldap_secret_backend" "test" {
+		  description               = "test description"
+		  binddn                    = "%s"
+		  bindpass                  = "%s"
+		}
+		
+		resource "vault_ldap_secret_backend_dynamic_role" "role" {
+		  mount           = vault_ldap_secret_backend.test.path
+		  role_name       = "%s"
+		  creation_ldif   = <<EOT
+		%s
+		EOT
+		  deletion_ldif   = <<EOT
+		%s
+		EOT
+		  rollback_ldif   = <<EOT
+		%s
+		EOT
+		  default_ttl     = %s
+		  max_ttl         = %s
+		  password_policy = "%s"
+		}
+		`, bindDN, bindPass, roleName, creationLDIF, deletionLDIF, rollbackLDIF, defaultTTL, maxTTL, passwordPolicy)
 }

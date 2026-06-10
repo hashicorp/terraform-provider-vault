@@ -61,6 +61,11 @@ func ldapSecretBackendDynamicRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "Specifies the maximum TTL for the leases associated with this role.",
 		},
+		consts.FieldPasswordPolicy: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Name of the password policy to use to generate passwords for this role.",
+		},
 	}
 	return &schema.Resource{
 		CreateContext: createUpdateLDAPDynamicRoleResource,
@@ -81,6 +86,7 @@ var ldapSecretBackendDynamicRoleFields = []string{
 	consts.FieldUsernameTemplate,
 	consts.FieldDefaultTTL,
 	consts.FieldMaxTTL,
+	consts.FieldPasswordPolicy,
 }
 
 func createUpdateLDAPDynamicRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
