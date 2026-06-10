@@ -242,6 +242,42 @@ func TestAccOAuthResourceServerConfigProfile_algorithms(t *testing.T) {
 	})
 }
 
+// TestAccOAuthResourceServerConfigProfile_duplicateProfileNameAcrossNamespaces tests that the
+// same profile_name can be used in different namespaces (namespace-scoped uniqueness).
+// This creates two separate profiles with the same profile_name in different
+// namespaces to prove that profile_name uniqueness is scoped to the namespace.
+func TestAccOAuthResourceServerConfigProfile_duplicateProfileNameAcrossNamespaces(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	ns1 := acctest.RandomWithPrefix("ns1")
+	ns2 := acctest.RandomWithPrefix("ns2")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Create two profiles with the same profile_name in different namespaces
+				// This should succeed, proving namespace-scoped uniqueness
+				Config: testAccOAuthResourceServerConfigProfileConfig_twoNamespaces(ns1, ns2, profileName),
+				Check: resource.ComposeTestCheckFunc(
+					// Verify first profile exists in ns1
+					resource.TestCheckResourceAttr("vault_oauth_resource_server_config_profile.test1", consts.FieldNamespace, ns1),
+					resource.TestCheckResourceAttr("vault_oauth_resource_server_config_profile.test1", consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttrSet("vault_oauth_resource_server_config_profile.test1", consts.FieldID),
+					// Verify second profile exists in ns2 with the same profile_name
+					resource.TestCheckResourceAttr("vault_oauth_resource_server_config_profile.test2", consts.FieldNamespace, ns2),
+					resource.TestCheckResourceAttr("vault_oauth_resource_server_config_profile.test2", consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttrSet("vault_oauth_resource_server_config_profile.test2", consts.FieldID),
+				),
+			},
+		},
+	})
+}
+
 // Config helper functions
 
 func testAccOAuthResourceServerConfigProfileConfig_jwks(profileName string) string {
@@ -337,6 +373,43 @@ resource "vault_oauth_resource_server_config_profile" "test" {
   jwks_uri     = "https://example.com/.well-known/jwks.json"
 }
 `, ns, profileName)
+}
+
+func testAccOAuthResourceServerConfigProfileConfig_twoNamespaces(ns1, ns2, profileName string) string {
+	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
+resource "vault_namespace" "test1" {
+  path = "%s"
+}
+
+resource "vault_namespace" "test2" {
+  path = "%s"
+}
+
+# First profile with profile_name in namespace 1
+resource "vault_oauth_resource_server_config_profile" "test1" {
+  depends_on   = [vault_activation_flags.oauth]
+  namespace    = vault_namespace.test1.path
+  profile_name = "%s"
+  issuer_id    = "https://example.com"
+  use_jwks     = true
+  jwks_uri     = "https://example.com/.well-known/jwks.json"
+}
+
+# Second profile with the same profile_name in namespace 2
+# This should succeed because profile_name uniqueness is namespace-scoped
+resource "vault_oauth_resource_server_config_profile" "test2" {
+  depends_on   = [vault_activation_flags.oauth]
+  namespace    = vault_namespace.test2.path
+  profile_name = "%s"
+  issuer_id    = "https://example.com"
+  use_jwks     = true
+  jwks_uri     = "https://example.com/.well-known/jwks.json"
+}
+`, ns1, ns2, profileName, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_algorithms(profileName string) string {
