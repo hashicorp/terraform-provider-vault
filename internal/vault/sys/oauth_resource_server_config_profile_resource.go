@@ -627,5 +627,5 @@ func (r *OAuthResourceServerConfigProfileResource) validateConfiguration(data *O
 
 // profilePath returns the Vault API path for a profile
 func (r *OAuthResourceServerConfigProfileResource) profilePath(profileName string) string {
-	return fmt.Sprintf("sys/config/oauth-resource-server/%s", url.PathEscape(profileName))
+	return "sys/config/oauth-resource-server/" + url.PathEscape(profileName)
 }
