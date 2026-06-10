@@ -165,27 +165,32 @@ EOT
 
 func testLDAPSecretBackendDynamicRoleConfig_passwordPolicy(roleName, bindDN, bindPass, defaultTTL, maxTTL, passwordPolicy string) string {
 	return fmt.Sprintf(`
-		resource "vault_ldap_secret_backend" "test" {
-		  description               = "test description"
-		  binddn                    = "%s"
-		  bindpass                  = "%s"
-		}
-		
-		resource "vault_ldap_secret_backend_dynamic_role" "role" {
-		  mount           = vault_ldap_secret_backend.test.path
-		  role_name       = "%s"
-		  creation_ldif   = <<EOT
-		%s
-		EOT
-		  deletion_ldif   = <<EOT
-		%s
-		EOT
-		  rollback_ldif   = <<EOT
-		%s
-		EOT
-		  default_ttl     = %s
-		  max_ttl         = %s
-		  password_policy = "%s"
-		}
-		`, bindDN, bindPass, roleName, creationLDIF, deletionLDIF, rollbackLDIF, defaultTTL, maxTTL, passwordPolicy)
+resource "vault_password_policy" "test" {
+  name   = "%s"
+  policy = "length=20\nrule \"charset\" { charset = \"abcdefghijklmnopqrstuvwxyz\" min-chars = 1 }"
+}
+
+resource "vault_ldap_secret_backend" "test" {
+  description               = "test description"
+  binddn                    = "%s"
+  bindpass                  = "%s"
+}
+
+resource "vault_ldap_secret_backend_dynamic_role" "role" {
+  mount           = vault_ldap_secret_backend.test.path
+  role_name       = "%s"
+  creation_ldif   = <<EOT
+%s
+EOT
+  deletion_ldif   = <<EOT
+%s
+EOT
+  rollback_ldif   = <<EOT
+%s
+EOT
+  default_ttl     = %s
+  max_ttl         = %s
+  password_policy = vault_password_policy.test.name
+}
+`, passwordPolicy, bindDN, bindPass, roleName, creationLDIF, deletionLDIF, rollbackLDIF, defaultTTL, maxTTL)
 }

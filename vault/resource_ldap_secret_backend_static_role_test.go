@@ -114,7 +114,7 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 	resourceType := "vault_ldap_secret_backend_static_role"
 	resourceName := resourceType + ".role"
 	username := "alice"
-	dn := "cn=alice,ou=users,dc=example,dc=org"
+	dn := "cn=alice,dc=example,dc=org"
 	rotationPeriod := "60"
 	passwordPolicy := "test-password-policy"
 	updatedPasswordPolicy := "updated-password-policy"
@@ -145,7 +145,7 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordPolicy, updatedPasswordPolicy),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName, consts.FieldSkipImportRotation),
 		},
 	})
 }
@@ -243,22 +243,28 @@ resource "vault_ldap_secret_backend_static_role" "role" {
 
 func testLDAPSecretBackendStaticRoleConfig_passwordPolicy(mount, bindDN, bindPass, url, username, dn, role, rotationPeriod, passwordPolicy string) string {
 	return fmt.Sprintf(`
+resource "vault_password_policy" "test" {
+  name   = "%s"
+  policy = "length=20\nrule \"charset\" { charset = \"abcdefghijklmnopqrstuvwxyz\" min-chars = 1 }"
+}
+
 resource "vault_ldap_secret_backend" "test" {
   path                      = "%s"
   description               = "test description"
   binddn                    = "%s"
   bindpass                  = "%s"
   url                       = "%s"
-  userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+  userdn                    = "dc=example,dc=org"
 }
 
 resource "vault_ldap_secret_backend_static_role" "role" {
-  mount            = vault_ldap_secret_backend.test.path
-  username         = "%s"
-  dn               = "%s"
-  role_name        = "%s"
-  rotation_period  = %s
-  password_policy  = "%s"
+  mount               = vault_ldap_secret_backend.test.path
+  username            = "%s"
+  dn                  = "%s"
+  role_name           = "%s"
+  rotation_period     = %s
+  password_policy     = vault_password_policy.test.name
+  skip_import_rotation = true
 }
-`, mount, bindDN, bindPass, url, username, dn, role, rotationPeriod, passwordPolicy)
+`, passwordPolicy, mount, bindDN, bindPass, url, username, dn, role, rotationPeriod)
 }
