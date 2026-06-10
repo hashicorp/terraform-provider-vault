@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package fwprovider
@@ -248,6 +248,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		radius.NewRadiusAuthBackendConfigResource,
 		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
+		sysconfig.NewConfigGroupPolicyApplicationResource,
 		sysconfig.NewConfigUIHeaderResource,
 		sys.NewRotationPolicyResource,
 		sysconfig.NewQuotaConfigResource,
