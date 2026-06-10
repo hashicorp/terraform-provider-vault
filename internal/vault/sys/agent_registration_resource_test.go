@@ -25,7 +25,7 @@ func TestAccAgentRegistration_basic(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -86,7 +86,7 @@ func TestAccAgentRegistration_importByID(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -122,7 +122,7 @@ func TestAccAgentRegistration_importByIDSlashDisplayName(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -154,7 +154,7 @@ func TestAccAgentRegistration_withPolicies(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -189,7 +189,7 @@ func TestAccAgentRegistration_noDefaultPolicy(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -223,7 +223,7 @@ func TestAccAgentRegistration_withDescription(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -266,7 +266,7 @@ func TestAccAgentRegistration_updatePolicies(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -302,7 +302,7 @@ func TestAccAgentRegistration_requiresReplace(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -332,7 +332,7 @@ func TestAccAgentRegistration_namespace(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -369,7 +369,7 @@ func TestAccAgentRegistration_multiplePolicies(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -408,7 +408,7 @@ func TestAccAgentRegistration_duplicateDisplayNameAcrossNamespaces(t *testing.T)
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
