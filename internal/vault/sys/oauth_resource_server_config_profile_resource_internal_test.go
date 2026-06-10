@@ -19,7 +19,7 @@ import (
 var publicKeyObjectType = types.ObjectType{
 	AttrTypes: map[string]attr.Type{
 		consts.FieldKeyID: types.StringType,
-		"pem":             types.StringType,
+		consts.FieldPEM:   types.StringType,
 	},
 }
 
@@ -29,7 +29,7 @@ func publicKeysWithOneKey() types.List {
 	return types.ListValueMust(publicKeyObjectType, []attr.Value{
 		types.ObjectValueMust(publicKeyObjectType.AttrTypes, map[string]attr.Value{
 			consts.FieldKeyID: types.StringValue("key-1"),
-			"pem":             types.StringValue("-----BEGIN PUBLIC KEY-----"),
+			consts.FieldPEM:   types.StringValue("-----BEGIN PUBLIC KEY-----"),
 		}),
 	})
 }

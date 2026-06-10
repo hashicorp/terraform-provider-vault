@@ -223,7 +223,7 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 							Required:            true,
 							MarkdownDescription: "The key ID (kid) for this public key.",
 						},
-						"pem": schema.StringAttribute{
+						consts.FieldPEM: schema.StringAttribute{
 							Required:            true,
 							MarkdownDescription: "The PEM-encoded public key.",
 						},
@@ -475,7 +475,7 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 		pkList, d := types.ListValueFrom(ctx, types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				consts.FieldKeyID: types.StringType,
-				"pem":             types.StringType,
+				consts.FieldPEM:   types.StringType,
 			},
 		}, publicKeys)
 		diags.Append(d...)
@@ -486,7 +486,7 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 		data.PublicKeys = types.ListNull(types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				consts.FieldKeyID: types.StringType,
-				"pem":             types.StringType,
+				consts.FieldPEM:   types.StringType,
 			},
 		})
 	}
@@ -549,7 +549,7 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 			for _, pk := range publicKeys {
 				apiPublicKeys = append(apiPublicKeys, map[string]interface{}{
 					consts.FieldKeyID: pk.KeyID.ValueString(),
-					"pem":             pk.PEM.ValueString(),
+					consts.FieldPEM:   pk.PEM.ValueString(),
 				})
 			}
 			vaultRequest[consts.FieldPublicKeys] = apiPublicKeys

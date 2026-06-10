@@ -282,6 +282,7 @@ const (
 	FieldNoParent                           = "no_parent"
 	FieldNoDefaultPolicy                    = "no_default_policy"
 	FieldPublicKeys                         = "public_keys"
+	FieldPEM                                = "pem"
 	FieldUseJWKS                            = "use_jwks"
 	FieldAudiences                          = "audiences"
 	FieldUserClaim                          = "user_claim"
