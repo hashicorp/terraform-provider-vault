@@ -64,6 +64,86 @@ func testAccAgentRegistrationImportStateIdFunc(resourceName string) resource.Imp
 	}
 }
 
+// testAccAgentRegistrationImportStateIDByIDFunc returns the id (UUID) for import
+func testAccAgentRegistrationImportStateIDByIDFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+		return rs.Primary.Attributes[consts.FieldID], nil
+	}
+}
+
+// TestAccAgentRegistration_importByID tests importing a record using its id
+// (UUID) rather than its display_name. When the import ID parses as a UUID, the
+// provider reads the record by id.
+func TestAccAgentRegistration_importByID(t *testing.T) {
+	displayName := acctest.RandomWithPrefix("test-agent")
+	resourceName := "vault_agent_registration.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAgentRegistrationConfig_basic(displayName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldID),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccAgentRegistrationImportStateIDByIDFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldID,
+			},
+		},
+	})
+}
+
+// TestAccAgentRegistration_importByIDSlashDisplayName tests that a record whose
+// display_name contains a "/" can be imported by its id (UUID). Importing by id
+// is the reliable path for such records, since a "/" in the display_name would
+// otherwise be interpreted as a path separator by the read-by-display_name
+// endpoint.
+func TestAccAgentRegistration_importByIDSlashDisplayName(t *testing.T) {
+	displayName := acctest.RandomWithPrefix("test-agent") + "/with/slashes"
+	entityName := acctest.RandomWithPrefix("test-entity")
+	resourceName := "vault_agent_registration.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLTE(t, provider.VaultVersion201)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAgentRegistrationConfig_customEntityName(displayName, entityName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldID),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccAgentRegistrationImportStateIDByIDFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldID,
+			},
+		},
+	})
+}
+
 // TestAccAgentRegistration_withPolicies tests agent registration with ceiling policies
 func TestAccAgentRegistration_withPolicies(t *testing.T) {
 	displayName := acctest.RandomWithPrefix("test-agent")
@@ -265,9 +345,12 @@ func TestAccAgentRegistration_namespace(t *testing.T) {
 				),
 			},
 			{
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
+				},
 				ResourceName:                         resourceName,
 				ImportState:                          true,
-				ImportStateIdFunc:                    testAccAgentRegistrationNamespaceImportStateIdFunc(resourceName),
+				ImportStateIdFunc:                    testAccAgentRegistrationImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldDisplayName,
 			},
@@ -362,6 +445,23 @@ resource "vault_agent_registration" "test" {
   entity_id    = vault_identity_entity.test.id
 }
 `, displayName, displayName)
+}
+
+// testAccAgentRegistrationConfig_customEntityName decouples the entity name from
+// the display_name, so the display_name can contain characters (such as "/")
+// that are not valid in an identity entity name.
+func testAccAgentRegistrationConfig_customEntityName(displayName, entityName string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "test" {
+  name     = "%s"
+  policies = ["default"]
+}
+
+resource "vault_agent_registration" "test" {
+  display_name = "%s"
+  entity_id    = vault_identity_entity.test.id
+}
+`, entityName, displayName)
 }
 
 func testAccAgentRegistrationConfig_withPolicies(displayName, policyName string) string {
@@ -510,16 +610,4 @@ resource "vault_agent_registration" "test" {
   ]
 }
 `, policy1, policy2, displayName, displayName)
-}
-
-func testAccAgentRegistrationNamespaceImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
-	return func(s *terraform.State) (string, error) {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return "", fmt.Errorf("not found: %s", resourceName)
-		}
-		namespace := rs.Primary.Attributes[consts.FieldNamespace]
-		displayName := rs.Primary.Attributes[consts.FieldDisplayName]
-		return fmt.Sprintf("%s/%s", namespace, displayName), nil
-	}
 }

@@ -6,8 +6,10 @@ package sys
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -361,20 +363,23 @@ func (r *AgentRegistrationResource) Delete(ctx context.Context, req resource.Del
 
 // ImportState implements the resource.ResourceWithImportState interface.
 func (r *AgentRegistrationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	namespace, displayName := base.ParseImportID(req.ID)
-
 	var data AgentRegistrationModel
-	data.DisplayName = types.StringValue(displayName)
 
-	// Fall back to the TERRAFORM_VAULT_NAMESPACE_IMPORT env var if no
-	// namespace was provided in the import ID, matching the behaviour of
-	// base.WithImportByID.
-	if namespace == "" {
-		namespace = os.Getenv(consts.EnvVarVaultNamespaceImport)
+	// The import ID is the verbatim Vault identifier for the record: either its
+	// UUID or its display_name. We detect which by attempting to parse it as a
+	// UUID using the same go-uuid package Vault uses to generate the id.
+	// readFromVault selects the read endpoint based on whether ID or
+	// DisplayName is set.
+	if importIDIsUUID(req.ID) {
+		data.ID = types.StringValue(req.ID)
+	} else {
+		data.DisplayName = types.StringValue(req.ID)
 	}
 
-	if namespace != "" {
-		data.Namespace = types.StringValue(namespace)
+	// Namespace is supplied via the TERRAFORM_VAULT_NAMESPACE_IMPORT env var,
+	// matching base.WithImportByID and the rest of the provider.
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		data.Namespace = types.StringValue(ns)
 	}
 
 	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
@@ -412,7 +417,7 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 		return
 	}
 
-	if readResp == nil {
+	if readResp == nil || readResp.Data == nil {
 		diags.AddError(
 			errutil.VaultReadResponseNil(),
 		)
@@ -473,9 +478,17 @@ func (r *AgentRegistrationResource) registerPath() string {
 }
 
 func (r *AgentRegistrationResource) registrationByNamePath(name string) string {
-	return fmt.Sprintf("agent-registry/registration/display-name/%s", name)
+	return fmt.Sprintf("agent-registry/registration/display-name/%s", url.PathEscape(name))
 }
 
 func (r *AgentRegistrationResource) registrationByIDPath(id string) string {
 	return fmt.Sprintf("agent-registry/registration/id/%s", id)
+}
+
+// importIDIsUUID reports whether an import ID should be treated as a record
+// UUID (read by id) rather than a display_name (read by display_name). Vault
+// generates record ids with go-uuid, so a successful parse identifies an id.
+func importIDIsUUID(id string) bool {
+	_, err := uuid.ParseUUID(id)
+	return err == nil
 }
