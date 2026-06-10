@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 
@@ -65,17 +64,6 @@ func (w *WithImportByID) ImportState(ctx context.Context, request resource.Impor
 			response.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...,
 		)
 	}
-}
-
-// ParseImportID splits an import ID into a namespace and a resource name.
-// The resource name cannot contain "/", so the split is performed from the
-// right to correctly handle nested namespaces (e.g. "parent/child/my-name"
-// returns namespace="parent/child", name="my-name").
-func ParseImportID(id string) (namespace, name string) {
-	if idx := strings.LastIndex(id, "/"); idx >= 0 {
-		return id[:idx], id[idx+1:]
-	}
-	return "", id
 }
 
 // DataSourceWithConfigure is a structure to be embedded within a DataSource

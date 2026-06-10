@@ -388,20 +388,17 @@ func (r *OAuthResourceServerConfigProfileResource) Delete(ctx context.Context, r
 
 // ImportState implements resource.ResourceWithImportState
 func (r *OAuthResourceServerConfigProfileResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	namespace, profileName := base.ParseImportID(req.ID)
-
 	var data OAuthResourceServerConfigProfileModel
-	data.ProfileName = types.StringValue(profileName)
 
-	// Fall back to the TERRAFORM_VAULT_NAMESPACE_IMPORT env var if no
-	// namespace was provided in the import ID, matching the behaviour of
-	// base.WithImportByID.
-	if namespace == "" {
-		namespace = os.Getenv(consts.EnvVarVaultNamespaceImport)
-	}
+	// The import ID is the verbatim profile_name. Profiles are read by
+	// profile_name (Vault exposes no read-by-config_id endpoint), so the import
+	// ID is used as-is rather than parsing a namespace out of it.
+	data.ProfileName = types.StringValue(req.ID)
 
-	if namespace != "" {
-		data.Namespace = types.StringValue(namespace)
+	// Namespace is supplied via the TERRAFORM_VAULT_NAMESPACE_IMPORT env var,
+	// matching base.WithImportByID and the rest of the provider.
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		data.Namespace = types.StringValue(ns)
 	}
 
 	client, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())

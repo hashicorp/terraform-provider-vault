@@ -205,9 +205,12 @@ func TestAccOAuthResourceServerConfigProfile_namespace(t *testing.T) {
 				),
 			},
 			{
+				PreConfig: func() {
+					t.Setenv(consts.EnvVarVaultNamespaceImport, ns)
+				},
 				ResourceName:      resourceName,
 				ImportState:       true,
-				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileNamespaceImportStateIdFunc(resourceName),
+				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName),
 				ImportStateVerify: true,
 			},
 		},
@@ -360,17 +363,5 @@ func testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName strin
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
 		return rs.Primary.Attributes[consts.FieldProfileName], nil
-	}
-}
-
-func testAccOAuthResourceServerConfigProfileNamespaceImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
-	return func(s *terraform.State) (string, error) {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return "", fmt.Errorf("not found: %s", resourceName)
-		}
-		namespace := rs.Primary.Attributes[consts.FieldNamespace]
-		profileName := rs.Primary.Attributes[consts.FieldProfileName]
-		return fmt.Sprintf("%s/%s", namespace, profileName), nil
 	}
 }

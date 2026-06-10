@@ -172,16 +172,17 @@ In addition to the arguments above, the following attributes are exported:
 
 ## Import
 
-OAuth Resource Server Configuration profiles can be imported using the `profile_name`, e.g.
+You can import OAuth Resource Server Configuration profiles using their `profile_name`, e.g.
 
 ```
 $ terraform import vault_oauth_resource_server_config_profile.example my-oauth-profile
 ```
 
-For profiles in a namespace, use the format `namespace/profile_name`:
+The import string does not encode the namespace. To import a profile from a
+namespace, set the `TERRAFORM_VAULT_NAMESPACE_IMPORT` environment variable:
 
 ```
-$ terraform import vault_oauth_resource_server_config_profile.example application/my-oauth-profile
+$ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_resource_server_config_profile.example my-oauth-profile
 ```
 
 ## Notes
