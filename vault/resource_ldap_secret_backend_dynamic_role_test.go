@@ -108,6 +108,18 @@ func TestAccLDAPSecretBackendDynamicRole_PasswordPolicy(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
+			{
+				Config: testLDAPSecretBackendDynamicRoleConfig(roleName, bindDN, bindPass, "10", "20"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCreationLDIF, creationLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionLDIF, deletionLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRollbackLDIF, rollbackLDIF+"\n"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultTTL, "10"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "20"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordPolicy, ""),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName, consts.FieldPasswordPolicy),
 		},
 	})
 }

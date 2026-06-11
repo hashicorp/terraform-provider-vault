@@ -146,6 +146,16 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName, consts.FieldSkipImportRotation),
+			{
+				Config: testLDAPSecretBackendStaticRoleConfig_withSkip(path, bindDN, bindPass, url, username, dn, username, rotationPeriod),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, dn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, rotationPeriod),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordPolicy, ""),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName, consts.FieldSkipImportRotation, consts.FieldPasswordPolicy),
 		},
 	})
 }

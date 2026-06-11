@@ -106,6 +106,18 @@ func createUpdateLDAPDynamicRoleResource(ctx context.Context, d *schema.Resource
 		}
 	}
 
+	// Handle password_policy unsetting: if the field changed from set to unset,
+	// send an empty string to clear the role-level override and inherit mount-level policy.
+	// Also validate that password_policy is only used with Vault >= 2.1.0.
+	if d.HasChange(consts.FieldPasswordPolicy) {
+		if _, ok := d.GetOk(consts.FieldPasswordPolicy); !ok {
+			// Field was removed from config, send empty string to clear it
+			data[consts.FieldPasswordPolicy] = ""
+		} else if !provider.IsAPISupported(meta, provider.VaultVersion210) {
+			return diag.Errorf("password_policy is only supported in Vault 2.1.0 and later")
+		}
+	}
+
 	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", rolePath, err))
 	}
