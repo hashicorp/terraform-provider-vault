@@ -14,10 +14,14 @@ FEATURES:
 * Add support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
 * `vault_policy`: Added `allow_overwrite` to optionally prevent overwriting Vault policies.([#2895](https://github.com/hashicorp/terraform-provider-vault/pull/2895))
 
-IMPROVEMENTS: 
+IMPROVEMENTS:
 
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
+
+BUG FIXES:
+
+* `provider`: Fix `auth_login_aws` assuming `aws_role_arn` twice when credentials are sourced from a profile or other non-web-identity chain, which caused the target role to assume itself and fail for roles that do not permit self-assumption. ([#2923](https://github.com/hashicorp/terraform-provider-vault/pull/2923))
 
 ## 5.9.0 (April 22, 2026)
 

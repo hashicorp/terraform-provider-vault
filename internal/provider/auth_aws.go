@@ -478,10 +478,11 @@ func (l *AuthLoginAWS) getCredentialsConfig(logger hclog.Logger) (*awsutil.Crede
 	if v, ok := l.params[consts.FieldAWSRegion].(string); ok && v != "" {
 		opts = append(opts, awsutil.WithRegion(v))
 	}
-	if v, ok := l.params[consts.FieldAWSRoleARN].(string); ok && v != "" {
+	_, manualAssume := l.manualAssumeRoleARN()
+	if v, ok := l.params[consts.FieldAWSRoleARN].(string); ok && v != "" && !manualAssume {
 		opts = append(opts, awsutil.WithRoleArn(v))
 	}
-	if v, ok := l.params[consts.FieldAWSRoleSessionName].(string); ok && v != "" {
+	if v, ok := l.params[consts.FieldAWSRoleSessionName].(string); ok && v != "" && !manualAssume {
 		opts = append(opts, awsutil.WithRoleSessionName(v))
 	}
 	if v, ok := l.params[consts.FieldAWSWebIdentityTokenFile].(string); ok && v != "" {
