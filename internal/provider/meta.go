@@ -111,7 +111,9 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	}
 
 	if root, ok := p.resourceData.GetOk(consts.FieldNamespace); ok && root.(string) != "" {
-		ns = fmt.Sprintf("%s/%s", root, ns)
+		if GetResourceDataBool(p.resourceData, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true) {
+			ns = fmt.Sprintf("%s/%s", root, ns)
+		}
 	}
 
 	if p.clientCache == nil {
@@ -369,6 +371,7 @@ func (p *ProviderMeta) setClient() error {
 		// namespace paths are properly honoured.
 		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
 		if setTokenFromNamespace {
+			// namespace = tokenNamespace
 			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 				return err
 			}
