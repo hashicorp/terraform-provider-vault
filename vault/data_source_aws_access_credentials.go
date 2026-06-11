@@ -4,17 +4,19 @@
 package vault
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -39,11 +41,16 @@ const (
 	// propagationBuffer is the added buffer of time we'll wait after N sequential successes
 	// before returning credentials for use.
 	propagationBuffer = 5 * time.Second
+
+	// AWS error codes used in credential validation
+	awsErrorAccessDenied       = "AccessDenied"
+	awsErrorValidationError    = "ValidationError"
+	awsErrorInvalidClientToken = "InvalidClientTokenId"
 )
 
 func awsAccessCredentialsDataSource() *schema.Resource {
 	return &schema.Resource{
-		Read: provider.ReadWrapper(awsAccessCredentialsDataSourceRead),
+		ReadContext: provider.ReadContextWrapper(awsAccessCredentialsDataSourceRead),
 
 		Schema: map[string]*schema.Schema{
 			"backend": {
@@ -77,7 +84,7 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 			"region": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Region the read credentials belong to.",
+				Description: "Region the read credentials belong to. Defaults to us-east-1 if unset.",
 			},
 			"access_key": {
 				Type:        schema.TypeString,
@@ -85,39 +92,33 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Description: "AWS access key ID read from Vault.",
 				Sensitive:   true,
 			},
-
 			"secret_key": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS secret key read from Vault.",
 				Sensitive:   true,
 			},
-
 			"security_token": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "AWS security token read from Vault. (Only returned if type is 'sts').",
 				Sensitive:   true,
 			},
-
 			consts.FieldLeaseID: {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Lease identifier assigned by vault.",
 			},
-
 			consts.FieldLeaseDuration: {
 				Type:        schema.TypeInt,
 				Computed:    true,
 				Description: "Lease duration in seconds relative to the time in lease_start_time.",
 			},
-
 			"lease_start_time": {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "Time at which the lease was read, using the clock of the system where Terraform was running",
 			},
-
 			consts.FieldLeaseRenewable: {
 				Type:        schema.TypeBool,
 				Computed:    true,
@@ -132,10 +133,10 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 	}
 }
 
-func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}) error {
+func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -156,12 +157,12 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	log.Printf("[DEBUG] Reading %q from Vault with data %#v", path, data)
 	secret, err := client.Logical().ReadWithData(path, data)
 	if err != nil {
-		return fmt.Errorf("error reading from Vault: %s", err)
+		return diag.FromErr(fmt.Errorf("error reading AWS credentials from Vault: %w", err))
 	}
 	log.Printf("[DEBUG] Read %q from Vault", path)
 
 	if secret == nil {
-		return fmt.Errorf("no role found at path %q", path)
+		return diag.FromErr(fmt.Errorf("no role found at path %q", path))
 	}
 
 	accessKey := secret.Data["access_key"].(string)
@@ -180,31 +181,45 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	d.Set("lease_start_time", time.Now().Format(time.RFC3339))
 	d.Set(consts.FieldLeaseRenewable, secret.Renewable)
 
-	awsConfig := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
-		HTTPClient:  cleanhttp.DefaultClient(),
+	optFns := []func(*config.LoadOptions) error{
+		config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(accessKey, secretKey, securityToken),
+		),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
 	}
 
+	// Default to us-east-1 when no region is provided, since IAM and STS are global services
+	// and require a region to be set in the AWS SDK v2 configuration.
 	region := d.Get("region").(string)
-	if region != "" {
-		awsConfig.Region = &region
+	if region == "" {
+		region = "us-east-1"
 	}
+	optFns = append(optFns, config.WithRegion(region))
 
-	sess, err := session.NewSession(awsConfig)
+	cfg, err := config.LoadDefaultConfig(ctx, optFns...)
 	if err != nil {
-		return fmt.Errorf("error creating AWS session: %s", err)
+		return diag.FromErr(fmt.Errorf("failed to load AWS SDK configuration: %w", err))
 	}
 
-	iamconn := iam.New(sess)
-	stsconn := sts.New(sess)
+	iamconn := iam.NewFromConfig(cfg)
+	stsconn := sts.NewFromConfig(cfg)
 
 	// Different types of AWS credentials have different behavior around consistency.
 	// See https://www.vaultproject.io/docs/secrets/aws/index.html#usage for more.
 	if credType == "sts" {
 		// STS credentials are immediately consistent. Let's ensure they're working.
 		log.Printf("[DEBUG] Checking if AWS sts token %q is valid", secret.LeaseID)
-		if _, err := stsconn.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
-			return err
+
+		// Use a bounded timeout for STS validation.
+		// GetCallerIdentity is typically sub‑second but can be delayed by network
+		// latency or throttling; 10 seconds provides sufficient headroom while
+		// preventing indefinite hangs in the provider.
+
+		stsCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if _, err := stsconn.GetCallerIdentity(stsCtx, &sts.GetCallerIdentityInput{}); err != nil {
+			return diag.FromErr(fmt.Errorf("error validating STS credentials: %w", err))
 		}
 		return nil
 	}
@@ -218,10 +233,16 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	// validateCreds is a retry function, which will be retried until it succeeds.
 	validateCreds := func() *retry.RetryError {
 		log.Printf("[DEBUG] Checking if AWS creds %q are valid", secret.LeaseID)
-		if _, err := iamconn.GetUser(nil); err != nil && isAWSAuthError(err) {
+
+		// Use a timeout context to bound each individual IAM validation attempt.
+		iamCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+
+		if _, err := iamconn.GetUser(iamCtx, nil); err != nil && isAWSAuthError(err) {
 			sequentialSuccesses = 0
 			log.Printf("[DEBUG] AWS auth error checking if creds %q are valid, is retryable", secret.LeaseID)
-			return retry.RetryableError(err)
+			wrappedErr := fmt.Errorf("AWS credentials validation failed (retryable): %w", err)
+			return retry.RetryableError(wrappedErr)
 		} else if err != nil {
 			log.Printf("[DEBUG] Error checking if creds %q are valid: %s", secret.LeaseID, err)
 			return retry.NonRetryableError(err)
@@ -234,10 +255,14 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 	start := time.Now()
 	for sequentialSuccesses < sequentialSuccessesRequired {
 		if time.Since(start) > sequentialSuccessTimeLimit {
-			return fmt.Errorf("unable to get %d sequential successes within %.f seconds", sequentialSuccessesRequired, sequentialSuccessTimeLimit.Seconds())
+			return diag.FromErr(fmt.Errorf(
+				"AWS credentials did not become consistent after %d successful validations within %.f seconds",
+				sequentialSuccessesRequired,
+				sequentialSuccessTimeLimit.Seconds(),
+			))
 		}
 		if err := retry.Retry(retryTimeOut, validateCreds); err != nil {
-			return fmt.Errorf("error checking if credentials are valid: %s", err)
+			return diag.FromErr(fmt.Errorf("AWS credentials validation failed after retries: %w", err))
 		}
 	}
 
@@ -247,16 +272,12 @@ func awsAccessCredentialsDataSourceRead(d *schema.ResourceData, meta interface{}
 }
 
 func isAWSAuthError(err error) bool {
-	awsErr, ok := err.(awserr.Error)
-	if !ok {
+	var apiErr smithy.APIError
+	if !errors.As(err, &apiErr) {
 		return false
 	}
-	switch awsErr.Code() {
-	case "AccessDenied":
-		return true
-	case "ValidationError":
-		return true
-	case "InvalidClientTokenId":
+	switch apiErr.ErrorCode() {
+	case awsErrorAccessDenied, awsErrorValidationError, awsErrorInvalidClientToken:
 		return true
 	default:
 		return false

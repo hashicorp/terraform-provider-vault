@@ -8,47 +8,68 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+// newAWSConfig creates an AWS config with the given region.
+// Extracted as a helper to avoid repeating config setup across test functions.
+func newAWSConfig(t *testing.T, region string) aws.Config {
+	t.Helper()
+	cfg, err := config.LoadDefaultConfig(
+		t.Context(),
+		config.WithRegion(region),
+	)
+	if err != nil {
+		t.Fatalf("Error creating AWS config: %s", err)
+	}
+	return cfg
+}
+
 func TestAccAWSAuthBackendLogin_iamIdentity(t *testing.T) {
 	mountPath := acctest.RandomWithPrefix("tf-test-aws")
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	sess, err := session.NewSession(nil)
+	cfg := newAWSConfig(t, testutil.GetTestAWSRegion(t))
+
+	stsClient := sts.NewFromConfig(cfg)
+
+	testIdentity, err := stsClient.GetCallerIdentity(t.Context(), &sts.GetCallerIdentityInput{})
 	if err != nil {
-		t.Errorf("Error creating AWS session: %s", err)
+		t.Fatalf("Error obtaining identity document: %s", err)
 	}
-	stsService := sts.New(sess)
-	testIdentity, err := stsService.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+
+	presignClient := sts.NewPresignClient(stsClient)
+	presignedReq, err := presignClient.PresignGetCallerIdentity(t.Context(), &sts.GetCallerIdentityInput{})
 	if err != nil {
-		t.Errorf("Error obtaining identity document: %s", err)
+		t.Fatalf("Error presigning GetCallerIdentity request: %s", err)
 	}
-	stsRequest, _ := stsService.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
-	stsRequest.Sign()
-	loginDataHeaders, err := json.Marshal(stsRequest.HTTPRequest.Header)
+
+	reqMethod := presignedReq.Method
+
+	reqURL := base64.StdEncoding.EncodeToString([]byte(presignedReq.URL))
+
+	headerBytes, err := json.Marshal(presignedReq.SignedHeader)
 	if err != nil {
-		t.Errorf("Error marshaling login headers: %s", err)
+		t.Fatalf("error marshaling signed headers: %s", err)
 	}
-	loginDataBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
-	if err != nil {
-		t.Errorf("Error reading login body: %s", err)
-	}
-	reqMethod := stsRequest.HTTPRequest.Method
-	reqURL := base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String()))
-	reqHeaders := base64.StdEncoding.EncodeToString(loginDataHeaders)
-	reqBody := base64.StdEncoding.EncodeToString(loginDataBody)
+	reqHeaders := base64.StdEncoding.EncodeToString(headerBytes)
+
+	// The IAM GetCallerIdentity request does not require a body; an empty body
+	// is expected and accepted by both STS and Vault's AWS auth backend.
+	reqBody := base64.StdEncoding.EncodeToString([]byte(""))
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
@@ -70,34 +91,44 @@ func TestAccAWSAuthBackendLogin_pkcs7(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	sess, err := session.NewSession(nil)
-	if err != nil {
-		t.Errorf("Error creating AWS session: %s", err)
-	}
-	metadata := ec2metadata.New(sess)
+	cfg := newAWSConfig(t, testutil.GetTestAWSRegion(t))
 
-	if !metadata.Available() {
+	metadataClient := imds.NewFromConfig(cfg)
+
+	_, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
 
-	iamInfo, err := metadata.IAMInfo()
+	iamInfoOutput, err := metadataClient.GetIAMInfo(t.Context(), &imds.GetIAMInfoInput{})
 	if err != nil {
 		t.Errorf("Error retrieving IAM info for instance: %s", err)
 	}
-	arn := iamInfo.InstanceProfileArn
+	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
-	doc, err := metadata.GetInstanceIdentityDocument()
+	docOutput, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Errorf("Error retrieving instance identity document: %s", err)
 	}
-	ami := doc.ImageID
-	account := doc.AccountID
+	ami := docOutput.ImageID
+	account := docOutput.AccountID
 
-	pkcs7, err := metadata.GetDynamicData("instance-identity/pkcs7")
+	pkcs7Output, err := metadataClient.GetDynamicData(t.Context(), &imds.GetDynamicDataInput{
+		Path: "instance-identity/pkcs7",
+	})
+
 	if err != nil {
-		t.Errorf("Error retrieving pkcs7 signature: %s", err)
+		t.Fatalf("Error retrieving pkcs7 signature: %s", err)
 	}
-	pkcs7 = strings.Replace(pkcs7, "\n", "", -1)
+	if pkcs7Output.Content != nil {
+		defer pkcs7Output.Content.Close()
+	}
+
+	pkcs7Bytes, err := io.ReadAll(pkcs7Output.Content)
+	if err != nil {
+		t.Errorf("Error reading pkcs7 content: %s", err)
+	}
+	pkcs7 := strings.Replace(string(pkcs7Bytes), "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -120,40 +151,61 @@ func TestAccAWSAuthBackendLogin_ec2Identity(t *testing.T) {
 	roleName := acctest.RandomWithPrefix("tf-test")
 	accessKey, secretKey := testutil.GetTestAWSCreds(t)
 
-	sess, err := session.NewSession(nil)
-	if err != nil {
-		t.Errorf("Error creating AWS session: %s", err)
-	}
-	metadata := ec2metadata.New(sess)
+	cfg := newAWSConfig(t, testutil.GetTestAWSRegion(t))
 
-	if !metadata.Available() {
+	metadataClient := imds.NewFromConfig(cfg)
+
+	_, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
+	if err != nil {
 		t.Skip("Not running on EC2 instance, can't test ec2 auth methods.")
 	}
 
-	iamInfo, err := metadata.IAMInfo()
+	iamInfoOutput, err := metadataClient.GetIAMInfo(t.Context(), &imds.GetIAMInfoInput{})
 	if err != nil {
 		t.Errorf("Error retrieving IAM info for instance: %s", err)
 	}
-	arn := iamInfo.InstanceProfileArn
+	arn := iamInfoOutput.IAMInfo.InstanceProfileArn
 
-	doc, err := metadata.GetInstanceIdentityDocument()
+	docOutput, err := metadataClient.GetInstanceIdentityDocument(t.Context(), &imds.GetInstanceIdentityDocumentInput{})
 	if err != nil {
 		t.Errorf("Error retrieving instance identity document: %s", err)
 	}
-	ami := doc.ImageID
-	account := doc.AccountID
+	ami := docOutput.ImageID
+	account := docOutput.AccountID
 
-	identity, err := metadata.GetDynamicData("instance-identity/document")
+	identityOutput, err := metadataClient.GetDynamicData(t.Context(), &imds.GetDynamicDataInput{
+		Path: "instance-identity/document",
+	})
 	if err != nil {
-		t.Errorf("Error retrieving raw identity: %s", err)
+		t.Fatalf("Error retrieving raw identity: %s", err)
 	}
-	identity = base64.StdEncoding.EncodeToString([]byte(identity))
 
-	sig, err := metadata.GetDynamicData("instance-identity/signature")
-	if err != nil {
-		t.Errorf("Error retrieving signature: %s", err)
+	if identityOutput.Content != nil {
+		defer identityOutput.Content.Close()
 	}
-	sig = strings.Replace(sig, "\n", "", -1)
+
+	identityBytes, err := io.ReadAll(identityOutput.Content)
+	if err != nil {
+		t.Fatalf("Error reading identity content: %s", err)
+	}
+	identity := base64.StdEncoding.EncodeToString(identityBytes)
+
+	sigOutput, err := metadataClient.GetDynamicData(t.Context(), &imds.GetDynamicDataInput{
+		Path: "instance-identity/signature",
+	})
+	if err != nil {
+		t.Fatalf("Error retrieving signature: %s", err)
+	}
+
+	if sigOutput.Content != nil {
+		defer sigOutput.Content.Close()
+	}
+
+	sigBytes, err := io.ReadAll(sigOutput.Content)
+	if err != nil {
+		t.Fatalf("Error reading signature content: %s", err)
+	}
+	sig := strings.Replace(string(sigBytes), "\n", "", -1)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
