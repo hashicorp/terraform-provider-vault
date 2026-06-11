@@ -371,7 +371,6 @@ func (p *ProviderMeta) setClient() error {
 		// namespace paths are properly honoured.
 		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
 		if setTokenFromNamespace {
-			// namespace = tokenNamespace
 			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 				return err
 			}
