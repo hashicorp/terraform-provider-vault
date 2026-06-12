@@ -14,7 +14,9 @@ Manages Agent Registry records in Vault Enterprise. An Agent Registry record all
 
 ~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.0.1 or later.
 
-## Example Usage
+### Relationship to OAuth Resource Server 
+
+These two features work together. You may want to refer to [OAuth Resource Server Terraform Resource](oauth_resource_server_config_profile.html.md).
 
 ### Basic Agent Registry Record
 
