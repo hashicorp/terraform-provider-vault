@@ -8,7 +8,7 @@ description: |-
 
 # vault\_agent\_registration
 
-~> **Preview feature:** This feature is currently available as a private preview. This feature is available only to select customers, and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
+~> **Preview feature:** This feature is currently available as a preview and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
 
 Manages Agent Registry records in Vault Enterprise. An Agent Registry record allows you to register Vault agents with specific identity entities and configure ceiling policies that limit the maximum permissions an agent can obtain.
 
