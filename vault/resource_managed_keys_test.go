@@ -576,87 +576,62 @@ type managedKeysUsagesAcceptanceTestCase struct {
 	name              string
 	providerAttr      string
 	keyType           string
-	buildConfig       func(t *testing.T, name string, usages []string) string
+	buildConfig       func(t *testing.T, name string) func(usages []string) string
 	importStateIgnore []string
-	preCheck          func(t *testing.T)
 }
 
-func TestManagedKeys_Usages_GenericHarness(t *testing.T) {
+func TestManagedKeysAWSUsages(t *testing.T) {
+	testManagedKeysUsagesAcceptance(t, managedKeysUsagesAcceptanceTestCase{
+		name:         "aws",
+		providerAttr: consts.FieldAWS,
+		keyType:      kmsTypeAWS,
+		buildConfig: func(_ *testing.T, name string) func(usages []string) string {
+			return func(usages []string) string {
+				return testManagedKeysConfig_awsUsages(name, usages)
+			}
+		},
+		importStateIgnore: []string{
+			"aws.0.access_key",
+			"aws.0.secret_key",
+		},
+	})
+}
+
+func TestManagedKeysPKCSUsages(t *testing.T) {
 	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
 
-	testCases := []managedKeysUsagesAcceptanceTestCase{
-		{
-			name:         "aws",
-			providerAttr: consts.FieldAWS,
-			keyType:      kmsTypeAWS,
-			buildConfig: func(_ *testing.T, name string, usages []string) string {
-				return testManagedKeysConfig_awsUsages(name, usages)
-			},
-			importStateIgnore: []string{
-				"aws.0.access_key",
-				"aws.0.secret_key",
-			},
-		},
-		{
-			name:         "pkcs",
-			providerAttr: consts.FieldPKCS,
-			keyType:      kmsTypePKCS,
-			buildConfig: func(t *testing.T, name string, usages []string) string {
-				library, slot, pin := testutil.GetTestPKCSCreds(t)
+	testManagedKeysUsagesAcceptance(t, managedKeysUsagesAcceptanceTestCase{
+		name:         "pkcs",
+		providerAttr: consts.FieldPKCS,
+		keyType:      kmsTypePKCS,
+		buildConfig: func(t *testing.T, name string) func(usages []string) string {
+			library, slot, pin := testutil.GetTestPKCSCreds(t)
+			return func(usages []string) string {
 				return testManagedKeysConfig_pkcsUsages(name, library, slot, pin, usages)
-			},
-			importStateIgnore: []string{
-				"pkcs.0.pin",
-				"pkcs.0.key_id",
-			},
-			preCheck: func(t *testing.T) {
-				testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
-			},
+			}
 		},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			testManagedKeysUsagesAcceptance(t, tc)
-		})
-	}
+		importStateIgnore: []string{
+			"pkcs.0.pin",
+			"pkcs.0.key_id",
+		},
+	})
 }
 
 func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanceTestCase) {
-	if tc.preCheck != nil {
-		tc.preCheck(t)
-	}
-
-	// Pre-run: remove any stale keys from previous runs of this sub-test.
-	// Scoped to the namePrefix across all key types so we don't disturb
-	// keys belonging to other tests.
-	namePrefix := fmt.Sprintf("%s-usages", tc.name)
-	for _, c := range managedKeyProviders {
-		cleanupManagedKeysByPrefix(t, c.keyType, namePrefix)
-	}
-
-	name := acctest.RandomWithPrefix(namePrefix)
-
-	// Post-run: delete only the specific key this test run created.
-	// resource.Test's destroy step handles Terraform-managed resources;
-	// this is a safety net for cases where destroy did not complete.
-	t.Cleanup(func() {
-		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-		path := getManagedKeysPath(tc.keyType, name)
-		if _, err := client.Logical().Delete(path); err != nil {
-			t.Errorf("cleanup: failed to delete managed key %q: %s", path, err)
-		}
-	})
+	name := acctest.RandomWithPrefix(fmt.Sprintf("%s-usages", tc.name))
 	resourceName := "vault_managed_keys.test"
 	stateUsagesPath := fmt.Sprintf("%s.0.%s", tc.providerAttr, consts.FieldUsages)
+	configForUsages := tc.buildConfig(t, name)
+	configWithUsages := configForUsages([]string{"verify", "sign"})
+	reorderedConfigWithUsages := configForUsages([]string{"sign", "verify"})
+	configWithoutUsages := configForUsages(nil)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
-				Config: tc.buildConfig(t, name, []string{"verify", "sign"}),
+				Config: configWithUsages,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", tc.providerAttr), "1"),
 					resource.TestCheckResourceAttr(resourceName, stateUsagesPath+".#", "2"),
@@ -667,12 +642,12 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 			},
 			{
 				// Reordered TypeSet values should not produce a diff.
-				Config:   tc.buildConfig(t, name, []string{"sign", "verify"}),
+				Config:   reorderedConfigWithUsages,
 				PlanOnly: true,
 			},
 			{
 				// Optional+Computed field should remain stable when omitted from config.
-				Config:   tc.buildConfig(t, name, nil),
+				Config:   configWithoutUsages,
 				PlanOnly: true,
 			},
 			{
@@ -683,46 +658,6 @@ func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanc
 			},
 		},
 	})
-}
-
-func cleanupManagedKeysByPrefix(t *testing.T, keyType, prefix string) {
-	t.Helper()
-
-	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-	listPath := getManagedKeysPathPrefix(keyType)
-	resp, err := client.Logical().List(listPath)
-	if err != nil {
-		if isUnsupportedKeyTypeError(err) {
-			return
-		}
-		t.Fatalf("failed to list managed keys at %q during cleanup: %s", listPath, err)
-	}
-
-	if resp == nil {
-		return
-	}
-
-	rawKeys, ok := resp.Data["keys"]
-	if !ok {
-		return
-	}
-
-	for _, item := range rawKeys.([]interface{}) {
-		name, ok := item.(string)
-		if !ok {
-			continue
-		}
-
-		name = strings.TrimSuffix(name, "/")
-		if !strings.HasPrefix(name, prefix) {
-			continue
-		}
-
-		path := getManagedKeysPath(keyType, name)
-		if _, err := client.Logical().Delete(path); err != nil {
-			t.Fatalf("failed to clean up managed key %q: %s", path, err)
-		}
-	}
 }
 
 func testManagedKeysConfig_awsUsages(name string, usages []string) string {
@@ -1003,13 +938,36 @@ func TestManagedKeyUsagesFromAPI(t *testing.T) {
 }
 
 func TestManagedKeyUsagesToAPI(t *testing.T) {
-	got, err := managedKeyUsagesToAPI(schema.NewSet(schema.HashString, []interface{}{"wrap", " decrypt ", "encrypt"}))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	tests := []struct {
+		name    string
+		input   []interface{}
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "sorted and trimmed",
+			input: []interface{}{"wrap", " decrypt ", "encrypt"},
+			want:  "decrypt,encrypt,wrap",
+		},
 	}
 
-	want := "decrypt,encrypt,wrap"
-	if got != want {
-		t.Fatalf("got %q, want %q", got, want)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := managedKeyUsagesToAPI(schema.NewSet(schema.HashString, tc.input))
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
