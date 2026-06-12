@@ -115,6 +115,30 @@ resource "vault_oauth_resource_server_config_profile" "advanced" {
 }
 ```
 
+### Profile with RAR (Rich Authorization Requests) Support
+
+```hcl
+resource "vault_oauth_resource_server_config_profile" "rar_optional" {
+  profile_name                     = "rar-optional-profile"
+  issuer_id                        = "https://auth.example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://auth.example.com/.well-known/jwks.json"
+  
+  # Make authorization_details optional in JWT tokens
+  optional_authorization_details   = true
+}
+
+resource "vault_oauth_resource_server_config_profile" "rar_mandatory" {
+  profile_name                     = "rar-mandatory-profile"
+  issuer_id                        = "https://auth.example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://auth.example.com/.well-known/jwks.json"
+  
+  # Require authorization_details in JWT tokens (default behavior)
+  optional_authorization_details   = false
+}
+```
+
 ### Profile in a Namespace
 
 ```hcl
@@ -182,6 +206,8 @@ The following arguments are supported:
 * `clock_skew_leeway` - (Optional) Leeway for clock skew in seconds when validating time-based claims (exp, iat, nbf). Defaults to `0`. Use this to account for clock differences between systems.
 
 * `enabled` - (Optional) Whether this profile is enabled for JWT validation. Disabled profiles are ignored during JWT authentication. Defaults to `true`.
+
+* `optional_authorization_details` - (Optional) When set to `true`, authorization_details in the JWT token are optional. When `false` (default), RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. Defaults to `false`.
 
 ## Attributes Reference
 

@@ -830,10 +830,11 @@ const (
 	/*
 		agent registry fields
 	*/
-	FieldCeilingPolicies        = "ceiling_policies"
-	FieldNoDefaultCeilingPolicy = "no_default_ceiling_policy"
-	FieldCreationTime           = "creation_time"
-	FieldLastUpdatedTime        = "last_updated_time"
+	FieldCeilingPolicies              = "ceiling_policies"
+	FieldNoDefaultCeilingPolicy       = "no_default_ceiling_policy"
+	FieldCreationTime                 = "creation_time"
+	FieldLastUpdatedTime              = "last_updated_time"
+	FieldOptionalAuthorizationDetails = "optional_authorization_details"
 
 	/*
 		raft snapshot agent config fields
@@ -994,6 +995,7 @@ const (
 	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
 	VaultVersion201  = "2.0.1"
+	VaultVersion203  = "2.0.3"
 	VaultVersion210  = "2.1.0"
 
 	/*

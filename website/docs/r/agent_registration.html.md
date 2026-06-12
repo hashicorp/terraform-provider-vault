@@ -131,6 +131,22 @@ resource "vault_agent_registration" "example" {
 }
 ```
 
+### Agent Registry Record with Optional Authorization Details (RAR)
+
+```hcl
+resource "vault_identity_entity" "agent" {
+  name     = "my-agent-entity"
+  policies = ["default"]
+}
+
+resource "vault_agent_registration" "example" {
+  display_name                  = "my-agent"
+  entity_id                     = vault_identity_entity.agent.id
+  optional_authorization_details = true
+  description                   = "Agent with optional RAR support"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -148,6 +164,8 @@ The following arguments are supported:
 * `no_default_ceiling_policy` - (Optional) When set to `true`, prevents Vault from applying the default ceiling policy to this agent. This allows you to have complete control over the agent's ceiling policies. Defaults to `false`.
 
 * `description` - (Optional) A human-readable description of the Agent Registry record. This field is for documentation purposes and does not affect the agent's behavior.
+
+* `optional_authorization_details` - (Optional) When set to `true`, makes Rich Authorization Requests (RAR) optional for this agent. RAR provides fine-grained authorization constraints beyond standard OAuth scopes. If either the OAuth profile or the agent registration has this set to `true`, RAR becomes optional. Defaults to `false`. Requires Vault 2.0.3 or later.
 
 ## Attributes Reference
 
