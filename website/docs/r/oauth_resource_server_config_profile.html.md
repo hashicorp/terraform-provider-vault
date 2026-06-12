@@ -8,9 +8,9 @@ description: |-
 
 # vault\_oauth\_resource\_server\_config\_profile
 
-~> **Beta feature:** This feature is currently available as a beta. Beta functionality is possibly incomplete and subject to change. **We strongly discourage using beta features in production deployments of Vault.**
+~>  **Preview feature:** This feature is currently available as a preview and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
 
-**Enable the Beta Feature**
+**Enable the Feature**
 
 ```hcl
 resource "vault_activation_flags" "oauth" {
