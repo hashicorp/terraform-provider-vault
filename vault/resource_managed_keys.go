@@ -292,7 +292,7 @@ func managedKeysPKCSConfigSchema() schemaMap {
 			Optional: true,
 			Computed: true,
 			Description: "The number of concurrent requests that may be in flight to the HSM at any given time." +
-				"Default is 1",
+				" Default is 1",
 		},
 	}
 
