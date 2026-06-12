@@ -5,7 +5,6 @@ package sys
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"os"
 
@@ -503,11 +502,11 @@ func (r *AgentRegistrationResource) registerPath() string {
 }
 
 func (r *AgentRegistrationResource) registrationByNamePath(name string) string {
-	return fmt.Sprintf("agent-registry/registration/display-name/%s", url.PathEscape(name))
+	return "agent-registry/registration/display-name/" + url.PathEscape(name)
 }
 
 func (r *AgentRegistrationResource) registrationByIDPath(id string) string {
-	return fmt.Sprintf("agent-registry/registration/id/%s", id)
+	return "agent-registry/registration/id/" + id
 }
 
 // importIDIsUUID reports whether an import ID should be treated as a record
