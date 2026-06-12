@@ -12,7 +12,7 @@ description: |-
 
 Manages Agent Registry records in Vault Enterprise. An Agent Registry record allows you to register Vault agents with specific identity entities and configure ceiling policies that limit the maximum permissions an agent can obtain.
 
-~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.1 or later.
+~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.0.1 or later.
 
 ## Example Usage
 
