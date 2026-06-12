@@ -271,7 +271,7 @@ resource "vault_managed_keys" "test" {
     pin                = "%s"
     mechanism          = "0x0001"
     max_parallel       = 2
-		usages             = ["sign", "verify", "wrap", "unwrap"]
+	usages             = ["sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, library, slot, pin)
@@ -287,7 +287,7 @@ resource "vault_managed_keys" "test" {
     slot               = "%s"
     pin                = "%s"
     mechanism          = "0x0001"
-		usages             = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
+	usages             = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, library, slot, pin)
@@ -767,7 +767,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key"
     algorithm   = "ec_sign_p256_sha256"
-		usages      = ["sign", "unwrap", "verify", "wrap"]
+	usages      = ["sign", "unwrap", "verify", "wrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -791,7 +791,7 @@ GCPCREDS
     allow_replace_key  = true
     allow_store_key    = true
     any_mount          = true
-		usages             = ["sign", "unwrap", "verify", "wrap"]
+	usages             = ["sign", "unwrap", "verify", "wrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -810,7 +810,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-update"
     algorithm   = "ec_sign_p256_sha256"
-		usages      = ["sign", "verify","unwrap"]
+	usages      = ["sign", "verify","unwrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -861,7 +861,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-1"
     algorithm   = "rsa_sign_pkcs1_2048_sha256"
-		usages      = ["sign","wrap", "unwrap"]
+	usages      = ["sign","wrap", "unwrap"]
   }
 }
 `, name0, credentials, project, keyRing, region, name1, credentials, project, keyRing, region)
@@ -880,7 +880,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-invalid"
     algorithm   = "invalid_algorithm_12345"
-		usages      = ["sign", "verify"]
+	usages      = ["sign", "verify"]
   }
 }
 `, name, credentials, project, keyRing, region)
