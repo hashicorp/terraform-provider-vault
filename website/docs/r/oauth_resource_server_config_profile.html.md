@@ -8,7 +8,23 @@ description: |-
 
 # vault\_oauth\_resource\_server\_config\_profile
 
-~> **Preview feature:** This feature is currently available as a private preview. This feature is available only to select customers, and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
+~> **Beta feature:** This feature is currently available as a beta. Beta functionality is possibly incomplete and subject to change. **We strongly discourage using beta features in production deployments of Vault.**
+
+**Enable the Beta Feature**
+
+```hcl
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
+resource "vault_oauth_resource_server_config_profile" "example" {
+  depends_on   = [vault_activation_flags.oauth]
+  profile_name = "example-profile"
+  issuer_id    = "https://example.com"
+  use_jwks     = true
+  jwks_uri     = "https://example.com/.well-known/jwks.json"
+}
+```
 
 Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These profiles define how Vault validates JWT tokens from OAuth 2.0 resource servers, enabling JWT-based authentication for API requests.
 
