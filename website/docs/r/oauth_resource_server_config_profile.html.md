@@ -10,7 +10,18 @@ description: |-
 
 ~>  **Preview feature:** This feature is currently available as a preview and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
 
-**Enable the Feature**
+
+Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These profiles define how Vault validates JWT tokens from OAuth 2.0 resource servers, enabling JWT-based authentication for API requests.
+
+~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.1 or later.
+
+### Relationship to Agent Registry 
+
+These two features work together. You may want to refer to [Agent Registry Terraform Resource](agent_registration.html.md).
+
+## Example Usage
+
+### Enable the Feature
 
 ```hcl
 resource "vault_activation_flags" "oauth" {
@@ -25,12 +36,6 @@ resource "vault_oauth_resource_server_config_profile" "example" {
   jwks_uri     = "https://example.com/.well-known/jwks.json"
 }
 ```
-
-Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These profiles define how Vault validates JWT tokens from OAuth 2.0 resource servers, enabling JWT-based authentication for API requests.
-
-~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.1 or later.
-
-## Example Usage
 
 ### JWKS-Based Profile
 
