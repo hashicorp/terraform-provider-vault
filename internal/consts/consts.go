@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package consts
@@ -28,6 +28,7 @@ const (
 	FieldAllowedEmailSans                   = "allowed_email_sans"
 	FieldAllowedNames                       = "allowed_names"
 	FieldAllowedOrganizationalUnits         = "allowed_organizational_units"
+	FieldAllowOverwrite                     = "allow_overwrite"
 	FieldRequiredExtensions                 = "required_extensions"
 	FieldOCSPCACertificates                 = "ocsp_ca_certificates"
 	FieldOCSPEnabled                        = "ocsp_enabled"
@@ -74,6 +75,7 @@ const (
 	FieldPathWrapTTL                        = "path_wrap_ttl"
 	FieldName                               = "name"
 	FieldValues                             = "values"
+	FieldGroupPolicyApplicationMode         = "group_policy_application_mode"
 	FieldVersion                            = "version"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
@@ -418,6 +420,10 @@ const (
 	FieldAltNames                           = "alt_names"
 	FieldFormat                             = "format"
 	FieldPrivateKeyFormat                   = "private_key_format"
+	FieldPKCS12Password                     = "pkcs12_password"
+	FieldPKCS12Encoder                      = "pkcs12_encoder"
+	FieldJKSPassword                        = "jks_password"
+	FieldJKSPrivateKeyAlias                 = "jks_private_key_alias"
 	FieldOu                                 = "ou"
 	FieldIssuingCA                          = "issuing_ca"
 	FieldSerial                             = "serial"
@@ -965,6 +971,7 @@ const (
 	VaultVersion121  = "1.21.0"
 	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
+	VaultVersion210  = "2.1.0"
 
 	/*
 		CloudFoundry auth backend field names
