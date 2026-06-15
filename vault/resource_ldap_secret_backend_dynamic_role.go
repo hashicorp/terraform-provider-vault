@@ -114,7 +114,7 @@ func createUpdateLDAPDynamicRoleResource(ctx context.Context, d *schema.Resource
 			// Field was removed from config, send empty string to clear it
 			data[consts.FieldPasswordPolicy] = ""
 		} else if !provider.IsAPISupported(meta, provider.VaultVersion210) {
-			return diag.Errorf("password_policy requires Vault 2.1.0 or later")
+			return diag.Errorf("password_policy is only supported in Vault 2.1.0 and later")
 		}
 	}
 
