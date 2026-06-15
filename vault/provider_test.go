@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -279,6 +280,89 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAccNamespaceProviderConfigure_setNamespaceFromTokenFalse verifies that when
+// set_namespace_from_token = false, the provider namespace is NOT prepended to child
+// namespace paths passed to GetNSClient. Without the fix, a resource with namespace = "child"
+// inside a provider configured with namespace = "parent" would resolve to "parent/child",
+// which is incorrect when set_namespace_from_token is explicitly false.
+func TestAccNamespaceProviderConfigure_setNamespaceFromTokenFalse(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+	acctestutil.SkipTestAcc(t)
+
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+	// Create a parent namespace.
+	parentNS := acctest.RandomWithPrefix("test-ns-parent")
+	if _, err := client.Logical().Write(consts.SysNamespaceRoot+parentNS, nil); err != nil {
+		t.Fatalf("failed to create parent namespace %q: %s", parentNS, err)
+	}
+	t.Cleanup(func() {
+		if _, err := client.Logical().Delete(consts.SysNamespaceRoot + parentNS); err != nil {
+			t.Errorf("failed to delete parent namespace %q: %s", parentNS, err)
+		}
+	})
+
+	// Create a child namespace at root. This is intentional: when
+	// set_namespace_from_token = false, namespace=childNS should resolve directly
+	// to childNS. If code incorrectly prepends parentNS, apply should fail.
+	childNS := acctest.RandomWithPrefix("test-ns-child")
+	if _, err := client.Logical().Write(consts.SysNamespaceRoot+childNS, nil); err != nil {
+		t.Fatalf("failed to create child namespace %q: %s", childNS, err)
+	}
+	t.Cleanup(func() {
+		if _, err := client.Logical().Delete(consts.SysNamespaceRoot + childNS); err != nil {
+			t.Errorf("failed to delete child namespace %q: %s", childNS, err)
+		}
+	})
+
+	// Configure a provider scoped to the parent namespace with set_namespace_from_token = false.
+	// The child resource sets namespace = childNS. With set_namespace_from_token = false the
+	// provider must NOT prepend parentNS, so the resolved namespace on the client must be
+	// exactly childNS (not "parentNS/childNS").
+	nsProvider := Provider()
+	nsProviderResource := &schema.Resource{
+		Schema: nsProvider.Schema,
+	}
+	nsProviderData := nsProviderResource.TestResourceData()
+	nsProviderData.Set(consts.FieldNamespace, parentNS)
+	nsProviderData.Set(consts.FieldToken, os.Getenv(api.EnvVaultToken))
+	nsProviderData.Set(consts.FieldSetNamespaceFromToken, false)
+	if _, err := provider.NewProviderMeta(nsProviderData); err != nil {
+		t.Fatal(err)
+	}
+
+	grandchildNS := acctest.RandomWithPrefix("test-ns-grandchild")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctestutil.TestAccPreCheck(t) },
+		Providers: map[string]*schema.Provider{
+			"vault": nsProvider,
+		},
+		Steps: []resource.TestStep{
+			{
+				// The resource sets namespace = childNS. With set_namespace_from_token = false the
+				// provider must resolve the client namespace to childNS only, not parentNS/childNS.
+				// If namespace were incorrectly prepended the Write would target
+				// "parentNS/childNS/grandchildNS" which does not exist and would fail.
+				Config: testNamespaceConfigWithProviderNS(childNS, grandchildNS),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_namespace.grandchild", consts.FieldPath, grandchildNS),
+					resource.TestCheckResourceAttr("vault_namespace.grandchild", consts.FieldNamespace, childNS),
+				),
+			},
+		},
+	})
+}
+
+func testNamespaceConfigWithProviderNS(providerNS, path string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "grandchild" {
+  namespace = %q
+  path      = %q
+}
+`, providerNS, path)
 }
 
 func testResourceApproleConfig_basic() string {
