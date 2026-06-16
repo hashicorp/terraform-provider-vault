@@ -816,6 +816,14 @@ const (
 	FieldValidateResponseSignature  = "validate_response_signature"
 
 	/*
+		agent registry fields
+	*/
+	FieldCeilingPolicies        = "ceiling_policies"
+	FieldNoDefaultCeilingPolicy = "no_default_ceiling_policy"
+	FieldCreationTime           = "creation_time"
+	FieldLastUpdatedTime        = "last_updated_time"
+
+	/*
 		raft snapshot agent config fields
 	*/
 	FieldInterval                  = "interval"
@@ -973,6 +981,7 @@ const (
 	VaultVersion121  = "1.21.0"
 	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
+	VaultVersion201  = "2.0.1"
 	VaultVersion210  = "2.1.0"
 
 	/*
