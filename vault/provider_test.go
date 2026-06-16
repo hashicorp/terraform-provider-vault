@@ -283,17 +283,18 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 }
 
 // TestAccNamespaceProviderConfigure_setNamespaceFromTokenFalse verifies that when
-// set_namespace_from_token = false, the provider namespace is NOT prepended to child
-// namespace paths passed to GetNSClient. Without the fix, a resource with namespace = "child"
-// inside a provider configured with namespace = "parent" would resolve to "parent/child",
-// which is incorrect when set_namespace_from_token is explicitly false.
+// set_namespace_from_token = false, the provider namespace is NOT prepended to resource
+// namespace paths. The provider is configured with namespace = parentNS and
+// set_namespace_from_token = false. A resource sets namespace = childNS, where childNS
+// exists at root only (not under parentNS). If the fix is absent, GetNSClient prepends
+// parentNS, resolving to parentNS/childNS which does not exist, causing a 404.
 func TestAccNamespaceProviderConfigure_setNamespaceFromTokenFalse(t *testing.T) {
 	acctestutil.SkipTestAccEnt(t)
 	acctestutil.SkipTestAcc(t)
 
 	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
-	// Create a parent namespace.
+	// Create a parent namespace. The provider will be configured with this namespace.
 	parentNS := acctest.RandomWithPrefix("test-ns-parent")
 	if _, err := client.Logical().Write(consts.SysNamespaceRoot+parentNS, nil); err != nil {
 		t.Fatalf("failed to create parent namespace %q: %s", parentNS, err)
@@ -304,9 +305,10 @@ func TestAccNamespaceProviderConfigure_setNamespaceFromTokenFalse(t *testing.T) 
 		}
 	})
 
-	// Create a child namespace at root. This is intentional: when
-	// set_namespace_from_token = false, namespace=childNS should resolve directly
-	// to childNS. If code incorrectly prepends parentNS, apply should fail.
+	// Create a child namespace at root only — not under parentNS. This is intentional:
+	// with set_namespace_from_token = false the resource namespace = childNS must resolve
+	// directly to the root-level childNS. If the code incorrectly prepends parentNS it
+	// targets parentNS/childNS, which does not exist, and the apply fails.
 	childNS := acctest.RandomWithPrefix("test-ns-child")
 	if _, err := client.Logical().Write(consts.SysNamespaceRoot+childNS, nil); err != nil {
 		t.Fatalf("failed to create child namespace %q: %s", childNS, err)
@@ -317,36 +319,17 @@ func TestAccNamespaceProviderConfigure_setNamespaceFromTokenFalse(t *testing.T) 
 		}
 	})
 
-	// Configure a provider scoped to the parent namespace with set_namespace_from_token = false.
-	// The child resource sets namespace = childNS. With set_namespace_from_token = false the
-	// provider must NOT prepend parentNS, so the resolved namespace on the client must be
-	// exactly childNS (not "parentNS/childNS").
-	nsProvider := Provider()
-	nsProviderResource := &schema.Resource{
-		Schema: nsProvider.Schema,
-	}
-	nsProviderData := nsProviderResource.TestResourceData()
-	nsProviderData.Set(consts.FieldNamespace, parentNS)
-	nsProviderData.Set(consts.FieldToken, os.Getenv(api.EnvVaultToken))
-	nsProviderData.Set(consts.FieldSetNamespaceFromToken, false)
-	if _, err := provider.NewProviderMeta(nsProviderData); err != nil {
-		t.Fatal(err)
-	}
-
 	grandchildNS := acctest.RandomWithPrefix("test-ns-grandchild")
 
+	// The provider block in HCL sets namespace = parentNS and set_namespace_from_token = false.
+	// resource.Test re-configures the provider from HCL, so these values must be embedded in
+	// the config string — not set on nsProviderData before the test — to survive re-configure.
 	resource.Test(t, resource.TestCase{
-		PreCheck: func() { acctestutil.TestAccPreCheck(t) },
-		Providers: map[string]*schema.Provider{
-			"vault": nsProvider,
-		},
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		Steps: []resource.TestStep{
 			{
-				// The resource sets namespace = childNS. With set_namespace_from_token = false the
-				// provider must resolve the client namespace to childNS only, not parentNS/childNS.
-				// If namespace were incorrectly prepended the Write would target
-				// "parentNS/childNS/grandchildNS" which does not exist and would fail.
-				Config: testNamespaceConfigWithProviderNS(childNS, grandchildNS),
+				Config: testNamespaceConfigWithProviderNS(parentNS, childNS, grandchildNS),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("vault_namespace.grandchild", consts.FieldPath, grandchildNS),
 					resource.TestCheckResourceAttr("vault_namespace.grandchild", consts.FieldNamespace, childNS),
@@ -356,13 +339,18 @@ func TestAccNamespaceProviderConfigure_setNamespaceFromTokenFalse(t *testing.T) 
 	})
 }
 
-func testNamespaceConfigWithProviderNS(providerNS, path string) string {
+func testNamespaceConfigWithProviderNS(providerNS, resourceNS, path string) string {
 	return fmt.Sprintf(`
+provider "vault" {
+  namespace                = %q
+  set_namespace_from_token = false
+}
+
 resource "vault_namespace" "grandchild" {
   namespace = %q
   path      = %q
 }
-`, providerNS, path)
+`, providerNS, resourceNS, path)
 }
 
 func testResourceApproleConfig_basic() string {
