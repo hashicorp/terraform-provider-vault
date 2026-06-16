@@ -254,6 +254,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		sys.NewRotationPolicyResource,
 		sysconfig.NewQuotaConfigResource,
 		sys.NewPluginRuntimeResource,
+		sys.NewOAuthResourceServerConfigProfileResource,
 		sys.NewAgentRegistrationResource,
 		config.NewSysConfigCORSResource,
 		sysconfig.NewControlGroupConfigResource,
