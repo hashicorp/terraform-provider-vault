@@ -248,6 +248,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		radius.NewRadiusAuthBackendConfigResource,
 		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
+		sysconfig.NewConfigUIDefaultAuthResource,
 		sysconfig.NewConfigGroupPolicyApplicationResource,
 		sysconfig.NewConfigUIHeaderResource,
 		sys.NewRotationPolicyResource,
