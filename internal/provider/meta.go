@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package provider
@@ -54,6 +54,8 @@ var (
 	VaultVersion121  = version.Must(version.NewSemver(consts.VaultVersion121))
 	VaultVersion1215 = version.Must(version.NewSemver(consts.VaultVersion1215))
 	VaultVersion200  = version.Must(version.NewSemver(consts.VaultVersion200))
+	VaultVersion201  = version.Must(version.NewSemver(consts.VaultVersion201))
+	VaultVersion210  = version.Must(version.NewSemver(consts.VaultVersion210))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )
