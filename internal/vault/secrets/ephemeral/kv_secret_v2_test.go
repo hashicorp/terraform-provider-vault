@@ -5,6 +5,9 @@ package ephemeralsecrets_test
 
 import (
 	"fmt"
+	"math/big"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -14,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"testing"
 )
 
 // TestAccKVV2Secret confirms that a secret written to
@@ -41,6 +43,7 @@ func TestAccKVV2Secret(t *testing.T) {
 				Config: testKVV2SecretConfig(mount, name),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue("echo.test_krb", tfjsonpath.New("data").AtMapKey("password"), knownvalue.StringExact("password1")),
+					statecheck.ExpectKnownValue("echo.test_krb", tfjsonpath.New("data").AtMapKey("version"), knownvalue.NumberExact(big.NewFloat(1))),
 				},
 			},
 		},
@@ -73,7 +76,9 @@ ephemeral "vault_kv_secret_v2" "db_secret" {
 }
 
 provider "echo" {
-	data = ephemeral.vault_kv_secret_v2.db_secret.data
+	data = merge(ephemeral.vault_kv_secret_v2.db_secret.data, {
+	  version = ephemeral.vault_kv_secret_v2.db_secret.version
+	})
 }
 
 resource "echo" "test_krb" {}

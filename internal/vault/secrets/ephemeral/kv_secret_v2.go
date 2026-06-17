@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -16,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
-	"strconv"
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -62,6 +63,7 @@ type Metadata struct {
 	CreatedTime    string                 `json:"created_time" mapstructure:"created_time"`
 	DeletionTime   string                 `json:"deletion_time" mapstructure:"deletion_time"`
 	Destroyed      bool                   `json:"destroyed" mapstructure:"destroyed"`
+	Version        int32                  `json:"version" mapstructure:"version"`
 }
 
 // Schema defines this resource's schema which is the data that is available in
@@ -81,6 +83,7 @@ func (r *KVV2EphemeralSecretResource) Schema(_ context.Context, _ ephemeral.Sche
 			},
 			consts.FieldVersion: schema.Int32Attribute{
 				Optional:            true,
+				Computed:            true,
 				MarkdownDescription: "Version of the secret to retrieve.",
 			},
 			consts.FieldDataJSON: schema.StringAttribute{
@@ -176,6 +179,7 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 	data.CreatedTime = types.StringValue(readResp.Metadata.CreatedTime)
 	data.DeletionTime = types.StringValue(readResp.Metadata.DeletionTime)
 	data.Destroyed = types.BoolValue(readResp.Metadata.Destroyed)
+	data.Version = types.Int32Value(readResp.Metadata.Version)
 
 	secretData, diag := types.MapValueFrom(ctx, types.StringType, readResp.Data)
 	resp.Diagnostics.Append(diag...)
