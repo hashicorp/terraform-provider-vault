@@ -75,31 +75,33 @@ type OAuthResourceServerConfigProfileModel struct {
 	PublicKeys types.List `tfsdk:"public_keys"` // List of PublicKeyModel
 
 	// Optional fields
-	Audiences           types.List   `tfsdk:"audiences"` // List of strings
-	NoDefaultPolicy     types.Bool   `tfsdk:"no_default_policy"`
-	UserClaim           types.String `tfsdk:"user_claim"`
-	SupportedAlgorithms types.List   `tfsdk:"supported_algorithms"` // List of strings
-	JwtType             types.String `tfsdk:"jwt_type"`
-	ClockSkewLeeway     types.Int64  `tfsdk:"clock_skew_leeway"`
-	Enabled             types.Bool   `tfsdk:"enabled"`
+	Audiences                    types.List   `tfsdk:"audiences"` // List of strings
+	NoDefaultPolicy              types.Bool   `tfsdk:"no_default_policy"`
+	UserClaim                    types.String `tfsdk:"user_claim"`
+	SupportedAlgorithms          types.List   `tfsdk:"supported_algorithms"` // List of strings
+	JwtType                      types.String `tfsdk:"jwt_type"`
+	ClockSkewLeeway              types.Int64  `tfsdk:"clock_skew_leeway"`
+	Enabled                      types.Bool   `tfsdk:"enabled"`
+	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
 }
 
 // OAuthResourceServerConfigProfileAPIModel describes the Vault API data model
 type OAuthResourceServerConfigProfileAPIModel struct {
-	ConfigID            string              `json:"config_id" mapstructure:"config_id"`
-	ProfileName         string              `json:"profile_name" mapstructure:"profile_name"`
-	IssuerId            string              `json:"issuer_id" mapstructure:"issuer_id"`
-	UseJWKS             bool                `json:"use_jwks" mapstructure:"use_jwks"`
-	JWKSUri             string              `json:"jwks_uri" mapstructure:"jwks_uri"`
-	JwksCaPem           string              `json:"jwks_ca_pem" mapstructure:"jwks_ca_pem"`
-	PublicKeys          []PublicKeyAPIModel `json:"public_keys" mapstructure:"public_keys"`
-	Audiences           []string            `json:"audiences" mapstructure:"audiences"`
-	NoDefaultPolicy     bool                `json:"no_default_policy" mapstructure:"no_default_policy"`
-	UserClaim           string              `json:"user_claim" mapstructure:"user_claim"`
-	SupportedAlgorithms []string            `json:"supported_algorithms" mapstructure:"supported_algorithms"`
-	JwtType             string              `json:"jwt_type" mapstructure:"jwt_type"`
-	ClockSkewLeeway     int                 `json:"clock_skew_leeway" mapstructure:"clock_skew_leeway"`
-	Enabled             bool                `json:"enabled" mapstructure:"enabled"`
+	ConfigID                     string              `json:"config_id" mapstructure:"config_id"`
+	ProfileName                  string              `json:"profile_name" mapstructure:"profile_name"`
+	IssuerId                     string              `json:"issuer_id" mapstructure:"issuer_id"`
+	UseJWKS                      bool                `json:"use_jwks" mapstructure:"use_jwks"`
+	JWKSUri                      string              `json:"jwks_uri" mapstructure:"jwks_uri"`
+	JwksCaPem                    string              `json:"jwks_ca_pem" mapstructure:"jwks_ca_pem"`
+	PublicKeys                   []PublicKeyAPIModel `json:"public_keys" mapstructure:"public_keys"`
+	Audiences                    []string            `json:"audiences" mapstructure:"audiences"`
+	NoDefaultPolicy              bool                `json:"no_default_policy" mapstructure:"no_default_policy"`
+	UserClaim                    string              `json:"user_claim" mapstructure:"user_claim"`
+	SupportedAlgorithms          []string            `json:"supported_algorithms" mapstructure:"supported_algorithms"`
+	JwtType                      string              `json:"jwt_type" mapstructure:"jwt_type"`
+	ClockSkewLeeway              int                 `json:"clock_skew_leeway" mapstructure:"clock_skew_leeway"`
+	Enabled                      bool                `json:"enabled" mapstructure:"enabled"`
+	OptionalAuthorizationDetails bool                `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
 }
 
 // PublicKeyAPIModel represents a public key in the API
@@ -211,6 +213,12 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Computed:            true,
 				Default:             booldefault.StaticBool(true),
 				MarkdownDescription: "Whether this profile is enabled for JWT validation. Disabled profiles are ignored. Defaults to true.",
+			},
+			consts.FieldOptionalAuthorizationDetails: schema.BoolAttribute{
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
+				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional. Defaults to false.",
 			},
 		},
 		// Note: ListNestedBlock is used instead of ListNestedAttribute because this provider
@@ -521,6 +529,9 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 	// Clock skew leeway
 	data.ClockSkewLeeway = types.Int64Value(int64(apiModel.ClockSkewLeeway))
 
+	// RAR support
+	data.OptionalAuthorizationDetails = types.BoolValue(apiModel.OptionalAuthorizationDetails)
+
 	return true
 }
 
@@ -595,6 +606,11 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 	// Clock skew leeway
 	if !data.ClockSkewLeeway.IsNull() && !data.ClockSkewLeeway.IsUnknown() {
 		vaultRequest[consts.FieldClockSkewLeeway] = int(data.ClockSkewLeeway.ValueInt64())
+	}
+
+	// RAR support
+	if !data.OptionalAuthorizationDetails.IsNull() && !data.OptionalAuthorizationDetails.IsUnknown() {
+		vaultRequest[consts.FieldOptionalAuthorizationDetails] = data.OptionalAuthorizationDetails.ValueBool()
 	}
 
 	return vaultRequest
