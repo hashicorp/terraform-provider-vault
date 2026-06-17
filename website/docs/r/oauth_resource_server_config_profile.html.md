@@ -8,7 +8,7 @@ description: |-
 
 # vault\_oauth\_resource\_server\_config\_profile
 
-~>  **Beta feature:** This feature is currently available as a preview and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
+~>  **Beta feature:** This feature is currently in beta status and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
 
 
 Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These profiles define how Vault validates JWT tokens from OAuth 2.0 resource servers, enabling JWT-based authentication for API requests.
