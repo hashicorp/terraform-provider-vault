@@ -140,10 +140,10 @@ resource "vault_identity_entity" "agent" {
 }
 
 resource "vault_agent_registration" "example" {
-  display_name                  = "my-agent"
-  entity_id                     = vault_identity_entity.agent.id
+  display_name                   = "my-agent"
+  entity_id                      = vault_identity_entity.agent.id
   optional_authorization_details = true
-  description                   = "Agent with optional RAR support"
+  description                    = "Agent with optional RAR support"
 }
 ```
 
