@@ -218,7 +218,7 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "When set to true, authorization_details in the JWT token are optional. When false (default), RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token.",
+				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional. Defaults to false.",
 			},
 		},
 		// Note: ListNestedBlock is used instead of ListNestedAttribute because this provider
@@ -608,8 +608,10 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 		vaultRequest[consts.FieldClockSkewLeeway] = int(data.ClockSkewLeeway.ValueInt64())
 	}
 
-	// RAR support - always send the value since it has a default
-	vaultRequest["optional_authorization_details"] = data.OptionalAuthorizationDetails.ValueBool()
+	// RAR support
+	if !data.OptionalAuthorizationDetails.IsNull() && !data.OptionalAuthorizationDetails.IsUnknown() {
+		vaultRequest[consts.FieldOptionalAuthorizationDetails] = data.OptionalAuthorizationDetails.ValueBool()
+	}
 
 	return vaultRequest
 }

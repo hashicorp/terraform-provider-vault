@@ -207,7 +207,7 @@ The following arguments are supported:
 
 * `enabled` - (Optional) Whether this profile is enabled for JWT validation. Disabled profiles are ignored during JWT authentication. Defaults to `true`.
 
-* `optional_authorization_details` - (Optional) When set to `true`, authorization_details in the JWT token are optional. When `false` (default), RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. Defaults to `false`.
+* `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional. Defaults to `false`. Requires Vault 2.0.3 or later.
 
 ## Attributes Reference
 

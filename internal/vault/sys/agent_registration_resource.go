@@ -141,7 +141,7 @@ func (r *AgentRegistrationResource) Schema(ctx context.Context, req resource.Sch
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
-				MarkdownDescription: "When set to true, authorization_details in the JWT token are optional for this agent. When false (default), RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. This setting works in conjunction with the OAuth Resource Server profile's optional_authorization_details setting - RAR is optional if EITHER is true.",
+				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional for this agent. This setting works in conjunction with the OAuth Resource Server profile's optional_authorization_details setting - RAR is optional if EITHER is true. Defaults to false.",
 			},
 		},
 		MarkdownDescription: "Manages Agent Registry registrations in Vault Enterprise. " +
@@ -202,8 +202,10 @@ func (r *AgentRegistrationResource) Create(ctx context.Context, req resource.Cre
 		vaultRequest[consts.FieldDescription] = data.Description.ValueString()
 	}
 
-	// RAR support - always send the value since it has a default
-	vaultRequest["optional_authorization_details"] = data.OptionalAuthorizationDetails.ValueBool()
+	// RAR support
+	if !data.OptionalAuthorizationDetails.IsNull() && !data.OptionalAuthorizationDetails.IsUnknown() {
+		vaultRequest[consts.FieldOptionalAuthorizationDetails] = data.OptionalAuthorizationDetails.ValueBool()
+	}
 
 	path := r.registerPath()
 	createResp, err := client.Logical().WriteWithContext(ctx, path, vaultRequest)
@@ -328,6 +330,7 @@ func (r *AgentRegistrationResource) Update(ctx context.Context, req resource.Upd
 		vaultRequest[consts.FieldDescription] = data.Description.ValueString()
 	}
 
+	// RAR support
 	if !data.OptionalAuthorizationDetails.IsNull() && !data.OptionalAuthorizationDetails.IsUnknown() {
 		vaultRequest[consts.FieldOptionalAuthorizationDetails] = data.OptionalAuthorizationDetails.ValueBool()
 	}

@@ -165,7 +165,7 @@ The following arguments are supported:
 
 * `description` - (Optional) A human-readable description of the Agent Registry record. This field is for documentation purposes and does not affect the agent's behavior.
 
-* `optional_authorization_details` - (Optional) When set to `true`, makes Rich Authorization Requests (RAR) optional for this agent. RAR provides fine-grained authorization constraints beyond standard OAuth scopes. If either the OAuth profile or the agent registration has this set to `true`, RAR becomes optional. Defaults to `false`. Requires Vault 2.0.3 or later.
+* `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional for this agent. This setting works in conjunction with the OAuth Resource Server profile's optional_authorization_details setting - RAR is optional if EITHER is `true`. Defaults to `false`. Requires Vault 2.0.3 or later.
 
 ## Attributes Reference
 
