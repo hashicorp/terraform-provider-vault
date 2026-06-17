@@ -235,6 +235,7 @@ const (
 	FieldPushInfo                           = "push_info"
 	FieldUsePasscode                        = "use_passcode"
 	FieldIssuer                             = "issuer"
+	FieldIssuerId                           = "issuer_id"
 	FieldPeriod                             = "period"
 	FieldKeySize                            = "key_size"
 	FieldQRSize                             = "qr_size"
@@ -267,6 +268,7 @@ const (
 	FieldOIDCResponseMode                   = "oidc_response_mode"
 	FieldOIDCResponseTypes                  = "oidc_response_types"
 	FieldJWKSURL                            = "jwks_url"
+	FieldJWKSURI                            = "jwks_uri"
 	FieldJWKSCAPEM                          = "jwks_ca_pem"
 	FieldJWKSPairs                          = "jwks_pairs"
 	FieldJWTValidationPubkeys               = "jwt_validation_pubkeys"
@@ -283,6 +285,16 @@ const (
 	FieldPolicies                           = "policies"
 	FieldNoParent                           = "no_parent"
 	FieldNoDefaultPolicy                    = "no_default_policy"
+	FieldPublicKeys                         = "public_keys"
+	FieldPEM                                = "pem"
+	FieldUseJWKS                            = "use_jwks"
+	FieldAudiences                          = "audiences"
+	FieldUserClaim                          = "user_claim"
+	FieldSupportedAlgorithms                = "supported_algorithms"
+	FieldJwtType                            = "jwt_type"
+	FieldClockSkewLeeway                    = "clock_skew_leeway"
+	FieldConfigID                           = "config_id"
+	FieldProfileName                        = "profile_name"
 	FieldRenewable                          = "renewable"
 	FieldExplicitMaxTTL                     = "explicit_max_ttl"
 	FieldPersistApp                         = "persist_app"
@@ -816,6 +828,14 @@ const (
 	FieldValidateResponseSignature  = "validate_response_signature"
 
 	/*
+		agent registry fields
+	*/
+	FieldCeilingPolicies        = "ceiling_policies"
+	FieldNoDefaultCeilingPolicy = "no_default_ceiling_policy"
+	FieldCreationTime           = "creation_time"
+	FieldLastUpdatedTime        = "last_updated_time"
+
+	/*
 		raft snapshot agent config fields
 	*/
 	FieldInterval                  = "interval"
@@ -973,6 +993,7 @@ const (
 	VaultVersion121  = "1.21.0"
 	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
+	VaultVersion201  = "2.0.1"
 	VaultVersion210  = "2.1.0"
 
 	/*
