@@ -278,6 +278,104 @@ func TestAccOAuthResourceServerConfigProfile_duplicateProfileNameAcrossNamespace
 	})
 }
 
+// TestAccOAuthResourceServerConfigProfile_rarOptional tests RAR with optional authorization_details
+func TestAccOAuthResourceServerConfigProfile_rarOptional(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_rarOptional(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, "optional_authorization_details", "true"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName),
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccOAuthResourceServerConfigProfile_rarMandatory tests RAR with mandatory authorization_details (default)
+func TestAccOAuthResourceServerConfigProfile_rarMandatory(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_rarMandatory(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, "optional_authorization_details", "false"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName),
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccOAuthResourceServerConfigProfile_rarUpdate tests updating RAR setting
+func TestAccOAuthResourceServerConfigProfile_rarUpdate(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Start with RAR mandatory (default)
+				Config: testAccOAuthResourceServerConfigProfileConfig_rarMandatory(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "optional_authorization_details", "false"),
+				),
+			},
+			{
+				// Update to RAR optional
+				Config: testAccOAuthResourceServerConfigProfileConfig_rarOptional(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "optional_authorization_details", "true"),
+				),
+			},
+			{
+				// Update back to RAR mandatory
+				Config: testAccOAuthResourceServerConfigProfileConfig_rarMandatory(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "optional_authorization_details", "false"),
+				),
+			},
+		},
+	})
+}
+
 // Config helper functions
 
 func testAccOAuthResourceServerConfigProfileConfig_jwks(profileName string) string {
@@ -425,6 +523,40 @@ resource "vault_oauth_resource_server_config_profile" "test" {
   use_jwks              = true
   jwks_uri              = "https://example.com/.well-known/jwks.json"
   supported_algorithms  = ["RS256", "ES256"]
+}
+`, profileName)
+}
+
+func testAccOAuthResourceServerConfigProfileConfig_rarOptional(profileName string) string {
+	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
+resource "vault_oauth_resource_server_config_profile" "test" {
+  depends_on                       = [vault_activation_flags.oauth]
+  profile_name                     = "%s"
+  issuer_id                        = "https://example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://example.com/.well-known/jwks.json"
+  optional_authorization_details   = true
+}
+`, profileName)
+}
+
+func testAccOAuthResourceServerConfigProfileConfig_rarMandatory(profileName string) string {
+	return fmt.Sprintf(`
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+
+resource "vault_oauth_resource_server_config_profile" "test" {
+  depends_on                       = [vault_activation_flags.oauth]
+  profile_name                     = "%s"
+  issuer_id                        = "https://example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://example.com/.well-known/jwks.json"
+  optional_authorization_details   = false
 }
 `, profileName)
 }

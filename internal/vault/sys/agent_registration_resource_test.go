@@ -611,3 +611,57 @@ resource "vault_agent_registration" "test" {
 }
 `, policy1, policy2, displayName, displayName)
 }
+
+// TestAccAgentRegistration_optionalAuthorizationDetails tests the optional_authorization_details field
+func TestAccAgentRegistration_optionalAuthorizationDetails(t *testing.T) {
+	displayName := acctest.RandomWithPrefix("test-agent")
+	resourceName := "vault_agent_registration.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAgentRegistrationConfig_optionalAuthorizationDetails(displayName, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOptionalAuthorizationDetails, "true"),
+				),
+			},
+			{
+				Config: testAccAgentRegistrationConfig_optionalAuthorizationDetails(displayName, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOptionalAuthorizationDetails, "false"),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccAgentRegistrationImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldDisplayName,
+				ImportStateVerifyIgnore:              []string{consts.FieldLastUpdatedTime},
+			},
+		},
+	})
+}
+
+func testAccAgentRegistrationConfig_optionalAuthorizationDetails(displayName string, optionalRAR bool) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "test" {
+  name     = "%s-entity"
+  policies = ["default"]
+}
+
+resource "vault_agent_registration" "test" {
+  display_name                  = "%s"
+  entity_id                     = vault_identity_entity.test.id
+  optional_authorization_details = %t
+}
+`, displayName, displayName, optionalRAR)
+}
