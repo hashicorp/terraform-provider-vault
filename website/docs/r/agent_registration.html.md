@@ -149,6 +149,8 @@ The following arguments are supported:
 
 * `description` - (Optional) A human-readable description of the Agent Registry record. This field is for documentation purposes and does not affect the agent's behavior.
 
+* `owner` - (Optional) Owner of the Agent Registry record.
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
