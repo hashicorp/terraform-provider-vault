@@ -266,7 +266,7 @@ func TestAccAgentRegistration_withOwner(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
