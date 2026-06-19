@@ -548,6 +548,8 @@ const (
 	FieldWrappingToken                      = "wrapping_token"
 	FieldWithWrappedAccessor                = "with_wrapped_accessor"
 	FieldExternalID                         = "external_id"
+	FieldKMSKeyID                           = "kms_key_id"
+	FieldRegionalKmsKeys                    = "regional_kms_keys"
 	FieldAppName                            = "app_name"
 	FieldInstallationID                     = "installation_id"
 	FieldAppID                              = "app_id"
