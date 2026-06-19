@@ -153,10 +153,10 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.19.17-ent"
-        - "vault-enterprise:1.20.11-ent"
-        - "vault-enterprise:1.21.6-ent"
-        - "vault-enterprise:2.0.1-ent"
+        - "vault-enterprise:1.19.19-ent"
+        - "vault-enterprise:1.20.13-ent"
+        - "vault-enterprise:1.21.8-ent"
+        - "vault-enterprise:2.0.3-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
