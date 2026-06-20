@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -19,11 +19,12 @@ import (
 
 func tokenResource() *schema.Resource {
 	return &schema.Resource{
-		Create: tokenCreate,
-		Read:   provider.ReadWrapper(tokenRead),
-		Update: tokenUpdate,
-		Delete: tokenDelete,
-		Exists: tokenExists,
+		DeprecationMessage: "The vault_token resource is maintained for legacy persistence; for better security and batch token support, use ephemeral \"vault_token\" instead.",
+		Create:             tokenCreate,
+		Read:               provider.ReadWrapper(tokenRead),
+		Update:             tokenUpdate,
+		Delete:             tokenDelete,
+		Exists:             tokenExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},

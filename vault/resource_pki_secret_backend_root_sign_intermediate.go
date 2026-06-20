@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -26,6 +26,9 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendRootSignIntermediateRead),
 		UpdateContext: pkiSecretBackendRootSignIntermediateUpdate,
 		DeleteContext: pkiSecretBackendCertDelete,
+		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			return pkiValidateFormatField(d, meta)
+		},
 		StateUpgraders: []schema.StateUpgrader{
 			{
 				Version: 0,
@@ -103,10 +106,41 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  "The format of data.",
+				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion210),
 				ForceNew:     true,
 				Default:      "pem",
-				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, false),
+			},
+			consts.FieldPKCS12Password: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Password for encrypting the PKCS#12 
+		archive when format is set to "pkcs12_bundle". If not provided, 
+		defaults to "changeit". It is recommended to use the default password
+		and protect the file using other means or use a high-entropy password.`,
+				ForceNew: true,
+				Default:  "changeit",
+			},
+			consts.FieldPKCS12Encoder: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Encoder profile to use for PKCS#12 archives when 
+format is set to "pkcs12_bundle". Valid values are "modern2026" and 
+"modern2023". Defaults to "modern2026", which uses the newer PKCS#12 
+integrity format (PBMAC1).`,
+				ForceNew:     true,
+				Default:      "modern2026",
+				ValidateFunc: validation.StringInSlice([]string{"modern2026", "modern2023"}, false),
+			},
+			consts.FieldJKSPassword: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Description: `Password for encrypting the Java keystore
+		when format is set to "jks_bundle". If not provided, 
+		defaults to "changeit". It is recommended to use the default password
+		and protect the file using other means or use a high-entropy password.`,
+				ForceNew: true,
+				Default:  "changeit",
 			},
 			consts.FieldMaxPathLength: {
 				Type:        schema.TypeInt,
@@ -356,6 +390,14 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 		consts.FieldSKID,
 		consts.FieldNotAfter,
 		consts.FieldNotBeforeDuration,
+	}
+
+	// Only add additional format parameters if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		intermediateSignAPIFields = append(intermediateSignAPIFields,
+			consts.FieldPKCS12Password,
+			consts.FieldPKCS12Encoder,
+			consts.FieldJKSPassword)
 	}
 
 	intermediateSignBooleanAPIFields := []string{
