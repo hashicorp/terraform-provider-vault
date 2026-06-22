@@ -404,12 +404,12 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 				},
 			},
 			logger: hclog.NewNullLogger(),
+			// Non-web-identity creds: aws_role_arn is assumed manually in
+			// getLoginData, so it is not also passed to the SDK here (#2922).
 			want: &awsutil.CredentialsConfig{
-				Region:          "us-east-1",
-				AccessKey:       "key-id",
-				SecretKey:       "secret-key",
-				RoleARN:         "arn:aws:iam::123456789012:role/test-role",
-				RoleSessionName: "test-session",
+				Region:    "us-east-1",
+				AccessKey: "key-id",
+				SecretKey: "secret-key",
 			},
 			wantErr: false,
 		},
@@ -431,7 +431,6 @@ func TestAuthLoginAWS_getCredentialsConfig(t *testing.T) {
 				AccessKey:    "key-id",
 				SecretKey:    "secret-key",
 				SessionToken: "session-token",
-				RoleARN:      "arn:aws:iam::123456789012:role/test-role",
 			},
 			wantErr: false,
 		},
@@ -585,25 +584,28 @@ func TestAuthLoginAWS_RoleAssumption(t *testing.T) {
 		expectSessionName    string
 	}{
 		{
-			name: "with-role-arn-and-session-name",
+			// Web identity (IRSA): the SDK assumes the role, so the role ARN
+			// must be passed through in the credentials config.
+			name: "web-identity-with-role-arn-and-session-name",
 			params: map[string]interface{}{
-				consts.FieldAWSAccessKeyID:     "key-id",
-				consts.FieldAWSSecretAccessKey: "secret-key",
-				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/test-role",
-				consts.FieldAWSRoleSessionName: "custom-session",
+				consts.FieldAWSRoleARN:              "arn:aws:iam::123456789012:role/test-role",
+				consts.FieldAWSRoleSessionName:      "custom-session",
+				consts.FieldAWSWebIdentityTokenFile: "/var/run/secrets/eks.amazonaws.com/serviceaccount/token",
 			},
 			expectRoleAssumption: true,
 			expectSessionName:    "custom-session",
 		},
 		{
-			name: "with-role-arn-default-session-name",
+			// Non-web-identity creds: the role is assumed manually in
+			// getLoginData, so the SDK config must NOT carry the role ARN
+			// (otherwise it is assumed twice; #2922).
+			name: "non-web-identity-role-arn-assumed-manually",
 			params: map[string]interface{}{
 				consts.FieldAWSAccessKeyID:     "key-id",
 				consts.FieldAWSSecretAccessKey: "secret-key",
 				consts.FieldAWSRoleARN:         "arn:aws:iam::123456789012:role/test-role",
 			},
-			expectRoleAssumption: true,
-			expectSessionName:    "", // Session name is not set in config when not provided
+			expectRoleAssumption: false,
 		},
 		{
 			name: "without-role-arn",
