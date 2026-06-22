@@ -23,6 +23,7 @@ IMPROVEMENTS:
 * `vault_kv_secret_v2` ephemeral resource: Expose the returned KV v2 metadata version through the `version` attribute while preserving its optional version selector behavior.([#2931](https://github.com/hashicorp/terraform-provider-vault/pull/2931))
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
+* `vault_agent_registration`: Added support for optional `owner` field on agent registrations.
 
 ## 5.9.0 (April 22, 2026)
 
