@@ -589,6 +589,11 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 		{name: "groups_recurse_max_depth", value: "0", err: false, want: int64(0)},
 		{name: "groups_recurse_max_depth", value: "-1", err: false, want: int64(-1)},
 		{name: "groups_recurse_max_depth", value: "foo", err: true, want: int64(0)},
+		
+		{name: "groups_cap", value: "100", err: false, want: int64(100)},
+		{name: "groups_cap", value: "0", err: false, want: int64(0)},
+		{name: "groups_cap", value: "-1", err: false, want: int64(-1)},
+		{name: "groups_cap", value: "bar", err: true, want: int64(0)},
 	}
 
 	for _, tc := range tests {
