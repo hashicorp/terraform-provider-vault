@@ -23,26 +23,27 @@ IMPROVEMENTS:
 
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
+
 * Updated dependencies:
-  * `cloud.google.com/go/iam` v1.9.0 -> v1.11.0 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898), [#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918))
-  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.21.1 -> v1.22.0 ([#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918))
-  * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.13.1 -> v1.14.0 ([#2937](https://github.com/hashicorp/terraform-provider-vault/pull/2937))
-  * `github.com/Azure/go-ntlmssp` v0.1.0 -> v0.1.1 ([#2893](https://github.com/hashicorp/terraform-provider-vault/pull/2893))
-  * `github.com/aws/aws-sdk-go-v2` v1.41.6 -> v1.42.0 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898), [#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918), [#2928](https://github.com/hashicorp/terraform-provider-vault/pull/2928))
-  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.53.8 -> v1.54.5 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898), [#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918), [#2928](https://github.com/hashicorp/terraform-provider-vault/pull/2928))
-  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.42.0 -> v1.43.3 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898), [#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918), [#2928](https://github.com/hashicorp/terraform-provider-vault/pull/2928))
-  * `github.com/aws/smithy-go` v1.25.0 -> v1.27.2 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898), [#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918), [#2928](https://github.com/hashicorp/terraform-provider-vault/pull/2928))
-  * `github.com/go-sql-driver/mysql` v1.9.3 -> v1.10.0 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898))
-  * `github.com/hashicorp/consul/api` v1.34.1 -> v1.34.3 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898), [#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918))
-  * `github.com/hashicorp/terraform-plugin-sdk/v2` v2.40.0 -> v2.40.1 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898))
-  * `github.com/hashicorp/terraform-plugin-testing` v1.15.0 -> v1.16.0 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898))
-  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.26.1 -> v0.26.3 ([#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918))
-  * `github.com/jackc/pgx/v5` v5.9.1 -> v5.9.2 ([#2891](https://github.com/hashicorp/terraform-provider-vault/pull/2891))
-  * `github.com/moby/moby/client` v0.4.1 -> v0.5.0 ([#2937](https://github.com/hashicorp/terraform-provider-vault/pull/2937))
-  * `github.com/spiffe/go-spiffe/v2` v2.6.0 -> v2.8.1 ([#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918), [#2937](https://github.com/hashicorp/terraform-provider-vault/pull/2937))
-  * `golang.org/x/crypto` v0.50.0 -> v0.53.0 ([#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918), [#2928](https://github.com/hashicorp/terraform-provider-vault/pull/2928))
-  * `golang.org/x/net` v0.53.0 -> v0.56.0 ([#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918), [#2928](https://github.com/hashicorp/terraform-provider-vault/pull/2928))
-  * `google.golang.org/api` v0.276.0 -> v0.286.0 ([#2898](https://github.com/hashicorp/terraform-provider-vault/pull/2898), [#2918](https://github.com/hashicorp/terraform-provider-vault/pull/2918), [#2928](https://github.com/hashicorp/terraform-provider-vault/pull/2928), [#2937](https://github.com/hashicorp/terraform-provider-vault/pull/2937))
+  * `cloud.google.com/go/iam` v1.9.0 -> v1.11.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.21.1 -> v1.22.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.13.1 -> v1.14.0
+  * `github.com/Azure/go-ntlmssp` v0.1.0 -> v0.1.1
+  * `github.com/aws/aws-sdk-go-v2` v1.41.6 -> v1.42.0
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.53.8 -> v1.54.5
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.42.0 -> v1.43.3
+  * `github.com/aws/smithy-go` v1.25.0 -> v1.27.2
+  * `github.com/go-sql-driver/mysql` v1.9.3 -> v1.10.0
+  * `github.com/hashicorp/consul/api` v1.34.1 -> v1.34.3
+  * `github.com/hashicorp/terraform-plugin-sdk/v2` v2.40.0 -> v2.40.1
+  * `github.com/hashicorp/terraform-plugin-testing` v1.15.0 -> v1.16.0
+  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.26.1 -> v0.26.3
+  * `github.com/jackc/pgx/v5` v5.9.1 -> v5.9.2
+  * `github.com/moby/moby/client` v0.4.1 -> v0.5.0
+  * `github.com/spiffe/go-spiffe/v2` v2.6.0 -> v2.8.1
+  * `golang.org/x/crypto` v0.50.0 -> v0.53.0
+  * `golang.org/x/net` v0.53.0 -> v0.56.0
+  * `google.golang.org/api` v0.276.0 -> v0.286.0
   * `google.golang.org/genproto` v0.0.0-20260420184626 -> v0.0.0-20260622175928
   * `google.golang.org/genproto/googleapis/api` v0.0.0-20260414002931 -> v0.0.0-20260618152121
   * `google.golang.org/genproto/googleapis/rpc` v0.0.0-20260610212136 -> v0.0.0-20260618152121
