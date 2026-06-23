@@ -106,13 +106,35 @@ func TestAWSSecretsSyncDestinationWithCustomEncryption(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-test"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-test"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldKMSKeyID, "aarn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKMSKeyID, "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				fieldAccessKeyID,
+				fieldSecretAccessKey,
+				consts.FieldKMSKeyID,
+				consts.FieldDisableStrictNetworking, // Vault API doesn't return false when not set
+			),
+		},
+	})
+}
+
+func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-aws-enc")
+
+	resourceName := "vault_secrets_sync_aws_destination.test"
+
+	accessKey, secretKey := testutil.GetTestAWSCreds(t)
+	region := testutil.GetTestAWSRegion(t)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		Steps: []resource.TestStep{
 			{
 				Config: testAWSSecretsSyncDestinationConfigWithReplication(accessKey, secretKey, region, destName, secretsKeyTemplate),
 				Check: resource.ComposeTestCheckFunc(
@@ -124,8 +146,6 @@ func TestAWSSecretsSyncDestinationWithCustomEncryption(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-test"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-test"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".%", "2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-east-2", "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-west-1", "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"),
@@ -136,6 +156,7 @@ func TestAWSSecretsSyncDestinationWithCustomEncryption(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				fieldAccessKeyID,
 				fieldSecretAccessKey,
+				consts.FieldRegionalKmsKeys,
 				consts.FieldDisableStrictNetworking, // Vault API doesn't return false when not set
 			),
 		},
@@ -327,11 +348,10 @@ resource "vault_secrets_sync_aws_destination" "test" {
   access_key_id	        = "%s"
   secret_access_key     = "%s"
   region                = "%s"
-  role_arn              = "role-arn-test"
-  external_id           = "external-id-test"
+  kms_key_id			= "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
   regional_kms_keys = {
-    "us-east-2":"arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef",
-    "us-west-1":"arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
+    "us-east-2" = "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef",
+    "us-west-1" = "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
   }
   %s
 }
