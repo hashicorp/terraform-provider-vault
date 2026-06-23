@@ -54,6 +54,7 @@ type AgentRegistrationModel struct {
 	CeilingPolicies              types.List   `tfsdk:"ceiling_policies"`
 	NoDefaultCeilingPolicy       types.Bool   `tfsdk:"no_default_ceiling_policy"`
 	Description                  types.String `tfsdk:"description"`
+	Owner                        types.String `tfsdk:"owner"`
 	CreationTime                 types.String `tfsdk:"creation_time"`
 	LastUpdatedTime              types.String `tfsdk:"last_updated_time"`
 	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
@@ -67,6 +68,7 @@ type AgentRegistrationAPIModel struct {
 	CeilingPolicies              []string `json:"ceiling_policies" mapstructure:"ceiling_policies"`
 	NoDefaultCeilingPolicy       bool     `json:"no_default_ceiling_policy" mapstructure:"no_default_ceiling_policy"`
 	Description                  string   `json:"description" mapstructure:"description"`
+	Owner                        string   `json:"owner" mapstructure:"owner"`
 	CreationTime                 string   `json:"creation_time" mapstructure:"creation_time"`
 	LastUpdatedTime              string   `json:"last_updated_time" mapstructure:"last_updated_time"`
 	OptionalAuthorizationDetails bool     `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
@@ -122,6 +124,10 @@ func (r *AgentRegistrationResource) Schema(ctx context.Context, req resource.Sch
 			consts.FieldDescription: schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "Detailed description of the agent's purpose.",
+			},
+			consts.FieldOwner: schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "Owner of the agent registration.",
 			},
 			consts.FieldCreationTime: schema.StringAttribute{
 				Computed:            true,
@@ -200,6 +206,9 @@ func (r *AgentRegistrationResource) Create(ctx context.Context, req resource.Cre
 
 	if !data.Description.IsNull() && !data.Description.IsUnknown() {
 		vaultRequest[consts.FieldDescription] = data.Description.ValueString()
+	}
+	if !data.Owner.IsNull() && !data.Owner.IsUnknown() {
+		vaultRequest[consts.FieldOwner] = data.Owner.ValueString()
 	}
 
 	// RAR support
@@ -328,6 +337,9 @@ func (r *AgentRegistrationResource) Update(ctx context.Context, req resource.Upd
 
 	if !data.Description.IsNull() && !data.Description.IsUnknown() {
 		vaultRequest[consts.FieldDescription] = data.Description.ValueString()
+	}
+	if !data.Owner.IsNull() && !data.Owner.IsUnknown() {
+		vaultRequest[consts.FieldOwner] = data.Owner.ValueString()
 	}
 
 	// RAR support
@@ -478,6 +490,9 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 
 	if apiModel.Description != "" {
 		data.Description = types.StringValue(apiModel.Description)
+	}
+	if apiModel.Owner != "" {
+		data.Owner = types.StringValue(apiModel.Owner)
 	}
 
 	// Filter out default policies from ceiling_policies

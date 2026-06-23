@@ -834,6 +834,7 @@ const (
 	*/
 	FieldCeilingPolicies              = "ceiling_policies"
 	FieldNoDefaultCeilingPolicy       = "no_default_ceiling_policy"
+	FieldOwner                        = "owner"
 	FieldCreationTime                 = "creation_time"
 	FieldLastUpdatedTime              = "last_updated_time"
 	FieldOptionalAuthorizationDetails = "optional_authorization_details"
