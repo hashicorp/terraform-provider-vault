@@ -54,9 +54,9 @@ require (
 	golang.org/x/crypto v0.53.0
 	golang.org/x/net v0.56.0
 	golang.org/x/oauth2 v0.36.0
-	google.golang.org/api v0.285.0
-	google.golang.org/genproto v0.0.0-20260420184626-e10c466a9529
-	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5
+	google.golang.org/api v0.286.0
+	google.golang.org/genproto v0.0.0-20260622175928-b703f567277d
+	k8s.io/utils v0.0.0-20260617174310-a95e086a2553
 )
 
 require (
@@ -217,8 +217,8 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260610212136-7ab31c22f7ad // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260618152121-87f3d3e198d3 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260618152121-87f3d3e198d3 // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
