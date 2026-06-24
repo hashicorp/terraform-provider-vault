@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"regexp"
 
 	"net/http"
 	"strconv"
@@ -38,14 +39,18 @@ type testPKICertStore struct {
 
 type certFields struct {
 	format               string
+	jksAlias             string
+	jksPassword          string
 	notAfter             string
+	pkcs12Encoder        string
+	pkcs12Password       string
 	removeRootsFromChain bool
 	revoke               bool
 	revokeWithKey        bool
 }
 
 // TestPkiSecretBackendCert_basic tests the vault_pki_secret_backend_cert resource
-// including certificate issuance, revocation, auto-renewal, and remove_roots_from_chain.
+// including certificate issuance, revocation, auto-renewal, remove_roots_from_chain, and format options (PKCS12, JKS).
 func TestPkiSecretBackendCert_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
@@ -141,6 +146,61 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "true"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
 				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion210), nil
+				},
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
+					certFields{format: "pkcs12_bundle", pkcs12Password: "123-secure-password", pkcs12Encoder: "modern2023"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pkcs12_bundle"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Password, "123-secure-password"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Encoder, "modern2023"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion210), nil
+				},
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
+					certFields{format: "jks_bundle", jksPassword: "super-secure-password", jksAlias: "myapp"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "super-secure-password"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPrivateKeyAlias, "myapp"),
+				),
+			},
+		},
+	})
+}
+
+// TestPkiSecretBackendCert_customizeDiffFormatVersionGate tests version-gating behavior for the format parameter.
+func TestPkiSecretBackendCert_customizeDiffFormatVersionGate(t *testing.T) {
+	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
+
+	skipVersion210OrLater := func() (bool, error) {
+		meta := testProvider.Meta().(*provider.ProviderMeta)
+		return meta.IsAPISupported(provider.VaultVersion210), nil
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				SkipFunc:    skipVersion210OrLater,
+				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "pkcs12_bundle"}),
+				ExpectError: regexp.MustCompile(`"pkcs12_bundle" format is only supported on Vault 2.1.0 or later`),
+			},
+			{
+				SkipFunc:    skipVersion210OrLater,
+				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "jks_bundle"}),
+				ExpectError: regexp.MustCompile(`"jks_bundle" format is only supported on Vault 2.1.0 or later`),
 			},
 		},
 	})
@@ -250,6 +310,26 @@ resource "vault_pki_secret_backend_cert" "test" {
 		if certFields.format != "" {
 			withCertBlock += fmt.Sprintf(`  format                = "%s"
 		`, certFields.format)
+		}
+
+		if certFields.pkcs12Password != "" {
+			withCertBlock += fmt.Sprintf(`  pkcs12_password       = "%s"
+		`, certFields.pkcs12Password)
+		}
+
+		if certFields.pkcs12Encoder != "" {
+			withCertBlock += fmt.Sprintf(`  pkcs12_encoder        = "%s"
+		`, certFields.pkcs12Encoder)
+		}
+
+		if certFields.jksPassword != "" {
+			withCertBlock += fmt.Sprintf(`  jks_password          = "%s"
+		`, certFields.jksPassword)
+		}
+
+		if certFields.jksAlias != "" {
+			withCertBlock += fmt.Sprintf(`  jks_private_key_alias             = "%s"
+		`, certFields.jksAlias)
 		}
 
 		withCertBlock += "}"
