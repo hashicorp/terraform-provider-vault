@@ -108,44 +108,44 @@ func pkiSecretBackendCertResource() *schema.Resource {
 			consts.FieldPKCS12Password: {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				Description: `Password for encrypting the PKCS#12 
 		archive when format is set to "pkcs12_bundle". If not provided, 
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 				ForceNew: true,
-				Default:  "changeit",
 			},
 			consts.FieldPKCS12Encoder: {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				Description: `Encoder profile to use for PKCS#12 archives when 
 format is set to "pkcs12_bundle". Valid values are "modern2026" and 
 "modern2023". Defaults to "modern2026", which uses the newer PKCS#12 
 integrity format (PBMAC1).`,
 				ForceNew:     true,
-				Default:      "modern2026",
 				ValidateFunc: validation.StringInSlice([]string{"modern2026", "modern2023"}, false),
 			},
 			consts.FieldJKSPassword: {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				Description: `Password for encrypting the Java keystore
 		when format is set to "jks_bundle". If not provided, 
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 				ForceNew: true,
-				Default:  "changeit",
 			},
 			consts.FieldJKSPrivateKeyAlias: {
 				Type:     schema.TypeString,
 				Optional: true,
+				Computed: true,
 				Description: `The entry alias in the Java keystore (JKS) when format is set to "jks_bundle" 
 				and bundle contains a single PrivateKeyEntry. This field is case-sensitive, but relying
 			on case-only differences for unique aliases is not recommended. Defaults to "1".
 			This parameter is ignored by endpoints that return TrustedCertificateEntry values
 			(JKS trust stores), and entry aliases are assigned incrementing numeric strings starting at "1".`,
 				ForceNew: true,
-				Default:  "1",
 			},
 			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
@@ -280,14 +280,6 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldPrivateKeyFormat,
 		consts.FieldNotAfter,
 	}
-	// Only add additional format parameters if supported
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
-		certAPIFields = append(certAPIFields,
-			consts.FieldPKCS12Password,
-			consts.FieldPKCS12Encoder,
-			consts.FieldJKSPassword,
-			consts.FieldJKSPrivateKeyAlias)
-	}
 
 	certBooleanAPIFields := []string{
 		consts.FieldExcludeCNFromSans,
@@ -305,6 +297,22 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 	for _, k := range certAPIFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
+		}
+	}
+
+	// Only add additional format parameters for supported versions
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		// Set defaults for "pkcs12_bundle" or "jks_bundle" formats if user does not provide a value
+		// to allow for intentional empty string passwords.
+		format := d.Get(consts.FieldFormat).(string)
+		switch format {
+		case "pkcs12_bundle":
+			setDefaultStringAllowEmpty(d, data, consts.FieldPKCS12Password, "changeit")
+			setDefaultStringEmptyNotAllowed(d, data, consts.FieldPKCS12Encoder, "modern2026")
+
+		case "jks_bundle":
+			setDefaultStringAllowEmpty(d, data, consts.FieldJKSPassword, "changeit")
+			setDefaultStringEmptyNotAllowed(d, data, consts.FieldJKSPrivateKeyAlias, "1")
 		}
 	}
 
