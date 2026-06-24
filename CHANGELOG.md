@@ -1,3 +1,10 @@
+## Unreleased
+
+BUG FIXES:
+
+* `vault_kmip_secret_scope`: Fix `terraform import` by adding custom import state handler to correctly populate `path` and `scope` attributes. Also fix double `/scope` suffix in read and update operations. ([#2943](https://github.com/hashicorp/terraform-provider-vault/pull/2943))
+* `vault_kmip_secret_role`: Fix `terraform import` by adding custom import state handler to correctly populate `path`, `scope`, and `role` attributes. ([#2943](https://github.com/hashicorp/terraform-provider-vault/pull/2943))
+
 ## 5.10.0 (June 23, 2026)
 
 FEATURES:
