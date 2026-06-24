@@ -17,7 +17,7 @@ FEATURES:
 * Add support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
 * `vault_policy`: Added `allow_overwrite` to optionally prevent overwriting Vault policies.([#2895](https://github.com/hashicorp/terraform-provider-vault/pull/2895))
 * `vault_managed_keys`: Added support for `usages` and `max_parallel` fields. ([#2887](https://github.com/hashicorp/terraform-provider-vault/pull/2887/)) 
-* **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921))
+* **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
 
 
 IMPROVEMENTS: 
