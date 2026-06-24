@@ -1,3 +1,7 @@
+## 5.10.1 
+
+Revert support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
+
 ## 5.10.0 (June 23, 2026)
 
 FEATURES:
