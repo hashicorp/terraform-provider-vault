@@ -353,12 +353,19 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	if namespace == "" && tokenNamespace != "" {
+		// set the provider namespace to the token's namespace
+		// this is here to ensure that do not break any configurations that are relying on the
+		// token's namespace being used during resource provisioning.
+		// In the future we should drop support for this behaviour.
 		log.Printf("[WARN] The provider namespace should be set whenever "+
 			"using namespaced auth tokens. You may want to update your provider "+
 			"configuration's namespace to be %q, before executing terraform. "+
 			"Future releases may not support this type of configuration.", tokenNamespace)
+		
 		namespace = tokenNamespace
-
+		// set the namespace on the provider to ensure that all child
+		// namespace paths are properly honoured.
+		
 		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
 
 		if setTokenFromNamespace {
