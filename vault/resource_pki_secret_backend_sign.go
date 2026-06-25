@@ -115,7 +115,6 @@ func pkiSecretBackendSignResource() *schema.Resource {
 			consts.FieldPKCS12Password: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
 				Description: `Password for encrypting the PKCS#12 
 		archive when format is set to "pkcs12_bundle". If not provided, 
 		defaults to "changeit". It is recommended to use the default password
@@ -125,7 +124,6 @@ func pkiSecretBackendSignResource() *schema.Resource {
 			consts.FieldPKCS12Encoder: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
 				Description: `Encoder profile to use for PKCS#12 archives when 
 format is set to "pkcs12_bundle". Valid values are "modern2026" and 
 "modern2023". Defaults to "modern2026", which uses the newer PKCS#12 
@@ -136,7 +134,6 @@ integrity format (PBMAC1).`,
 			consts.FieldJKSPassword: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
 				Description: `Password for encrypting the Java keystore
 		when format is set to "jks_bundle". If not provided, 
 		defaults to "changeit". It is recommended to use the default password
@@ -244,6 +241,14 @@ func pkiSecretBackendSignCreate(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldNotAfter,
 	}
 
+	// Only add additional format parameters if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		signAPIFields = append(signAPIFields,
+			consts.FieldPKCS12Password,
+			consts.FieldPKCS12Encoder,
+			consts.FieldJKSPassword)
+	}
+
 	signBooleanAPIFields := []string{
 		consts.FieldExcludeCNFromSans,
 		consts.FieldRemoveRootsFromChain,
@@ -260,22 +265,6 @@ func pkiSecretBackendSignCreate(ctx context.Context, d *schema.ResourceData, met
 	for _, k := range signAPIFields {
 		if v, ok := d.GetOk(k); ok {
 			data[k] = v
-		}
-	}
-
-	// Only add additional format parameters for supported versions
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
-		// Set defaults for "pkcs12_bundle" or "jks_bundle" formats if user does not provide a value
-		// to allow for intentional empty string passwords.
-		format := d.Get(consts.FieldFormat).(string)
-		switch format {
-		case "pkcs12_bundle":
-			setDefaultStringAllowEmpty(d, data, consts.FieldPKCS12Password, "changeit")
-			setDefaultStringEmptyNotAllowed(d, data, consts.FieldPKCS12Encoder, "modern2026")
-
-		case "jks_bundle":
-			setDefaultStringAllowEmpty(d, data, consts.FieldJKSPassword, "changeit")
-			setDefaultStringEmptyNotAllowed(d, data, consts.FieldJKSPrivateKeyAlias, "1")
 		}
 	}
 
