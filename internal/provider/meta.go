@@ -109,9 +109,7 @@ func (p *ProviderMeta) GetNSClient(ns string) (*api.Client, error) {
 	}
 
 	if root, ok := p.resourceData.GetOk(consts.FieldNamespace); ok && root.(string) != "" {
-		if GetResourceDataBool(p.resourceData, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true) {
-			ns = fmt.Sprintf("%s/%s", root, ns)
-		}
+		ns = fmt.Sprintf("%s/%s", root, ns)
 	}
 
 	if p.clientCache == nil {
@@ -355,36 +353,32 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	if namespace == "" && tokenNamespace != "" {
-		// set the provider namespace to the token's namespace
-		// this is here to ensure that do not break any configurations that are relying on the
-		// token's namespace being used during resource provisioning.
-		// In the future we should drop support for this behaviour.
 		log.Printf("[WARN] The provider namespace should be set whenever "+
 			"using namespaced auth tokens. You may want to update your provider "+
 			"configuration's namespace to be %q, before executing terraform. "+
 			"Future releases may not support this type of configuration.", tokenNamespace)
-
 		namespace = tokenNamespace
-		// set the namespace on the provider to ensure that all child
-		// namespace paths are properly honoured.
+
 		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
+
 		if setTokenFromNamespace {
 			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 				return err
 			}
+		} else {
+			// When set_namespace_from_token=false, do NOT propagate the token's
+			// namespace to ResourceData or the client. Reset namespace so the
+			// subsequent block is skipped entirely.
+			namespace = ""
 		}
 	}
 
 	if namespace != "" {
-		// set the namespace on the provider to ensure that all child
-		// namespace paths are properly honoured.
-		log.Printf("[DEBUG] Setting namespace on provider to %q", namespace)
+		// This block now only executes when the namespace was explicitly
+		// configured on the provider (not derived from the token).
 		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 			return fmt.Errorf("failed to set namespace on provider: %w", err)
 		}
-
-		// set the namespace on the parent client
-		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
 		client.SetNamespace(namespace)
 	}
 
