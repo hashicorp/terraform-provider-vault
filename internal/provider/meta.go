@@ -364,11 +364,10 @@ func (p *ProviderMeta) setClient() error {
 			"configuration's namespace to be %q, before executing terraform. "+
 			"Future releases may not support this type of configuration.", tokenNamespace)
 
-		namespace = tokenNamespace
-		// set the namespace on the provider to ensure that all child
-		// namespace paths are properly honoured.
-		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
-		if setTokenFromNamespace {
+		setNamespaceFromToken := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
+
+		if setNamespaceFromToken {
+			namespace = tokenNamespace
 			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 				return err
 			}
@@ -376,15 +375,11 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	if namespace != "" {
-		// set the namespace on the provider to ensure that all child
-		// namespace paths are properly honoured.
-		log.Printf("[DEBUG] Setting namespace on provider to %q", namespace)
+		// This block now only executes when the namespace was explicitly
+		// configured on the provider (not derived from the token).
 		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 			return fmt.Errorf("failed to set namespace on provider: %w", err)
 		}
-
-		// set the namespace on the parent client
-		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
 		client.SetNamespace(namespace)
 	}
 
