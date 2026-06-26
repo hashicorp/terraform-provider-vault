@@ -67,7 +67,8 @@ The following arguments are supported:
   secret, the name is the nested path excluding the mount and data prefix. For example, for a
   secret at 'kvv2/data/foo/bar/baz', the name is 'foo/bar/baz'.
 
-* `version` (Optional) Version of the secret to retrieve.
+* `version` (Optional) Version of the secret to retrieve. If omitted, Vault returns
+  the latest version. This attribute is also set to the version that was read.
 
 ## Attributes Reference
 
@@ -89,4 +90,4 @@ The following attributes are exported in addition to the arguments listed above:
 
 * `destroyed` - Indicates whether the secret has been destroyed.
 
-* `custom_metadata` - Custom metadata for the secret.
+* `version` - Version of the secret that was read.
