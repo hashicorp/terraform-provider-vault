@@ -1,6 +1,6 @@
-## 5.10.1 (June 26, 2026)
-
 ## Unreleased
+
+## 5.10.1 (June 26, 2026)
 
 FEATURES:
 
