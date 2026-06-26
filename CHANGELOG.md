@@ -1,3 +1,9 @@
+## Unreleased
+
+IMPROVEMENTS:
+
+* Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`.
+
 ## 5.10.1 (June 26, 2026)
 
 BREAKING CHANGES: 
