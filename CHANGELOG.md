@@ -141,6 +141,9 @@ Release Note:
 
 
 
+IMPROVEMENTS:
+* `vault_approle_auth_backend_role_secret_id`: Add support for response-wrapping via `wrapping_ttl` in the ephemeral resource
+
 ## 5.8.0 (March 12, 2026)
 
 FEATURES:

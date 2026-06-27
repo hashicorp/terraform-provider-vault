@@ -101,6 +101,11 @@ The following arguments are supported:
 
 * `num_uses` - (Optional) The number of times this SecretID can be used. After this many uses, the SecretID will no longer be valid. If not specified, uses the role's `secret_id_num_uses`.
 
+* `wrapping_ttl` - (Optional) If set, the SecretID response will be
+  [response-wrapped](https://www.vaultproject.io/docs/concepts/response-wrapping)
+  and available for the duration specified or until terraform run completes, whichever comes first. Only a single unwrapping of the
+  token is allowed.
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
@@ -108,6 +113,10 @@ In addition to the arguments above, the following attributes are exported:
 * `secret_id` - The generated SecretID. This value is sensitive and ephemeral - it is not stored in Terraform state and is automatically destroyed when the Terraform configuration is no longer active.
 
 * `accessor` - The accessor for the SecretID. This unique ID can be safely logged and used to track or revoke the SecretID.
+
+* `wrapping_accessor` - The unique ID for the response-wrapped SecretID. This ID can be safely logged and used to track or revoke the wrapping token.
+
+* `wrapping_token` - The token used to retrieve a response-wrapped SecretID. This value is sensitive and ephemeral - it is not stored in Terraform state and is automatically destroyed when the Terraform configuration is no longer active.
 
 ## Automatic Cleanup
 
