@@ -1,8 +1,8 @@
 ## Unreleased
 
-IMPROVEMENTS:
+BUG FIXES:
 
-* Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`.
+* Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
 
 ## 5.10.1 (June 26, 2026)
 
