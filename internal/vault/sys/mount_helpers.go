@@ -27,6 +27,11 @@ import (
 // GetMountAttributes returns all mount configuration schema attributes for Plugin Framework resources.
 // Resources can use this to get a consistent set of mount fields and then add their backend-specific fields.
 // The excludes parameter allows resources to exclude fields they define themselves with custom configurations.
+//
+// NOTE: excluding a field only removes it from the schema. The shared MountModel
+// still declares every mount field, so an excluded field must be redefined in the
+// resource's own schema (e.g. with a different config). Otherwise the model has a
+// tfsdk field with no matching schema attribute and Get/Set will fail at runtime.
 func GetMountAttributes(excludes ...string) map[string]schema.Attribute {
 	s := map[string]schema.Attribute{
 		consts.FieldPath: schema.StringAttribute{
@@ -54,6 +59,9 @@ func GetMountAttributes(excludes ...string) map[string]schema.Attribute {
 			Optional:            true,
 			Computed:            true,
 		},
+		// force_no_cache cannot be tuned after mount creation; Vault only honors
+		// it at mount time and ignores it on tune updates (same as SDKv2). It is
+		// therefore set in CreateMount but intentionally omitted from UpdateMount.
 		consts.FieldForceNoCache: schema.BoolAttribute{
 			MarkdownDescription: "If set to true, disables caching",
 			Optional:            true,
@@ -360,7 +368,9 @@ func CreateMount(ctx context.Context, client *api.Client, data *MountModel, moun
 // UpdateMount updates an existing mount in Vault with the provided configuration.
 // This is the Plugin Framework equivalent of the SDKv2 updateMount() function.
 // It compares the new data with the previous state to only send changed fields.
-func UpdateMount(ctx context.Context, client *api.Client, path string, data *MountModel, state *MountModel, meta interface{}) error {
+func UpdateMount(ctx context.Context, client *api.Client, data *MountModel, state *MountModel, meta interface{}) error {
+	path := data.Path.ValueString()
+
 	// Build tune configuration. SDKv2 parity: always include options so that
 	// clearing all options is persisted to Vault.
 	options := make(map[string]string)
@@ -491,16 +501,16 @@ func UpdateMount(ctx context.Context, client *api.Client, path string, data *Mou
 
 // ReadMount reads mount information from Vault and returns it as a MountModel.
 // This is the Plugin Framework equivalent of the SDKv2 readMount() function.
-func ReadMount(ctx context.Context, client *api.Client, path string) (*MountModel, error) {
+func ReadMount(ctx context.Context, client *api.Client, path string) (*MountModel, bool, error) {
 	log.Printf("[DEBUG] Reading mount %s from Vault", path)
 
 	mount, err := mountutil.GetMount(ctx, client, path)
 	if err != nil {
 		if mountutil.IsMountNotFoundError(err) {
 			log.Printf("[WARN] Mount %q not found", path)
-			return nil, nil
+			return nil, false, nil
 		}
-		return nil, err
+		return nil, false, err
 	}
 
 	// TODO: this helper does not implement the kv-v2 special handling that the
@@ -535,7 +545,10 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountMode
 		for i, key := range mount.Config.AuditNonHMACRequestKeys {
 			elements[i] = types.StringValue(key)
 		}
-		listValue, _ := types.ListValueFrom(ctx, types.StringType, elements)
+		listValue, diags := types.ListValueFrom(ctx, types.StringType, elements)
+		if diags.HasError() {
+			return nil, false, fmt.Errorf("failed to convert audit_non_hmac_request_keys: %v", diags)
+		}
 		output.AuditNonHMACRequestKeys = listValue
 	} else {
 		output.AuditNonHMACRequestKeys = types.ListNull(types.StringType)
@@ -547,7 +560,10 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountMode
 		for i, key := range mount.Config.AuditNonHMACResponseKeys {
 			elements[i] = types.StringValue(key)
 		}
-		listValue, _ := types.ListValueFrom(ctx, types.StringType, elements)
+		listValue, diags := types.ListValueFrom(ctx, types.StringType, elements)
+		if diags.HasError() {
+			return nil, false, fmt.Errorf("failed to convert audit_non_hmac_response_keys: %v", diags)
+		}
 		output.AuditNonHMACResponseKeys = listValue
 	} else {
 		output.AuditNonHMACResponseKeys = types.ListNull(types.StringType)
@@ -559,7 +575,10 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountMode
 		for i, key := range mount.Config.AllowedManagedKeys {
 			elements[i] = types.StringValue(key)
 		}
-		setValue, _ := types.SetValueFrom(ctx, types.StringType, elements)
+		setValue, diags := types.SetValueFrom(ctx, types.StringType, elements)
+		if diags.HasError() {
+			return nil, false, fmt.Errorf("failed to convert allowed_managed_keys: %v", diags)
+		}
 		output.AllowedManagedKeys = setValue
 	} else {
 		output.AllowedManagedKeys = types.SetNull(types.StringType)
@@ -571,7 +590,10 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountMode
 		for i, header := range mount.Config.PassthroughRequestHeaders {
 			elements[i] = types.StringValue(header)
 		}
-		listValue, _ := types.ListValueFrom(ctx, types.StringType, elements)
+		listValue, diags := types.ListValueFrom(ctx, types.StringType, elements)
+		if diags.HasError() {
+			return nil, false, fmt.Errorf("failed to convert passthrough_request_headers: %v", diags)
+		}
 		output.PassthroughRequestHeaders = listValue
 	} else {
 		output.PassthroughRequestHeaders = types.ListNull(types.StringType)
@@ -583,7 +605,10 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountMode
 		for i, header := range mount.Config.AllowedResponseHeaders {
 			elements[i] = types.StringValue(header)
 		}
-		listValue, _ := types.ListValueFrom(ctx, types.StringType, elements)
+		listValue, diags := types.ListValueFrom(ctx, types.StringType, elements)
+		if diags.HasError() {
+			return nil, false, fmt.Errorf("failed to convert allowed_response_headers: %v", diags)
+		}
 		output.AllowedResponseHeaders = listValue
 	} else {
 		output.AllowedResponseHeaders = types.ListNull(types.StringType)
@@ -595,7 +620,10 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountMode
 		for i, accessor := range mount.Config.DelegatedAuthAccessors {
 			elements[i] = types.StringValue(accessor)
 		}
-		listValue, _ := types.ListValueFrom(ctx, types.StringType, elements)
+		listValue, diags := types.ListValueFrom(ctx, types.StringType, elements)
+		if diags.HasError() {
+			return nil, false, fmt.Errorf("failed to convert delegated_auth_accessors: %v", diags)
+		}
 		output.DelegatedAuthAccessors = listValue
 	} else {
 		output.DelegatedAuthAccessors = types.ListNull(types.StringType)
@@ -625,13 +653,16 @@ func ReadMount(ctx context.Context, client *api.Client, path string) (*MountMode
 		for k, v := range mount.Options {
 			elements[k] = types.StringValue(v)
 		}
-		mapValue, _ := types.MapValue(types.StringType, elements)
+		mapValue, diags := types.MapValue(types.StringType, elements)
+		if diags.HasError() {
+			return nil, false, fmt.Errorf("failed to convert options: %v", diags)
+		}
 		output.Options = mapValue
 	} else {
 		output.Options = types.MapNull(types.StringType)
 	}
 
-	return output, nil
+	return output, true, nil
 }
 
 // DeleteMount unmounts a mount from Vault.
@@ -651,6 +682,15 @@ func DeleteMount(ctx context.Context, client *api.Client, path string) error {
 // lets resources support in-place path changes instead of destroy/recreate.
 // Callers should drop RequiresReplace() from the path attribute and invoke this
 // from Update when the planned path differs from the prior state path.
+//
+// This helper is only the remount mechanism, not the remount-vs-replace policy.
+// The shared mount helpers have no disable_remount field or equivalent of SDKv2's
+// getMountCustomizeDiffFunc (which forces destroy/recreate when disable_remount is
+// set or Vault is < provider.VaultVersion110). Each resource picks its own policy:
+//   - Destroy/recreate on path change: keep RequiresReplace() on path, don't call this.
+//   - Remount in place: drop RequiresReplace() and call RemountMount from Update.
+//   - SDKv2 disable_remount parity: add a disable_remount attribute with a path
+//     RequiresReplaceIf that forces replacement when it's set (or Vault < 1.10).
 func RemountMount(ctx context.Context, client *api.Client, oldPath, newPath string) error {
 	log.Printf("[DEBUG] Remount %s to %s in Vault", oldPath, newPath)
 

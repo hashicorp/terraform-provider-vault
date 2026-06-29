@@ -326,7 +326,7 @@ func TestMountHelper_UpdateMount(t *testing.T) {
 				tt.modifyData(data)
 			}
 
-			err := UpdateMount(context.Background(), client, "test-mount", data, state, mockProviderMeta(t))
+			err := UpdateMount(context.Background(), client, data, state, mockProviderMeta(t))
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -434,7 +434,7 @@ func TestMountHelper_ReadMount(t *testing.T) {
 				http.NotFound(w, r)
 			})
 
-			output, err := ReadMount(context.Background(), client, tt.path)
+			output, found, err := ReadMount(context.Background(), client, tt.path)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -442,10 +442,12 @@ func TestMountHelper_ReadMount(t *testing.T) {
 
 			assert.NoError(t, err)
 			if tt.wantOutput == nil {
+				assert.False(t, found)
 				assert.Nil(t, output)
 				return
 			}
 
+			assert.True(t, found)
 			require.NotNil(t, output)
 			assert.Equal(t, tt.wantOutput.Path, output.Path)
 			assert.Equal(t, tt.wantOutput.Type, output.Type)
@@ -456,6 +458,60 @@ func TestMountHelper_ReadMount(t *testing.T) {
 			assert.Equal(t, tt.wantOutput.ExternalEntropyAccess, output.ExternalEntropyAccess)
 		})
 	}
+}
+
+// TestMountHelper_IdentityTokenKeyPerpetualDiff documents the pre-1.16 /
+// non-Enterprise behavior: a configured identity_token_key is silently dropped on
+// create (not sent to Vault), then read back as null, leaving a perpetual diff
+// against the configured value. mockProviderMeta skips the version check so the
+// server is treated as unsupported.
+func TestMountHelper_IdentityTokenKeyPerpetualDiff(t *testing.T) {
+	t.Parallel()
+
+	const path = "test-mount"
+
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/v1/sys/mounts/"+path && r.Method == http.MethodPost:
+			// identity_token_key is gated out for unsupported servers, so it
+			// must not be sent in the create request.
+			var input api.MountInput
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&input))
+			assert.Empty(t, input.Config.IdentityTokenKey)
+			w.WriteHeader(http.StatusNoContent)
+		case r.Method == http.MethodGet:
+			// Vault ignored identity_token_key, so it's absent from the read.
+			writeJSON(w, map[string]interface{}{
+				"data": map[string]interface{}{
+					"type":     "kv",
+					"accessor": "kv_12345678",
+					"config":   map[string]interface{}{},
+				},
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	})
+
+	// Config sets identity_token_key against a non-1.16 / non-Enterprise server.
+	config := baseMountModel()
+	config.IdentityTokenKey = types.StringValue("default-key")
+
+	require.NoError(t, CreateMount(context.Background(), client, config, config.Type.ValueString(), mockProviderMeta(t)))
+
+	output, found, err := ReadMount(context.Background(), client, path)
+	require.NoError(t, err)
+	require.True(t, found)
+	// Read back as null because Vault silently ignored the configured value.
+	assert.True(t, output.IdentityTokenKey.IsNull())
+
+	// Applying the read into state nulls the field while config keeps its value,
+	// so HasMountChanges keeps reporting a (perpetual) diff.
+	state := baseMountModel()
+	state.IdentityTokenKey = config.IdentityTokenKey
+	state.ApplyMountOutput(output)
+	assert.True(t, state.IdentityTokenKey.IsNull())
+	assert.True(t, config.HasMountChanges(state))
 }
 
 func TestMountHelper_DeleteMount(t *testing.T) {
@@ -637,7 +693,7 @@ func TestMountHelper_UpdateMount_RetryLogic(t *testing.T) {
 	data.DefaultLeaseTTLSeconds = types.Int64Value(7200)
 	data.MaxLeaseTTLSeconds = types.Int64Value(14400)
 
-	err := UpdateMount(context.Background(), client, "test-mount", data, state, mockProviderMeta(t))
+	err := UpdateMount(context.Background(), client, data, state, mockProviderMeta(t))
 	assert.NoError(t, err)
 	assert.Equal(t, 3, attemptCount, "Expected 3 attempts")
 }
