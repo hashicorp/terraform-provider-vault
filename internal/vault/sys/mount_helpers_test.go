@@ -52,6 +52,29 @@ func mockProviderMeta(t *testing.T) interface{} {
 	return meta
 }
 
+// mockProviderMetaEnt creates a mock provider meta pinned to a 1.16+ Enterprise
+// Vault version via vault_version_override, so identity_token_key gating is
+// treated as supported.
+func mockProviderMetaEnt(t *testing.T) interface{} {
+	s := map[string]*schema.Schema{
+		consts.FieldSkipGetVaultVersion: {
+			Type:     schema.TypeBool,
+			Optional: true,
+		},
+		consts.FieldVaultVersionOverride: {
+			Type:     schema.TypeString,
+			Optional: true,
+		},
+	}
+
+	d := schema.TestResourceDataRaw(t, s, map[string]interface{}{
+		consts.FieldVaultVersionOverride: "1.16.0+ent",
+	})
+
+	meta, _ := provider.NewProviderMeta(d)
+	return meta
+}
+
 // newTestClient spins up an httptest server with the given handler and returns
 // a Vault API client pointed at it. The server is closed via t.Cleanup.
 func newTestClient(t *testing.T, handler http.HandlerFunc) *api.Client {
@@ -62,6 +85,7 @@ func newTestClient(t *testing.T, handler http.HandlerFunc) *api.Client {
 
 	config := api.DefaultConfig()
 	config.Address = server.URL
+	config.MaxRetries = 0
 	client, err := api.NewClient(config)
 	require.NoError(t, err)
 
@@ -200,6 +224,10 @@ func TestMountHelper_CreateMount(t *testing.T) {
 				assert.Equal(t, "kms-key", input.Config.AllowedManagedKeys[0])
 			},
 		},
+		{
+			name:    "vault-error",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -208,6 +236,11 @@ func TestMountHelper_CreateMount(t *testing.T) {
 
 			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/v1/sys/mounts/test-mount" && r.Method == http.MethodPost {
+					if tt.wantErr {
+						w.WriteHeader(http.StatusInternalServerError)
+						writeJSON(w, map[string]interface{}{"errors": []string{"internal server error"}})
+						return
+					}
 					if tt.validateServer != nil {
 						tt.validateServer(t, r)
 					}
@@ -300,6 +333,10 @@ func TestMountHelper_UpdateMount(t *testing.T) {
 				assert.Contains(t, config, consts.FieldAllowedResponseHeaders)
 			},
 		},
+		{
+			name:    "vault-error",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -308,6 +345,11 @@ func TestMountHelper_UpdateMount(t *testing.T) {
 
 			client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/v1/sys/mounts/test-mount/tune" && r.Method == http.MethodPost {
+					if tt.wantErr {
+						w.WriteHeader(http.StatusInternalServerError)
+						writeJSON(w, map[string]interface{}{"errors": []string{"internal server error"}})
+						return
+					}
 					if tt.validateServer != nil {
 						tt.validateServer(t, r)
 					}
@@ -597,6 +639,46 @@ func TestMountHelper_IdentityTokenKeyPerpetualDiff(t *testing.T) {
 	state.ApplyMountOutput(output)
 	assert.True(t, state.IdentityTokenKey.IsNull())
 	assert.True(t, config.HasMountChanges(state))
+}
+
+// TestMountHelper_IdentityTokenKeySupported verifies that on a 1.16+ Enterprise
+// server identity_token_key is sent in both create and tune requests.
+func TestMountHelper_IdentityTokenKeySupported(t *testing.T) {
+	t.Parallel()
+
+	const path = "test-mount"
+
+	var sawCreate, sawTune bool
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/v1/sys/mounts/"+path && r.Method == http.MethodPost:
+			var input api.MountInput
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&input))
+			assert.Equal(t, "default-key", input.Config.IdentityTokenKey)
+			sawCreate = true
+			w.WriteHeader(http.StatusNoContent)
+		case r.URL.Path == "/v1/sys/mounts/"+path+"/tune" && r.Method == http.MethodPost:
+			var config map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&config))
+			assert.Equal(t, "default-key", config[consts.FieldIdentityTokenKey])
+			sawTune = true
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+
+	meta := mockProviderMetaEnt(t)
+
+	config := baseMountModel()
+	config.IdentityTokenKey = types.StringValue("default-key")
+	require.NoError(t, CreateMount(context.Background(), client, config, config.Type.ValueString(), meta))
+	assert.True(t, sawCreate, "identity_token_key must be sent on create")
+
+	// State has no key, plan sets it -> changed -> sent in tune request.
+	state := baseMountModel()
+	require.NoError(t, UpdateMount(context.Background(), client, config, state, meta))
+	assert.True(t, sawTune, "identity_token_key must be sent on update")
 }
 
 func TestMountHelper_DeleteMount(t *testing.T) {
