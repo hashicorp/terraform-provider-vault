@@ -24,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
-	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -277,62 +276,6 @@ func TestPkiSecretBackendRootSignIntermediate_basic_pem_bundle(t *testing.T) {
 			{
 				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false, `format = "pem_bundle"`),
 				Check:  testCheckPKISecretRootSignIntermediate("vault_pki_secret_backend_root_sign_intermediate.test", rootPath, commonName, "pem_bundle", "", x509.SHA256WithRSA, false),
-			},
-		},
-	})
-}
-
-// TestPkiSecretBackendRootSignIntermediate_pkcs12_bundle tests signing an intermediate certificate
-// and returning it in PKCS#12 bundle format with custom password and encoder settings.
-func TestPkiSecretBackendRootSignIntermediate_pkcs12_bundle(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
-	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
-		},
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps: []resource.TestStep{
-			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
-					`format          = "pkcs12_bundle"
-					 pkcs12_password = "secure-test-password"
-					 pkcs12_encoder  = "modern2023"`),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldFormat, "pkcs12_bundle"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldPKCS12Password, "secure-test-password"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldPKCS12Encoder, "modern2023"),
-				),
-			},
-		},
-	})
-}
-
-// TestPkiSecretBackendRootSignIntermediate_jks_bundle tests signing an intermediate certificate
-// and returning it in JKS (Java KeyStore) bundle format with custom password and alias settings.
-func TestPkiSecretBackendRootSignIntermediate_jks_bundle(t *testing.T) {
-	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
-	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
-		},
-		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
-		Steps: []resource.TestStep{
-			{
-				Config: testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, intermediatePath, false,
-					`format       = "jks_bundle"
-					 jks_password = "jks-password-123"`),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldFormat, "jks_bundle"),
-					resource.TestCheckResourceAttr("vault_pki_secret_backend_root_sign_intermediate.test", consts.FieldJKSPassword, "jks-password-123"),
-				),
 			},
 		},
 	})
@@ -687,6 +630,66 @@ func assertCertificateAttributes(res string, notAfter string, expectedSignatureA
 
 		return nil
 	}
+}
+
+// TestPkiSecretBackendRootSignIntermediate_Upgrade verifies upgrades do not force recreation of "vault_pki_secret_backend_root_sign_intermediate" resources.
+// This safeguards against unintended schema changes that would trigger resource replacement.
+func TestPkiSecretBackendRootSignIntermediate_Upgrade(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						VersionConstraint: "5.9.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testPkiSecretBackendRootSignIntermediateConfig_upgrade(path),
+			},
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Config:                   testPkiSecretBackendRootSignIntermediateConfig_upgrade(path),
+				PlanOnly:                 true,
+				ExpectNonEmptyPlan:       false,
+				// Upgrading from v5.9.x to the current provider should be a no-op plan.
+				// If this step fails and the diff is intentional, update the baseline version (preferred) or
+				// expected assertions to reflect the new upgrade contract.
+				// Do not just flip ExpectNonEmptyPlan to true.
+			},
+		},
+	})
+}
+
+// Minimal definition of resources with only required parameters
+func testPkiSecretBackendRootSignIntermediateConfig_upgrade(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path  = "%s"
+  type  = "pki"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+	common_name = "RootOrg Root CA"
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  depends_on  = [vault_pki_secret_backend_root_cert.test]
+  backend     = vault_mount.test.path
+	common_name = "SubOrg Intermediate CA"
+  type        = "internal"
+}
+
+resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
+  backend     = vault_mount.test.path
+  csr         = vault_pki_secret_backend_intermediate_cert_request.test.csr
+	common_name = "SubOrg Intermediate CA"
+}
+`, path)
 }
 
 func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path string, revoke bool, extra ...string) string {

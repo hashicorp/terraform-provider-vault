@@ -3,6 +3,15 @@
 IMPROVEMENTS:
 
 * resource/vault_jwt_auth_backend: Support `use_workload_identity` in the Azure `provider_config` to authenticate the OIDC client to Microsoft Entra ID with an Azure Workload Identity federated token instead of a static `oidc_client_secret`. Requires corresponding auth method support in Vault.
+FEATURES:
+
+* **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
+
+## 5.10.1 (June 26, 2026)
+
+BREAKING CHANGES: 
+
+Reverted the 5.10.0 support for `pkcs12_bundle` and `jks_bundle` formats in formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` that forced resource recreation. Configurations using these formats or their related arguments are no longer supported. ([#2945](https://github.com/hashicorp/terraform-provider-vault/pull/2945))
 
 ## 5.10.0 (June 23, 2026)
 
@@ -23,7 +32,8 @@ FEATURES:
 * **New Resource**: `vault_config_group_policy_application` - Manages the global group policy application mode for Vault Enterprise. Controls how policies attached to identity groups are applied across namespace boundaries. Supports `within_namespace_hierarchy` (default) and `any` modes. Requires Vault Enterprise 1.13.8+. ([#2863](https://github.com/hashicorp/terraform-provider-vault/pull/2863))
 * Add support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
 * `vault_policy`: Added `allow_overwrite` to optionally prevent overwriting Vault policies.([#2895](https://github.com/hashicorp/terraform-provider-vault/pull/2895))
-* `vault_managed_keys`: Added support for `usages` and `max_parallel` fields. ([#2887](https://github.com/hashicorp/terraform-provider-vault/pull/2887/)) 
+* `vault_managed_keys`: Added support for `usages` and `max_parallel` fields. ([#2887](https://github.com/hashicorp/terraform-provider-vault/pull/2887/))
+
 
 IMPROVEMENTS:
 
