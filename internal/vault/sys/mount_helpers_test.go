@@ -377,6 +377,79 @@ func TestMountHelper_ReadMount(t *testing.T) {
 				ExternalEntropyAccess:  types.BoolValue(false),
 				DefaultLeaseTTLSeconds: types.Int64Value(3600),
 				MaxLeaseTTLSeconds:     types.Int64Value(7200),
+				// options present -> non-null map; all other collections absent -> null.
+				Options:                   strMap(t, map[string]string{"version": "2"}),
+				AllowedManagedKeys:        types.SetNull(types.StringType),
+				PassthroughRequestHeaders: types.ListNull(types.StringType),
+				AllowedResponseHeaders:    types.ListNull(types.StringType),
+				DelegatedAuthAccessors:    types.ListNull(types.StringType),
+			},
+		},
+		{
+			name: "full-collections",
+			path: "test-mount",
+			serverResponse: func(w http.ResponseWriter, r *http.Request) {
+				writeJSON(w, map[string]interface{}{
+					"data": map[string]interface{}{
+						"type":     "kv",
+						"accessor": "kv_12345678",
+						"options":  map[string]string{"version": "2", "cas_required": "true"},
+						"config": map[string]interface{}{
+							"default_lease_ttl":           3600,
+							"max_lease_ttl":               7200,
+							"force_no_cache":              false,
+							"allowed_managed_keys":        []string{"kms-key"},
+							"passthrough_request_headers": []string{"h1", "h2"},
+							"allowed_response_headers":    []string{"r1"},
+							"delegated_auth_accessors":    []string{"a1", "a2"},
+						},
+					},
+				})
+			},
+			wantOutput: &MountModel{
+				Path:                      types.StringValue("test-mount"),
+				Type:                      types.StringValue("kv"),
+				Accessor:                  types.StringValue("kv_12345678"),
+				SealWrap:                  types.BoolValue(false),
+				Local:                     types.BoolValue(false),
+				ExternalEntropyAccess:     types.BoolValue(false),
+				Options:                   strMap(t, map[string]string{"version": "2", "cas_required": "true"}),
+				AllowedManagedKeys:        strSet(t, "kms-key"),
+				PassthroughRequestHeaders: strList(t, "h1", "h2"),
+				AllowedResponseHeaders:    strList(t, "r1"),
+				DelegatedAuthAccessors:    strList(t, "a1", "a2"),
+			},
+		},
+		{
+			name: "empty-collections-are-null",
+			path: "test-mount",
+			serverResponse: func(w http.ResponseWriter, r *http.Request) {
+				writeJSON(w, map[string]interface{}{
+					"data": map[string]interface{}{
+						"type":     "kv",
+						"accessor": "kv_12345678",
+						"options":  map[string]string{},
+						"config": map[string]interface{}{
+							"allowed_managed_keys":        []string{},
+							"passthrough_request_headers": []string{},
+							"allowed_response_headers":    []string{},
+							"delegated_auth_accessors":    []string{},
+						},
+					},
+				})
+			},
+			wantOutput: &MountModel{
+				Path:                      types.StringValue("test-mount"),
+				Type:                      types.StringValue("kv"),
+				Accessor:                  types.StringValue("kv_12345678"),
+				SealWrap:                  types.BoolValue(false),
+				Local:                     types.BoolValue(false),
+				ExternalEntropyAccess:     types.BoolValue(false),
+				Options:                   types.MapNull(types.StringType),
+				AllowedManagedKeys:        types.SetNull(types.StringType),
+				PassthroughRequestHeaders: types.ListNull(types.StringType),
+				AllowedResponseHeaders:    types.ListNull(types.StringType),
+				DelegatedAuthAccessors:    types.ListNull(types.StringType),
 			},
 		},
 		{
@@ -400,13 +473,18 @@ func TestMountHelper_ReadMount(t *testing.T) {
 				})
 			},
 			wantOutput: &MountModel{
-				Path:                  types.StringValue("test-mount"),
-				Type:                  types.StringValue("transit"),
-				Description:           types.StringValue("local mount"),
-				Accessor:              types.StringValue("transit_87654321"),
-				SealWrap:              types.BoolValue(false),
-				Local:                 types.BoolValue(true),
-				ExternalEntropyAccess: types.BoolValue(true),
+				Path:                      types.StringValue("test-mount"),
+				Type:                      types.StringValue("transit"),
+				Description:               types.StringValue("local mount"),
+				Accessor:                  types.StringValue("transit_87654321"),
+				SealWrap:                  types.BoolValue(false),
+				Local:                     types.BoolValue(true),
+				ExternalEntropyAccess:     types.BoolValue(true),
+				Options:                   types.MapNull(types.StringType),
+				AllowedManagedKeys:        types.SetNull(types.StringType),
+				PassthroughRequestHeaders: types.ListNull(types.StringType),
+				AllowedResponseHeaders:    types.ListNull(types.StringType),
+				DelegatedAuthAccessors:    types.ListNull(types.StringType),
 			},
 		},
 		{
@@ -456,6 +534,13 @@ func TestMountHelper_ReadMount(t *testing.T) {
 			assert.Equal(t, tt.wantOutput.SealWrap, output.SealWrap)
 			assert.Equal(t, tt.wantOutput.Local, output.Local)
 			assert.Equal(t, tt.wantOutput.ExternalEntropyAccess, output.ExternalEntropyAccess)
+			// Collection fields: assert exact equality so empty Vault values are
+			// read back as null (not empty), preventing state drift/parity regressions.
+			assert.Equal(t, tt.wantOutput.Options, output.Options)
+			assert.Equal(t, tt.wantOutput.AllowedManagedKeys, output.AllowedManagedKeys)
+			assert.Equal(t, tt.wantOutput.PassthroughRequestHeaders, output.PassthroughRequestHeaders)
+			assert.Equal(t, tt.wantOutput.AllowedResponseHeaders, output.AllowedResponseHeaders)
+			assert.Equal(t, tt.wantOutput.DelegatedAuthAccessors, output.DelegatedAuthAccessors)
 		})
 	}
 }
