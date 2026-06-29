@@ -375,11 +375,13 @@ func (p *ProviderMeta) setClient() error {
 	}
 
 	if namespace != "" {
-		// This block now only executes when the namespace was explicitly
-		// configured on the provider (not derived from the token).
+		// This block executes when the namespace was explicitly
+		// configured on the provider (not derived from the token)
+		// or when the namespace was not configured on the provider but was derived from the token
 		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 			return fmt.Errorf("failed to set namespace on provider: %w", err)
 		}
+		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
 		client.SetNamespace(namespace)
 	}
 
