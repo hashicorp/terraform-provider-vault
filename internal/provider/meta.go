@@ -368,9 +368,6 @@ func (p *ProviderMeta) setClient() error {
 
 		if setNamespaceFromToken {
 			namespace = tokenNamespace
-			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
-				return err
-			}
 		}
 	}
 
