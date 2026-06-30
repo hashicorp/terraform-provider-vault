@@ -249,6 +249,10 @@ var (
 			Resource:      UpdateSchemaResource(AuthBackendResource()),
 			PathInventory: []string{"/sys/auth/{path}"},
 		},
+		"vault_auth_tune": {
+			Resource:      UpdateSchemaResource(authTuneResource()),
+			PathInventory: []string{"/sys/auth/{path}/tune"},
+		},
 		"vault_token": {
 			Resource: UpdateSchemaResource(tokenResource()),
 			PathInventory: []string{
