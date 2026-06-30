@@ -84,6 +84,7 @@ customModes:
       - edit
       - browser
       - command
+      - mcp
     customInstructions: >-
       ## Development Workflow
 
@@ -128,7 +129,7 @@ customModes:
 
       Create resource documentation per `tfvp-doc-standards`.
       Add sidebar entry to `website/vault.erb`.
-      Add changelog entry to `.changelog/{PR_NUMBER}.txt`.
+      Add changelog entry to `CHANGELOG.md` under the appropriate version section (FEATURES, IMPROVEMENTS, or BUG FIXES) with PR reference link.
       Register the new resource in `internal/provider/fwprovider/provider.go`.
 
 
