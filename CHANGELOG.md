@@ -1,5 +1,9 @@
 ## Unreleased
 
+BUGS:
+
+* `vault_kubernetes_auth_backend_config`, `vault_consul_secret_backend`, `vault_rabbitmq_secret_backend`, `vault_mongodbatlas_secret_backend`: Fix write-only fields (`token_reviewer_jwt_wo`, `token_wo`/`client_key_wo`, `password_wo`, `private_key_wo`) being silently cleared in Vault (or causing apply errors) when any other field on the resource was updated without bumping the corresponding `*_wo_version`. The provider now always re-sends the configured write-only value on update for these resources, matching the existing behaviour of `vault_jwt_auth_backend.oidc_client_secret_wo`. ([#2900](https://github.com/hashicorp/terraform-provider-vault/issues/2900))
+
 FEATURES:
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.

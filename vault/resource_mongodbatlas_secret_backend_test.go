@@ -240,3 +240,68 @@ resource "vault_mongodbatlas_secret_backend" "test" {
   public_key  = "%s"
 }`, path, publicKey)
 }
+
+// testAccMongoDBAtlasSecretBackendConfig_writeOnlyWithPublicKey is identical
+// to testAccMongoDBAtlasSecretBackendConfig_writeOnly but takes the public
+// key as a parameter so the regression test can vary it across applies.
+func testAccMongoDBAtlasSecretBackendConfig_writeOnlyWithPublicKey(path, privateKey string, version int, publicKey string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "mongo" {
+	path        = "%s"
+	type        = "mongodbatlas"
+    description = "MongoDB Atlas secret engine mount"
+}
+
+resource "vault_mongodbatlas_secret_backend" "test" {
+  mount                   = vault_mount.mongo.path
+  private_key_wo          = "%s"
+  private_key_wo_version  = %d
+  public_key              = "%s"
+}`, path, privateKey, version, publicKey)
+}
+
+// TestAccMongoDBAtlasSecretBackend_writeOnlyPersistsOnUnrelatedUpdate is a
+// regression test for the bug where updating an unrelated field while
+// private_key_wo_version stays unchanged caused the provider to omit
+// `private_key` from the request to the full-replace `<mount>/config`
+// endpoint. The mongodbatlas plugin rejects an empty private_key with
+// `private_key is empty`, so the bug surfaces as a hard apply failure
+// rather than silent data loss.
+//
+// See https://github.com/hashicorp/terraform-provider-vault/issues/2900.
+func TestAccMongoDBAtlasSecretBackend_writeOnlyPersistsOnUnrelatedUpdate(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-mongodbatlas-wo-unrelated")
+	resourceType := "vault_mongodbatlas_secret_backend"
+	resourceName := resourceType + ".test"
+	privateKey, publicKey := testutil.GetTestMDBACreds(t)
+	updatedPublicKey := publicKey + "-v2"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeMongoDBAtlas, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccMongoDBAtlasSecretBackendConfig_writeOnlyWithPublicKey(
+					mount, privateKey, 1, publicKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyWOVersion, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPublicKey, publicKey),
+				),
+			},
+			{
+				// Update only `public_key`; keep private_key_wo_version at 1.
+				// Before the fix, this apply would fail because the provider
+				// would resolve private_key to "" and the mongodbatlas plugin
+				// would reject the empty private_key.
+				Config: testAccMongoDBAtlasSecretBackendConfig_writeOnlyWithPublicKey(
+					mount, privateKey, 1, updatedPublicKey),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPublicKey, updatedPublicKey),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyWOVersion, "1"),
+				),
+			},
+		},
+	})
+}
