@@ -87,6 +87,10 @@ var (
 			Resource:      UpdateSchemaResource(nomadAccessCredentialsDataSource()),
 			PathInventory: []string{"/nomad/creds/{role}"},
 		},
+		"vault_terraform_cloud_credentials": {
+			Resource:      UpdateSchemaResource(terraformCloudCredentialsDataSource()),
+			PathInventory: []string{"/terraform/creds/{role}"},
+		},
 		"vault_aws_access_credentials": {
 			Resource:      UpdateSchemaResource(awsAccessCredentialsDataSource()),
 			PathInventory: []string{"/aws/creds"},
