@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,6 +44,17 @@ import (
 const (
 	EnvVarSkipVaultNext = "SKIP_VAULT_NEXT_TESTS"
 	EnvVarTfAccEnt      = "TF_ACC_ENTERPRISE"
+
+	// Environment variable names for GCP KMS testing
+	EnvVarGoogleCredentials = "GOOGLE_CREDENTIALS"
+	EnvVarGoogleKMSKeyRing  = "GOOGLE_KMS_KEY_RING"
+)
+
+var (
+	// RegexpBase64 matches base64-like strings used in test assertions.
+	RegexpBase64 = regexp.MustCompile(`^[A-Za-z0-9+/]+=*$`)
+	// RegexpNonEmpty matches any non-empty string for test assertions.
+	RegexpNonEmpty = regexp.MustCompile(`.+`)
 )
 
 // Deprecated: use acctestutil.TestAccPreCheck instead, this is here for
@@ -237,6 +249,14 @@ func GetTestGCPCreds(t *testing.T) (string, string) {
 	}
 
 	return creds, project
+}
+
+// GetTestGCPKMSCreds returns the GCP credentials and KMS key ring from
+// environment variables. The test will be skipped if either is unset.
+func GetTestGCPKMSCreds(t *testing.T) (string, string) {
+	t.Helper()
+	v := SkipTestEnvUnset(t, EnvVarGoogleCredentials, EnvVarGoogleKMSKeyRing)
+	return v[0], v[1]
 }
 
 func GetTestRMQCreds(t *testing.T) (string, string, string) {
