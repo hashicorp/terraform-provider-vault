@@ -383,7 +383,7 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 				return nil, fmt.Errorf("could not convert %s to bool: %s", k, err)
 			}
 			newConfig[k] = valBool
-		case "groups_recurse_max_depth":
+		case "groups_recurse_max_depth", "groups_cap":
 			valInt, err := strconv.ParseInt(val, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("could not convert %s to int: %s", k, err)
