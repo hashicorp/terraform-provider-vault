@@ -282,6 +282,37 @@ func TestGCPSecretsSyncDestination_AdvancedFeatures(t *testing.T) {
 			},
 		})
 	}
+
+	// Vault 2.1.0+ features require a separate test or conditional checks
+	if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion210) {
+		resource.Test(t, resource.TestCase{
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			PreCheck: func() {
+				acctestutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			},
+			Steps: []resource.TestStep{
+				// Step 1: Test global encryption
+				{
+					Config: testGCPSecretsSyncDestinationConfig_encryptionKMSKeyID(credentials, project, destName+"-enc"),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldKMSKeyID, "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"),
+					),
+				},
+				// Step 2: Test replication with regional KMS Keys
+				{
+					Config: testGCPSecretsSyncDestinationConfig_replicationBasicRegionalKMSKeys(credentials, project, destName+"-rep-kms"),
+					Check: resource.ComposeTestCheckFunc(
+						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".%", "2"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-central1", "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-east1", "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"),
+					),
+				},
+			},
+		})
+	}
 }
 
 func TestGCPSecretsSyncDestination_NegativeTests(t *testing.T) {
@@ -423,6 +454,22 @@ CREDS
 `, destName, project, credentials)
 }
 
+func testGCPSecretsSyncDestinationConfig_encryptionKMSKeyID(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  granularity          = "secret-path"
+  
+  kms_key_id       = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
+}
+`, destName, project, credentials)
+}
+
 func testGCPSecretsSyncDestinationConfig_replicationBasic(credentials, project, destName string) string {
 	return fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
@@ -435,6 +482,25 @@ CREDS
   granularity          = "secret-path"
   
   replication_locations = ["us-central1", "us-east1"]
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfig_replicationBasicRegionalKMSKeys(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+  granularity          = "secret-path"
+  
+  regional_kms_keys = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+    "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
+  }
 }
 `, destName, project, credentials)
 }

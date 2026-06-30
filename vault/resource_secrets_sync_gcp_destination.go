@@ -51,6 +51,13 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 		)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		fields = append(fields,
+			consts.FieldRegionalKmsKeys,
+			consts.FieldKMSKeyID,
+		)
+	}
+
 	return fields
 }
 
@@ -81,6 +88,13 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 		fields = append(fields,
 			consts.FieldIdentityTokenTTL,
 			consts.FieldServiceAccountEmail,
+		)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		fields = append(fields,
+			consts.FieldRegionalKmsKeys,
+			consts.FieldKMSKeyID,
 		)
 	}
 
@@ -189,6 +203,17 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Global KMS key for encryption.",
+			},
+			consts.FieldRegionalKmsKeys: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Regional KMS keys for encryption.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+			},
+			consts.FieldKMSKeyID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "KMS key ID for encryption.",
 			},
 			consts.FieldReplicationLocations: {
 				Type:        schema.TypeSet,
