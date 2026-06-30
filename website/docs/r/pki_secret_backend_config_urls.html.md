@@ -44,6 +44,8 @@ The following arguments are supported:
 
 * `crl_distribution_points` - (Optional) Specifies the URL values for the CRL Distribution Points field.
 
+* `delta_crl_distribution_points` - (Optional) Specifies the URL values for the Delta CRL Distribution Points field. Requires Vault 1.20+.
+
 * `ocsp_servers` - (Optional) Specifies the URL values for the OCSP Servers field.
 
 * `enable_templating` - (Optional) Specifies that templating of AIA fields is allowed.
