@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -117,9 +119,11 @@ func secretsSyncAssociationWrite(ctx context.Context, d *schema.ResourceData, me
 	}
 	log.Printf("[DEBUG] Wrote association to %q", path)
 
-	// ex: gh/dest/gh-dest-1/mount/kv/secret/token
-	// unique. each destination should only have one association for a particular accessor and secret
-	id := fmt.Sprintf("%s/dest/%s/mount/%s/secret/%s", destType, name, mount, secretName)
+	// Length-based ID format: {len1},{len2},{len3},{len4}:{destType}:{name}:{mount}:{secretName}
+	// Example: 7,8,2,5:aws-kms:my-mount:kv:token
+	id := fmt.Sprintf("%d,%d,%d,%d:%s:%s:%s:%s",
+		len(destType), len(name), len(mount), len(secretName),
+		destType, name, mount, secretName)
 	d.SetId(id)
 
 	return secretsSyncAssociationRead(ctx, d, meta)
@@ -289,7 +293,78 @@ func getSyncAssociationModelFromResponse(resp *api.Secret) (*syncAssociationMode
 	return model, nil
 }
 
+// isLengthBasedIDFormat checks if ID uses length-based format (starts with digit).
+func isLengthBasedIDFormat(id string) bool {
+	return len(id) > 0 && id[0] >= '0' && id[0] <= '9'
+}
+
+// parseLengthBasedID parses length-based ID format.
+// Format: {len1},{len2},{len3},{len4}:{destType}:{name}:{mount}:{secretName}
+// Returns: [destType, name, mount, secretName]
+func parseLengthBasedID(id string) ([]string, error) {
+	// Find the first colon that separates lengths from values
+	colonIdx := strings.Index(id, ":")
+	if colonIdx == -1 {
+		return nil, fmt.Errorf("invalid length-based ID format: expected format {len1},{len2},{len3},{len4}:{values}")
+	}
+
+	lengthsPart := id[:colonIdx]
+	valuesPart := id[colonIdx+1:] // Skip the first colon
+
+	// Parse the lengths
+	lengthStrs := strings.Split(lengthsPart, ",")
+	if len(lengthStrs) != 4 {
+		return nil, fmt.Errorf("invalid length-based ID format: expected 4 length values, got %d", len(lengthStrs))
+	}
+
+	lengths := make([]int, 4)
+	for i, lenStr := range lengthStrs {
+		length, err := strconv.Atoi(lenStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid length value at position %d: %s", i, err)
+		}
+		if length < 0 {
+			return nil, fmt.Errorf("invalid length value at position %d: length cannot be negative", i)
+		}
+		lengths[i] = length
+	}
+
+	// Extract values using the lengths, skipping colon separators
+	fields := make([]string, 4)
+	pos := 0
+	for i := 0; i < 4; i++ {
+		// Skip colon separator before each field (except the first)
+		if i > 0 {
+			if pos >= len(valuesPart) || valuesPart[pos] != ':' {
+				return nil, fmt.Errorf("invalid length-based ID format: expected ':' separator at position %d", pos)
+			}
+			pos++ // Skip the colon
+		}
+
+		if pos+lengths[i] > len(valuesPart) {
+			return nil, fmt.Errorf("invalid length-based ID format: length %d at position %d exceeds remaining string length", lengths[i], i)
+		}
+
+		fields[i] = valuesPart[pos : pos+lengths[i]]
+		pos += lengths[i]
+	}
+
+	// Verify we've consumed the entire values part
+	if pos != len(valuesPart) {
+		return nil, fmt.Errorf("invalid length-based ID format: unexpected trailing data after parsing all fields")
+	}
+
+	return fields, nil
+}
+
+// syncAssociationFieldsFromID parses ID and returns [destType, name, mount, secretName].
+// Supports both old and new formats for backward compatibility.
 func syncAssociationFieldsFromID(id string) ([]string, error) {
+	if isLengthBasedIDFormat(id) {
+		return parseLengthBasedID(id)
+	}
+
+	// Old format fallback
 	if !syncAssociationFieldsFromIDRegex.MatchString(id) {
 		return nil, fmt.Errorf("regex did not match")
 	}
