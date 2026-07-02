@@ -2,6 +2,7 @@
 
 FEATURES:
 
+* **New Action**: `vault_secret_backend_rotate_root` - Rotates the root credentials for a secret backend connection. This is the first Terraform action in the provider, requiring Terraform 1.14.0+.
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
 
 ## 5.10.1 (June 26, 2026)
