@@ -447,7 +447,6 @@ func NewProviderMeta(d *schema.ResourceData) (interface{}, error) {
 	}, nil
 }
 
-
 func warnMinTokenTTL(tokenInfo *api.Secret) {
 	// tokens with "root" policies tend to have no TTL set, so there should be no
 	// need to warn in this case.
