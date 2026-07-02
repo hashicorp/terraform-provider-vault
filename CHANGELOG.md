@@ -1,5 +1,8 @@
 ## Unreleased
 
+IMPROVEMENTS:
+
+* resource/vault_jwt_auth_backend: Support `use_workload_identity` in the Azure `provider_config` to authenticate the OIDC client to Microsoft Entra ID with an Azure Workload Identity federated token instead of a static `oidc_client_secret`. Requires corresponding auth method support in Vault.
 FEATURES:
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
