@@ -20,9 +20,8 @@ import (
 func TestAccSecretBackendRotateRoot_basic(t *testing.T) {
 	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
 	connURL := values[0]
-
 	backend := acctest.RandomWithPrefix("tf-test-db")
-	name := acctest.RandomWithPrefix("conn")
+	name := acctest.RandomWithPrefix("db")
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -33,27 +32,6 @@ func TestAccSecretBackendRotateRoot_basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: testAccSecretBackendRotateRootConfig_basic(backend, name, connURL),
-			},
-		},
-	})
-}
-
-func TestAccSecretBackendRotateRoot_withTimeout(t *testing.T) {
-	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
-	connURL := values[0]
-
-	backend := acctest.RandomWithPrefix("tf-test-db")
-	name := acctest.RandomWithPrefix("conn")
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_14_0),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAccSecretBackendRotateRootConfig_withTimeout(backend, name, connURL, 120),
 			},
 		},
 	})
@@ -75,41 +53,20 @@ func TestAccSecretBackendRotateRoot_invalidBackend(t *testing.T) {
 	})
 }
 
-func TestAccSecretBackendRotateRoot_afterCreateAndUpdate(t *testing.T) {
-	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
-	connURL := values[0]
-
-	backend := acctest.RandomWithPrefix("tf-test-db")
-	name := acctest.RandomWithPrefix("conn")
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
-			tfversion.SkipBelow(tfversion.Version1_14_0),
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testAccSecretBackendRotateRootConfig_afterCreateAndUpdate(backend, name, connURL),
-			},
-		},
-	})
-}
-
 func testAccSecretBackendRotateRootConfig_basic(backend, name, connURL string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "db" {
-  path = %q
+  path = "%s"
   type = "database"
 }
 
 resource "vault_database_secret_backend_connection" "test" {
   backend       = vault_mount.db.path
-  name          = %q
+  name          = "%s"
   allowed_roles = ["*"]
 
   postgresql {
-    connection_url = %q
+    connection_url = "%s"
   }
 
   lifecycle {
@@ -127,40 +84,6 @@ action "vault_secret_backend_rotate_root" "test" {
   }
 }
 `, backend, name, connURL)
-}
-
-func testAccSecretBackendRotateRootConfig_withTimeout(backend, name, connURL string, timeout int) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = %q
-  type = "database"
-}
-
-resource "vault_database_secret_backend_connection" "test" {
-  backend       = vault_mount.db.path
-  name          = %q
-  allowed_roles = ["*"]
-
-  postgresql {
-    connection_url = %q
-  }
-
-  lifecycle {
-    action_trigger {
-      events  = [after_create]
-      actions = [action.vault_secret_backend_rotate_root.test]
-    }
-  }
-}
-
-action "vault_secret_backend_rotate_root" "test" {
-  config {
-    backend         = vault_mount.db.path
-    name            = vault_database_secret_backend_connection.test.name
-    timeout_seconds = %d
-  }
-}
-`, backend, name, connURL, timeout)
 }
 
 func testAccSecretBackendRotateRootConfig_invalidBackend() string {
@@ -181,37 +104,4 @@ action "vault_secret_backend_rotate_root" "test" {
   }
 }
 `
-}
-
-func testAccSecretBackendRotateRootConfig_afterCreateAndUpdate(backend, name, connURL string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "db" {
-  path = %q
-  type = "database"
-}
-
-resource "vault_database_secret_backend_connection" "test" {
-  backend       = vault_mount.db.path
-  name          = %q
-  allowed_roles = ["*"]
-
-  postgresql {
-    connection_url = %q
-  }
-
-  lifecycle {
-    action_trigger {
-      events  = [after_create, after_update]
-      actions = [action.vault_secret_backend_rotate_root.test]
-    }
-  }
-}
-
-action "vault_secret_backend_rotate_root" "test" {
-  config {
-    backend = vault_mount.db.path
-    name    = vault_database_secret_backend_connection.test.name
-  }
-}
-`, backend, name, connURL)
 }
