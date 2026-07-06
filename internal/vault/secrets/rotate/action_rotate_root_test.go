@@ -18,7 +18,7 @@ import (
 )
 
 func TestAccSecretBackendRotateRoot_basic(t *testing.T) {
-	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_ROTATE_ROOT_URL")
 	connURL := values[0]
 	backend := acctest.RandomWithPrefix("tf-test-db")
 	name := acctest.RandomWithPrefix("db")
@@ -67,8 +67,6 @@ resource "vault_database_secret_backend_connection" "test" {
 
   postgresql {
     connection_url = "%s"
-    username       = "postgres"
-    password       = "secret"
   }
 
   lifecycle {
