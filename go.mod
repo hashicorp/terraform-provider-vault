@@ -8,13 +8,13 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.22.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
-	github.com/aws/aws-sdk-go-v2 v1.42.0
-	github.com/aws/aws-sdk-go-v2/config v1.32.17
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.16
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.23
-	github.com/aws/aws-sdk-go-v2/service/iam v1.54.5
-	github.com/aws/aws-sdk-go-v2/service/sts v1.43.3
-	github.com/aws/smithy-go v1.27.2
+	github.com/aws/aws-sdk-go-v2 v1.42.1
+	github.com/aws/aws-sdk-go-v2/config v1.32.27
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.26
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.30
+	github.com/aws/aws-sdk-go-v2/service/iam v1.54.7
+	github.com/aws/aws-sdk-go-v2/service/sts v1.43.5
+	github.com/aws/smithy-go v1.27.3
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/coreos/pkg v0.0.0-20240122114842-bbd7aa9bf6fb
 	github.com/denisenkom/go-mssqldb v0.12.3
@@ -56,7 +56,7 @@ require (
 	golang.org/x/crypto v0.53.0
 	golang.org/x/net v0.56.0
 	golang.org/x/oauth2 v0.36.0
-	google.golang.org/api v0.286.0
+	google.golang.org/api v0.287.0
 	google.golang.org/genproto v0.0.0-20260622175928-b703f567277d
 	k8s.io/utils v0.0.0-20260617174310-a95e086a2553
 )
@@ -75,14 +75,14 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.29 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.29 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.30 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.29 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.0.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.30.17 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.21 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.30 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.30 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.31 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.30 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.2.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.31.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.36.8 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -113,7 +113,7 @@ require (
 	github.com/google/certificate-transparency-go v1.3.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.16 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.17 // indirect
 	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/hashicorp/cap v0.13.0 // indirect
@@ -216,7 +216,7 @@ require (
 	golang.org/x/tools v0.45.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260618152121-87f3d3e198d3 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260618152121-87f3d3e198d3 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260622175928-b703f567277d // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/jcmturner/goidentity.v3 v3.0.0 // indirect
