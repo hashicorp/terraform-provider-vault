@@ -67,6 +67,8 @@ resource "vault_database_secret_backend_connection" "test" {
 
   postgresql {
     connection_url = "%s"
+	username       = "rotate_root_user"
+	password       = "rotate_root_password"
   }
 
   lifecycle {
