@@ -55,35 +55,6 @@ action "vault_secret_backend_rotate_root" "postgres" {
 }
 ```
 
-### Rotate After Connection Updates
-
-```hcl
-resource "vault_database_secret_backend_connection" "postgres" {
-  backend       = vault_mount.db.path
-  name          = "postgres"
-  allowed_roles = ["*"]
-
-  postgresql {
-    connection_url = "postgres://root:password@localhost:5432/postgres"
-  }
-
-  lifecycle {
-    action_trigger {
-      events  = [after_create, after_update]
-      actions = [action.vault_secret_backend_rotate_root.postgres]
-    }
-  }
-}
-
-action "vault_secret_backend_rotate_root" "postgres" {
-  config {
-    backend         = vault_mount.db.path
-    name            = vault_database_secret_backend_connection.postgres.name
-    timeout_seconds = 120
-  }
-}
-```
-
 ## Argument Reference
 
 The following arguments are supported inside the `config` block:
