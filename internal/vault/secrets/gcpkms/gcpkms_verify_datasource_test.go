@@ -136,24 +136,18 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-%s
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
-  credentials_wo         = <<-EOT
+	 path                   = "%s"
+	 credentials_wo         = <<-EOT
 %s
 EOT
-  credentials_wo_version = 1
+	 credentials_wo_version = 1
 %s
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
+  mount            = vault_gcpkms_secret_backend.test.path
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
   algorithm        = "rsa_sign_pss_2048_sha256"
@@ -162,25 +156,20 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  mount       = vault_mount.test.path
-  key_name    = vault_gcpkms_secret_backend_key.test.name
-  key_version = 1
-  digest      = "dGVzdC1kaWdlc3Q="
-  signature   = "dGVzdC1zaWduYXR1cmU="
+  mount       = vault_gcpkms_secret_backend.test.path
+  key_name    = vault_gcpkms_secret_backend_key.test.key_name
+	 key_version = 1
+	 digest      = "dGVzdC1kaWdlc3Q="
+	 signature   = "dGVzdC1zaWduYXR1cmU="
 %s
 }
-`, nsBlock, path, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, namespaceAttr)
+`, nsBlock, path, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, namespaceAttr)
 }
 
 func testGCPKMSVerifyDataSource_basicConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -188,8 +177,8 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
+  mount            = vault_gcpkms_secret_backend.test.path
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
   algorithm        = "rsa_sign_pss_2048_sha256"
@@ -197,8 +186,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 data "vault_gcpkms_verify" "test" {
-  mount       = vault_mount.test.path
-  key_name    = vault_gcpkms_secret_backend_key.test.name
+  mount       = vault_gcpkms_secret_backend.test.path
+  key_name    = vault_gcpkms_secret_backend_key.test.key_name
   key_version = 1
   digest      = "dGVzdC1kaWdlc3Q="
   signature   = "dGVzdC1zaWduYXR1cmU="
@@ -213,13 +202,8 @@ func testGCPKMSVerifyDataSource_validSignatureConfig(path, keyName, keyRing, cre
 	testDigest := "YBbp+LPAKcJjVz0JvKs0YJvVKN8dGZ3qN0Y5vF5XYXQ="
 
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -227,8 +211,8 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
+  mount            = vault_gcpkms_secret_backend.test.path
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
   algorithm        = "rsa_sign_pss_2048_sha256"
@@ -238,7 +222,7 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 # Use vault_generic_endpoint to sign the data
 resource "vault_generic_endpoint" "sign" {
   depends_on           = [vault_gcpkms_secret_backend_key.test]
-  path                 = "${vault_mount.test.path}/sign/${vault_gcpkms_secret_backend_key.test.name}"
+  path                 = "${vault_gcpkms_secret_backend.test.path}/sign/${vault_gcpkms_secret_backend_key.test.key_name}"
   disable_read         = true
   disable_delete       = true
   ignore_absent_fields = true
@@ -253,8 +237,8 @@ resource "vault_generic_endpoint" "sign" {
 # Verify the signature using the data source
 data "vault_gcpkms_verify" "test" {
   depends_on  = [vault_generic_endpoint.sign]
-  mount       = vault_mount.test.path
-  key_name    = vault_gcpkms_secret_backend_key.test.name
+  mount       = vault_gcpkms_secret_backend.test.path
+  key_name    = vault_gcpkms_secret_backend_key.test.key_name
   key_version = 1
   digest      = "%s"
   signature   = jsondecode(vault_generic_endpoint.sign.write_data_json)["signature"]

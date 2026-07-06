@@ -188,57 +188,46 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-%s
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
-  credentials_wo         = <<-EOT
+	 path                   = "%s"
+	 credentials_wo         = <<-EOT
 %s
 EOT
-  credentials_wo_version = 1
+	 credentials_wo_version = 1
 %s
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
-  key_ring         = "%s"
-  purpose          = "asymmetric_sign"
-  algorithm        = "ec_sign_p256_sha256"
-  protection_level = "software"
+	 mount            = vault_gcpkms_secret_backend.test.path
+	 key_name         = "%s"
+	 key_ring         = "%s"
+	 purpose          = "asymmetric_sign"
+	 algorithm        = "ec_sign_p256_sha256"
+	 protection_level = "software"
 %s
 }
 
 ephemeral "vault_gcpkms_sign" "test" {
-  mount_id    = vault_mount.test.id
-  mount       = vault_mount.test.path
-  key_name    = vault_gcpkms_secret_backend_key.test.name
-  digest      = "%s"
-  key_version = %s
+	 mount_id    = vault_gcpkms_secret_backend.test.id
+	 mount       = vault_gcpkms_secret_backend.test.path
+	 key_name    = vault_gcpkms_secret_backend_key.test.key_name
+	 digest      = "%s"
+	 key_version = %s
 %s
 }
 
 provider "echo" {
-  data = ephemeral.vault_gcpkms_sign.test
+	 data = ephemeral.vault_gcpkms_sign.test
 }
 
 resource "echo" "signature" {}
-`, nsBlock, backend, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, digest, keyVersion, namespaceAttr)
+`, nsBlock, backend, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, digest, keyVersion, namespaceAttr)
 }
 
 func testAccGCPKMSSignConfig(backend, keyName, digest, keyVersion, credentials, keyRing string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -246,8 +235,8 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
+  mount            = vault_gcpkms_secret_backend.test.path
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
   algorithm        = "ec_sign_p256_sha256"
@@ -255,9 +244,9 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 ephemeral "vault_gcpkms_sign" "test" {
-  mount_id    = vault_mount.test.id
-  mount       = vault_mount.test.path
-  key_name    = vault_gcpkms_secret_backend_key.test.name
+  mount_id    = vault_gcpkms_secret_backend.test.id
+  mount       = vault_gcpkms_secret_backend.test.path
+  key_name    = vault_gcpkms_secret_backend_key.test.key_name
   digest      = "%s"
   key_version = %s
 }
@@ -272,13 +261,8 @@ resource "echo" "signature" {}
 
 func testAccGCPKMSSignWithBothAlgorithmsConfig(backend, keyNameP256, keyNameP384, digestSHA256, digestSHA384, keyVersion, credentials, keyRing string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -286,8 +270,8 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test_p256" {
-  mount            = vault_mount.test.path
-  name             = "%s"
+  mount            = vault_gcpkms_secret_backend.test.path
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
   algorithm        = "ec_sign_p256_sha256"
@@ -295,8 +279,8 @@ resource "vault_gcpkms_secret_backend_key" "test_p256" {
 }
 
 resource "vault_gcpkms_secret_backend_key" "test_p384" {
-  mount            = vault_mount.test.path
-  name             = "%s"
+  mount            = vault_gcpkms_secret_backend.test.path
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
   algorithm        = "ec_sign_p384_sha384"
@@ -304,17 +288,17 @@ resource "vault_gcpkms_secret_backend_key" "test_p384" {
 }
 
 ephemeral "vault_gcpkms_sign" "test_p256" {
-  mount_id    = vault_mount.test.id
-  mount       = vault_mount.test.path
-  key_name   = vault_gcpkms_secret_backend_key.test_p256.name
+  mount_id    = vault_gcpkms_secret_backend.test.id
+  mount       = vault_gcpkms_secret_backend.test.path
+  key_name    = vault_gcpkms_secret_backend_key.test_p256.key_name
   digest      = "%s"
   key_version = %s
 }
 
 ephemeral "vault_gcpkms_sign" "test_p384" {
-  mount_id    = vault_mount.test.id
-  mount       = vault_mount.test.path
-  key_name   = vault_gcpkms_secret_backend_key.test_p384.name
+  mount_id    = vault_gcpkms_secret_backend.test.id
+  mount       = vault_gcpkms_secret_backend.test.path
+  key_name    = vault_gcpkms_secret_backend_key.test_p384.key_name
   digest      = "%s"
   key_version = %s
 }

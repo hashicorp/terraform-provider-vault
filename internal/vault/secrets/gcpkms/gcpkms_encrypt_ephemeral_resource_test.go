@@ -123,56 +123,45 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-%s
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
-  credentials_wo         = <<-EOT
+	 path                   = "%s"
+	 credentials_wo         = <<-EOT
 %s
 EOT
-  credentials_wo_version = 1
+	 credentials_wo_version = 1
 %s
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
-  key_ring         = "%s"
-  purpose          = "encrypt_decrypt"
-  algorithm        = "symmetric_encryption"
-  protection_level = "software"
+	 mount            = vault_gcpkms_secret_backend.test.path
+	 key_name         = "%s"
+	 key_ring         = "%s"
+	 purpose          = "encrypt_decrypt"
+	 algorithm        = "symmetric_encryption"
+	 protection_level = "software"
 %s
 }
 
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id  = vault_mount.test.id
-  mount     = vault_mount.test.path
-  key_name  = vault_gcpkms_secret_backend_key.test.name
-  plaintext = "%s"
+	 mount_id  = vault_gcpkms_secret_backend.test.id
+	 mount     = vault_gcpkms_secret_backend.test.path
+	 key_name  = vault_gcpkms_secret_backend_key.test.key_name
+	 plaintext = "%s"
 %s
 }
 
 provider "echo" {
-  data = ephemeral.vault_gcpkms_encrypt.test
+	 data = ephemeral.vault_gcpkms_encrypt.test
 }
 
 resource "echo" "ciphertext" {}
-`, nsBlock, backend, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, plaintext, namespaceAttr)
+`, nsBlock, backend, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, plaintext, namespaceAttr)
 }
 
 func testAccGCPKMSEncryptConfig(backend, keyName, plaintext, aad, keyVersion, credentials, keyRing string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -180,8 +169,8 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
+  mount            = vault_gcpkms_secret_backend.test.path
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
@@ -189,9 +178,9 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 }
 
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id                      = vault_mount.test.id
-  mount                         = vault_mount.test.path
-  key_name                      = vault_gcpkms_secret_backend_key.test.name
+  mount_id                      = vault_gcpkms_secret_backend.test.id
+  mount                         = vault_gcpkms_secret_backend.test.path
+  key_name                      = vault_gcpkms_secret_backend_key.test.key_name
   plaintext                     = "%s"
   additional_authenticated_data = "%s"
   key_version                   = %s

@@ -257,13 +257,8 @@ func TestGCPKMSSecretBackendKey_namespace(t *testing.T) {
 
 func testGCPKMSSecretBackendKey_initialConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -271,28 +266,21 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
   protection_level = "software"
   rotation_period  = "2592000s"
-  
-  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing)
 }
 
 func testGCPKMSSecretBackendKey_updateConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -300,57 +288,43 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
   protection_level = "software"
   rotation_period  = "3600000s"
-  
-  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing)
 }
 
 func testGCPKMSSecretBackendKey_cryptoKeyConfig(path, keyName, keyRing, cryptoKeyName, credentials string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount          = vault_mount.test.path
-  credentials_wo = <<-EOT
+  path                   = "%s"
+  credentials_wo         = <<-EOT
 %s
 EOT
   credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   key_name         = "%s"
   key_ring         = "%s"
   crypto_key       = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
   protection_level = "software"
-  
-  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing, cryptoKeyName)
 }
 
 func testGCPKMSSecretBackendKey_signingConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -358,27 +332,20 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   key_name         = "%s"
   key_ring         = "%s"
   purpose          = "asymmetric_sign"
   algorithm        = "rsa_sign_pss_2048_sha256"
   protection_level = "software"
-  
-  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing)
 }
 
 func testGCPKMSSecretBackendKey_labelsConfig(path, keyName, keyRing, credentials string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -386,7 +353,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -396,38 +363,8 @@ resource "vault_gcpkms_secret_backend_key" "test" {
     env        = "test"
     managed-by = "terraform"
   }
-  
-  depends_on = [vault_gcpkms_secret_backend.test]
 }
 `, path, credentials, keyName, keyRing)
-}
-
-func testGCPKMSSecretBackendKey_conflictConfig(path, keyName, keyRing, cryptoKey, credentials string) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
-resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
-  credentials_wo         = <<-EOT
-%s
-EOT
-  credentials_wo_version = 1
-}
-
-resource "vault_gcpkms_secret_backend_key" "test" {
-  mount      = vault_mount.test.path
-  key_name   = "%s"
-  key_ring   = "%s"
-  crypto_key = "%s"
-  purpose    = "encrypt_decrypt"
-  algorithm  = "symmetric_encryption"
-  
-  depends_on = [vault_gcpkms_secret_backend.test]
-}
-`, path, credentials, keyName, keyRing, cryptoKey)
 }
 
 func testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -458,14 +395,8 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-%s
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -474,7 +405,7 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
+  mount            = vault_gcpkms_secret_backend.test.path
   key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
@@ -482,8 +413,6 @@ resource "vault_gcpkms_secret_backend_key" "test" {
   protection_level = "software"
   rotation_period  = "2592000s"
 %s
-  
-  depends_on = [vault_gcpkms_secret_backend.test]
 }
-`, nsBlock, path, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr)
+`, nsBlock, path, credentials, namespaceAttr, keyName, keyRing, namespaceAttr)
 }

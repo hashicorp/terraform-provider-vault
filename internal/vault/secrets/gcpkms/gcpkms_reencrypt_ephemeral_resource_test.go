@@ -120,63 +120,53 @@ resource "vault_namespace" "test" {
 
 	return fmt.Sprintf(`
 %s
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-%s
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
-  credentials_wo         = <<-EOT
+	 path                   = "%s"
+	 credentials_wo         = <<-EOT
 %s
 EOT
-  credentials_wo_version = 1
+	 credentials_wo_version = 1
 %s
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
-  key_ring         = "%s"
-  purpose          = "encrypt_decrypt"
-  algorithm        = "symmetric_encryption"
-  protection_level = "software"
+	 mount            = vault_gcpkms_secret_backend.test.path
+	 key_name         = "%s"
+	 key_ring         = "%s"
+	 purpose          = "encrypt_decrypt"
+	 algorithm        = "symmetric_encryption"
+	 protection_level = "software"
 %s
 }
 
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id  = vault_mount.test.id
-  mount     = vault_mount.test.path
-  key_name  = vault_gcpkms_secret_backend_key.test.name
+  mount_id  = vault_gcpkms_secret_backend.test.id
+  mount     = vault_gcpkms_secret_backend.test.path
+  key_name  = vault_gcpkms_secret_backend_key.test.key_name
   plaintext = base64encode("test plaintext data")
 %s
 }
 
 ephemeral "vault_gcpkms_reencrypt" "test" {
-  mount      = vault_mount.test.path
-  key_name   = vault_gcpkms_secret_backend_key.test.name
+  mount_id   = vault_gcpkms_secret_backend.test.id
+  mount      = vault_gcpkms_secret_backend.test.path
+  key_name   = vault_gcpkms_secret_backend_key.test.key_name
   ciphertext = ephemeral.vault_gcpkms_encrypt.test.ciphertext
 %s
 }
 
 provider "echo" {
-  data = ephemeral.vault_gcpkms_reencrypt.test
+	 data = ephemeral.vault_gcpkms_reencrypt.test
 }
 
 resource "echo" "new_ciphertext" {}
-`, nsBlock, backend, namespaceAttr, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, namespaceAttr, namespaceAttr)
+`, nsBlock, backend, credentials, namespaceAttr, keyName, keyRing, namespaceAttr, namespaceAttr, namespaceAttr)
 }
 
 func testAccGCPKMSReencryptConfig(backend, keyName, aad, keyVersion, credentials, keyRing string) string {
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = "%s"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "test" {
-  mount                  = vault_mount.test.path
+  path                   = "%s"
   credentials_wo         = <<-EOT
 %s
 EOT
@@ -184,8 +174,8 @@ EOT
 }
 
 resource "vault_gcpkms_secret_backend_key" "test" {
-  mount            = vault_mount.test.path
-  name             = "%s"
+  mount            = vault_gcpkms_secret_backend.test.path
+  key_name         = "%s"
   key_ring         = "%s"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
@@ -194,17 +184,18 @@ resource "vault_gcpkms_secret_backend_key" "test" {
 
 # First encrypt some data with AAD to get a real ciphertext
 ephemeral "vault_gcpkms_encrypt" "test" {
-  mount_id                      = vault_mount.test.id
-  mount                         = vault_mount.test.path
-  key_name                      = vault_gcpkms_secret_backend_key.test.name
+  mount_id                      = vault_gcpkms_secret_backend.test.id
+  mount                         = vault_gcpkms_secret_backend.test.path
+  key_name                      = vault_gcpkms_secret_backend_key.test.key_name
   plaintext                     = base64encode("test plaintext data")
   additional_authenticated_data = "%s"
 }
 
 # Then reencrypt it using the same AAD and a specific key version
 ephemeral "vault_gcpkms_reencrypt" "test" {
-  mount                         = vault_mount.test.path
-  key_name                      = vault_gcpkms_secret_backend_key.test.name
+  mount_id                      = vault_gcpkms_secret_backend.test.id
+  mount                         = vault_gcpkms_secret_backend.test.path
+  key_name                      = vault_gcpkms_secret_backend_key.test.key_name
   ciphertext                    = ephemeral.vault_gcpkms_encrypt.test.ciphertext
   additional_authenticated_data = "%s"
   key_version                   = %s
