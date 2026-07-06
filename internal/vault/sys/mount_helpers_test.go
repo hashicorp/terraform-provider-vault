@@ -421,10 +421,14 @@ func TestMountHelper_ReadMount(t *testing.T) {
 				MaxLeaseTTLSeconds:     types.Int64Value(7200),
 				// options present -> non-null map; all other collections absent -> null.
 				Options:                   strMap(t, map[string]string{"version": "2"}),
+				AuditNonHMACRequestKeys:   types.ListNull(types.StringType),
+				AuditNonHMACResponseKeys:  types.ListNull(types.StringType),
 				AllowedManagedKeys:        types.SetNull(types.StringType),
 				PassthroughRequestHeaders: types.ListNull(types.StringType),
 				AllowedResponseHeaders:    types.ListNull(types.StringType),
 				DelegatedAuthAccessors:    types.ListNull(types.StringType),
+				ListingVisibility:         types.StringNull(),
+				IdentityTokenKey:          types.StringNull(),
 			},
 		},
 		{
@@ -437,13 +441,17 @@ func TestMountHelper_ReadMount(t *testing.T) {
 						"accessor": "kv_12345678",
 						"options":  map[string]string{"version": "2", "cas_required": "true"},
 						"config": map[string]interface{}{
-							"default_lease_ttl":           3600,
-							"max_lease_ttl":               7200,
-							"force_no_cache":              false,
-							"allowed_managed_keys":        []string{"kms-key"},
-							"passthrough_request_headers": []string{"h1", "h2"},
-							"allowed_response_headers":    []string{"r1"},
-							"delegated_auth_accessors":    []string{"a1", "a2"},
+							"default_lease_ttl":            3600,
+							"max_lease_ttl":                7200,
+							"force_no_cache":               false,
+							"audit_non_hmac_request_keys":  []string{"req1", "req2"},
+							"audit_non_hmac_response_keys": []string{"resp1"},
+							"allowed_managed_keys":         []string{"kms-key"},
+							"passthrough_request_headers":  []string{"h1", "h2"},
+							"allowed_response_headers":     []string{"r1"},
+							"delegated_auth_accessors":     []string{"a1", "a2"},
+							"listing_visibility":           "unauth",
+							"identity_token_key":           "my-key",
 						},
 					},
 				})
@@ -455,11 +463,17 @@ func TestMountHelper_ReadMount(t *testing.T) {
 				SealWrap:                  types.BoolValue(false),
 				Local:                     types.BoolValue(false),
 				ExternalEntropyAccess:     types.BoolValue(false),
+				DefaultLeaseTTLSeconds:    types.Int64Value(3600),
+				MaxLeaseTTLSeconds:        types.Int64Value(7200),
 				Options:                   strMap(t, map[string]string{"version": "2", "cas_required": "true"}),
+				AuditNonHMACRequestKeys:   strList(t, "req1", "req2"),
+				AuditNonHMACResponseKeys:  strList(t, "resp1"),
 				AllowedManagedKeys:        strSet(t, "kms-key"),
 				PassthroughRequestHeaders: strList(t, "h1", "h2"),
 				AllowedResponseHeaders:    strList(t, "r1"),
 				DelegatedAuthAccessors:    strList(t, "a1", "a2"),
+				ListingVisibility:         types.StringValue("unauth"),
+				IdentityTokenKey:          types.StringValue("my-key"),
 			},
 		},
 		{
@@ -487,11 +501,17 @@ func TestMountHelper_ReadMount(t *testing.T) {
 				SealWrap:                  types.BoolValue(false),
 				Local:                     types.BoolValue(false),
 				ExternalEntropyAccess:     types.BoolValue(false),
+				DefaultLeaseTTLSeconds:    types.Int64Value(0),
+				MaxLeaseTTLSeconds:        types.Int64Value(0),
 				Options:                   types.MapNull(types.StringType),
+				AuditNonHMACRequestKeys:   types.ListNull(types.StringType),
+				AuditNonHMACResponseKeys:  types.ListNull(types.StringType),
 				AllowedManagedKeys:        types.SetNull(types.StringType),
 				PassthroughRequestHeaders: types.ListNull(types.StringType),
 				AllowedResponseHeaders:    types.ListNull(types.StringType),
 				DelegatedAuthAccessors:    types.ListNull(types.StringType),
+				ListingVisibility:         types.StringNull(),
+				IdentityTokenKey:          types.StringNull(),
 			},
 		},
 		{
@@ -522,11 +542,17 @@ func TestMountHelper_ReadMount(t *testing.T) {
 				SealWrap:                  types.BoolValue(false),
 				Local:                     types.BoolValue(true),
 				ExternalEntropyAccess:     types.BoolValue(true),
+				DefaultLeaseTTLSeconds:    types.Int64Value(3600),
+				MaxLeaseTTLSeconds:        types.Int64Value(7200),
 				Options:                   types.MapNull(types.StringType),
+				AuditNonHMACRequestKeys:   types.ListNull(types.StringType),
+				AuditNonHMACResponseKeys:  types.ListNull(types.StringType),
 				AllowedManagedKeys:        types.SetNull(types.StringType),
 				PassthroughRequestHeaders: types.ListNull(types.StringType),
 				AllowedResponseHeaders:    types.ListNull(types.StringType),
 				DelegatedAuthAccessors:    types.ListNull(types.StringType),
+				ListingVisibility:         types.StringNull(),
+				IdentityTokenKey:          types.StringNull(),
 			},
 		},
 		{
@@ -576,9 +602,15 @@ func TestMountHelper_ReadMount(t *testing.T) {
 			assert.Equal(t, tt.wantOutput.SealWrap, output.SealWrap)
 			assert.Equal(t, tt.wantOutput.Local, output.Local)
 			assert.Equal(t, tt.wantOutput.ExternalEntropyAccess, output.ExternalEntropyAccess)
+			assert.Equal(t, tt.wantOutput.DefaultLeaseTTLSeconds, output.DefaultLeaseTTLSeconds)
+			assert.Equal(t, tt.wantOutput.MaxLeaseTTLSeconds, output.MaxLeaseTTLSeconds)
+			assert.Equal(t, tt.wantOutput.ListingVisibility, output.ListingVisibility)
+			assert.Equal(t, tt.wantOutput.IdentityTokenKey, output.IdentityTokenKey)
 			// Collection fields: assert exact equality so empty Vault values are
 			// read back as null (not empty), preventing state drift/parity regressions.
 			assert.Equal(t, tt.wantOutput.Options, output.Options)
+			assert.Equal(t, tt.wantOutput.AuditNonHMACRequestKeys, output.AuditNonHMACRequestKeys)
+			assert.Equal(t, tt.wantOutput.AuditNonHMACResponseKeys, output.AuditNonHMACResponseKeys)
 			assert.Equal(t, tt.wantOutput.AllowedManagedKeys, output.AllowedManagedKeys)
 			assert.Equal(t, tt.wantOutput.PassthroughRequestHeaders, output.PassthroughRequestHeaders)
 			assert.Equal(t, tt.wantOutput.AllowedResponseHeaders, output.AllowedResponseHeaders)
