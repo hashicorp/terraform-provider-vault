@@ -14,8 +14,13 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
+
+// tfseRotationVersion is the minimum Vault version that supports root-token
+// rotation configuration on the Terraform secrets engine.
+var tfseRotationVersion = provider.VaultVersion210
 
 func terraformCloudSecretBackendResource() *schema.Resource {
 	r := provider.MustAddMountMigrationSchema(&schema.Resource{
@@ -91,6 +96,15 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 				Default:     "0",
 				Description: "Maximum possible lease duration for secrets in seconds",
 			},
+			consts.FieldExplicitMaxTTL: {
+				Type:     schema.TypeInt,
+				Optional: true,
+				Computed: true,
+				Description: "The maximum lifetime, in seconds, set on the root token in " +
+					"Terraform Cloud or Enterprise when Vault rotates it. Acts as an upper-bound " +
+					"safety net; Vault manages the root token lifecycle. The default (0) omits the " +
+					"expiration so Terraform applies its default token expiry.",
+			},
 		},
 	}, false)
 
@@ -103,6 +117,11 @@ func terraformCloudSecretBackendResource() *schema.Resource {
 		consts.FieldMaxLeaseTTLSeconds,
 	))
 
+	// Add common automated root rotation schema to the resource. Automated
+	// rotation requires Vault Enterprise; the on-demand rotate-root endpoint and
+	// explicit_max_ttl work in both editions.
+	provider.MustAddSchema(r, provider.GetAutomatedRootRotationSchema())
+
 	return r
 }
 
@@ -111,6 +130,9 @@ func terraformCloudSecretBackendCreate(ctx context.Context, d *schema.ResourceDa
 	if e != nil {
 		return diag.FromErr(e)
 	}
+
+	useRotationFields := provider.IsAPISupported(meta, tfseRotationVersion)
+	isEnterprise := provider.IsEnterpriseSupported(meta)
 
 	backend := d.Get(consts.FieldBackend).(string)
 	address := d.Get(consts.FieldAddress).(string)
@@ -148,6 +170,20 @@ func terraformCloudSecretBackendCreate(ctx context.Context, d *schema.ResourceDa
 		data[consts.FieldToken] = token
 	}
 
+	if useRotationFields {
+		// explicit_max_ttl applies to both manual and automated rotation and is
+		// not Enterprise-gated.
+		if v, ok := d.GetOk(consts.FieldExplicitMaxTTL); ok {
+			data[consts.FieldExplicitMaxTTL] = v.(int)
+		}
+
+		// Automated root rotation relies on the Rotation Manager, which requires
+		// Vault Enterprise.
+		if isEnterprise {
+			automatedrotationutil.ParseAutomatedRotationFields(d, data)
+		}
+	}
+
 	if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
 		return diag.Errorf("Error writing Terraform Cloud configuration for %q: %s", backend, err)
 	}
@@ -180,11 +216,29 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
 
-	if err := d.Set("address", secret.Data["address"].(string)); err != nil {
-		return diag.FromErr(err)
+	if v, ok := secret.Data[consts.FieldAddress]; ok {
+		if err := d.Set(consts.FieldAddress, v); err != nil {
+			return diag.FromErr(err)
+		}
 	}
-	if err := d.Set("base_path", secret.Data["base_path"].(string)); err != nil {
-		return diag.FromErr(err)
+	if v, ok := secret.Data[consts.FieldBasePath]; ok {
+		if err := d.Set(consts.FieldBasePath, v); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, tfseRotationVersion) {
+		if v, ok := secret.Data[consts.FieldExplicitMaxTTL]; ok {
+			if err := d.Set(consts.FieldExplicitMaxTTL, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+
+		if provider.IsEnterpriseSupported(meta) {
+			if err := automatedrotationutil.PopulateAutomatedRotationFields(d, secret, configPath); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 
 	return nil
@@ -209,20 +263,37 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	if d.HasChange(consts.FieldAddress) || d.HasChange(consts.FieldBasePath) {
+	useRotationFields := provider.IsAPISupported(meta, tfseRotationVersion)
+	isEnterprise := provider.IsEnterpriseSupported(meta)
+
+	rotationFieldsChanged := useRotationFields && isEnterprise &&
+		d.HasChanges(consts.FieldRotationSchedule, consts.FieldRotationPeriod,
+			consts.FieldRotationWindow, consts.FieldDisableAutomatedRotation)
+	explicitMaxTTLChanged := useRotationFields && d.HasChange(consts.FieldExplicitMaxTTL)
+
+	if d.HasChange(consts.FieldAddress) || d.HasChange(consts.FieldBasePath) ||
+		explicitMaxTTLChanged || rotationFieldsChanged {
 		log.Printf("[DEBUG] Updating Terraform Cloud configuration at %q", configPath)
 		data := map[string]interface{}{
 			consts.FieldAddress:  d.Get(consts.FieldAddress).(string),
 			consts.FieldBasePath: d.Get(consts.FieldBasePath).(string),
 		}
+
+		if explicitMaxTTLChanged {
+			data[consts.FieldExplicitMaxTTL] = d.Get(consts.FieldExplicitMaxTTL).(int)
+		}
+		if rotationFieldsChanged {
+			automatedrotationutil.ParseAutomatedRotationFields(d, data)
+		}
+
 		if _, err := client.Logical().WriteWithContext(ctx, configPath, data); err != nil {
 			return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
 		}
 		log.Printf("[DEBUG] Updated Terraform Cloud configuration at %q", configPath)
-		if err := d.Set("address", data["address"]); err != nil {
+		if err := d.Set(consts.FieldAddress, data[consts.FieldAddress]); err != nil {
 			return diag.FromErr(err)
 		}
-		if err := d.Set("base_path", data["base_path"]); err != nil {
+		if err := d.Set(consts.FieldBasePath, data[consts.FieldBasePath]); err != nil {
 			return diag.FromErr(err)
 		}
 	}
