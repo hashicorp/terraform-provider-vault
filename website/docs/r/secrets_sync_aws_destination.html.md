@@ -69,6 +69,34 @@ resource "vault_secrets_sync_aws_destination" "aws_wif" {
 }
 ```
 
+### With Custom KMS Key (Vault 2.1.0+)
+
+```hcl
+resource "vault_secrets_sync_aws_destination" "aws_kms_key_id" {
+  name              = "aws-dest-kms-key-id"
+  access_key_id     = var.access_key_id
+  secret_access_key = var.secret_access_key
+  region            = "us-east-1"
+  kms_key_id        = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+}
+```
+
+### With Regional KMS Keys (Vault 2.1.0+)
+
+```hcl
+resource "vault_secrets_sync_aws_destination" "aws_regional_kms_keys" {
+  name              = "aws-dest-regional-kms"
+  access_key_id     = var.access_key_id
+  secret_access_key = var.secret_access_key
+  region            = "us-east-1"
+
+  regional_kms_keys = {
+    "us-east-2" = "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
+    "us-west-1" = "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -126,6 +154,14 @@ The following arguments are supported:
 * `disable_strict_networking` - (Optional) Disable strict networking mode. When set to `true`, Vault will not enforce
   allowed IP addresses and ports. Defaults to `false`.
   **Requires Vault 1.19.0+**.
+
+### Encryption Configuration (Vault 2.1.0+)
+
+* `kms_key_id` - (Optional) Specifies the ARN or alias of the AWS KMS key used to encrypt synced secrets.
+  **Requires Vault 2.1.0+**.
+
+* `regional_kms_keys` - (Optional) Map of AWS regions to KMS key ARN or alias values for regional encryption.
+  **Requires Vault 2.1.0+**.
 
 ### Workload Identity Federation (Vault 2.0.0+)
 

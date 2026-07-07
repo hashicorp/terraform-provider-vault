@@ -297,9 +297,12 @@ func TestGCPSecretsSyncDestination_AdvancedFeatures(t *testing.T) {
 					Config: testGCPSecretsSyncDestinationConfig_encryptionKMSKeyID(credentials, project, destName+"-enc"),
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldKMSKeyID, "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldKmsKeyID, "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"),
 					),
 				},
+				testutil.GetImportTestStep(resourceName, false, nil,
+					consts.FieldCredentials,
+				),
 				// Step 2: Test replication with regional KMS Keys
 				{
 					Config: testGCPSecretsSyncDestinationConfig_replicationBasicRegionalKMSKeys(credentials, project, destName+"-rep-kms"),
@@ -310,6 +313,9 @@ func TestGCPSecretsSyncDestination_AdvancedFeatures(t *testing.T) {
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-east1", "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"),
 					),
 				},
+				testutil.GetImportTestStep(resourceName, false, nil,
+					consts.FieldCredentials,
+				),
 			},
 		})
 	}

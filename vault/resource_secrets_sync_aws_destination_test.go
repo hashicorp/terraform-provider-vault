@@ -106,7 +106,7 @@ func TestAWSSecretsSyncDestinationWithCustomEncryption(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldKMSKeyID, "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKmsKeyID, "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
@@ -114,7 +114,6 @@ func TestAWSSecretsSyncDestinationWithCustomEncryption(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				fieldAccessKeyID,
 				fieldSecretAccessKey,
-				consts.FieldKMSKeyID,
 				consts.FieldDisableStrictNetworking, // Vault API doesn't return false when not set
 			),
 		},
@@ -122,7 +121,7 @@ func TestAWSSecretsSyncDestinationWithCustomEncryption(t *testing.T) {
 }
 
 func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
-	destName := acctest.RandomWithPrefix("tf-sync-dest-aws-enc")
+	destName := acctest.RandomWithPrefix("tf-sync-dest-aws-rep")
 
 	resourceName := "vault_secrets_sync_aws_destination.test"
 
@@ -136,7 +135,7 @@ func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testAWSSecretsSyncDestinationConfigWithReplication(accessKey, secretKey, region, destName, secretsKeyTemplate),
+				Config: testAWSSecretsSyncDestinationConfigWithReplication(accessKey, secretKey, region, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -156,7 +155,6 @@ func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil,
 				fieldAccessKeyID,
 				fieldSecretAccessKey,
-				consts.FieldRegionalKmsKeys,
 				consts.FieldDisableStrictNetworking, // Vault API doesn't return false when not set
 			),
 		},
@@ -329,14 +327,14 @@ resource "vault_secrets_sync_aws_destination" "test" {
 func testAWSSecretsSyncDestinationConfigWithCustomEncryption(accessKey, secretKey, region, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_aws_destination" "test" {
-  name                  = "%s"
-  access_key_id	        = "%s"
-  secret_access_key     = "%s"
-  region                = "%s"
-  kms_key_id			= "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+  name              = "%s"
+  access_key_id     = "%s"
+  secret_access_key = "%s"
+  region            = "%s"
+  kms_key_id        = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
   %s
 }
-`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
+`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, true, true, false))
 
 	return ret
 }
@@ -344,18 +342,17 @@ resource "vault_secrets_sync_aws_destination" "test" {
 func testAWSSecretsSyncDestinationConfigWithReplication(accessKey, secretKey, region, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_aws_destination" "test" {
-  name                  = "%s"
-  access_key_id	        = "%s"
-  secret_access_key     = "%s"
-  region                = "%s"
-  kms_key_id			= "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+  name              = "%s"
+  access_key_id     = "%s"
+  secret_access_key = "%s"
+  region            = "%s"
   regional_kms_keys = {
     "us-east-2" = "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef",
     "us-west-1" = "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
   }
   %s
 }
-`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
+`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, true, true, false))
 
 	return ret
 }

@@ -54,7 +54,7 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 	if provider.IsAPISupported(meta, provider.VaultVersion210) {
 		fields = append(fields,
 			consts.FieldRegionalKmsKeys,
-			consts.FieldKMSKeyID,
+			consts.FieldKmsKeyID,
 		)
 	}
 
@@ -94,7 +94,7 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 	if provider.IsAPISupported(meta, provider.VaultVersion210) {
 		fields = append(fields,
 			consts.FieldRegionalKmsKeys,
-			consts.FieldKMSKeyID,
+			consts.FieldKmsKeyID,
 		)
 	}
 
@@ -197,20 +197,22 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Locational KMS keys for encryption.",
+				Deprecated:  "Deprecated in favor of regional_kms_keys for Vault Enterprise 2.1.0+.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldGlobalKmsKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Global KMS key for encryption.",
+				Deprecated:  "Deprecated in favor of kms_key_id for Vault Enterprise 2.1.0+.",
 			},
 			consts.FieldRegionalKmsKeys: {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				Description: "Regional KMS keys for encryption.",
+				Description: "Regional KMS keys for encryption. KMS key values are optional.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			consts.FieldKMSKeyID: {
+			consts.FieldKmsKeyID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "KMS key ID for encryption.",
@@ -219,13 +221,34 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Replication locations for secrets.",
+				Deprecated:  "Deprecated in favor of regional_kms_keys for Vault Enterprise 2.1.0+.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 		},
 	})
 }
 
+func validateGCPSync210Fields(d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		return nil
+	}
+
+	if _, ok := d.GetOk(consts.FieldKmsKeyID); ok {
+		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1 and later")
+	}
+
+	if _, ok := d.GetOk(consts.FieldRegionalKmsKeys); ok {
+		return diag.Errorf("regional_kms_keys is only supported in Vault Enterprise 2.1 and later")
+	}
+
+	return nil
+}
+
 func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if diags := validateGCPSync210Fields(d, meta); diags != nil {
+		return diags
+	}
+
 	writeFields := buildGCPSyncWriteFields(meta)
 	readFields := buildGCPSyncReadFields(meta)
 	// typeSetFields indicates which fields are of TypeSet type and need conversion to List during write

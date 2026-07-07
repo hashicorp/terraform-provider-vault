@@ -82,6 +82,35 @@ resource "vault_secrets_sync_gcp_destination" "gcp_replication_encryption" {
 }
 ```
 
+### With KMS Key ID (Vault 2.1.0+)
+
+```hcl
+resource "vault_secrets_sync_gcp_destination" "gcp_kms_key_id" {
+  name                 = "gcp-dest-kms-key-id"
+  project_id           = "gcp-project-id"
+  credentials          = file(var.credentials_file)
+  secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
+
+  kms_key_id = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
+}
+```
+
+### With Regional KMS Keys (Vault 2.1.0+)
+
+```hcl
+resource "vault_secrets_sync_gcp_destination" "gcp_regional_kms_keys" {
+  name                 = "gcp-dest-regional-kms"
+  project_id           = "gcp-project-id"
+  credentials          = file(var.credentials_file)
+  secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
+
+  regional_kms_keys = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+    "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
+  }
+}
+```
+
 ### Using Workload Identity Federation (Vault 2.0.0+)
 
 ```hcl
@@ -162,6 +191,10 @@ The following arguments are supported:
 
 ### Encryption Configuration (Vault 1.19+)
 
+~> **Deprecated** `global_kms_key` and `locational_kms_keys` are deprecated in favor of
+`kms_key_id` and `regional_kms_keys` on Vault Enterprise 2.1.0+. Existing configurations
+continue to work for backward compatibility.
+
 * `global_kms_key` - (Optional) KMS key resource name for encrypting all secrets. 
   Format: `projects/{project}/locations/{location}/keyRings/{keyring}/cryptoKeys/{key}`.
 
@@ -180,6 +213,18 @@ The following arguments are supported:
 
 * `replication_locations` - (Optional) List of GCP regions where secrets should be replicated. 
   Example: `["us-central1", "us-east1"]`.
+  **Deprecated** in favor of `regional_kms_keys` on Vault Enterprise 2.1.0+.
+
+### Encryption Configuration (Vault 2.1.0+)
+
+* `kms_key_id` - (Optional) KMS key resource name for encrypting synced secrets.
+  Format: `projects/{project}/locations/{location}/keyRings/{keyring}/cryptoKeys/{key}`.
+  **Requires Vault 2.1.0+**.
+
+* `regional_kms_keys` - (Optional) Map of GCP regions to KMS key resource names for regional encryption.
+  Map values are optional.
+  Preferred over `replication_locations` on Vault Enterprise 2.1.0+.
+  **Requires Vault 2.1.0+**.
 
 ## Attributes Reference
 

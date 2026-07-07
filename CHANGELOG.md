@@ -3,6 +3,7 @@
 FEATURES:
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
+* **Secrets Sync customer controlled encryption**: `vault_secrets_sync_aws_destination` and `vault_secrets_sync_gcp_destination` now support Vault 2.1.0+ fields `kms_key_id` and `regional_kms_keys`; added validation for unsupported Vault versions; and deprecated GCP legacy fields `global_kms_key`, `locational_kms_keys`, and `replication_locations` in favor of `kms_key_id` and `regional_kms_keys`. ([#2936](https://github.com/hashicorp/terraform-provider-vault/pull/2936))
 
 ## 5.10.1 (June 26, 2026)
 

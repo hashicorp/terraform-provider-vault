@@ -95,7 +95,7 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
 			},
-			consts.FieldKMSKeyID: {
+			consts.FieldKmsKeyID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Specifies the ARN or alias of the AWS KMS key to be used to encrypt the secret.",
@@ -190,15 +190,35 @@ var awsSync200ReadFields = []string{
 
 var awsSync210ReadFields = []string{
 	consts.FieldRegionalKmsKeys,
-	consts.FieldKMSKeyID,
+	consts.FieldKmsKeyID,
 }
 
 var awsSync210WriteFields = []string{
 	consts.FieldRegionalKmsKeys,
-	consts.FieldKMSKeyID,
+	consts.FieldKmsKeyID,
+}
+
+func validateAWSSync210Fields(d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		return nil
+	}
+
+	if _, ok := d.GetOk(consts.FieldKmsKeyID); ok {
+		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1 and later")
+	}
+
+	if _, ok := d.GetOk(consts.FieldRegionalKmsKeys); ok {
+		return diag.Errorf("regional_kms_keys is only supported in Vault Enterprise 2.1 and later")
+	}
+
+	return nil
 }
 
 func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if diags := validateAWSSync210Fields(d, meta); diags != nil {
+		return diags
+	}
+
 	readFields := awsSyncReadFields
 	writeFields := awsSyncWriteFields
 
