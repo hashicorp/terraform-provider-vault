@@ -380,7 +380,7 @@ jobs:
           VAULT_PLUGIN_ENT_VERSION:  ${{ steps.plugin_enterprise.outputs.version }}
         run: |
           PGPASSWORD=secret psql -h localhost -U postgres -d database -c \
-            "CREATE USER rotate_root_user WITH PASSWORD 'rotate_root_password' SUPERUSER;"
+            "CREATE ROLE rotate_root_user WITH LOGIN PASSWORD 'rotate_root_password' CREATEROLE;"
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
           else
