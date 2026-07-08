@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/mount"
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -44,7 +44,7 @@ type GCPKMSSecretBackendModel struct {
 	base.BaseModel
 
 	// Mount configuration fields (path, type, ttls, audit keys, etc.)
-	sys.MountModel
+	mount.MountModel
 
 	// GCP KMS backend configuration
 	CredentialsWO        types.String `tfsdk:"credentials_wo"`
@@ -101,7 +101,7 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 	}
 
 	// Add mount configuration fields
-	sys.MustAddMountSchema(&resp.Schema, consts.FieldType)
+	mount.MustAddMountSchema(&resp.Schema, consts.FieldType)
 
 	// Add base schema fields (namespace, etc.)
 	base.MustAddBaseSchema(&resp.Schema)
@@ -139,7 +139,7 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 
 	// Step 1: Create the mount using the helper
 	tflog.Debug(ctx, "Creating GCP KMS mount", map[string]any{"path": mountPath})
-	if err := sys.CreateMount(ctx, cli, &data.MountModel, consts.MountTypeGCPKMS, r.Meta()); err != nil {
+	if err := mount.CreateMount(ctx, cli, &data.MountModel, consts.MountTypeGCPKMS, r.Meta()); err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating GCP KMS mount",
 			fmt.Sprintf("Could not create mount at %s: %s", mountPath, err),
@@ -164,7 +164,7 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 	}
 
 	// Step 3: Read back mount information to get computed values
-	mountOutput, found, err := sys.ReadMount(ctx, cli, mountPath)
+	mountOutput, found, err := mount.ReadMount(ctx, cli, mountPath)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading GCP KMS mount",
@@ -209,7 +209,7 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 
 	// Step 1: Read mount information to get accessor and other mount-level attributes
 	tflog.Debug(ctx, "Reading GCP KMS mount", map[string]any{"path": mountPath})
-	mountOutput, found, err := sys.ReadMount(ctx, cli, mountPath)
+	mountOutput, found, err := mount.ReadMount(ctx, cli, mountPath)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading GCP KMS mount",
@@ -306,7 +306,7 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 	if !plan.Path.Equal(state.Path) {
 		oldPath := state.Path.ValueString()
 		tflog.Debug(ctx, "Remounting GCP KMS mount", map[string]any{"from": oldPath, "to": mountPath})
-		if err := sys.RemountMount(ctx, cli, oldPath, mountPath); err != nil {
+		if err := mount.RemountMount(ctx, cli, oldPath, mountPath); err != nil {
 			resp.Diagnostics.AddError(
 				"Error remounting GCP KMS mount",
 				fmt.Sprintf("Could not remount from %s to %s: %s", oldPath, mountPath, err),
@@ -320,7 +320,7 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 
 	if mountFieldsChanged {
 		tflog.Debug(ctx, "Updating GCP KMS mount settings", map[string]any{"path": mountPath})
-		if err := sys.UpdateMount(ctx, cli, &plan.MountModel, &state.MountModel, r.Meta()); err != nil {
+		if err := mount.UpdateMount(ctx, cli, &plan.MountModel, &state.MountModel, r.Meta()); err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating GCP KMS mount",
 				fmt.Sprintf("Could not update mount at %s: %s", mountPath, err),
@@ -378,7 +378,7 @@ func (r *GCPKMSSecretBackendResource) Delete(ctx context.Context, req resource.D
 
 	// Delete the mount (which also deletes the backend configuration)
 	tflog.Debug(ctx, "Deleting GCP KMS mount", map[string]any{"path": mountPath})
-	if err := sys.DeleteMount(ctx, cli, mountPath); err != nil {
+	if err := mount.DeleteMount(ctx, cli, mountPath); err != nil {
 		resp.Diagnostics.AddError(
 			"Error deleting GCP KMS mount",
 			fmt.Sprintf("Could not delete mount at %s: %s", mountPath, err),
