@@ -34,6 +34,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* Added Plugin Framework `mount_helpers` for Vault mount operations to support incremental migration from SDKv2. These internal helpers provide CRUD operations for self managing mounts for resources using Plugin Framework types. ([#2917](https://github.com/hashicorp/terraform-provider-vault/pull/2917))
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Migrated AWS provider dependency from `aws-sdk-go` (v1) to `aws-sdk-go-v2` for improved performance and maintainability. ([#2882](https://github.com/hashicorp/terraform-provider-vault/pull/2882))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
