@@ -360,6 +360,9 @@ jobs:
           # POSTGRES_URL_ROOTLESS is used by Vault to connect to the postgres
           # container for "rootless" static roles".
           POSTGRES_URL_ROOTLESS: "postgres://{{username}}:{{password}}@postgres:5432/database?sslmode=disable"
+          # POSTGRES_ROTATE_ROOT_URL is used by action tests to rotate root
+          # credentials without interfering with the main postgres user.
+          POSTGRES_ROTATE_ROOT_URL: "postgres://rotate_root_user:rotate_root_password@postgres:5432/database?sslmode=disable"
           COUCHBASE_HOST: couchbase
           COUCHBASE_USERNAME: Administrator
           COUCHBASE_PASSWORD: password
@@ -376,6 +379,8 @@ jobs:
           VAULT_PLUGIN_ENT_NAME:  ${{ steps.plugin_enterprise.outputs.name }}
           VAULT_PLUGIN_ENT_VERSION:  ${{ steps.plugin_enterprise.outputs.version }}
         run: |
+          PGPASSWORD=secret psql -h localhost -U postgres -d database -c \
+            "CREATE ROLE rotate_root_user WITH LOGIN PASSWORD 'rotate_root_password' CREATEROLE;"
           if [[ ${{ matrix.image }} =~ "-ent" ]]; then
             target="testacc-ent"
           else
