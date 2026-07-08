@@ -864,6 +864,8 @@ const (
 	FieldAzureClientID             = "azure_client_id"
 	FieldAzureAuthMode             = "azure_auth_mode"
 	FieldSelfManaged               = "self_managed"
+	FieldRotateOnRead              = "rotate_on_read"
+	FieldRotateOnReadCooldown      = "rotate_on_read_cooldown"
 	FieldRotationPolicy            = "rotation_policy"
 	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
 	FieldSecretsWOVersion          = "secrets_wo_version"

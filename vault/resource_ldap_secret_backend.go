@@ -150,6 +150,18 @@ func ldapSecretBackendResource() *schema.Resource {
 			ConflictsWith: []string{consts.FieldBindPass, consts.FieldBindPassWO},
 			ExactlyOneOf:  []string{consts.FieldBindPass, consts.FieldBindPassWO, consts.FieldSelfManaged},
 		},
+		consts.FieldRotateOnRead: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Computed:    true,
+			Description: "If true, static role credentials are rotated on each read. Acts as a default for all static roles. Requires Vault Enterprise ≥ 2.1.0.",
+		},
+		consts.FieldRotateOnReadCooldown: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Computed:    true,
+			Description: "Minimum seconds between rotate-on-read rotations. Acts as a default cooldown for all static roles. Requires Vault Enterprise ≥ 2.1.0.",
+		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(createUpdateLDAPConfigResource, provider.VaultVersion112),
@@ -258,6 +270,16 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
 	}
 
+	// get rotate-on-read fields
+	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(consts.FieldRotateOnRead); ok {
+			data[consts.FieldRotateOnRead] = v
+		}
+		if v, ok := d.GetOk(consts.FieldRotateOnReadCooldown); ok {
+			data[consts.FieldRotateOnReadCooldown] = v
+		}
+	}
+
 	// get self-managed boolean
 	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
 		if d.HasChange(consts.FieldSelfManaged) {
@@ -345,6 +367,19 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
 		if err := d.Set(consts.FieldSelfManaged, resp.Data[consts.FieldSelfManaged]); err != nil {
 			return diag.Errorf("error setting self-managed field: %s", err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := resp.Data[consts.FieldRotateOnRead]; ok {
+			if err := d.Set(consts.FieldRotateOnRead, v); err != nil {
+				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnRead, err)
+			}
+		}
+		if v, ok := resp.Data[consts.FieldRotateOnReadCooldown]; ok {
+			if err := d.Set(consts.FieldRotateOnReadCooldown, v); err != nil {
+				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnReadCooldown, err)
+			}
 		}
 	}
 
