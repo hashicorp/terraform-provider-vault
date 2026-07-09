@@ -4,6 +4,10 @@ FEATURES:
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
 
+IMPROVEMENTS:
+
+* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `elasticsearch` engine block, so the connection password can be configured without being persisted in Terraform state (parity with the connection-URL engines). ([#PR](https://github.com/hashicorp/terraform-provider-vault/pull/PR))
+
 BUG FIXES:
 
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
