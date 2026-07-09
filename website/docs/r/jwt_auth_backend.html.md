@@ -76,7 +76,7 @@ resource "vault_jwt_auth_backend" "gsuite" {
 }
 ```
 
-Configuring the auth backend with Okta provider:
+Configuring the auth backend with Okta provider(requires Vault 2.1.0+):
 
 ```hcl
 resource "vault_jwt_auth_backend" "okta" {
