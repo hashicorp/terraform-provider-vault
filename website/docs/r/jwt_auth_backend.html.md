@@ -76,6 +76,24 @@ resource "vault_jwt_auth_backend" "gsuite" {
 }
 ```
 
+Configuring the auth backend with Okta provider:
+
+```hcl
+resource "vault_jwt_auth_backend" "okta" {
+    description        = "OIDC backend"
+    oidc_discovery_url = "https://mycompany.okta.com/oauth2/default"
+    path               = "oidc"
+    type               = "oidc"
+    provider_config = {
+        provider   = "okta"
+        fetch_groups = true
+        org_url = "https://mycompany.okta.com"
+        api_token = "12345"
+        groups_cap = 200
+    }
+}
+```
+
 
 ## Argument Reference
 
