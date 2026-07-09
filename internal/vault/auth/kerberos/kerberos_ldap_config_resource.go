@@ -647,8 +647,19 @@ func (r *kerberosAuthBackendLDAPConfigResource) populateDataModelFromApi(ctx con
 		tfModel.EnableSAMAccountNameLogin = types.BoolValue(apiModel.EnableSAMAccountNameLogin)
 	}
 
+	// Save the current alias_metadata value before PopulateTokenModelFromAPI
+	// overwrites it. On Vault versions prior to 1.21, the Kerberos/LDAP auth
+	// plugin does not support alias_metadata: it is silently dropped on write
+	// and absent on read. Restoring the value preserves plan/state consistency
+	// and avoids a "provider produced inconsistent result" error.
+	savedAliasMetadata := tfModel.AliasMetadata
+
 	// Populate token fields using the token package helper
 	diags.Append(token.PopulateTokenModelFromAPI(ctx, &tfModel.TokenModel, &apiModel.TokenAPIModel)...)
+
+	if r.Meta() == nil || !r.Meta().IsAPISupported(provider.VaultVersion121) {
+		tfModel.AliasMetadata = savedAliasMetadata
+	}
 
 	return diags
 }

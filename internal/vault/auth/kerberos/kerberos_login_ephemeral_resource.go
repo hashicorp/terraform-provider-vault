@@ -241,12 +241,7 @@ func (e *kerberosAuthBackendLoginEphemeral) Open(ctx context.Context, req epheme
 	config.LeaseDuration = types.Int64Value(int64(secret.Auth.LeaseDuration))
 	config.Renewable = types.BoolValue(secret.Auth.Renewable)
 	config.EntityID = types.StringValue(secret.Auth.EntityID)
-
-	if secret.Auth.Orphan {
-		config.Orphan = types.BoolValue(true)
-	} else {
-		config.Orphan = types.BoolValue(false)
-	}
+	config.Orphan = types.BoolValue(secret.Auth.Orphan)
 
 	// Convert policies
 	if len(secret.Auth.Policies) > 0 {

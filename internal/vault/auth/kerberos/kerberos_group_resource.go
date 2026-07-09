@@ -33,8 +33,11 @@ var (
 	kerberosAuthBackendGroupNameFromPathRegex  = regexp.MustCompile("^auth/.+/groups/(.+)$")
 )
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ resource.ResourceWithConfigure = &kerberosAuthBackendGroupResource{}
+var (
+	_ resource.Resource                = (*kerberosAuthBackendLDAPConfigResource)(nil)
+	_ resource.ResourceWithConfigure   = (*kerberosAuthBackendLDAPConfigResource)(nil)
+	_ resource.ResourceWithImportState = (*kerberosAuthBackendLDAPConfigResource)(nil)
+)
 
 // NewKerberosAuthBackendGroupResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider

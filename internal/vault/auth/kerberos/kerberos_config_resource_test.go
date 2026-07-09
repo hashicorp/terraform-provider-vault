@@ -203,8 +203,6 @@ func TestAccKerberosAuthBackendConfig_importErrors(t *testing.T) {
 }
 
 // TestAccKerberosAuthBackendConfig_namespace tests configuration with namespace (Enterprise only)
-// Note: This test is currently skipped as vault_auth_backend resource doesn't properly support
-// namespaces in the Plugin Framework. This test serves as documentation for the namespace field.
 func TestAccKerberosAuthBackendConfig_namespace(t *testing.T) {
 
 	namespace := acctest.RandomWithPrefix("tf-ns")
