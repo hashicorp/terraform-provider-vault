@@ -9,26 +9,26 @@ customModes:
       thorough, constructive feedback focused on correctness, security, and adherence
       to established TFVP patterns.
     whenToUse: >-
-      Use this mode when reviewing pull requests for the Terraform Vault Provider.
+      Use this mode only when reviewing pull requests for the Terraform Vault Provider.
       It checks code against TFVP best practices, SDK usage, test coverage, Vault API
       version handling, documentation, and changelog entries.
-      Switch to TFVP Resource Developer mode for implementation work.
     groups:
       - read
-      - edit
-      - browser
-      - command
       - mcp
-    customInstructions: >-
-      ## PR Review Process
+      - skill
+      - todo
+      - subagent
+      - mode
+    customInstructions: |
+      Switch to tfvp-dev mode for any code changes.
 
+      ## PR Review Process
 
       **Step 1 — Activate skills**
 
-      At the start of every review activate the `tfvp-review-checklist` skill.
-      If the PR touches tests also activate `tfvp-test-patterns`.
-      If it touches documentation activate `tfvp-doc-standards`.
-
+      Must always start every review by calling use_skill with skill_name: "tfvp-review-checklist".
+      If the PR touches tests, also call use_skill with skill_name: "tfvp-test-patterns".
+      If it touches documentation, also call use_skill with skill_name: "tfvp-doc-standards".
 
       **Step 2 — Gather context**
 
@@ -36,12 +36,10 @@ customModes:
       Run through the diff to understand the scope of changes.
       Identify whether the PR uses Plugin Framework, SDK v2, or both.
 
-
       **Step 3 — Review each changed file**
 
       Apply all checks from the active skills.
       Track issues as you go — note file path, line number, and severity.
-
 
       **Step 4 — Report findings**
 
@@ -54,7 +52,6 @@ customModes:
 
       End with a brief **Overall Assessment** (GOOD ✅ / NEEDS WORK ⚠️ / CRITICAL ISSUES ❌)
       and a **What's Working Well** section acknowledging good patterns.
-
 
       ## Non-Negotiable Rules (always apply, no skill needed)
 
@@ -78,23 +75,25 @@ customModes:
     whenToUse: >-
       Use this mode when developing new Terraform Vault Provider resources or data sources:
       schema design, CRUD implementation, import support, test generation, and docs.
-      Switch to Bob Reviewer mode for reviewing existing code.
     groups:
       - read
       - edit
-      - browser
-      - command
+      - execute
       - mcp
-    customInstructions: >-
-      ## Development Workflow
+      - skill
+      - todo
+      - subagent
+      - mode
+    customInstructions: |
+      Switch to bob-reviewer mode for reviewing existing code.
 
+      ## Development Workflow
 
       **Step 1 — Activate skills**
 
-      At the start of every development task activate `tfvp-code-patterns`.
-      If writing tests also activate `tfvp-test-patterns`.
-      If creating documentation also activate `tfvp-doc-standards`.
-
+      Must always start every development task by calling use_skill with skill_name: "tfvp-code-patterns".
+      If writing tests, also call use_skill with skill_name: "tfvp-test-patterns".
+      If creating documentation, also call use_skill with skill_name: "tfvp-doc-standards".
 
       **Step 2 — Discovery**
 
@@ -103,13 +102,11 @@ customModes:
       Identify required, optional, computed, sensitive, and write-only fields.
       Clarify Vault version requirements and any Enterprise-only features.
 
-
       **Step 3 — Plan**
 
       Create a TODO checklist covering: constants → helpers → resource file →
       test file → provider registration → documentation → changelog.
       Use `update_todo_list` to track progress throughout.
-
 
       **Step 4 — Implement**
 
@@ -117,13 +114,11 @@ customModes:
       Read similar existing resources for context before writing new code.
       Generate complete files — no partial stubs.
 
-
       **Step 5 — Test**
 
       Follow all patterns in `tfvp-test-patterns`.
       Minimum: basic CRUD test + import test + optional-fields test.
       Run `go build ./...` and the relevant acceptance tests to verify.
-
 
       **Step 6 — Document & register**
 
@@ -131,7 +126,6 @@ customModes:
       Add sidebar entry to `website/vault.erb`.
       Add changelog entry to `CHANGELOG.md` under the appropriate version section (FEATURES, IMPROVEMENTS, or BUG FIXES) with PR reference link.
       Register the new resource in `internal/provider/fwprovider/provider.go`.
-
 
       ## Non-Negotiable Rules (always apply, no skill needed)
 
