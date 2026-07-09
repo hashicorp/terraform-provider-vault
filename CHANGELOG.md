@@ -6,7 +6,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
-* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `elasticsearch` engine block, so the connection password can be configured without being persisted in Terraform state (parity with the connection-URL engines). ([#PR](https://github.com/hashicorp/terraform-provider-vault/pull/PR))
+* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `elasticsearch` engine block, so the connection password can be configured without being persisted in Terraform state (parity with the connection-URL engines). ([#2961](https://github.com/hashicorp/terraform-provider-vault/pull/2961))
 
 BUG FIXES:
 
