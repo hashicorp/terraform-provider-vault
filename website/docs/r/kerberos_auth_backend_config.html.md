@@ -21,7 +21,7 @@ It is only sent to Vault when the `keytab_wo_version` changes or during initial 
 See [the main provider documentation](../index.html) for more details.
 
 ~> **Note** Vault does not support deleting auth backend configurations via the API.
-When this resource is destroyed or replaced (e.g., when changing the `path`), it is 
+When this resource is destroyed or replaced (e.g., when changing the `mount`), it is 
 only removed from Terraform state. The configuration remains in Vault until the auth 
 mount itself is deleted.
 

@@ -231,7 +231,7 @@ The following arguments are supported:
 
 * `enable_samaccountname_login` - (Optional) If true, matching sAMAccountName attribute values
   will be allowed to login when `upndomain` is defined. Defaults to `false`.
-  **Note:** This field is only supported in Vault 1.19.0 and above. If configured for vault version lesser than 1.21.0, this field will be ignored, even though the value is persisted in the state file.
+  **Note:** This field is only supported in Vault 1.19.0 and above.
 
 ### Group Search Settings
 

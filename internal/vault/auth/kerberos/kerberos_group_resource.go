@@ -34,9 +34,9 @@ var (
 )
 
 var (
-	_ resource.Resource                = (*kerberosAuthBackendLDAPConfigResource)(nil)
-	_ resource.ResourceWithConfigure   = (*kerberosAuthBackendLDAPConfigResource)(nil)
-	_ resource.ResourceWithImportState = (*kerberosAuthBackendLDAPConfigResource)(nil)
+	_ resource.Resource                = (*kerberosAuthBackendGroupResource)(nil)
+	_ resource.ResourceWithConfigure   = (*kerberosAuthBackendGroupResource)(nil)
+	_ resource.ResourceWithImportState = (*kerberosAuthBackendGroupResource)(nil)
 )
 
 // NewKerberosAuthBackendGroupResource returns the implementation for this resource to be
@@ -281,7 +281,7 @@ func (r *kerberosAuthBackendGroupResource) ImportState(ctx context.Context, req 
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Invalid import ID format",
-			fmt.Sprintf("Expected format: 'auth/<mount>/groups/<name>', got: '%s'", req.ID),
+			fmt.Sprintf("Expected format: 'auth/<mount>/groups/<name>', got: '%s'", id),
 		)
 		return
 	}
