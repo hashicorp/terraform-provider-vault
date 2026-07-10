@@ -187,6 +187,37 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	)
 }
 
+func TestAccJWTAuthBackendProviderConfigOkta(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".oidc"
+	
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			// Skip if Vault < 2.1.0 (Okta provider with groups_cap requires 2.1.0+)
+			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion210) {
+				t.Skip("Okta provider with groups_cap requires Vault 2.1.0+")
+			}
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendProviderConfigOkta(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "oidc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".provider", "okta"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".org_url", "https://myco.auth0.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".groups_cap", "200"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	t.Parallel()
 	resourceType := "vault_jwt_auth_backend"
@@ -470,6 +501,24 @@ resource "vault_namespace" "test" {
 	}
 
 	return strings.Join(append(fragments, config, "}"), "\n")
+}
+
+func testAccJWTAuthBackendProviderConfigOkta(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "oidc" {
+  description        = "OIDC backend"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  path               = "%s"
+  type               = "oidc"
+  provider_config = {
+    provider      = "okta"
+    fetch_groups  = "true"
+    org_url       = "https://myco.auth0.com"
+    api_token     = "test-token-12345"
+    groups_cap    = "200"
+  }
+}
+`, path)
 }
 
 func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {

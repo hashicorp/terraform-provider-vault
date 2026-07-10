@@ -348,6 +348,12 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			continue
 		}
 
+		// Skip provider_config to preserve sensitive api_token and type-incompatible fields in state
+		// (similar to oidc_client_secret and JWKS Pairs handling)
+		if configOption == consts.FieldProviderConfig {
+			continue
+		}
+
 		d.Set(configOption, config.Data[configOption])
 	}
 
