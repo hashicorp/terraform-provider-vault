@@ -122,5 +122,4 @@ Entry format (match existing style exactly):
 - [ ] Import format documented with real example command
 - [ ] Vault version or Enterprise requirements stated
 - [ ] Security warnings in `~>` callout blocks
-- [ ] Sidebar entry added to `website/vault.erb`
 - [ ] Changelog entry added to `CHANGELOG.md` under `## Unreleased`
