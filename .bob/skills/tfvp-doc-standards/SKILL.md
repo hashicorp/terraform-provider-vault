@@ -98,14 +98,19 @@ $ terraform import vault_{resource}.example mount-path/resource-name
 ```
 
 ## Changelog Format
-File: `.changelog/{PR_NUMBER}.txt`
-```
-```release-note:feature
-secrets/{engine}: Add `vault_{resource}` resource for {description}
-```
-```
+File: `CHANGELOG.md` — add a bullet under the appropriate section header inside the `## Unreleased` block at the top of the file.
 
-Categories: `feature` · `improvement` · `bug` · `note` (breaking changes)
+Section headers (use the one that matches):
+- `FEATURES:` — new resources, data sources, or ephemeral resources
+- `IMPROVEMENTS:` — enhancements to existing resources
+- `BUG FIXES:` — bug fixes
+- `BREAKING CHANGES:` — backwards-incompatible changes
+
+Entry format (match existing style exactly):
+```
+* **New Resource**: `vault_{resource}` - {description}. ([#{PR}](https://github.com/hashicorp/terraform-provider-vault/pull/{PR}))
+* `vault_{resource}`: {description}. ([#{PR}](https://github.com/hashicorp/terraform-provider-vault/pull/{PR}))
+```
 
 ## Documentation Completeness Checklist
 - [ ] Description is clear and explains purpose
@@ -118,4 +123,4 @@ Categories: `feature` · `improvement` · `bug` · `note` (breaking changes)
 - [ ] Vault version or Enterprise requirements stated
 - [ ] Security warnings in `~>` callout blocks
 - [ ] Sidebar entry added to `website/vault.erb`
-- [ ] Changelog entry created in `.changelog/`
+- [ ] Changelog entry added to `CHANGELOG.md` under `## Unreleased`
