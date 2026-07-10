@@ -192,7 +192,7 @@ func TestAccJWTAuthBackendProviderConfigOkta(t *testing.T) {
 	path := acctest.RandomWithPrefix("oidc")
 	resourceType := "vault_jwt_auth_backend"
 	resourceName := resourceType + ".oidc"
-	
+
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
