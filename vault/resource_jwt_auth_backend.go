@@ -353,12 +353,12 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			if providerConfig, ok := config.Data[configOption].(map[string]interface{}); ok {
 				// Get existing provider_config from state
 				existingConfig := d.Get(consts.FieldProviderConfig).(map[string]interface{})
-				
+
 				// Preserve api_token from state if it exists (sensitive, not returned by Vault)
 				if val, exists := existingConfig["api_token"]; exists {
 					providerConfig["api_token"] = val
 				}
-				
+
 				d.Set(configOption, providerConfig)
 			} else {
 				d.Set(configOption, config.Data[configOption])
