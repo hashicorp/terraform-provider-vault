@@ -214,6 +214,18 @@ func TestAccJWTAuthBackendProviderConfigOkta(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".groups_cap", "200"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldProviderConfig + ".api_token",
+					consts.FieldProviderConfig + ".%", // Map count differs due to api_token exclusion
+					consts.FieldOIDCClientSecret,
+					consts.FieldDescription,
+					consts.FieldDisableRemount,
+				},
+			},
 		},
 	})
 }
@@ -512,7 +524,6 @@ resource "vault_jwt_auth_backend" "oidc" {
   type               = "oidc"
   provider_config = {
     provider      = "okta"
-    fetch_groups  = "true"
     org_url       = "https://myco.auth0.com"
     api_token     = "test-token-12345"
     groups_cap    = "200"

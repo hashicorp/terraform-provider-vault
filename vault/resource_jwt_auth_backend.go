@@ -348,13 +348,24 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			continue
 		}
 
-		// Skip provider_config to preserve sensitive api_token and type-incompatible fields in state
-		// (similar to oidc_client_secret and JWKS Pairs handling)
+		// Handle provider_config specially - preserve api_token from state (sensitive, like oidc_client_secret)
 		if configOption == consts.FieldProviderConfig {
-			continue
+			if providerConfig, ok := config.Data[configOption].(map[string]interface{}); ok {
+				// Get existing provider_config from state
+				existingConfig := d.Get(consts.FieldProviderConfig).(map[string]interface{})
+				
+				// Preserve api_token from state if it exists (sensitive, not returned by Vault)
+				if val, exists := existingConfig["api_token"]; exists {
+					providerConfig["api_token"] = val
+				}
+				
+				d.Set(configOption, providerConfig)
+			} else {
+				d.Set(configOption, config.Data[configOption])
+			}
+		} else {
+			d.Set(configOption, config.Data[configOption])
 		}
-
-		d.Set(configOption, config.Data[configOption])
 	}
 
 	log.Printf("[DEBUG] Reading jwt auth tune from %q", path+"/tune")
