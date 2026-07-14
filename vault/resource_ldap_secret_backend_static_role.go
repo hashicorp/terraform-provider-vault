@@ -102,6 +102,8 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldRotationPeriod,
 	consts.FieldSkipImportRotation,
 	consts.FieldPasswordPolicy,
+	consts.FieldRotateOnRead,
+	consts.FieldRotateOnReadCooldown,
 }
 
 func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -205,19 +207,6 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
 		if err := automatedrotationutil.PopulateAutomatedRotationFieldsWithPolicy(d, resp, rolePath); err != nil {
 			return diag.Errorf("error setting automated rotation fields: %s", err)
-		}
-	}
-
-	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
-		if v, ok := resp.Data[consts.FieldRotateOnRead]; ok {
-			if err := d.Set(consts.FieldRotateOnRead, v); err != nil {
-				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnRead, err)
-			}
-		}
-		if v, ok := resp.Data[consts.FieldRotateOnReadCooldown]; ok {
-			if err := d.Set(consts.FieldRotateOnReadCooldown, v); err != nil {
-				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnReadCooldown, err)
-			}
 		}
 	}
 
