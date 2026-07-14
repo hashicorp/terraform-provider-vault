@@ -8,6 +8,7 @@ FEATURES:
 BUG FIXES:
 
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
+* `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2801](https://github.com/hashicorp/terraform-provider-vault/pull/2801))
 
 ## 5.10.1 (June 26, 2026)
 
@@ -220,10 +221,6 @@ IMPROVEMENTS:
 BUGS:
 
 * Clears the bindpass field in the state file after migrating to the write-only field in `vault_ldap_auth_backend` resource. ([#2813](https://github.com/hashicorp/terraform-provider-vault/pull/2813))
-
-BUGS:
-
-* `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2801](https://github.com/hashicorp/terraform-provider-vault/pull/2801))
 
 ## 5.7.0 (February 5, 2026)
 
