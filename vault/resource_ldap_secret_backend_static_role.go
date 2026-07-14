@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/go-cty/cty"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -153,11 +154,11 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 
 	// get rotate-on-read role-level overrides
 	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
-		if v, ok := d.GetOk(consts.FieldRotateOnRead); ok {
-			data[consts.FieldRotateOnRead] = v
+		if d.HasChange(consts.FieldRotateOnRead) {
+			data[consts.FieldRotateOnRead] = d.Get(consts.FieldRotateOnRead)
 		}
-		if v, ok := d.GetOk(consts.FieldRotateOnReadCooldown); ok {
-			data[consts.FieldRotateOnReadCooldown] = v
+		if d.HasChange(consts.FieldRotateOnReadCooldown) {
+			data[consts.FieldRotateOnReadCooldown] = d.Get(consts.FieldRotateOnReadCooldown)
 		}
 	}
 
@@ -207,7 +208,6 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	// read rotate-on-read role-level overrides (only present when explicitly set on the role)
 	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := resp.Data[consts.FieldRotateOnRead]; ok {
 			if err := d.Set(consts.FieldRotateOnRead, v); err != nil {

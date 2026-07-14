@@ -272,11 +272,11 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 
 	// get rotate-on-read fields
 	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
-		if v, ok := d.GetOk(consts.FieldRotateOnRead); ok {
-			data[consts.FieldRotateOnRead] = v
+		if d.HasChange(consts.FieldRotateOnRead) {
+			data[consts.FieldRotateOnRead] = d.Get(consts.FieldRotateOnRead)
 		}
-		if v, ok := d.GetOk(consts.FieldRotateOnReadCooldown); ok {
-			data[consts.FieldRotateOnReadCooldown] = v
+		if d.HasChange(consts.FieldRotateOnReadCooldown) {
+			data[consts.FieldRotateOnReadCooldown] = d.Get(consts.FieldRotateOnReadCooldown)
 		}
 	}
 
