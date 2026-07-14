@@ -84,7 +84,7 @@ The following arguments are supported:
 
 * `ttl` - (Optional) Time to live
 
-* `format` - (Optional) The format of data
+* `format` - (Optional) The format of data. Valid values are "pem", "pem_bundle" or "der". 
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs
 

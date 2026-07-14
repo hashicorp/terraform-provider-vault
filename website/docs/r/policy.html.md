@@ -13,7 +13,8 @@ description: |-
 
 ```hcl
 resource "vault_policy" "example" {
-  name = "dev-team"
+  name            = "dev-team"
+  allow_overwrite = false
 
   policy = <<EOT
 path "secret/my_app" {
@@ -35,6 +36,8 @@ The following arguments are supported:
 * `name` - (Required) The name of the policy
 
 * `policy` - (Required) String containing a Vault policy
+
+* `allow_overwrite` - (Optional) Allow overwriting policies with the same name. Defaults to `true`. This will be removed in the next major release and the default behavior will be not overwrite policies. 
 
 ## Attributes Reference
 

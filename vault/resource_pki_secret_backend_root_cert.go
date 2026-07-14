@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -504,7 +504,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 		}
 	}
 
-	// Whether name constraints fields (other than permitted_dns_domains), are supproted,
+	// Whether name constraints fields (other than permitted_dns_domains), are supported,
 	// See VAULT-32141.
 	isNameConstraintsExtensionSupported := provider.IsAPISupported(meta, provider.VaultVersion119)
 	if isNameConstraintsExtensionSupported {

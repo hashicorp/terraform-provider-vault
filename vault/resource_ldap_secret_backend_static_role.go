@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -62,6 +62,11 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Description:  "Version counter for write-only password.",
 			RequiredWith: []string{consts.FieldPasswordWO},
 		},
+		consts.FieldPasswordPolicy: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "Name of the password policy to use to generate passwords for this role.",
+		},
 	}
 	resource := &schema.Resource{
 		CreateContext: createUpdateLDAPStaticRoleResource,
@@ -85,6 +90,7 @@ var ldapSecretBackendStaticRoleFields = []string{
 	consts.FieldDN,
 	consts.FieldRotationPeriod,
 	consts.FieldSkipImportRotation,
+	consts.FieldPasswordPolicy,
 }
 
 func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -106,6 +112,18 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 		}
 		if v, ok := d.GetOk(field); ok {
 			data[field] = v
+		}
+	}
+
+	// Handle password_policy unsetting: if the field changed from set to unset,
+	// send an empty string to clear the role-level override and inherit mount-level policy.
+	// validate that password_policy is only used with Vault >= 2.1.0.
+	if d.HasChange(consts.FieldPasswordPolicy) {
+		if _, ok := d.GetOk(consts.FieldPasswordPolicy); !ok {
+			// Field was removed from config, send empty string to clear it
+			data[consts.FieldPasswordPolicy] = ""
+		} else if !provider.IsAPISupported(meta, provider.VaultVersion210) {
+			return diag.Errorf("password_policy is only supported in Vault 2.1.0 and later")
 		}
 	}
 

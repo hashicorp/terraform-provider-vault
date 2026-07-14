@@ -1,16 +1,20 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -40,6 +44,7 @@ func TestManagedKeys(t *testing.T) {
 						consts.FieldKeyBits:   "2048",
 						consts.FieldKeyType:   "RSA",
 						consts.FieldKMSKey:    "alias/test_identifier_string",
+						consts.FieldUsages:    "sign,unwrap,verify,wrap",
 					}
 
 					p := getManagedKeysPath(kmsTypeAWS, name0)
@@ -126,6 +131,7 @@ func TestManagedKeys(t *testing.T) {
 						consts.FieldKeyBits:   "4096",
 						consts.FieldKeyType:   "RSA",
 						consts.FieldKMSKey:    "alias/test_identifier_string_2",
+						consts.FieldUsages:    "sign,unwrap,verify,wrap",
 					}
 
 					_, err = client.Logical().Write(p, data)
@@ -198,6 +204,7 @@ func TestManagedKeysPKCS(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.slot", slot),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.pin", pin),
 					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "1"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.max_parallel", "2"),
 				),
 			},
 			{
@@ -220,6 +227,7 @@ resource "vault_managed_keys" "test" {
     key_bits   = "2048"
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string"
+	usages     = ["sign", "verify", "wrap", "unwrap"]
   }
 
   aws {
@@ -229,6 +237,7 @@ resource "vault_managed_keys" "test" {
     key_bits   = "4096"
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string_2"
+	usages     = ["sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name0, name1)
@@ -244,6 +253,7 @@ resource "vault_managed_keys" "test" {
     key_bits   = "4096"
     key_type   = "RSA"
     kms_key    = "alias/test_identifier_string_2"
+	usages     = ["sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name)
@@ -260,6 +270,8 @@ resource "vault_managed_keys" "test" {
     slot               = "%s"
     pin                = "%s"
     mechanism          = "0x0001"
+    max_parallel       = 2
+	usages             = ["sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, library, slot, pin)
@@ -275,6 +287,7 @@ resource "vault_managed_keys" "test" {
     slot               = "%s"
     pin                = "%s"
     mechanism          = "0x0001"
+	usages             = ["encrypt", "decrypt", "sign", "verify", "wrap", "unwrap"]
   }
 }
 `, name, library, slot, pin)
@@ -338,6 +351,7 @@ func TestManagedKeysGCP(t *testing.T) {
 						consts.FieldRegion:      region,
 						consts.FieldCryptoKey:   "test-crypto-key",
 						consts.FieldAlgorithm:   "ec_sign_p256_sha256",
+						consts.FieldUsages:      "sign,unwrap,verify,wrap",
 					}
 					if _, err := client.Logical().Write(p, data); err != nil {
 						t.Fatalf("failed to recreate GCP managed key %q: %s", p, err)
@@ -387,6 +401,7 @@ func TestManagedKeysGCP_PreExistingConflict(t *testing.T) {
 						consts.FieldRegion:      region,
 						consts.FieldCryptoKey:   "existing-key",
 						consts.FieldAlgorithm:   "ec_sign_p256_sha256",
+						consts.FieldUsages:      "sign,unwrap,verify,wrap",
 					}
 					if _, err := client.Logical().Write(p, data); err != nil {
 						t.Fatalf("failed to pre-create GCP managed key %q: %s", p, err)
@@ -557,6 +572,188 @@ func TestManagedKeysGCP_InvalidAlgorithm(t *testing.T) {
 	})
 }
 
+type managedKeysUsagesAcceptanceTestCase struct {
+	name              string
+	providerAttr      string
+	keyType           string
+	buildConfig       func(t *testing.T, name string) func(usages []string) string
+	importStateIgnore []string
+}
+
+func TestManagedKeysAWSUsages(t *testing.T) {
+	testManagedKeysUsagesAcceptance(t, managedKeysUsagesAcceptanceTestCase{
+		name:         "aws",
+		providerAttr: consts.FieldAWS,
+		keyType:      kmsTypeAWS,
+		buildConfig: func(_ *testing.T, name string) func(usages []string) string {
+			return func(usages []string) string {
+				return testManagedKeysConfig_awsUsages(name, usages)
+			}
+		},
+		importStateIgnore: []string{
+			"aws.0.access_key",
+			"aws.0.secret_key",
+		},
+	})
+}
+
+func TestManagedKeysPKCSUsages(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	testManagedKeysUsagesAcceptance(t, managedKeysUsagesAcceptanceTestCase{
+		name:         "pkcs",
+		providerAttr: consts.FieldPKCS,
+		keyType:      kmsTypePKCS,
+		buildConfig: func(t *testing.T, name string) func(usages []string) string {
+			library, slot, pin := testutil.GetTestPKCSCreds(t)
+			return func(usages []string) string {
+				return testManagedKeysConfig_pkcsUsages(name, library, slot, pin, usages)
+			}
+		},
+		importStateIgnore: []string{
+			"pkcs.0.pin",
+			"pkcs.0.key_id",
+		},
+	})
+}
+
+func testManagedKeysUsagesAcceptance(t *testing.T, tc managedKeysUsagesAcceptanceTestCase) {
+	name := acctest.RandomWithPrefix(fmt.Sprintf("%s-usages", tc.name))
+	resourceName := "vault_managed_keys.test"
+	stateUsagesPath := fmt.Sprintf("%s.0.%s", tc.providerAttr, consts.FieldUsages)
+	configForUsages := tc.buildConfig(t, name)
+	configWithUsages := configForUsages([]string{"verify", "sign"})
+	reorderedConfigWithUsages := configForUsages([]string{"sign", "verify"})
+	configWithoutUsages := configForUsages(nil)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: configWithUsages,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", tc.providerAttr), "1"),
+					resource.TestCheckResourceAttr(resourceName, stateUsagesPath+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, stateUsagesPath+".*", "sign"),
+					resource.TestCheckTypeSetElemAttr(resourceName, stateUsagesPath+".*", "verify"),
+					testManagedKeysCheckVaultUsages(resourceName, tc.keyType, name, []string{"sign", "verify"}),
+				),
+			},
+			{
+				// Reordered TypeSet values should not produce a diff.
+				Config:   reorderedConfigWithUsages,
+				PlanOnly: true,
+			},
+			{
+				// Optional+Computed field should remain stable when omitted from config.
+				Config:   configWithoutUsages,
+				PlanOnly: true,
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: tc.importStateIgnore,
+			},
+		},
+	})
+}
+
+func testManagedKeysConfig_awsUsages(name string, usages []string) string {
+	var usagesLine string
+	if len(usages) > 0 {
+		quoted := make([]string, 0, len(usages))
+		for _, usage := range usages {
+			quoted = append(quoted, fmt.Sprintf("%q", usage))
+		}
+
+		usagesLine = fmt.Sprintf("\n    usages     = [%s]", strings.Join(quoted, ", "))
+	}
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  aws {
+    name       = "%s"
+    access_key = "ASIAKBASDADA09090"
+    secret_key = "8C7THtrIigh2rPZQMbguugt8IUftWhMRCOBzbuyz"
+    key_bits   = "2048"
+    key_type   = "RSA"
+    kms_key    = "alias/test_identifier_string"%s
+  }
+}
+`, name, usagesLine)
+}
+
+func testManagedKeysConfig_pkcsUsages(name, library, slot, pin string, usages []string) string {
+	var usagesLine string
+	if len(usages) > 0 {
+		quoted := make([]string, 0, len(usages))
+		for _, usage := range usages {
+			quoted = append(quoted, fmt.Sprintf("%q", usage))
+		}
+
+		usagesLine = fmt.Sprintf("\n    usages      = [%s]", strings.Join(quoted, ", "))
+	}
+
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  pkcs {
+    name       = "%s"
+		library    = "%s"
+    key_label  = "kms-intermediate"
+    mechanism  = "0x0001"
+		slot       = "%s"
+		pin        = "%s"%s
+  }
+}
+`, name, library, slot, pin, usagesLine)
+}
+
+func testManagedKeysCheckVaultUsages(resourceName, keyType, name string, want []string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		_, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+		path := getManagedKeysPath(keyType, name)
+
+		resp, err := client.Logical().Read(path)
+		if err != nil {
+			return fmt.Errorf("failed to read managed key %q: %w", path, err)
+		}
+
+		if resp == nil {
+			return fmt.Errorf("managed key %q not found", path)
+		}
+
+		raw, ok := resp.Data[consts.FieldUsages]
+		if !ok {
+			return fmt.Errorf("managed key %q missing %q", path, consts.FieldUsages)
+		}
+
+		normalized, err := managedKeyUsagesFromAPI(raw)
+		if err != nil {
+			return fmt.Errorf("failed to normalize %q for %q: %w", consts.FieldUsages, path, err)
+		}
+
+		gotSet := schema.NewSet(schema.HashString, normalized)
+		wantItems := make([]interface{}, 0, len(want))
+		for _, v := range want {
+			wantItems = append(wantItems, v)
+		}
+		wantSet := schema.NewSet(schema.HashString, wantItems)
+
+		if !gotSet.Equal(wantSet) {
+			return fmt.Errorf("unexpected usages for %q, got=%v want=%v", path, gotSet.List(), wantSet.List())
+		}
+
+		return nil
+	}
+}
+
 func testManagedKeysConfig_gcp(name, credentials, project, keyRing, region string) string {
 	return fmt.Sprintf(`
 resource "vault_managed_keys" "test" {
@@ -570,6 +767,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key"
     algorithm   = "ec_sign_p256_sha256"
+	usages      = ["sign", "unwrap", "verify", "wrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -593,6 +791,7 @@ GCPCREDS
     allow_replace_key  = true
     allow_store_key    = true
     any_mount          = true
+	usages             = ["sign", "unwrap", "verify", "wrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -611,6 +810,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-update"
     algorithm   = "ec_sign_p256_sha256"
+	usages      = ["sign", "verify","unwrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -629,6 +829,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-update-2"
     algorithm   = "rsa_sign_pkcs1_2048_sha256"
+		usages      = ["wrap", "unwrap"]
   }
 }
 `, name, credentials, project, keyRing, region)
@@ -647,6 +848,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-0"
     algorithm   = "ec_sign_p256_sha256"
+	usages      = ["verify", "wrap"]
   }
 
   gcp {
@@ -659,6 +861,7 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-1"
     algorithm   = "rsa_sign_pkcs1_2048_sha256"
+	usages      = ["sign","wrap", "unwrap"]
   }
 }
 `, name0, credentials, project, keyRing, region, name1, credentials, project, keyRing, region)
@@ -677,7 +880,94 @@ GCPCREDS
     region      = "%s"
     crypto_key  = "test-crypto-key-invalid"
     algorithm   = "invalid_algorithm_12345"
+	usages      = ["sign", "verify"]
   }
 }
 `, name, credentials, project, keyRing, region)
+}
+
+func TestManagedKeyUsagesFromAPI(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   interface{}
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "vault 2 list of strings",
+			input: []interface{}{"encrypt", "decrypt", "wrap", "unwrap"},
+			want:  "encrypt,decrypt,wrap,unwrap",
+		},
+		{
+			name:  "vault pre-2 list of json.Number",
+			input: []interface{}{json.Number("1"), json.Number("2"), json.Number("5"), json.Number("6")},
+			want:  "encrypt,decrypt,wrap,unwrap",
+		},
+		{
+			name:    "unknown usage index",
+			input:   []interface{}{json.Number("99")},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := managedKeyUsagesFromAPI(tc.input)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			wantVals := []interface{}{}
+			if tc.want != "" {
+				for _, v := range strings.Split(tc.want, ",") {
+					wantVals = append(wantVals, v)
+				}
+			}
+
+			if !schema.NewSet(schema.HashString, got).Equal(schema.NewSet(schema.HashString, wantVals)) {
+				t.Fatalf("got %#v, want %#v", got, wantVals)
+			}
+		})
+	}
+}
+
+func TestManagedKeyUsagesToAPI(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []interface{}
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "sorted and trimmed",
+			input: []interface{}{"wrap", " decrypt ", "encrypt"},
+			want:  "decrypt,encrypt,wrap",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := managedKeyUsagesToAPI(schema.NewSet(schema.HashString, tc.input))
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
 }

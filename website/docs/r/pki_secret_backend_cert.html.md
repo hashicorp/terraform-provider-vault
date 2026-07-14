@@ -57,7 +57,7 @@ The following arguments are supported:
 
 * `ttl` - (Optional) Time to live
 
-* `format` - (Optional) The format of data
+* `format` - (Optional) The format of data. Valid values are "pem", "pem_bundle" or "der". 
 
 * `private_key_format` - (Optional) The private key format
 

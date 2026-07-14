@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -34,8 +34,9 @@ func pkiSecretBackendSignResource() *schema.Resource {
 			},
 		},
 		SchemaVersion: 1,
-		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
-
+		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			return pkiCertPlanAutoRenewal(d)
+		},
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
 				Type:        schema.TypeString,

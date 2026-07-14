@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -36,6 +36,16 @@ type testPKICertStore struct {
 	revokeWithKey    bool
 }
 
+type certFields struct {
+	format               string
+	notAfter             string
+	removeRootsFromChain bool
+	revoke               bool
+	revokeWithKey        bool
+}
+
+// TestPkiSecretBackendCert_basic tests the vault_pki_secret_backend_cert resource
+// including certificate issuance, revocation, auto-renewal, and remove_roots_from_chain.
 func TestPkiSecretBackendCert_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
@@ -60,7 +70,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 		CheckDestroy:             testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevoke, "false"),
@@ -71,7 +81,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert, expect a new one is re-issued
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{revoke: true}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevoke, "true"),
@@ -82,7 +92,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// remove the cert to test revocation flow (expect no revocation)
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", false, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, false, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					testPKICertRevocation(intermediatePath, store),
 				),
@@ -92,14 +102,14 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion113), nil
 				},
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserIds+".0", "foo"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldUserIds+".1", "bar"),
 				),
 			},
 			{
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, notAfter, true, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{notAfter: notAfter}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNotAfter, notAfter),
 					testCapturePKICert(resourceName, store),
@@ -107,7 +117,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// revoke the cert with key
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, true, true, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{revoke: true, revokeWithKey: true}),
 				Check: resource.ComposeTestCheckFunc(
 					append(checks,
 						resource.TestCheckResourceAttr(resourceName, consts.FieldRevokeWithKey, "true"),
@@ -118,7 +128,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// test remove_roots_from_chain = false
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, false),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "false"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
@@ -126,7 +136,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			},
 			{
 				// test remove_roots_from_chain = true
-				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, "", true, false, false, true),
+				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{removeRootsFromChain: true}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRemoveRootsFromChain, "true"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCAChain),
@@ -136,7 +146,69 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 	})
 }
 
-func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, notAfter string, withCert, revoke bool, revokeWithKey bool, removeRootsFromChain bool) string {
+// TestPkiSecretBackendCert_Upgrade verifies upgrades do not force recreation of "vault_pki_secret_backend_cert"
+// and "vault_pki_secret_backend_root_cert" resources.
+// This safeguards against unintended schema changes that would trigger resource replacement.
+func TestPkiSecretBackendCert_Upgrade(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						VersionConstraint: "5.9.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testPkiSecretBackendCertConfig_upgrade(path),
+			},
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Config:                   testPkiSecretBackendCertConfig_upgrade(path),
+				PlanOnly:                 true,
+				ExpectNonEmptyPlan:       false,
+				// Upgrading from v5.9.x to the current provider should be a no-op plan.
+				// If this step fails and the diff is intentional, update the baseline version (preferred) or
+				// expected assertions to reflect the new upgrade contract.
+				// Do not just flip ExpectNonEmptyPlan to true.
+			},
+		},
+	})
+}
+
+// Minimal definition of resources with only required parameters
+func testPkiSecretBackendCertConfig_upgrade(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path  = "%s"
+  type  = "pki"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  common_name = "RootOrg Root CA"
+}
+
+resource "vault_pki_secret_backend_role" "test" {
+  backend          = vault_mount.test.path
+  name             = "test"
+  allowed_domains  = ["test.my.domain"]
+  allow_subdomains = true
+}
+
+resource "vault_pki_secret_backend_cert" "test" {
+  backend     = vault_mount.test.path
+  name        = vault_pki_secret_backend_role.test.name
+  common_name = "cert.test.my.domain"
+	ttl         = "1h"
+}
+`, path)
+}
+
+func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert bool, certFields certFields) string {
 	fragments := []string{
 		fmt.Sprintf(`
 resource "vault_mount" "test-root" {
@@ -219,22 +291,27 @@ resource "vault_pki_secret_backend_cert" "test" {
   min_seconds_remaining = 60
 `
 
-		if notAfter != "" {
+		if certFields.notAfter != "" {
 			withCertBlock += fmt.Sprintf(`  not_after             = "%s"
-`, notAfter)
+`, certFields.notAfter)
 		}
 
-		if revokeWithKey {
+		if certFields.revokeWithKey {
 			withCertBlock += `  revoke_with_key       = true
 `
 		} else {
 			withCertBlock += fmt.Sprintf(`  revoke                = %t
-`, revoke)
+`, certFields.revoke)
 		}
 
-		if removeRootsFromChain {
+		if certFields.removeRootsFromChain {
 			withCertBlock += `  remove_roots_from_chain = true
 `
+		}
+
+		if certFields.format != "" {
+			withCertBlock += fmt.Sprintf(`  format                = "%s"
+		`, certFields.format)
 		}
 
 		withCertBlock += "}"

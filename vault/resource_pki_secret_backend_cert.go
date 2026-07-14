@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -26,7 +26,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendCertRead),
 		UpdateContext: pkiSecretBackendCertUpdate,
 		DeleteContext: pkiSecretBackendCertDelete,
-		CustomizeDiff: pkiCertAutoRenewCustomizeDiff,
+		CustomizeDiff: pkiCertResourceCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
@@ -330,33 +330,11 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 	return pkiSecretBackendCertRead(ctx, d, meta)
 }
 
-func pkiCertAutoRenewCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
-	// The Create and Read functions will both set renew_pending if
-	// the current time is after the min_seconds_remaining timestamp. During
-	// planning we respond to that by proposing automatic renewal, if enabled.
-	if d.Id() == "" || !d.Get(consts.FieldAutoRenew).(bool) {
-		return nil
-	}
-	if d.Get(consts.FieldRenewPending).(bool) {
-		log.Printf("[DEBUG] certificate %q is due for renewal", d.Id())
-		if err := d.SetNewComputed(consts.FieldCertificate); err != nil {
-			return err
-		}
-
-		if err := d.ForceNew(consts.FieldCertificate); err != nil {
-			return err
-		}
-
-		// Renewing the certificate will reset the value of renew_pending
-		d.SetNewComputed(consts.FieldRenewPending)
-		if err := d.ForceNew(consts.FieldRenewPending); err != nil {
-			return err
-		}
-
-		return nil
+func pkiCertResourceCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	if err := pkiCertPlanAutoRenewal(d); err != nil {
+		return err
 	}
 
-	log.Printf("[DEBUG] certificate %q is not due for renewal", d.Id())
 	return nil
 }
 

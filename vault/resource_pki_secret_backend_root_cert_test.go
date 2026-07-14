@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -277,7 +277,7 @@ func TestPkiSecretBackendRootCertificate_name_constraints(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
-		//resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "86400"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pem"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldPrivateKeyFormat, "der"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "rsa"),
@@ -337,9 +337,6 @@ func checkCertificateNameConstraints(resourceName string, s *terraform.State) er
 		}
 
 		b, _ := pem.Decode([]byte(certPEM))
-		if err != nil {
-			return err
-		}
 
 		cert, err = x509.ParseCertificate(b.Bytes)
 		if err != nil {
@@ -493,7 +490,7 @@ func TestPkiSecretBackendRootCertificate_multiIssuer(t *testing.T) {
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_multiIssuerInternal(path, issuerName, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					append(internalChecks)...,
+					internalChecks...,
 				),
 			},
 			{
@@ -572,7 +569,7 @@ func TestPkiSecretBackendRootCertificate_managedKeys(t *testing.T) {
 			{
 				Config: testPkiSecretBackendRootCertificateConfig_managedKeys(path, managedKeyName, accessKey, secretKey),
 				Check: resource.ComposeTestCheckFunc(
-					append(checks)...,
+					checks...,
 				),
 			},
 		},
@@ -594,7 +591,6 @@ resource "vault_pki_secret_backend_root_cert" "test" {
   backend              = vault_mount.test.path
   type                 = "internal"
   common_name          = "test Root CA"
-  format               = "pem"
   private_key_format   = "der"
   key_type             = "rsa"
   key_bits             = 4096
