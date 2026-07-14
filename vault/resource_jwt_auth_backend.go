@@ -377,7 +377,7 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 	for k, v := range input {
 		val := v.(string)
 		switch k {
-		case "fetch_groups", "fetch_user_info":
+		case "fetch_groups", "fetch_user_info", "use_workload_identity":
 			valBool, err := strconv.ParseBool(val)
 			if err != nil {
 				return nil, fmt.Errorf("could not convert %s to bool: %s", k, err)

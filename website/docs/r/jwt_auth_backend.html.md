@@ -76,6 +76,27 @@ resource "vault_jwt_auth_backend" "gsuite" {
 }
 ```
 
+Configuring the Azure provider to authenticate to Microsoft Entra ID with an
+[Azure Workload Identity](https://azure.github.io/azure-workload-identity/) federated
+token instead of a static `oidc_client_secret`. When `use_workload_identity` is set,
+`oidc_client_id` is required and `oidc_client_secret` must be omitted. The Vault pod
+must be configured for Azure Workload Identity so that the `AZURE_FEDERATED_TOKEN_FILE`
+environment variable is set. Requires Vault 1.x with the corresponding auth method support.
+
+```hcl
+resource "vault_jwt_auth_backend" "azure" {
+    description = "OIDC backend"
+    oidc_discovery_url = "https://login.microsoftonline.com/<tenant_id>/v2.0"
+    oidc_client_id = "<client_id>"
+    path = "oidc"
+    type = "oidc"
+    provider_config = {
+        provider = "azure"
+        use_workload_identity = "true"
+    }
+}
+```
+
 
 ## Argument Reference
 
