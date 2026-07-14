@@ -179,7 +179,10 @@ func parseLDAPStaticCredSecret(secret *api.Secret) (lDAPStaticCredResponse, erro
 		return lDAPStaticCredResponse{}, fmt.Errorf("username is not set in response")
 	}
 
-	password, _ := secret.Data[consts.FieldPassword].(string)
+	password := secret.Data[consts.FieldPassword].(string)
+	if password == "" {
+		return lDAPStaticCredResponse{}, fmt.Errorf("password is not set in response")
+	}
 
 	return lDAPStaticCredResponse{
 		dn:                dn,
