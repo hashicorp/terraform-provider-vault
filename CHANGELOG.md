@@ -3,6 +3,7 @@
 FEATURES:
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
+* **LDAP Rotate-on-Read Support**: Added `rotate_on_read` and `rotate_on_read_cooldown` parameters to `vault_ldap_secret_backend` and `vault_ldap_secret_backend_static_role` resources, and `rotated_on_read` attribute to `vault_ldap_static_role_credentials` data source to support credential rotation on each read ([#2960](https://github.com/hashicorp/terraform-provider-vault/pull/2960). Requires Vault Enterprise 2.1.0+.
 
 ## 5.10.1 (June 26, 2026)
 
