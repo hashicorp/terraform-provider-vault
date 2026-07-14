@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -138,19 +139,16 @@ func identityGroupAliasRead(ctx context.Context, d *schema.ResourceData, meta in
 
 	id := d.Id()
 
-	path := getIdentityGroupAliasIDPath(id)
-
-	log.Printf("[DEBUG] Reading IdentityGroupAlias %s from %q", id, path)
-	resp, err := client.Logical().ReadWithContext(ctx, path)
+	resp, err := group.ReadIdentityGroupAlias(client, id, d.IsNewResource())
 	if err != nil {
+		if group.IsIdentityNotFoundError(err) {
+			log.Printf("[WARN] IdentityGroupAlias %q not found, removing from state", id)
+			d.SetId("")
+			return nil
+		}
 		return diag.FromErr(fmt.Errorf("error reading IdentityGroupAlias %q: %s", id, err))
 	}
 	log.Printf("[DEBUG] Read IdentityGroupAlias %s", id)
-	if resp == nil {
-		log.Printf("[WARN] IdentityGroupAlias %q not found, removing from state", id)
-		d.SetId("")
-		return nil
-	}
 
 	d.SetId(resp.Data["id"].(string))
 	for _, k := range []string{"name", consts.FieldMountAccessor, "canonical_id"} {

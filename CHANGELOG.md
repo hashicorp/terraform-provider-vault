@@ -8,6 +8,7 @@ FEATURES:
 BUG FIXES:
 
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
+* `vault_identity_group_alias`: Fix "Provider produced inconsistent result after apply" when the post-create Read hits a stale performance-replica; the Read now goes through the Client Controlled Consistency retry client (honors `max_retries_ccc`), matching `vault_identity_entity_alias`. ([#2959](https://github.com/hashicorp/terraform-provider-vault/pull/2959))
 
 ## 5.10.1 (June 26, 2026)
 

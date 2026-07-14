@@ -19,8 +19,9 @@ import (
 )
 
 const (
-	LookupPath        = "identity/lookup/group"
-	IdentityGroupPath = "/identity/group"
+	LookupPath             = "identity/lookup/group"
+	IdentityGroupPath      = "/identity/group"
+	IdentityGroupAliasPath = "/identity/group-alias"
 
 	GroupResourceType = iota
 	EntityResourceType
@@ -30,10 +31,25 @@ func IdentityGroupIDPath(id string) string {
 	return fmt.Sprintf("%s/id/%s", IdentityGroupPath, id)
 }
 
+func IdentityGroupAliasIDPath(id string) string {
+	return fmt.Sprintf("%s/id/%s", IdentityGroupAliasPath, id)
+}
+
 // ReadIdentityGroup may return `nil` for the IdentityGroup if it does not exist
 func ReadIdentityGroup(client *api.Client, groupID string, retry bool) (*api.Secret, error) {
 	path := IdentityGroupIDPath(groupID)
 	log.Printf("[DEBUG] Reading IdentityGroup %s from %q", groupID, path)
+
+	return entity.ReadEntity(client, path, retry)
+}
+
+// ReadIdentityGroupAlias reads a group alias by ID. When retry is true the
+// underlying client is configured for Client Controlled Consistency so that
+// a stale performance-replica read directly after a write is retried instead
+// of returning a spurious 404.
+func ReadIdentityGroupAlias(client *api.Client, aliasID string, retry bool) (*api.Secret, error) {
+	path := IdentityGroupAliasIDPath(aliasID)
+	log.Printf("[DEBUG] Reading IdentityGroupAlias %s from %q", aliasID, path)
 
 	return entity.ReadEntity(client, path, retry)
 }
