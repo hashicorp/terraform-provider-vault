@@ -12,6 +12,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
+* `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2801](https://github.com/hashicorp/terraform-provider-vault/pull/2801))
 
 ## 5.10.1 (June 26, 2026)
 
