@@ -176,6 +176,28 @@ func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 	})
 }
 
+func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
+	backend := acctest.RandomWithPrefix("azure")
+
+	resourceType := "vault_azure_auth_backend_config"
+	resourceName := resourceType + ".config"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureAuthBackendConfig_authType(backend),
+				Check: resource.ComposeTestCheckFunc(
+					testAccAzureAuthBackendConfigCheck_attrs(backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, "aks_wi"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccAzureAuthBackend_wif(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-azure-updated")
@@ -406,6 +428,24 @@ resource "vault_azure_auth_backend_config" "config" {
 `, backend)
 }
 
+func testAccAzureAuthBackendConfig_authType(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  type = "azure"
+  path = "%s"
+  description = "Test auth backend for Azure backend config"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend = vault_auth_backend.azure.path
+  tenant_id = "11111111-2222-3333-4444-555555555555"
+  client_id = "11111111-2222-3333-4444-555555555555"
+  resource = "http://vault.hashicorp.com"
+  auth_type = "aks_wi"
+}
+`, backend)
+}
+
 func testAccAzureAuthBackendConfigCheck_attrs(backend string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		resourceState := s.Modules[0].Resources["vault_azure_auth_backend_config.config"]
@@ -437,6 +477,7 @@ func testAccAzureAuthBackendConfigCheck_attrs(backend string) resource.TestCheck
 			consts.FieldClientID:    consts.FieldClientID,
 			consts.FieldResource:    consts.FieldResource,
 			consts.FieldEnvironment: consts.FieldEnvironment,
+			consts.FieldAuthType:    consts.FieldAuthType,
 		}
 		for stateAttr, apiAttr := range attrs {
 			if resp.Data[apiAttr] == nil && instanceState.Attributes[stateAttr] == "" {

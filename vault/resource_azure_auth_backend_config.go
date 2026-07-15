@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
@@ -83,6 +84,12 @@ func azureAuthBackendConfigResource() *schema.Resource {
 				Required:    true,
 				Description: "The configured URL for the application registered in Azure Active Directory.",
 			},
+			consts.FieldAuthType: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Description:  "Specifies how Vault authenticates to Azure APIs. Valid values: auto, root_creds, plugin_wif, msi, aks_wi. Defaults to auto for backward compatibility.",
+				ValidateFunc: validation.StringInSlice([]string{"auto", "root_creds", "plugin_wif", "msi", "aks_wi"}, false),
+			},
 			consts.FieldEnvironment: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -148,6 +155,10 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldClientID:    clientId,
 		consts.FieldResource:    resource,
 		consts.FieldEnvironment: environment,
+	}
+
+	if v, ok := d.GetOk(consts.FieldAuthType); ok {
+		data[consts.FieldAuthType] = v.(string)
 	}
 
 	// Handle client_secret: legacy field or write-only field
@@ -250,6 +261,7 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		consts.FieldResource,
 		consts.FieldEnvironment,
 		consts.FieldMaxRetries,
+		consts.FieldAuthType,
 	}
 	for _, k := range fields {
 		if v, ok := secret.Data[k]; ok {
