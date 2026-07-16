@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -630,6 +630,66 @@ func assertCertificateAttributes(res string, notAfter string, expectedSignatureA
 
 		return nil
 	}
+}
+
+// TestPkiSecretBackendRootSignIntermediate_Upgrade verifies upgrades do not force recreation of "vault_pki_secret_backend_root_sign_intermediate" resources.
+// This safeguards against unintended schema changes that would trigger resource replacement.
+func TestPkiSecretBackendRootSignIntermediate_Upgrade(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						VersionConstraint: "5.9.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testPkiSecretBackendRootSignIntermediateConfig_upgrade(path),
+			},
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Config:                   testPkiSecretBackendRootSignIntermediateConfig_upgrade(path),
+				PlanOnly:                 true,
+				ExpectNonEmptyPlan:       false,
+				// Upgrading from v5.9.x to the current provider should be a no-op plan.
+				// If this step fails and the diff is intentional, update the baseline version (preferred) or
+				// expected assertions to reflect the new upgrade contract.
+				// Do not just flip ExpectNonEmptyPlan to true.
+			},
+		},
+	})
+}
+
+// Minimal definition of resources with only required parameters
+func testPkiSecretBackendRootSignIntermediateConfig_upgrade(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path  = "%s"
+  type  = "pki"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+	common_name = "RootOrg Root CA"
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  depends_on  = [vault_pki_secret_backend_root_cert.test]
+  backend     = vault_mount.test.path
+	common_name = "SubOrg Intermediate CA"
+  type        = "internal"
+}
+
+resource "vault_pki_secret_backend_root_sign_intermediate" "test" {
+  backend     = vault_mount.test.path
+  csr         = vault_pki_secret_backend_intermediate_cert_request.test.csr
+	common_name = "SubOrg Intermediate CA"
+}
+`, path)
 }
 
 func testPkiSecretBackendRootSignIntermediateConfig_basic(rootPath, path string, revoke bool, extra ...string) string {

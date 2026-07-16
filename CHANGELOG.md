@@ -1,5 +1,78 @@
 ## Unreleased
 
+FEATURES:
+
+* **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
+* Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
+
+IMPROVEMENTS:
+
+* `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
+
+BUG FIXES:
+
+* Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
+* `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2801](https://github.com/hashicorp/terraform-provider-vault/pull/2801))
+
+## 5.10.1 (June 26, 2026)
+
+BREAKING CHANGES: 
+
+Reverted the 5.10.0 support for `pkcs12_bundle` and `jks_bundle` formats in formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` that forced resource recreation. Configurations using these formats or their related arguments are no longer supported. ([#2945](https://github.com/hashicorp/terraform-provider-vault/pull/2945))
+
+## 5.10.0 (June 23, 2026)
+
+FEATURES:
+
+* **New Resource**: `vault_config_ui_default_auth` - Manages UI default authentication configuration for the Vault GUI login form. Controls which authentication methods are displayed by default and as backup options for specific namespaces. Supports inheritance control for child namespaces. Enterprise-only feature requiring Vault 1.20.0+. ([#2846](https://github.com/hashicorp/terraform-provider-vault/pull/2846))
+* `vault_config_control_group`: Added initial implementation for `vault_config_control_group` resource in sys/config/control-group. ([#2840](https://github.com/hashicorp/terraform-provider-vault/pull/2840))
+* **New Resource**: `vault_config_ui_header` - Manages custom HTTP headers for the Vault UI. Supports security headers (CSP, HSTS, X-Frame-Options), CORS configuration, and custom organizational headers. Requires Vault 1.16.0+. ([#2842](https://github.com/hashicorp/terraform-provider-vault/pull/2842))
+* **New Resource**: Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
+* **New Resource**: `vault_activation_flags`  for managing Vault features that are gated by one-time flags. Requires Vault 1.16 or later. Needs Vault enterprise license([#2861](https://github.com/hashicorp/terraform-provider-vault/pull/2861/))
+* **New Resource**: `vault_oauth_resource_server_config_profile` for managing OAuth Resource Server Configuration profiles in Vault Enterprise. Enables JWT-based authentication by defining how Vault validates JWT tokens from OAuth 2.0 resource servers. Supports both JWKS-based and static PEM key validation. Requires Vault 2.0.1+. ([#2890](https://github.com/hashicorp/terraform-provider-vault/pull/2890))
+* **New Resource**: `vault_agent_registration`for managing Agent Registry records in Vault Enterprise. Allows registering Vault agents with specific identity entities and configuring ceiling policies that limit maximum agent permissions. Requires Vault 2.0.1+. ([#2885](https://github.com/hashicorp/terraform-provider-vault/pull/2885),[2935](https://github.com/hashicorp/terraform-provider-vault/pull/2935))
+* **New Resource**: `vault_oauth_resource_server_config_profile` Add optional_authorization_details to make RAR optional on OAuth resource server and agent registration. Requires Vault 2.0.3+.([#2930](https://github.com/hashicorp/terraform-provider-vault/pull/2930),[#2933](https://github.com/hashicorp/terraform-provider-vault/pull/2933))
+* **New Resources**: `vault_userpass_auth_backend_user` for user creation, deletion, password updates, and policy updates, and ephemeral resource `vault_userpass_auth_login` for authenticating with Userpass. ([#2859](https://github.com/hashicorp/terraform-provider-vault/pull/2859))
+* Add support for write only parameters for s3 backends for `vault_raft_snapshot_agent_config` by @drewmullen ([#2825]https://github.com/hashicorp/terraform-provider-vault/pull/2825)
+* `vault_transform_transformation`: Added `mapping_mode`, `stores` and `convergent` fields to the resource. ([#2820] https://github.com/hashicorp/terraform-provider-vault/pull/2820/)
+* **New Ephemeral Resource**: `vault_token` for creating Vault tokens with automatic revocation. Supports service and batch tokens, as well as entity alias association, which was not supported in the SDKv2 resource. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
+* **New Resource**: `vault_config_group_policy_application` - Manages the global group policy application mode for Vault Enterprise. Controls how policies attached to identity groups are applied across namespace boundaries. Supports `within_namespace_hierarchy` (default) and `any` modes. Requires Vault Enterprise 1.13.8+. ([#2863](https://github.com/hashicorp/terraform-provider-vault/pull/2863))
+* Add support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
+* `vault_policy`: Added `allow_overwrite` to optionally prevent overwriting Vault policies.([#2895](https://github.com/hashicorp/terraform-provider-vault/pull/2895))
+* `vault_managed_keys`: Added support for `usages` and `max_parallel` fields. ([#2887](https://github.com/hashicorp/terraform-provider-vault/pull/2887/))
+
+
+IMPROVEMENTS:
+
+* `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
+* Migrated AWS provider dependency from `aws-sdk-go` (v1) to `aws-sdk-go-v2` for improved performance and maintainability. ([#2882](https://github.com/hashicorp/terraform-provider-vault/pull/2882))
+* Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
+
+* Updated dependencies:
+  * `cloud.google.com/go/iam` v1.9.0 -> v1.11.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.21.1 -> v1.22.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.13.1 -> v1.14.0
+  * `github.com/Azure/go-ntlmssp` v0.1.0 -> v0.1.1
+  * `github.com/aws/aws-sdk-go-v2` v1.41.6 -> v1.42.0
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.53.8 -> v1.54.5
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.42.0 -> v1.43.3
+  * `github.com/aws/smithy-go` v1.25.0 -> v1.27.2
+  * `github.com/go-sql-driver/mysql` v1.9.3 -> v1.10.0
+  * `github.com/hashicorp/consul/api` v1.34.1 -> v1.34.3
+  * `github.com/hashicorp/terraform-plugin-sdk/v2` v2.40.0 -> v2.40.1
+  * `github.com/hashicorp/terraform-plugin-testing` v1.15.0 -> v1.16.0
+  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.26.1 -> v0.26.3
+  * `github.com/jackc/pgx/v5` v5.9.1 -> v5.9.2
+  * `github.com/moby/moby/client` v0.4.1 -> v0.5.0
+  * `github.com/spiffe/go-spiffe/v2` v2.6.0 -> v2.8.1
+  * `golang.org/x/crypto` v0.50.0 -> v0.53.0
+  * `golang.org/x/net` v0.53.0 -> v0.56.0
+  * `google.golang.org/api` v0.276.0 -> v0.286.0
+  * `google.golang.org/genproto` v0.0.0-20260420184626 -> v0.0.0-20260622175928
+  * `google.golang.org/genproto/googleapis/api` v0.0.0-20260414002931 -> v0.0.0-20260618152121
+  * `google.golang.org/genproto/googleapis/rpc` v0.0.0-20260610212136 -> v0.0.0-20260618152121
+  * `k8s.io/utils` v0.0.0-20260319190234 -> v0.0.0-20260617174310
+
 ## 5.9.0 (April 22, 2026)
 
 BREAKING CHANGES:
@@ -21,7 +94,7 @@ IMPROVEMENTS:
 
 * `vault_cf_auth_backend_config`: Added `cf_password_wo_version` to trigger updates when only `cf_password_wo` changes.([#2878](https://github.com/hashicorp/terraform-provider-vault/pull/2878))
 * `vault_pki_secret_backend_config_acme`: Added new fields that control the PKI ACME challenge worker IP ranges that they can connect. ([#2839]https://github.com/hashicorp/terraform-provider-vault/pull/2839)
-* Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734)
+* Add support for metadata fields in `azure_access_credentials` and `resource_azure_secret_backend_role` resources. ([#2734](https://github.com/hashicorp/terraform-provider-vault/pull/2734))
 * Add support for Enterprise Plugins in `vault_plugin` resource. ([#2707](https://github.com/hashicorp/terraform-provider-vault/pull/2707))
 * `vault_ldap_secret_backend`: Add self-managed support to ldap secrets engine. Requires Vault Enterprise 2.0+. ([#2845](https://github.com/hashicorp/terraform-provider-vault/pull/2845))
 * `azure_static_role`: Add support for importing existing credentials via new Vault import endpoint. ([#2756](https://github.com/hashicorp/terraform-provider-vault/pull/2756))
@@ -83,6 +156,7 @@ BUGS:
 Release Note:
 
 * **Vault Version Support**: The Vault provider will be dropping Vault version support for Vault <= `1.18.x`. This means that going forward only Vault server version `1.19.x` and greater will be officially tested against.
+
 
 
 ## 5.8.0 (March 12, 2026)

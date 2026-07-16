@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -489,7 +489,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		diag.FromErr(e)
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)

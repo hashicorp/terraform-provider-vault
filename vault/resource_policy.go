@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -9,12 +9,13 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 func policyResource() *schema.Resource {
 	return &schema.Resource{
-		Create: policyWrite,
+		Create: policyCreate,
 		Update: policyWrite,
 		Delete: policyDelete,
 		Read:   provider.ReadWrapper(policyRead),
@@ -35,8 +36,42 @@ func policyResource() *schema.Resource {
 				Required:    true,
 				Description: "The policy document",
 			},
+
+			consts.FieldAllowOverwrite: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Allow overwriting an existing policy. Defaults to `true` for backwards compatibility purposes.",
+				Deprecated:  "Deprecated. Overwriting pre-existing policies will soon be removed. Use 'terraform import' to manage existing policies.",
+			},
 		},
 	}
+}
+
+func policyCreate(d *schema.ResourceData, meta interface{}) error {
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return e
+	}
+
+	name := d.Get("name").(string)
+
+	allowOverwrite := true
+	if v := d.GetRawConfig().GetAttr(consts.FieldAllowOverwrite); !v.IsNull() {
+		allowOverwrite = v.True()
+	}
+
+	existing, err := client.Sys().GetPolicy(name)
+
+	if err != nil {
+		return fmt.Errorf("error checking for existing policy %q: %s", name, err)
+	}
+
+	if existing != "" && !allowOverwrite {
+		return fmt.Errorf("policy %q already exists; use terraform import to manage it or set allow_overwrite = true", name)
+	}
+
+	return policyWrite(d, meta)
 }
 
 func policyWrite(d *schema.ResourceData, meta interface{}) error {

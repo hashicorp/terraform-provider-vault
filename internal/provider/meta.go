@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package provider
@@ -54,6 +54,9 @@ var (
 	VaultVersion121  = version.Must(version.NewSemver(consts.VaultVersion121))
 	VaultVersion1215 = version.Must(version.NewSemver(consts.VaultVersion1215))
 	VaultVersion200  = version.Must(version.NewSemver(consts.VaultVersion200))
+	VaultVersion201  = version.Must(version.NewSemver(consts.VaultVersion201))
+	VaultVersion203  = version.Must(version.NewSemver(consts.VaultVersion203))
+	VaultVersion210  = version.Must(version.NewSemver(consts.VaultVersion210))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )
@@ -361,26 +364,20 @@ func (p *ProviderMeta) setClient() error {
 			"configuration's namespace to be %q, before executing terraform. "+
 			"Future releases may not support this type of configuration.", tokenNamespace)
 
-		namespace = tokenNamespace
-		// set the namespace on the provider to ensure that all child
-		// namespace paths are properly honoured.
-		setTokenFromNamespace := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
-		if setTokenFromNamespace {
-			if err := d.Set(consts.FieldNamespace, namespace); err != nil {
-				return err
-			}
+		setNamespaceFromToken := GetResourceDataBool(d, consts.FieldSetNamespaceFromToken, "VAULT_SET_NAMESPACE_FROM_TOKEN", true)
+
+		if setNamespaceFromToken {
+			namespace = tokenNamespace
 		}
 	}
 
 	if namespace != "" {
-		// set the namespace on the provider to ensure that all child
-		// namespace paths are properly honoured.
-		log.Printf("[DEBUG] Setting namespace on provider to %q", namespace)
+		// This block executes when the namespace was explicitly
+		// configured on the provider (not derived from the token)
+		// or when the namespace was not configured on the provider but was derived from the token
 		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 			return fmt.Errorf("failed to set namespace on provider: %w", err)
 		}
-
-		// set the namespace on the parent client
 		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
 		client.SetNamespace(namespace)
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package fwprovider
@@ -9,10 +9,21 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
+	kerberosauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/kerberos"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
 	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
@@ -22,17 +33,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
-
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-provider-vault/internal/consts"
-	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 )
 
@@ -240,13 +242,23 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffe.NewSpiffeAuthRoleResource,
 		cloudfoundry.NewCFAuthBackendConfigResource,
 		cloudfoundry.NewCFAuthBackendRoleResource,
+		userpass.NewUserpassAuthUserResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
+		radius.NewRadiusAuthBackendConfigResource,
+		radius.NewRadiusAuthBackendUserResource,
 		sys.NewPasswordPolicyResource,
+		sysconfig.NewConfigUIDefaultAuthResource,
+		sysconfig.NewConfigGroupPolicyApplicationResource,
+		sysconfig.NewConfigUIHeaderResource,
 		sys.NewRotationPolicyResource,
 		sysconfig.NewQuotaConfigResource,
 		sys.NewPluginRuntimeResource,
+		sys.NewOAuthResourceServerConfigProfileResource,
+		sys.NewAgentRegistrationResource,
 		config.NewSysConfigCORSResource,
+		sysconfig.NewControlGroupConfigResource,
+		sys.NewRaftSnapshotAgentConfigResource,
 		azure.NewAzureStaticRoleResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
@@ -259,6 +271,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCAOrderResource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
 		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
+		sys.NewActivationFlagsResource,
 		keymgmt.NewKeyResource,
 		keymgmt.NewAWSKMSResource,
 		keymgmt.NewAzureKMSResource,
@@ -268,6 +281,9 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		keymgmt.NewReplicateKeyResource,
 		alicloud.NewAliCloudSecretBackendResource,
 		alicloud.NewAliCloudSecretBackendRoleResource,
+		kerberosauth.NewKerberosAuthBackendConfigResource,
+		kerberosauth.NewKerberosAuthBackendLDAPConfigResource,
+		kerberosauth.NewKerberosAuthBackendGroupResource,
 	}, testResources()...)
 }
 
@@ -284,13 +300,16 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewAWSStaticAccessCredentialsEphemeralSecretResource,
 		alicloud.NewAliCloudAccessCredentialsEphemeralResource,
 		ephemeralauth.NewApproleAuthBackendRoleSecretIDEphemeralResource,
+		radius.NewRadiusAuthLoginEphemeralResource,
 		ephemeralsecrets.NewKubernetesServiceAccountTokenEphemeralResource,
 		cloudfoundry.NewCFAuthLoginEphemeralResource,
+		userpass.NewUserpassAuthLoginEphemeralResource,
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
+		ephemeralauth.NewTokenEphemeralResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
+		kerberosauth.NewKerberosAuthBackendLoginEphemeralResource,
 	}
-
 }
 
 // DataSources returns a slice of functions to instantiate each DataSource
@@ -300,6 +319,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 // the Metadata method. All data sources must have unique names.
 func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		sys.NewActivationFlagsDataSource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -714,10 +714,6 @@ var (
 		"vault_transit_secret_cache_config": {
 			Resource:      UpdateSchemaResource(transitSecretBackendCacheConfig()),
 			PathInventory: []string{"/transit/cache-config"},
-		},
-		"vault_raft_snapshot_agent_config": {
-			Resource:      UpdateSchemaResource(raftSnapshotAgentConfigResource()),
-			PathInventory: []string{"/sys/storage/raft/snapshot-auto/config/{name}"},
 		},
 		"vault_raft_autopilot": {
 			Resource:      UpdateSchemaResource(raftAutopilotConfigResource()),
