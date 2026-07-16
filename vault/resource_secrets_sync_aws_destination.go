@@ -100,10 +100,10 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Specifies the ARN or alias of the AWS KMS key to be used to encrypt the secret.",
 			},
-			consts.FieldRegionalKmsKeys: {
+			consts.FieldReplicaRegions: {
 				Type:        schema.TypeMap,
 				Optional:    true,
-				Description: "Regional KMS keys for encryption.",
+				Description: "Map of regions to KMS key ARN values for replica region encryption. KMS key values are optional.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldIdentityTokenKeyWO: {
@@ -189,12 +189,12 @@ var awsSync200ReadFields = []string{
 }
 
 var awsSync210ReadFields = []string{
-	consts.FieldRegionalKmsKeys,
+	consts.FieldReplicaRegions,
 	consts.FieldKmsKeyID,
 }
 
 var awsSync210WriteFields = []string{
-	consts.FieldRegionalKmsKeys,
+	consts.FieldReplicaRegions,
 	consts.FieldKmsKeyID,
 }
 
@@ -207,8 +207,8 @@ func validateAWSSync210Fields(d *schema.ResourceData, meta interface{}) diag.Dia
 		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1 and later")
 	}
 
-	if _, ok := d.GetOk(consts.FieldRegionalKmsKeys); ok {
-		return diag.Errorf("regional_kms_keys is only supported in Vault Enterprise 2.1 and later")
+	if _, ok := d.GetOk(consts.FieldReplicaRegions); ok {
+		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.1 and later")
 	}
 
 	return nil

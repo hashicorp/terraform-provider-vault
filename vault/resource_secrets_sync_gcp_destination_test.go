@@ -308,9 +308,9 @@ func TestGCPSecretsSyncDestination_AdvancedFeatures(t *testing.T) {
 					Config: testGCPSecretsSyncDestinationConfig_replicationBasicRegionalKMSKeys(credentials, project, destName+"-rep-kms"),
 					Check: resource.ComposeTestCheckFunc(
 						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".%", "2"),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-central1", "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-east1", "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".%", "2"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-central1", "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-east1", "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"),
 					),
 				},
 				testutil.GetImportTestStep(resourceName, false, nil,
@@ -503,7 +503,7 @@ CREDS
   secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
   granularity          = "secret-path"
   
-  regional_kms_keys = {
+  replica_regions = {
     "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
     "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
   }

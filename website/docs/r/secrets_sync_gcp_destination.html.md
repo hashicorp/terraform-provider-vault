@@ -95,16 +95,16 @@ resource "vault_secrets_sync_gcp_destination" "gcp_kms_key_id" {
 }
 ```
 
-### With Regional KMS Keys (Vault 2.1.0+)
+### With Replica Regions (Vault 2.1.0+)
 
 ```hcl
-resource "vault_secrets_sync_gcp_destination" "gcp_regional_kms_keys" {
-  name                 = "gcp-dest-regional-kms"
+resource "vault_secrets_sync_gcp_destination" "gcp_replica_regions" {
+  name                 = "gcp-dest-replica-regions"
   project_id           = "gcp-project-id"
   credentials          = file(var.credentials_file)
   secret_name_template = "vault_{{ .MountAccessor | lowercase }}_{{ .SecretPath | lowercase }}"
 
-  regional_kms_keys = {
+  replica_regions = {
     "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
     "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
   }
@@ -192,7 +192,7 @@ The following arguments are supported:
 ### Encryption Configuration (Vault 1.19+)
 
 ~> **Deprecated** `global_kms_key` and `locational_kms_keys` are deprecated in favor of
-`kms_key_id` and `regional_kms_keys` on Vault Enterprise 2.1.0+. Existing configurations
+`kms_key_id` and `replica_regions` on Vault Enterprise 2.1.0+. Existing configurations
 continue to work for backward compatibility.
 
 * `global_kms_key` - (Optional) KMS key resource name for encrypting all secrets. 
@@ -213,18 +213,25 @@ continue to work for backward compatibility.
 
 * `replication_locations` - (Optional) List of GCP regions where secrets should be replicated. 
   Example: `["us-central1", "us-east1"]`.
-  **Deprecated** in favor of `regional_kms_keys` on Vault Enterprise 2.1.0+.
+  **Deprecated** in favor of `replica_regions` on Vault Enterprise 2.1.0+.
 
-### Encryption Configuration (Vault 2.1.0+)
+### Encryption and Replication Configuration (Vault 2.1.0+)
 
 * `kms_key_id` - (Optional) KMS key resource name for encrypting synced secrets.
   Format: `projects/{project}/locations/{location}/keyRings/{keyring}/cryptoKeys/{key}`.
   **Requires Vault 2.1.0+**.
 
-* `regional_kms_keys` - (Optional) Map of GCP regions to KMS key resource names for regional encryption.
-  Map values are optional.
-  Preferred over `replication_locations` on Vault Enterprise 2.1.0+.
+* `replica_regions` - (Optional) Map of GCP regions to KMS key resource names for replica region encryption.
+  KMS key values are optional and may be left empty.
   **Requires Vault 2.1.0+**.
+
+  Example:
+  ```hcl
+  replica_regions = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+    "us-east1"    = "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"
+  }
+  ```
 
 ## Attributes Reference
 

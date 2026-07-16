@@ -145,9 +145,9 @@ func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".%", "2"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-east-2", "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRegionalKmsKeys+".us-west-1", "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".%", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-east-2", "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-west-1", "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
@@ -346,7 +346,7 @@ resource "vault_secrets_sync_aws_destination" "test" {
   access_key_id     = "%s"
   secret_access_key = "%s"
   region            = "%s"
-  regional_kms_keys = {
+  replica_regions = {
     "us-east-2" = "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef",
     "us-west-1" = "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
   }
