@@ -187,6 +187,49 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	)
 }
 
+func TestAccJWTAuthBackendProviderConfigOkta(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".oidc"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			// Skip if Vault < 2.1.0 (Okta provider with groups_cap requires 2.1.0+)
+			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion210) {
+				t.Skip("Okta provider with groups_cap requires Vault 2.1.0+")
+			}
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendProviderConfigOkta(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "oidc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".provider", "okta"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".org_url", "https://myco.auth0.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".groups_cap", "200"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldProviderConfig + ".api_token",
+					consts.FieldProviderConfig + ".%", // Map count differs due to api_token exclusion
+					consts.FieldOIDCClientSecret,
+					consts.FieldDescription,
+					consts.FieldDisableRemount,
+				},
+			},
+		},
+	})
+}
+
 func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	t.Parallel()
 	resourceType := "vault_jwt_auth_backend"
@@ -472,6 +515,23 @@ resource "vault_namespace" "test" {
 	return strings.Join(append(fragments, config, "}"), "\n")
 }
 
+func testAccJWTAuthBackendProviderConfigOkta(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "oidc" {
+  description        = "OIDC backend"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  path               = "%s"
+  type               = "oidc"
+  provider_config = {
+    provider      = "okta"
+    org_url       = "https://myco.auth0.com"
+    api_token     = "test-token-12345"
+    groups_cap    = "200"
+  }
+}
+`, path)
+}
+
 func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 	t.Parallel()
 
@@ -589,6 +649,11 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 		{name: "groups_recurse_max_depth", value: "0", err: false, want: int64(0)},
 		{name: "groups_recurse_max_depth", value: "-1", err: false, want: int64(-1)},
 		{name: "groups_recurse_max_depth", value: "foo", err: true, want: int64(0)},
+
+		{name: "groups_cap", value: "100", err: false, want: int64(100)},
+		{name: "groups_cap", value: "0", err: false, want: int64(0)},
+		{name: "groups_cap", value: "-1", err: false, want: int64(-1)},
+		{name: "groups_cap", value: "bar", err: true, want: int64(0)},
 	}
 
 	for _, tc := range tests {
