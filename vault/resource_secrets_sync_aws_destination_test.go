@@ -6,7 +6,11 @@ package vault
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
+	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -21,7 +25,66 @@ import (
 const (
 	defaultSecretsSyncTemplate = "vault/{{ .MountAccessor }}/{{ .SecretPath }}"
 	updatedSecretsSyncTemplate = "VAULT_{{ .MountAccessor | uppercase }}_{{ .SecretPath | uppercase }}"
+
+	// envAWSSecretsSyncOwnerTag is the environment variable used to inject an
+	// "Owner" custom tag into the AWS secrets sync destination acceptance test
+	// resources. When set, its value is applied as the value of the "Owner"
+	// custom tag on every destination created by these tests, which is required
+	// for permission issues encountered in doormat AWS account.
+	// When unset, no "Owner" tag is added and test behavior is unchanged.
+	envAWSSecretsSyncOwnerTag = "TEST_AWS_SECRETS_SYNC_OWNER_TAG"
+
+	// awsSecretsSyncOwnerTagKey is the custom tag key used for the owner tag.
+	awsSecretsSyncOwnerTagKey = "Owner"
 )
+
+// awsSyncCustomTagsWithOwner returns a copy of base with the "Owner" custom tag
+// added when the envAWSSecretsSyncOwnerTag environment variable is set.
+func awsSyncCustomTagsWithOwner(base map[string]string) map[string]string {
+	tags := map[string]string{}
+	for k, v := range base {
+		tags[k] = v
+	}
+	if owner := os.Getenv(envAWSSecretsSyncOwnerTag); owner != "" {
+		tags[awsSecretsSyncOwnerTagKey] = owner
+	}
+	return tags
+}
+
+// customTagsHCL renders a custom_tags block for the given tags. It returns an
+// empty string when there are no tags so it can be safely embedded in configs.
+func customTagsHCL(tags map[string]string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+
+	keys := make([]string, 0, len(tags))
+	for k := range tags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	b.WriteString("  custom_tags = {\n")
+	for _, k := range keys {
+		fmt.Fprintf(&b, "    %q = %q\n", k, tags[k])
+	}
+	b.WriteString("  }\n")
+	return b.String()
+}
+
+// testCheckCustomTags builds the resource checks for a custom_tags map,
+// including the owner tag when the envAWSSecretsSyncOwnerTag env var is set.
+func testCheckCustomTags(resourceName string, base map[string]string) resource.TestCheckFunc {
+	tags := awsSyncCustomTagsWithOwner(base)
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, "custom_tags.%", strconv.Itoa(len(tags))),
+	}
+	for k, v := range tags {
+		checks = append(checks, resource.TestCheckResourceAttr(resourceName, "custom_tags."+k, v))
+	}
+	return resource.ComposeTestCheckFunc(checks...)
+}
 
 func TestAWSSecretsSyncDestination(t *testing.T) {
 	destName := acctest.RandomWithPrefix("tf-sync-dest-aws")
@@ -48,10 +111,9 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "arn:aws:iam::123456789012:role/test-role"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-test"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
+					testCheckCustomTags(resourceName, map[string]string{"foo": "bar"}),
 				),
 			},
 			{
@@ -65,11 +127,9 @@ func TestAWSSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, awsSyncType),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, secretsKeyTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-key"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "role-arn-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRoleArn, "arn:aws:iam::123456789012:role/updated-role"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalID, "external-id-updated"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
+					testCheckCustomTags(resourceName, map[string]string{"foo": "bar", "baz": "bux"}),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -107,8 +167,7 @@ func TestAWSSecretsSyncDestinationWithCustomEncryption(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKmsKeyID, "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
+					testCheckCustomTags(resourceName, map[string]string{"foo": "bar"}),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -148,8 +207,7 @@ func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".%", "2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-east-2", "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-west-1", "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
-					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
+					testCheckCustomTags(resourceName, map[string]string{"foo": "bar"}),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -338,8 +396,9 @@ resource "vault_secrets_sync_aws_destination" "test" {
   allowed_ipv6_addresses      = ["2001:db8::/32"]
   allowed_ports               = [443, 8200]
   disable_strict_networking   = false
+%s
 }
-`, destName, accessKey, secretKey, region)
+`, destName, accessKey, secretKey, region, customTagsHCL(awsSyncCustomTagsWithOwner(nil)))
 }
 
 func testAWSSecretsSyncDestinationConfig_networkingUpdated(accessKey, secretKey, region, destName string) string {
@@ -353,8 +412,9 @@ resource "vault_secrets_sync_aws_destination" "test" {
   allowed_ipv4_addresses      = ["172.16.0.0/12"]
   allowed_ports               = [443]
   disable_strict_networking   = true
+%s
 }
-`, destName, accessKey, secretKey, region)
+`, destName, accessKey, secretKey, region, customTagsHCL(awsSyncCustomTagsWithOwner(nil)))
 }
 
 func testAWSSecretsSyncDestinationConfig_initial(accessKey, secretKey, region, destName, templ string) string {
@@ -364,7 +424,7 @@ resource "vault_secrets_sync_aws_destination" "test" {
   access_key_id	        = "%s"
   secret_access_key     = "%s"
   region                = "%s"
-  role_arn              = "role-arn-test"
+  role_arn              = "arn:aws:iam::123456789012:role/test-role"
   external_id           = "external-id-test"
   %s
 }
@@ -413,7 +473,7 @@ resource "vault_secrets_sync_aws_destination" "test" {
   access_key_id         = "%s"
   secret_access_key     = "%s"
   region                = "%s"
-  role_arn              = "role-arn-updated"
+  role_arn              = "arn:aws:iam::123456789012:role/updated-role"
   external_id           = "external-id-updated"
   %s
 }
@@ -472,8 +532,9 @@ resource "vault_secrets_sync_aws_destination" "test" {
   # Intentionally include duplicates to verify TypeSet behavior
   allowed_ipv4_addresses = ["198.51.100.0/24", "203.0.113.0/24", "198.51.100.0/24", "203.0.113.0/24"]
   allowed_ports          = [8080, 9090, 8080, 9090]
+%s
 }
-`, destName, accessKey, secretKey, region)
+`, destName, accessKey, secretKey, region, customTagsHCL(awsSyncCustomTagsWithOwner(nil)))
 }
 
 // TestAWSSecretsSyncDestinationWIF tests WIF (Workload Identity Federation)
@@ -544,7 +605,7 @@ func TestAWSSecretsSyncDestinationWIF(t *testing.T) {
 				consts.FieldRoleArn,
 			),
 			{ // Missing role_arn when using WIF should error
-				Config:      testAWSSecretsSyncDestinationWIFConfigMissingRoleArn(destName, region, audience),
+				Config:      testAWSSecretsSyncDestinationWIFConfigMissingRoleArn(destName+"-no-role-arn", region, audience),
 				ExpectError: regexp.MustCompile(`role_arn|invalid|error`),
 			},
 		},
@@ -561,7 +622,8 @@ resource "vault_secrets_sync_aws_destination" "test" {
   identity_token_audience_wo_version = %d
   identity_token_ttl                 = %d
   granularity                        = "secret-path"
-}`, destName, region, roleArn, audience, identity_token_audience_wo_version, ttl)
+%s
+}`, destName, region, roleArn, audience, identity_token_audience_wo_version, ttl, customTagsHCL(awsSyncCustomTagsWithOwner(nil)))
 }
 
 func testAWSSecretsSyncDestinationWIFConfigMissingRoleArn(destName, region, audience string) string {
@@ -584,19 +646,12 @@ func testSecretsSyncDestinationCommonConfig(templ string, withTemplate, withTags
 `, templ)
 	}
 
-	if withTags && !update {
-		ret += fmt.Sprintf(`
-  custom_tags = {
-    "foo" = "bar"
-  }
-`)
-	} else if withTags && update {
-		ret += fmt.Sprintf(`
-  custom_tags = {
-    "foo" = "bar"
-    "baz" = "bux"
-  }
-`)
+	if withTags {
+		base := map[string]string{"foo": "bar"}
+		if update {
+			base["baz"] = "bux"
+		}
+		ret += customTagsHCL(awsSyncCustomTagsWithOwner(base))
 	}
 
 	if update {
