@@ -428,7 +428,7 @@ resource "vault_secrets_sync_aws_destination" "test" {
   external_id           = "external-id-test"
   %s
 }
-`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
+`, destName, accessKey, secretKey, region, testAWSSecretsSyncDestinationCommonConfig(templ, false, true, false))
 
 	return ret
 }
@@ -443,7 +443,7 @@ resource "vault_secrets_sync_aws_destination" "test" {
   kms_key_id        = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
   %s
 }
-`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, true, true, false))
+`, destName, accessKey, secretKey, region, testAWSSecretsSyncDestinationCommonConfig(templ, true, true, false))
 
 	return ret
 }
@@ -461,7 +461,7 @@ resource "vault_secrets_sync_aws_destination" "test" {
   }
   %s
 }
-`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, true, true, false))
+`, destName, accessKey, secretKey, region, testAWSSecretsSyncDestinationCommonConfig(templ, true, true, false))
 
 	return ret
 }
@@ -477,7 +477,7 @@ resource "vault_secrets_sync_aws_destination" "test" {
   external_id           = "external-id-updated"
   %s
 }
-`, destName, accessKey, secretKey, region, testSecretsSyncDestinationCommonConfig(templ, true, true, true))
+`, destName, accessKey, secretKey, region, testAWSSecretsSyncDestinationCommonConfig(templ, true, true, true))
 
 	return ret
 }
@@ -651,7 +651,7 @@ func testSecretsSyncDestinationCommonConfig(templ string, withTemplate, withTags
 		if update {
 			base["baz"] = "bux"
 		}
-		ret += customTagsHCL(awsSyncCustomTagsWithOwner(base))
+		ret += customTagsHCL(base)
 	}
 
 	if update {
@@ -663,5 +663,24 @@ func testSecretsSyncDestinationCommonConfig(templ string, withTemplate, withTags
   granularity = "secret-path"
 `)
 	}
+	return ret
+}
+
+// testAWSSecretsSyncDestinationCommonConfig renders the shared destination config
+// and, for AWS destinations only, injects the optional "Owner" custom tag when
+// TEST_AWS_SECRETS_SYNC_OWNER_TAG is set. The shared helper is left deterministic
+// so non-AWS destinations (Azure/GCP/etc.) keep their exact custom_tags.
+func testAWSSecretsSyncDestinationCommonConfig(templ string, withTemplate, withTags, update bool) string {
+	// Render the shared config without tags, then append AWS-aware tags below.
+	ret := testSecretsSyncDestinationCommonConfig(templ, withTemplate, false, update)
+
+	if withTags {
+		base := map[string]string{"foo": "bar"}
+		if update {
+			base["baz"] = "bux"
+		}
+		ret += customTagsHCL(awsSyncCustomTagsWithOwner(base))
+	}
+
 	return ret
 }
