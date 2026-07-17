@@ -23,7 +23,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 
 	resourceName := "vault_secrets_sync_gcp_destination.test"
 
-	credentials, _ := testutil.GetTestGCPCreds(t)
+	credentials, project := testutil.GetTestGCPCreds(t)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -33,7 +33,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 		}, PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: testGCPSecretsSyncDestinationConfig_initial(credentials, destName, defaultSecretsSyncTemplate),
+				Config: testGCPSecretsSyncDestinationConfig_initial(credentials, project, destName, defaultSecretsSyncTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -41,13 +41,13 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, defaultSecretsSyncTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "gcp-project-id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "1"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 				),
 			},
 			{
-				Config: testGCPSecretsSyncDestinationConfig_updated(credentials, destName, secretsKeyTemplate),
+				Config: testGCPSecretsSyncDestinationConfig_updated(credentials, project, destName, secretsKeyTemplate),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
@@ -55,7 +55,7 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSecretNameTemplate, secretsKeyTemplate),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-key"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, "gcp-project-id-updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.%", "2"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.foo", "bar"),
 					resource.TestCheckResourceAttr(resourceName, "custom_tags.baz", "bux"),
@@ -65,6 +65,153 @@ func TestGCPSecretsSyncDestination(t *testing.T) {
 				consts.FieldCredentials),
 		},
 	})
+}
+
+// TestGCPSecretsSyncDestinationWithKMS creates a destination that uses only the
+// kms_key_id field for customer-managed encryption.
+func TestGCPSecretsSyncDestinationWithKMS(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-gcp-kms")
+	resourceName := "vault_secrets_sync_gcp_destination.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPSecretsSyncDestinationConfigWithKMS(credentials, project, destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldGranularity, "secret-path"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKmsKeyID, "projects/my-project/locations/global/keyRings/test-keyring/cryptoKeys/test-key"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldCredentials),
+		},
+	})
+}
+
+// TestGCPSecretsSyncDestinationWithReplicaRegionsEmptyKeys creates a destination
+// with replica_regions where the KMS key values are empty (Vault selects the
+// default key per region).
+func TestGCPSecretsSyncDestinationWithReplicaRegionsEmptyKeys(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-gcp-rep-empty")
+	resourceName := "vault_secrets_sync_gcp_destination.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPSecretsSyncDestinationConfigWithReplicaRegionsEmptyKeys(credentials, project, destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".%", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-east1", ""),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-west1", ""),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldCredentials),
+		},
+	})
+}
+
+// TestGCPSecretsSyncDestinationWithReplicaRegions creates a destination with
+// replica_regions where each region maps to a customer-managed KMS key.
+func TestGCPSecretsSyncDestinationWithReplicaRegions(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-gcp-rep")
+	resourceName := "vault_secrets_sync_gcp_destination.test"
+
+	credentials, project := testutil.GetTestGCPCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				Config: testGCPSecretsSyncDestinationConfigWithReplicaRegions(credentials, project, destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, gcpSyncType),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".%", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-east1", "projects/my-project/locations/us-east1/keyRings/test-keyring/cryptoKeys/test-key"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-west1", "projects/my-project/locations/us-west1/keyRings/test-keyring/cryptoKeys/test-key"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldCredentials),
+		},
+	})
+}
+
+func testGCPSecretsSyncDestinationConfigWithKMS(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name        = "%s"
+  project_id  = "%s"
+  granularity = "secret-path"
+  credentials = <<CREDS
+%sCREDS
+
+  kms_key_id = "projects/my-project/locations/global/keyRings/test-keyring/cryptoKeys/test-key"
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfigWithReplicaRegionsEmptyKeys(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name        = "%s"
+  project_id  = "%s"
+  granularity = "secret-path"
+  credentials = <<CREDS
+%sCREDS
+
+  replica_regions = {
+    "us-east1" = ""
+    "us-west1" = ""
+  }
+}
+`, destName, project, credentials)
+}
+
+func testGCPSecretsSyncDestinationConfigWithReplicaRegions(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name        = "%s"
+  project_id  = "%s"
+  granularity = "secret-path"
+  credentials = <<CREDS
+%sCREDS
+
+  replica_regions = {
+    "us-east1" = "projects/my-project/locations/us-east1/keyRings/test-keyring/cryptoKeys/test-key"
+    "us-west1" = "projects/my-project/locations/us-west1/keyRings/test-keyring/cryptoKeys/test-key"
+  }
+}
+`, destName, project, credentials)
 }
 
 func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
@@ -127,16 +274,16 @@ func TestGCPSecretsSyncDestinationWIF(t *testing.T) {
 	})
 }
 
-func testGCPSecretsSyncDestinationConfig_initial(credentials, destName, templ string) string {
+func testGCPSecretsSyncDestinationConfig_initial(credentials, project, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
   name          = "%s"
-  project_id    = "gcp-project-id"
+  project_id    = "%s"
   credentials   = <<CREDS
 %sCREDS
   %s
 }
-`, destName, credentials, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
+`, destName, project, credentials, testSecretsSyncDestinationCommonConfig(templ, false, true, false))
 
 	return ret
 }
@@ -192,16 +339,16 @@ resource "vault_secrets_sync_gcp_destination" "test" {
 }`, destName, projectID, audience)
 }
 
-func testGCPSecretsSyncDestinationConfig_updated(credentials, destName, templ string) string {
+func testGCPSecretsSyncDestinationConfig_updated(credentials, project, destName, templ string) string {
 	ret := fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
   name          = "%s"
-  project_id    = "gcp-project-id-updated"
+  project_id    = "%s"
   credentials   = <<CREDS
 %sCREDS
   %s
 }
-`, destName, credentials, testSecretsSyncDestinationCommonConfig(templ, true, true, true))
+`, destName, project, credentials, testSecretsSyncDestinationCommonConfig(templ, true, true, true))
 
 	return ret
 }
@@ -347,23 +494,24 @@ func TestGCPSecretsSyncDestination_NegativeTests(t *testing.T) {
 				Config:      testGCPSecretsSyncDestinationConfig_conflictingEncryption(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
 				ExpectError: regexp.MustCompile("."), // Any error indicates validation worked
 			},
-			// Test 4: Duplicate regions in replication_locations - TypeSet should deduplicate automatically
+			// Test 4: kms_key_id (new) combined with each deprecated field - ConflictsWith should fail at plan time
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_conflictKmsKeyID(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
+				ExpectError: regexp.MustCompile(`(?s)conflicts with`),
+			},
+			// Test 5: replica_regions (new) combined with each deprecated field - ConflictsWith should fail at plan time
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_conflictReplicaRegions(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
+				ExpectError: regexp.MustCompile(`(?s)conflicts with`),
+			},
+			// Test 6: Duplicate regions in replication_locations - TypeSet should deduplicate automatically.
+			// Kept last (it is the only step that applies real state) so teardown destroys a valid config.
 			{
 				Config: testGCPSecretsSyncDestinationConfig_duplicateRegions(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
 				Check: resource.ComposeTestCheckFunc(
 					// TypeSet automatically deduplicates, so we should only see 2 unique regions
 					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".#", "2"),
 				),
-			},
-			// Test 5: kms_key_id (new) combined with each deprecated field - ConflictsWith should fail at plan time
-			{
-				Config:      testGCPSecretsSyncDestinationConfig_conflictKmsKeyID(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
-				ExpectError: regexp.MustCompile(`(?s)conflicts with`),
-			},
-			// Test 6: replica_regions (new) combined with each deprecated field - ConflictsWith should fail at plan time
-			{
-				Config:      testGCPSecretsSyncDestinationConfig_conflictReplicaRegions(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
-				ExpectError: regexp.MustCompile(`(?s)conflicts with`),
 			},
 		},
 	})
