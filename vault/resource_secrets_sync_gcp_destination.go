@@ -244,11 +244,11 @@ func validateGCPSync210Fields(d *schema.ResourceData, meta interface{}) diag.Dia
 	}
 
 	if _, ok := d.GetOk(consts.FieldKmsKeyID); ok {
-		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1 and later")
+		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1.0 and later")
 	}
 
 	if _, ok := d.GetOk(consts.FieldReplicaRegions); ok {
-		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.1 and later")
+		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.1.0 and later")
 	}
 
 	return nil

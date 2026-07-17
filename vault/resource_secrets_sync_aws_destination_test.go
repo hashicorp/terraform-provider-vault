@@ -161,6 +161,55 @@ func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
 	})
 }
 
+// TestAWSSecretsSyncDestination_UnsupportedVersionFields verifies that configuring the
+// Vault 2.1.0+ fields (kms_key_id, replica_regions) against a Vault server older than
+// 2.1.0 fails with the intended validation error, rather than silently ignoring them or
+// failing later. Guarded so it only runs on Vault < 2.1.0.
+func TestAWSSecretsSyncDestination_UnsupportedVersionFields(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-aws-ver")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testAWSSecretsSyncDestinationConfig_kmsKeyID(destName),
+				ExpectError: regexp.MustCompile(`kms_key_id is only supported in Vault Enterprise 2.1.0 and later`),
+			},
+			{
+				Config:      testAWSSecretsSyncDestinationConfig_replicaRegions(destName),
+				ExpectError: regexp.MustCompile(`replica_regions is only supported in Vault Enterprise 2.1.0 and later`),
+			},
+		},
+	})
+}
+
+func testAWSSecretsSyncDestinationConfig_kmsKeyID(destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_aws_destination" "test" {
+  name       = "%s"
+  region     = "us-east-1"
+  kms_key_id = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+}
+`, destName)
+}
+
+func testAWSSecretsSyncDestinationConfig_replicaRegions(destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_aws_destination" "test" {
+  name   = "%s"
+  region = "us-east-1"
+
+  replica_regions = {
+    "us-west-2" = "arn:aws:kms:us-west-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
+  }
+}
+`, destName)
+}
+
 func TestAWSSecretsSyncDestination_Networking(t *testing.T) {
 	destName := acctest.RandomWithPrefix("tf-sync-dest-aws-net")
 

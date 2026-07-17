@@ -161,7 +161,7 @@ The following arguments are supported:
   **Requires Vault 2.1.0+**.
 
 * `replica_regions` - (Optional) Map of AWS regions to KMS key ARN values for replica region encryption.
-  KMS key values are optional and may be left empty.
+  KMS key values are optional and may be set to an empty string.
   **Requires Vault 2.1.0+**.
 
 ### Workload Identity Federation (Vault 2.0.0+)

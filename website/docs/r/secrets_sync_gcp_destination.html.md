@@ -222,7 +222,7 @@ continue to work for backward compatibility.
   **Requires Vault 2.1.0+**.
 
 * `replica_regions` - (Optional) Map of GCP regions to KMS key resource names for replica region encryption.
-  KMS key values are optional and may be left empty.
+  KMS key values are optional and may be set to an empty string.
   **Requires Vault 2.1.0+**.
 
   Example:

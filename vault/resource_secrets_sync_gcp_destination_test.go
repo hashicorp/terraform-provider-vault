@@ -369,6 +369,60 @@ func TestGCPSecretsSyncDestination_NegativeTests(t *testing.T) {
 	})
 }
 
+// TestGCPSecretsSyncDestination_UnsupportedVersionFields verifies that configuring the
+// Vault 2.1.0+ fields (kms_key_id, replica_regions) against a Vault server older than
+// 2.1.0 fails with the intended validation error, rather than silently ignoring them or
+// failing later. Guarded so it only runs on Vault < 2.1.0.
+func TestGCPSecretsSyncDestination_UnsupportedVersionFields(t *testing.T) {
+	destName := acctest.RandomWithPrefix("tf-sync-dest-gcp-ver")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_kmsKeyID(destName),
+				ExpectError: regexp.MustCompile(`kms_key_id is only supported in Vault Enterprise 2.1.0 and later`),
+			},
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_replicaRegions(destName),
+				ExpectError: regexp.MustCompile(`replica_regions is only supported in Vault Enterprise 2.1.0 and later`),
+			},
+		},
+	})
+}
+
+func testGCPSecretsSyncDestinationConfig_kmsKeyID(destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "gcp-project-id"
+  credentials          = "{}"
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+
+  kms_key_id = "projects/my-project/locations/global/keyRings/kr/cryptoKeys/key"
+}
+`, destName)
+}
+
+func testGCPSecretsSyncDestinationConfig_replicaRegions(destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "gcp-project-id"
+  credentials          = "{}"
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+
+  replica_regions = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+  }
+}
+`, destName)
+}
+
 func testGCPSecretsSyncDestinationConfig_invalidIPv4(credentials, project, destName string) string {
 	return fmt.Sprintf(`
 resource "vault_secrets_sync_gcp_destination" "test" {
