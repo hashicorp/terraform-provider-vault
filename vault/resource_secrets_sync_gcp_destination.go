@@ -211,11 +211,21 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Optional:    true,
 				Description: "Map of regions to KMS key resource names for replica region encryption. KMS key values are optional.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
+				ConflictsWith: []string{
+					consts.FieldGlobalKmsKey,
+					consts.FieldLocationalKmsKeys,
+					consts.FieldReplicationLocations,
+				},
 			},
 			consts.FieldKmsKeyID: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "KMS key ID for encryption.",
+				ConflictsWith: []string{
+					consts.FieldGlobalKmsKey,
+					consts.FieldLocationalKmsKeys,
+					consts.FieldReplicationLocations,
+				},
 			},
 			consts.FieldReplicationLocations: {
 				Type:        schema.TypeSet,

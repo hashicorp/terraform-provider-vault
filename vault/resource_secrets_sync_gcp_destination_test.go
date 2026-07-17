@@ -355,6 +355,16 @@ func TestGCPSecretsSyncDestination_NegativeTests(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicationLocations+".#", "2"),
 				),
 			},
+			// Test 5: kms_key_id (new) combined with each deprecated field - ConflictsWith should fail at plan time
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_conflictKmsKeyID(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
+				ExpectError: regexp.MustCompile(`(?s)conflicts with`),
+			},
+			// Test 6: replica_regions (new) combined with each deprecated field - ConflictsWith should fail at plan time
+			{
+				Config:      testGCPSecretsSyncDestinationConfig_conflictReplicaRegions(credentials, project, acctest.RandomWithPrefix("tf-sync-dest-gcp")),
+				ExpectError: regexp.MustCompile(`(?s)conflicts with`),
+			},
 		},
 	})
 }
@@ -400,6 +410,54 @@ CREDS
   secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
   
   global_kms_key = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
+  locational_kms_keys = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+  }
+  replication_locations = ["us-central1"]
+}
+`, destName, project, credentials)
+}
+
+// testGCPSecretsSyncDestinationConfig_conflictKmsKeyID mixes the new kms_key_id field
+// with all three deprecated fields. Each pairing is declared in ConflictsWith, so the
+// SDK rejects the plan before any Vault call.
+func testGCPSecretsSyncDestinationConfig_conflictKmsKeyID(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+
+  kms_key_id          = "projects/my-project/locations/global/keyRings/kr/cryptoKeys/key"
+  global_kms_key      = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
+  locational_kms_keys = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+  }
+  replication_locations = ["us-central1"]
+}
+`, destName, project, credentials)
+}
+
+// testGCPSecretsSyncDestinationConfig_conflictReplicaRegions mixes the new replica_regions
+// field with all three deprecated fields. Each pairing is declared in ConflictsWith, so the
+// SDK rejects the plan before any Vault call.
+func testGCPSecretsSyncDestinationConfig_conflictReplicaRegions(credentials, project, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_gcp_destination" "test" {
+  name                 = "%s"
+  project_id           = "%s"
+  credentials          = <<CREDS
+%s
+CREDS
+  secret_name_template = "vault_{{ .MountAccessor }}_{{ .SecretPath }}"
+
+  replica_regions = {
+    "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
+  }
+  global_kms_key      = "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"
   locational_kms_keys = {
     "us-central1" = "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"
   }
