@@ -149,6 +149,49 @@ func TestCertAuthBackend(t *testing.T) {
 	})
 }
 
+func TestCertAuthBackend_AllowedCommonNamesDrift(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
+	name := acctest.RandomWithPrefix("tf-test-cert-name")
+	resourceName := "vault_cert_auth_backend_role.test"
+	expectedCommonName := "expected.example.com"
+	driftedCommonName := "drifted.example.com"
+	config := testCertAuthBackendConfig_allowedCommonNames(backend, name, expectedCommonName)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedCommonNames+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedCommonNames+".*", expectedCommonName),
+					testCertAuthBackendCheck_attrs(resourceName, backend, name),
+				),
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					path := certCertResourcePath(backend, name)
+					data := map[string]interface{}{
+						consts.FieldAllowedCommonNames: []string{driftedCommonName},
+					}
+					if _, err := client.Logical().Write(path, data); err != nil {
+						t.Fatalf("failed to update allowed common names for cert auth backend role %q: %s", path, err)
+					}
+				},
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedCommonNames+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedCommonNames+".*", expectedCommonName),
+					testCertAuthBackendCheck_attrs(resourceName, backend, name),
+				),
+			},
+		},
+	})
+}
+
 func TestCertAuthBackend_OCSP(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
 	name := acctest.RandomWithPrefix("tf-test-cert-name")
@@ -323,6 +366,7 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 		attrs := map[string]string{
 			consts.FieldName:                       consts.FieldDisplayName,
 			consts.FieldAllowedNames:               consts.FieldAllowedNames,
+			consts.FieldAllowedCommonNames:         consts.FieldAllowedCommonNames,
 			consts.FieldAllowedDNSSans:             consts.FieldAllowedDNSSans,
 			consts.FieldAllowedEmailSans:           consts.FieldAllowedEmailSans,
 			consts.FieldAllowedURISans:             consts.FieldAllowedURISans,
@@ -343,7 +387,7 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 				VaultAttr:    v,
 			}
 			switch k {
-			case TokenFieldPolicies, consts.FieldAllowedNames, consts.FieldAllowedOrganizationalUnits:
+			case TokenFieldPolicies, consts.FieldAllowedNames, consts.FieldAllowedCommonNames, consts.FieldAllowedOrganizationalUnits:
 				ta.AsSet = true
 			}
 
@@ -378,6 +422,25 @@ EOF
 `, backend, name, certificate, util.ArrayToTerraformList(allowedNames), util.ArrayToTerraformList(allowedOrgUnits), extraConfig)
 
 	return config
+}
+
+func testCertAuthBackendConfig_allowedCommonNames(backend, name, allowedCommonName string) string {
+	return fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = %q
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                 = %q
+    certificate          = <<EOF
+%s
+EOF
+    allowed_common_names = [%q]
+    backend              = vault_auth_backend.cert.path
+}
+`, backend, name, testCertificate, allowedCommonName)
 }
 
 func testCertAuthBackendConfig_unset(backend, name, certificate string, allowedNames []string) string {

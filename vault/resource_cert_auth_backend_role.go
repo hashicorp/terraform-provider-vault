@@ -369,6 +369,17 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_common_names"] != nil {
+		d.Set("allowed_common_names",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_common_names"].([]interface{})))
+	} else {
+		d.Set("allowed_common_names",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
 	if resp.Data["allowed_dns_sans"] != nil {
 		d.Set("allowed_dns_sans",
 			schema.NewSet(
