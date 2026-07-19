@@ -144,6 +144,67 @@ func TestAccDatabaseSecretBackendConnection_cassandra(t *testing.T) {
 	})
 }
 
+// TestAccDatabaseSecretBackendConnection_cassandra_password_wo tests that the
+// write-only attribute `password_wo` works as expected for the cassandra engine.
+//
+// To run locally you will need to set the following env vars:
+//   - CASSANDRA_HOST
+//   - CASSANDRA_USERNAME
+//   - CASSANDRA_PASSWORD
+func TestAccDatabaseSecretBackendConnection_cassandra_password_wo(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineCassandra)
+
+	// TODO: make these fatal once we auto provision the required test infrastructure.
+	values := testutil.SkipTestEnvUnset(t, "CASSANDRA_HOST")
+	host := values[0]
+
+	username := os.Getenv("CASSANDRA_USERNAME")
+	password := os.Getenv("CASSANDRA_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineCassandra.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				// password and password_wo are mutually exclusive
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_passwordConflict(name, backend, host, username),
+				ExpectError: regexp.MustCompile("conflicts with"),
+			},
+			{
+				// password_wo_version requires password_wo
+				Config:      testAccDatabaseSecretBackendConnectionConfig_cassandra_versionWithoutWO(name, backend, host, username, 1),
+				ExpectError: regexp.MustCompile("must be specified"),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra_writeOnly(name, backend, host, username, password, 1),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.hosts.#", "1"),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.hosts.0", host),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.password_wo_version", "1"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_cassandra_writeOnly(name, backend, host, username, password, 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				// successful connection guarantees that password_wo was re-sent on the version bump
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "cassandra.0.password_wo_version", "2"),
+				),
+			},
+		},
+	})
+}
+
 // TestAccDatabaseSecretBackendConnection_cassandraProtocol tests cassandra DB connection when optional fields are ommitted
 func TestAccDatabaseSecretBackendConnection_cassandraProtocol(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineCassandra)
@@ -1934,6 +1995,75 @@ func testAccDatabaseSecretBackendConnectionConfig_cassandra(name, path, host, us
 		}
 	}
 	`, path, name, skipStaticLine, host, username, password, timeout)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_writeOnly(name, path, host, username, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+	path = "%s"
+	type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+	backend = vault_mount.db.path
+	name = "%s"
+	allowed_roles = ["dev", "prod"]
+	verify_connection = true
+
+	cassandra {
+		hosts               = ["%s"]
+		username            = "%s"
+		password_wo         = "%s"
+		password_wo_version = %d
+		tls                 = false
+		protocol_version    = 4
+	}
+}
+`, path, name, host, username, password, version)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_passwordConflict(name, path, host, username string) string {
+	// values are dummies: this config fails validation before any connection
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+	path = "%s"
+	type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+	backend = vault_mount.db.path
+	name = "%s"
+	allowed_roles = ["dev", "prod"]
+
+	cassandra {
+		hosts       = ["%s"]
+		username    = "%s"
+		password    = "test-password"
+		password_wo = "test-password"
+	}
+}
+`, path, name, host, username)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_cassandra_versionWithoutWO(name, path, host, username string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+	path = "%s"
+	type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+	backend = vault_mount.db.path
+	name = "%s"
+	allowed_roles = ["dev", "prod"]
+
+	cassandra {
+		hosts               = ["%s"]
+		username            = "%s"
+		password_wo_version = %d
+	}
+}
+`, path, name, host, username, version)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_cassandraProtocol(name, path, host, username, password string) string {
