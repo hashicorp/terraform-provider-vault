@@ -7,6 +7,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `cassandra` engine to set the password without storing it in state. ([#2968](https://github.com/hashicorp/terraform-provider-vault/pull/2968))
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
 
 BUG FIXES:
