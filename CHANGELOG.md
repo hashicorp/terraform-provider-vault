@@ -3,12 +3,18 @@
 FEATURES:
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
+* Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
+
+IMPROVEMENTS:
+
+* `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
 
 * **Autosnapshot support for AWS IRSA**: Added documentation for IRSA usage per changes in Vault. IRSA feature requires Vault 2.1.0+
 
 BUG FIXES:
 
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
+* `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2801](https://github.com/hashicorp/terraform-provider-vault/pull/2801))
 
 ## 5.10.1 (June 26, 2026)
 
