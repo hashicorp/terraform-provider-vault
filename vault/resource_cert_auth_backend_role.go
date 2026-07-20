@@ -5,7 +5,9 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/go-cty/cty"
@@ -17,6 +19,9 @@ import (
 )
 
 var (
+	certAuthBackendRoleBackendFromPathRegex = regexp.MustCompile("^auth/(.+)/certs/[^/]+$")
+	certAuthBackendRoleNameFromPathRegex    = regexp.MustCompile("^auth/.+/certs/([^/]+)$")
+
 	certAuthStringFields = []string{
 		consts.FieldDisplayName,
 		consts.FieldOCSPCACertificates,
@@ -63,6 +68,9 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Type:     schema.TypeString,
 			Required: true,
 			ForceNew: true,
+			StateFunc: func(v interface{}) string {
+				return strings.Trim(v.(string), "/")
+			},
 		},
 		consts.FieldCertificate: {
 			Type:          schema.TypeString,
@@ -217,12 +225,37 @@ func certAuthBackendRoleResource() *schema.Resource {
 		UpdateContext: certAuthResourceUpdate,
 		ReadContext:   provider.ReadContextWrapper(certAuthResourceRead),
 		DeleteContext: certAuthResourceDelete,
-		Schema:        fields,
+		Importer: &schema.ResourceImporter{
+			StateContext: schema.ImportStatePassthroughContext,
+		},
+		Schema: fields,
 	}
 }
 
 func certCertResourcePath(backend, name string) string {
 	return "auth/" + strings.Trim(backend, "/") + "/certs/" + strings.Trim(name, "/")
+}
+
+func certAuthBackendRoleNameFromPath(path string) (string, error) {
+	if !certAuthBackendRoleNameFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no role found")
+	}
+	res := certAuthBackendRoleNameFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for role", len(res))
+	}
+	return res[1], nil
+}
+
+func certAuthBackendRoleBackendFromPath(path string) (string, error) {
+	if !certAuthBackendRoleBackendFromPathRegex.MatchString(path) {
+		return "", fmt.Errorf("no backend found")
+	}
+	res := certAuthBackendRoleBackendFromPathRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for backend", len(res))
+	}
+	return res[1], nil
 }
 
 func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -367,6 +400,15 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 		return diag.FromErr(e)
 	}
 	path := d.Id()
+	backend, err := certAuthBackendRoleBackendFromPath(path)
+	if err != nil {
+		return diag.Errorf("invalid path %q for cert auth backend role: %s", path, err)
+	}
+
+	name, err := certAuthBackendRoleNameFromPath(path)
+	if err != nil {
+		return diag.Errorf("invalid path %q for cert auth backend role: %s", path, err)
+	}
 
 	log.Printf("[DEBUG] Reading cert %q", path)
 	resp, err := client.Logical().Read(path)
@@ -379,6 +421,13 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 		log.Printf("[WARN] cert %q not found, removing from state", path)
 		d.SetId("")
 		return nil
+	}
+
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		return diag.FromErr(err)
+	}
+	if err := d.Set(consts.FieldName, name); err != nil {
+		return diag.FromErr(err)
 	}
 
 	if err := readTokenFields(d, resp); err != nil {
@@ -395,6 +444,17 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 				schema.HashString, resp.Data["allowed_names"].([]interface{})))
 	} else {
 		d.Set("allowed_names",
+			schema.NewSet(
+				schema.HashString, []interface{}{}))
+	}
+
+	// Vault sometimes returns these as null instead of an empty list.
+	if resp.Data["allowed_common_names"] != nil {
+		d.Set("allowed_common_names",
+			schema.NewSet(
+				schema.HashString, resp.Data["allowed_common_names"].([]interface{})))
+	} else {
+		d.Set("allowed_common_names",
 			schema.NewSet(
 				schema.HashString, []interface{}{}))
 	}
