@@ -75,6 +75,111 @@ bwvTJuiSbAHkhG+eM/04PpWPMo6skek10KmIBvGveHM8R89gbA1Fgw==
 
 const testBase64PEM = `MIIDIzCCAgugAwIBAgIJAIxJbvl6PnmvMA0GCSqGSIb3DQEBBQUAMBUxEzARBgNVBAMTClZhdWx0IFRlc3QwHhcNMTgwNTA5MTcyMjU0WhcNMjgwNTA2MTcyMjU0WjAVMRMwEQYDVQQDEwpWYXVsdCBUZXN0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxZj/1W69FiancHSEbMhfL0KZvftNksIN2rsMHhVkLDSn7KZyqlVhSOmygARFVmSwi5AO894FAuJU7L/RDcBD6mI3lTzDokeuRoRMpwbNg2aR+VNQaQpdHbLFm3xTO1na7wuxO4F7tDzLQRKzO0wSmqBhXXdJsoTG97mA8Gq5tAR20Uz8vWh3PI8taFG6aSuL7rfm+O3iMoCPTj3DofUENfnd0ZxlXpR/X7Z1iQej5+jXIn0ygoXxc07rfPd6J2jxz0lWL95Q65QWBSaKKNjWHaShSsqGe8KLZu9BFp20+M4Y8fd40B7+mlWk17nUdqvwZtnNL1qf+t0SFFhueQY+4wIDAQABo3YwdDAdBgNVHQ4EFgQUoTWVof3QQakI0Xfamu5nJglXUwswRQYDVR0jBD4wPIAUoTWVof3QQakI0Xfamu5nJglXUwuhGaQXMBUxEzARBgNVBAMTClZhdWx0IFRlc3SCCQCMSW75ej55rzAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IBAQDFmMBq5s5vBHMrACXfgIBpZSSaiBXz8tVDaiYO5UfZsWqEIn61+NrgJT4Xvhba3VZgGkOLX/9CfnTXx9nq4qL2ht4my2QszXXBJyi0pB+0VIQhbRzjbrYeQn8uCmN5DLph3sA+vJuUWvR7l6h1zUjzRrXWLFQ+qQxtyYT18fgO3uttnbuzptDT23RDRySaoYLpeUFY47RIzFmuIO8bNsh8h5ymHNkVXrrvvqDIxIPD/M21z4ZlZSbsokyVcsGKbF87xv8SFXj5GbtZ7UI0qVYr9zk/Y090Qv1aypM1k5jHWSBCixTrUFtWENQYLYhh2bMP1uJ4UMxSNJXCthRASqNF`
 
+func TestCertAuthBackendRolePathMatching(t *testing.T) {
+	tests := map[string]struct {
+		path        string
+		wantBackend string
+		wantName    string
+		wantErr     bool
+	}{
+		"default backend": {
+			path:        "auth/cert/certs/example",
+			wantBackend: "cert",
+			wantName:    "example",
+		},
+		"nested backend": {
+			path:        "auth/custom/cert/certs/service.example",
+			wantBackend: "custom/cert",
+			wantName:    "service.example",
+		},
+		"final delimiter": {
+			path:        "auth/custom/certs/backend/certs/example",
+			wantBackend: "custom/certs/backend",
+			wantName:    "example",
+		},
+		"missing auth prefix": {
+			path:    "cert/certs/example",
+			wantErr: true,
+		},
+		"empty backend": {
+			path:    "auth//certs/example",
+			wantErr: true,
+		},
+		"missing certs delimiter": {
+			path:    "auth/cert/example",
+			wantErr: true,
+		},
+		"empty role name": {
+			path:    "auth/cert/certs/",
+			wantErr: true,
+		},
+		"role name with path separator": {
+			path:    "auth/cert/certs/example/child",
+			wantErr: true,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			backend, backendErr := certAuthBackendRoleBackendFromPath(tt.path)
+			role, roleErr := certAuthBackendRoleNameFromPath(tt.path)
+			if tt.wantErr {
+				if backendErr == nil || roleErr == nil {
+					t.Fatalf("expected path %q to be rejected", tt.path)
+				}
+				return
+			}
+
+			if backendErr != nil {
+				t.Fatalf("unexpected backend error: %s", backendErr)
+			}
+			if backend != tt.wantBackend {
+				t.Fatalf("expected backend %q, got %q", tt.wantBackend, backend)
+			}
+
+			if roleErr != nil {
+				t.Fatalf("unexpected role error: %s", roleErr)
+			}
+			if role != tt.wantName {
+				t.Fatalf("expected role name %q, got %q", tt.wantName, role)
+			}
+		})
+	}
+}
+
+func TestAccCertAuthBackendRole_import(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth") + "/nested"
+	name := acctest.RandomWithPrefix("tf-test-cert-name") + ".example"
+	configuredName := "/" + name + "/"
+	allowedNames := []string{"foo.example.org", "bar.example.org"}
+	allowedOrgUnits := []string{"engineering", "security"}
+	resourceName := "vault_cert_auth_backend_role.test"
+	config := testCertAuthBackendConfig_basic(backend, configuredName, testCertificate, "", allowedNames, allowedOrgUnits)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenTTL, "300"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenMaxTTL, "600"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+		},
+	})
+}
+
 func TestCertAuthBackend(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
 	name := acctest.RandomWithPrefix("tf-test-cert-name")

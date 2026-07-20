@@ -7,6 +7,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_cert_auth_backend_role`: Added import support for existing certificate auth roles. ([#2970](https://github.com/hashicorp/terraform-provider-vault/pull/2970))
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
 
 BUG FIXES:
