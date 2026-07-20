@@ -69,7 +69,7 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion210), nil
+					return !meta.IsAPISupported(provider.VaultVersion205), nil
 				},
 				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath,
 					`format = "pkcs12_bundle"
@@ -84,7 +84,7 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion210), nil
+					return !meta.IsAPISupported(provider.VaultVersion205), nil
 				},
 				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath,
 					`format       = "jks_bundle"

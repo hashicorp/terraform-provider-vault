@@ -92,7 +92,7 @@ func pkiSecretBackendCertResource() *schema.Resource {
 			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion210),
+				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion205),
 				ForceNew:     true,
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, false),
@@ -278,7 +278,7 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	// Only add additional format parameters if supported
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion205) {
 		certAPIFields = append(certAPIFields,
 			consts.FieldPKCS12Password,
 			consts.FieldPKCS12Encoder,

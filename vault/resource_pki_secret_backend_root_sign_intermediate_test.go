@@ -292,7 +292,7 @@ func TestPkiSecretBackendRootSignIntermediate_pkcs12_bundle(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion205)
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -321,7 +321,7 @@ func TestPkiSecretBackendRootSignIntermediate_jks_bundle(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion205)
 		},
 		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
 		Steps: []resource.TestStep{

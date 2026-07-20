@@ -150,7 +150,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion210), nil
+					return !meta.IsAPISupported(provider.VaultVersion205), nil
 				},
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
 					certFields{format: "pkcs12_bundle", pkcs12Password: "123-secure-password", pkcs12Encoder: "modern2023"}),
@@ -163,7 +163,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion210), nil
+					return !meta.IsAPISupported(provider.VaultVersion205), nil
 				},
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
 					certFields{format: "jks_bundle", jksPassword: "super-secure-password", jksAlias: "myapp"}),
@@ -184,7 +184,7 @@ func TestPkiSecretBackendCert_customizeDiffFormatVersionGate(t *testing.T) {
 
 	skipVersion210OrLater := func() (bool, error) {
 		meta := testProvider.Meta().(*provider.ProviderMeta)
-		return meta.IsAPISupported(provider.VaultVersion210), nil
+		return meta.IsAPISupported(provider.VaultVersion205), nil
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -195,12 +195,12 @@ func TestPkiSecretBackendCert_customizeDiffFormatVersionGate(t *testing.T) {
 			{
 				SkipFunc:    skipVersion210OrLater,
 				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "pkcs12_bundle"}),
-				ExpectError: regexp.MustCompile(`"pkcs12_bundle" format is only supported on Vault 2.1.0 or later`),
+				ExpectError: regexp.MustCompile(`"pkcs12_bundle" format is only supported on Vault 2.0.5 or later`),
 			},
 			{
 				SkipFunc:    skipVersion210OrLater,
 				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "jks_bundle"}),
-				ExpectError: regexp.MustCompile(`"jks_bundle" format is only supported on Vault 2.1.0 or later`),
+				ExpectError: regexp.MustCompile(`"jks_bundle" format is only supported on Vault 2.0.5 or later`),
 			},
 		},
 	})

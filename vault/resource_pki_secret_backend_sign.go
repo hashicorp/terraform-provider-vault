@@ -242,7 +242,7 @@ func pkiSecretBackendSignCreate(ctx context.Context, d *schema.ResourceData, met
 	}
 
 	// Only add additional format parameters if supported
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion205) {
 		signAPIFields = append(signAPIFields,
 			consts.FieldPKCS12Password,
 			consts.FieldPKCS12Encoder,
