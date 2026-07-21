@@ -18,10 +18,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-// tfseRotationVersion is the minimum Vault version that supports root-token
-// rotation configuration on the Terraform secrets engine.
-var tfseRotationVersion = provider.VaultVersion210
-
 func terraformCloudSecretBackendResource() *schema.Resource {
 	r := provider.MustAddMountMigrationSchema(&schema.Resource{
 		CreateContext: terraformCloudSecretBackendCreate,
@@ -131,7 +127,7 @@ func terraformCloudSecretBackendCreate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(e)
 	}
 
-	useRotationFields := provider.IsAPISupported(meta, tfseRotationVersion)
+	useRotationFields := provider.IsAPISupported(meta, provider.VaultVersion210)
 	isEnterprise := provider.IsEnterpriseSupported(meta)
 
 	backend := d.Get(consts.FieldBackend).(string)
@@ -232,7 +228,7 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
-	if provider.IsAPISupported(meta, tfseRotationVersion) {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
 		if v, ok := secret.Data[consts.FieldExplicitMaxTTL]; ok {
 			if err := d.Set(consts.FieldExplicitMaxTTL, v); err != nil {
 				return diag.FromErr(err)
@@ -268,7 +264,7 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	useRotationFields := provider.IsAPISupported(meta, tfseRotationVersion)
+	useRotationFields := provider.IsAPISupported(meta, provider.VaultVersion210)
 	isEnterprise := provider.IsEnterpriseSupported(meta)
 
 	rotationFieldsChanged := useRotationFields && isEnterprise &&
