@@ -279,9 +279,13 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 	if d.HasChange(consts.FieldAddress) || d.HasChange(consts.FieldBasePath) ||
 		explicitMaxTTLChanged || rotationFieldsChanged {
 		log.Printf("[DEBUG] Updating Terraform Cloud configuration at %q", configPath)
-		data := map[string]interface{}{
-			consts.FieldAddress:  d.Get(consts.FieldAddress).(string),
-			consts.FieldBasePath: d.Get(consts.FieldBasePath).(string),
+		data := map[string]interface{}{}
+
+		if d.HasChange(consts.FieldAddress) {
+			data[consts.FieldAddress] = d.Get(consts.FieldAddress).(string)
+		}
+		if d.HasChange(consts.FieldBasePath) {
+			data[consts.FieldBasePath] = d.Get(consts.FieldBasePath).(string)
 		}
 
 		if explicitMaxTTLChanged {
@@ -295,11 +299,15 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 			return diag.Errorf("Error configuring Terraform Cloud configuration for %q: %s", backend, err)
 		}
 		log.Printf("[DEBUG] Updated Terraform Cloud configuration at %q", configPath)
-		if err := d.Set(consts.FieldAddress, data[consts.FieldAddress]); err != nil {
-			return diag.FromErr(err)
+		if d.HasChange(consts.FieldAddress) {
+			if err := d.Set(consts.FieldAddress, data[consts.FieldAddress]); err != nil {
+				return diag.FromErr(err)
+			}
 		}
-		if err := d.Set(consts.FieldBasePath, data[consts.FieldBasePath]); err != nil {
-			return diag.FromErr(err)
+		if d.HasChange(consts.FieldBasePath) {
+			if err := d.Set(consts.FieldBasePath, data[consts.FieldBasePath]); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
