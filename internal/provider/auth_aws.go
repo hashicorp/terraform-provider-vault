@@ -71,8 +71,9 @@ func GetAWSLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: `The Vault role to use when logging into Vault.`,
 			},
 			// static credential fields
@@ -162,10 +163,11 @@ type AuthLoginAWS struct {
 }
 
 func (l *AuthLoginAWS) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
-	defaults := l.getDefaults()
 	if err := l.AuthLoginCommon.Init(d, authField,
 		func(data *schema.ResourceData, params map[string]interface{}) error {
-			return l.setDefaultFields(d, defaults, params)
+			// getDefaults is called here (rather than before Init) so that
+			// l.authField is populated for authLoginEnvVar-generated env vars.
+			return l.setDefaultFields(d, l.getDefaults(), params)
 		},
 		func(data *schema.ResourceData, params map[string]interface{}) error {
 			return l.checkRequiredFields(d, params, consts.FieldRole)
@@ -347,6 +349,26 @@ func (l *AuthLoginAWS) getDefaults() authDefaults {
 		{
 			field:      consts.FieldAWSRegion,
 			envVars:    []string{envVarAWSRegion, envVarAWSDefaultRegion},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldRole,
+			envVars:    []string{authLoginEnvVar(l.authField, consts.FieldRole)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSSTSEndpoint,
+			envVars:    []string{authLoginEnvVar(l.authField, consts.FieldAWSSTSEndpoint)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAWSIAMEndpoint,
+			envVars:    []string{authLoginEnvVar(l.authField, consts.FieldAWSIAMEndpoint)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldHeaderValue,
+			envVars:    []string{authLoginEnvVar(l.authField, consts.FieldHeaderValue)},
 			defaultVal: "",
 		},
 	}

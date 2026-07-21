@@ -90,6 +90,79 @@ func TestAuthLoginJWT_Init(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:      "role-with-env",
+			authField: consts.FieldAuthLoginJWT,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginJWT: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+						consts.FieldJWT:       "jwt1",
+					},
+				},
+			},
+			envVars: map[string]string{
+				authLoginEnvVar(consts.FieldAuthLoginJWT, consts.FieldRole): "alice",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:                   "ns1",
+				consts.FieldUseRootNamespace:            false,
+				consts.FieldMount:                       consts.MountTypeJWT,
+				consts.FieldRole:                        "alice",
+				consts.FieldJWT:                         "jwt1",
+				consts.FieldDistributedClaimAccessToken: "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "mount-with-env",
+			authField: consts.FieldAuthLoginJWT,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginJWT: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+						consts.FieldRole:      "alice",
+						consts.FieldJWT:       "jwt1",
+					},
+				},
+			},
+			envVars: map[string]string{
+				authLoginEnvVar(consts.FieldAuthLoginJWT, consts.FieldMount): "custom-jwt",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:                   "ns1",
+				consts.FieldUseRootNamespace:            false,
+				consts.FieldMount:                       "custom-jwt",
+				consts.FieldRole:                        "alice",
+				consts.FieldJWT:                         "jwt1",
+				consts.FieldDistributedClaimAccessToken: "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "namespace-with-env",
+			authField: consts.FieldAuthLoginJWT,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginJWT: []interface{}{
+					map[string]interface{}{
+						consts.FieldRole: "alice",
+						consts.FieldJWT:  "jwt1",
+					},
+				},
+			},
+			envVars: map[string]string{
+				authLoginEnvVar(consts.FieldAuthLoginJWT, consts.FieldNamespace): "ns-from-env",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:                   "ns-from-env",
+				consts.FieldUseRootNamespace:            false,
+				consts.FieldMount:                       consts.MountTypeJWT,
+				consts.FieldRole:                        "alice",
+				consts.FieldJWT:                         "jwt1",
+				consts.FieldDistributedClaimAccessToken: "",
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginJWT,
 			expectParams: nil,

@@ -48,19 +48,22 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 					"created automatically",
 			},
 			consts.FieldRole: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldSubscriptionID: {
-				Type:     schema.TypeString,
-				Required: true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional: true,
 				Description: "The subscription ID for the machine that generated the MSI token. " +
 					"This information can be obtained through instance metadata.",
 			},
 			consts.FieldResourceGroupName: {
-				Type:     schema.TypeString,
-				Required: true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional: true,
 				Description: "The resource group for the machine that generated the MSI token. " +
 					"This information can be obtained through instance metadata.",
 			},
@@ -128,8 +131,33 @@ func (l *AuthLoginAzure) Init(d *schema.ResourceData, authField string) (AuthLog
 		},
 		{
 			field:      consts.FieldScope,
-			envVars:    []string{""},
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldScope)},
 			defaultVal: defaultAzureScope,
+		},
+		{
+			field:      consts.FieldRole,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldRole)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldSubscriptionID,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldSubscriptionID)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldResourceGroupName,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldResourceGroupName)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldTenantID,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldTenantID)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldClientID,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldClientID)},
+			defaultVal: "",
 		},
 	}
 	if err := l.AuthLoginCommon.Init(d, authField,
@@ -196,7 +224,7 @@ func (l *AuthLoginAzure) getJWT(ctx context.Context) (string, error) {
 
 	// attempt to get the token from Azure
 	credOpts := &azidentity.ManagedIdentityCredentialOptions{}
-	if v, ok := l.params[consts.FieldClientID]; ok {
+	if v, ok := l.params[consts.FieldClientID]; ok && v.(string) != "" {
 		credOpts.ID = azidentity.ClientID(v.(string))
 	}
 
@@ -213,7 +241,7 @@ func (l *AuthLoginAzure) getJWT(ctx context.Context) (string, error) {
 	tOpts := policy.TokenRequestOptions{
 		Scopes: scopes,
 	}
-	if v, ok := l.params[consts.FieldTenantID]; ok {
+	if v, ok := l.params[consts.FieldTenantID]; ok && v.(string) != "" {
 		tOpts.TenantID = v.(string)
 	}
 

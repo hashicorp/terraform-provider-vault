@@ -50,8 +50,9 @@ func GetGCPLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldJWT: {
@@ -96,6 +97,16 @@ func (l *AuthLoginGCP) Init(d *schema.ResourceData, authField string) (AuthLogin
 		{
 			field:      consts.FieldCredentials,
 			envVars:    []string{consts.EnvVarGoogleApplicationCreds},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldRole,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldRole)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldServiceAccount,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldServiceAccount)},
 			defaultVal: "",
 		},
 	}
@@ -190,7 +201,7 @@ func (l *AuthLoginGCP) getJWT(ctx context.Context) (string, error) {
 		}
 
 		var serviceAccount string
-		if v, ok := l.params[consts.FieldServiceAccount]; ok {
+		if v, ok := l.params[consts.FieldServiceAccount]; ok && v.(string) != "" {
 			serviceAccount = v.(string)
 		} else if v, ok := m[consts.FieldClientEmail]; ok {
 			serviceAccount = v.(string)

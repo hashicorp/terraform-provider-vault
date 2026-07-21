@@ -8,6 +8,7 @@ FEATURES:
 IMPROVEMENTS:
 
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
+* Provider `auth_login_*` blocks: Add support for configuring most auth login fields (including the common `mount`, `namespace`, and `use_root_namespace` fields, and method-specific fields such as `role`) via conventionally-named `TERRAFORM_VAULT_AUTH_<METHOD>_<FIELD>` environment variables. Explicit configuration values and existing dedicated environment variables continue to take precedence.
 
 BUG FIXES:
 
