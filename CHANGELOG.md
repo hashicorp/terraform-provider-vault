@@ -4,7 +4,7 @@ FEATURES:
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
 
-* **Autosnapshot support for AWS IRSA**: Added documentation for IRSA usage per changes in Vault. IRSA feature requires Vault 2.1.0+
+* **Autosnapshot support for AWS IRSA**: Added documentation for IRSA usage per changes in Vault ([hashicorp/raft-snapshotagent#49](https://github.com/hashicorp/raft-snapshotagent/pull/49)). IRSA feature requires Vault 2.1.0+
 
 BUG FIXES:
 
