@@ -215,6 +215,11 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 	if err != nil {
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
+	if secret == nil {
+		log.Printf("[WARN] No Terraform Cloud config found at %q, removing from state", configPath)
+		d.SetId("")
+		return nil
+	}
 
 	if v, ok := secret.Data[consts.FieldAddress]; ok {
 		if err := d.Set(consts.FieldAddress, v); err != nil {
