@@ -75,7 +75,6 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Optional: true,
-			Computed: true,
 		},
 		consts.FieldAllowedCommonNames: {
 			Type: schema.TypeSet,
@@ -83,7 +82,6 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Optional: true,
-			Computed: true,
 		},
 		consts.FieldAllowedDNSSans: {
 			Type: schema.TypeSet,
@@ -91,7 +89,6 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Optional: true,
-			Computed: true,
 		},
 		consts.FieldAllowedEmailSans: {
 			Type: schema.TypeSet,
@@ -99,7 +96,6 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Optional: true,
-			Computed: true,
 		},
 		consts.FieldAllowedURISans: {
 			Type: schema.TypeSet,
@@ -107,7 +103,6 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Optional: true,
-			Computed: true,
 		},
 		consts.FieldAllowedOrganizationalUnits: {
 			Type: schema.TypeSet,
@@ -122,7 +117,6 @@ func certAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Optional: true,
-			Computed: true,
 		},
 		consts.FieldDisplayName: {
 			Type:     schema.TypeString,
@@ -293,14 +287,10 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
 			continue
 		}
-		// special handling for allowed_organizational_units since unsetting
-		// this in Vault has special meaning (allow all OUs)
-		if k == consts.FieldAllowedOrganizationalUnits {
-			if d.HasChange(k) {
-				data[k] = d.Get(k).(*schema.Set).List()
-			}
-		} else if v, ok := d.GetOk(k); ok {
+		if v, ok := d.GetOk(k); ok {
 			data[k] = v.(*schema.Set).List()
+		} else if d.HasChange(k) {
+			data[k] = d.Get(k).(*schema.Set).List()
 		}
 	}
 
