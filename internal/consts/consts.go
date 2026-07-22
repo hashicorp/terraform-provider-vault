@@ -434,6 +434,10 @@ const (
 	FieldAltNames                           = "alt_names"
 	FieldFormat                             = "format"
 	FieldPrivateKeyFormat                   = "private_key_format"
+	FieldPKCS12Password                     = "pkcs12_password"
+	FieldPKCS12Encoder                      = "pkcs12_encoder"
+	FieldJKSPassword                        = "jks_password"
+	FieldJKSPrivateKeyAlias                 = "jks_private_key_alias"
 	FieldOu                                 = "ou"
 	FieldIssuingCA                          = "issuing_ca"
 	FieldSerial                             = "serial"
@@ -1001,6 +1005,7 @@ const (
 	VaultVersion200  = "2.0.0"
 	VaultVersion201  = "2.0.1"
 	VaultVersion203  = "2.0.3"
+	VaultVersion205  = "2.0.5"
 	VaultVersion210  = "2.1.0"
 
 	/*

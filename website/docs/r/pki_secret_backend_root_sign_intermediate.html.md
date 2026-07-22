@@ -51,6 +51,14 @@ The following arguments are supported:
 
 * `format` - (Optional) The format of data
 
+* `pkcs12_password` - (Optional) Password for encrypting the PKCS#12 archive when format is set to "pkcs12_bundle". If not provided, defaults to "changeit". It is recommended to use the default password and protect the file using other means or use a high-entropy password. Requires Vault 2.0.5+.
+
+* `pkcs12_encoder` - (Optional) Encoder profile to use for PKCS#12 archives when format is set to "pkcs12_bundle". Valid values are "modern2026" and "modern2023". Defaults to "modern2026", which uses the newer PKCS#12 integrity format (PBMAC1). Requires Vault 2.0.5+.
+
+**NOTE**: The `jks_bundle` format is provided only for compatibility with legacy systems and should be avoided for new usage. Prefer `pkcs12_bundle`.
+
+* `jks_password` - (Optional) Password for encrypting the Java keystore when format is set to "jks_bundle". If not provided, defaults to "changeit". It is recommended to use the default password and protect the file using other means or use a high-entropy password. Requires Vault 2.0.5+.
+
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate
 
 * `key_usage` - (Optional) Specify the key usages to be added to the existing set of key usages ("CRL", "CertSign") on the generated certificate. Requires Vault 1.19.2+.

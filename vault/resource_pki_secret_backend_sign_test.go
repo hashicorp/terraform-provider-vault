@@ -23,7 +23,7 @@ import (
 )
 
 // TestPkiSecretBackendSign_basic tests the vault_pki_secret_backend_sign resource
-// including CSR signing and issuer references.
+// including CSR signing, issuer references, and format options (PKCS12, JKS).
 func TestPkiSecretBackendSign_basic(t *testing.T) {
 	rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 	intermediatePath := "pki-intermediate-" + strconv.Itoa(acctest.RandInt())
@@ -64,6 +64,34 @@ func TestPkiSecretBackendSign_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "remove_roots_from_chain", "true"),
 					resource.TestCheckResourceAttrSet(resourceName, "ca_chain.#"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion205), nil
+				},
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath,
+					`format = "pkcs12_bundle"
+					 pkcs12_password = "test-password-123"
+				   pkcs12_encoder = "modern2023"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pkcs12_bundle"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Password, "test-password-123"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Encoder, "modern2023"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion205), nil
+				},
+				Config: testPkiSecretBackendSignConfig_basic(rootPath, intermediatePath,
+					`format       = "jks_bundle"
+					 jks_password = "jks-secure-pass"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "jks-secure-pass"),
 				),
 			},
 		},

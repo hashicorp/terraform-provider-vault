@@ -4,12 +4,33 @@
 package vault
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+func pkiValidateFormatField(d *schema.ResourceDiff, meta interface{}) error {
+	if provider.IsAPISupported(meta, provider.VaultVersion205) {
+		return nil
+	}
+
+	format, ok := d.GetOk(consts.FieldFormat)
+	if !ok {
+		return nil
+	}
+
+	formatStr := format.(string)
+	switch formatStr {
+	case "pkcs12_bundle", "jks_bundle":
+		return fmt.Errorf("%q format is only supported on Vault %s or later", formatStr, consts.VaultVersion205)
+	default:
+		return nil
+	}
+}
 
 // pkiCertPlanAutoRenewal proposes automatic renewal during planning (if enabled)
 // because the Create and Read functions will both set renew_pending if
