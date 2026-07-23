@@ -6,7 +6,6 @@ package ephemeralsecrets
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -34,7 +34,6 @@ var NewAzureAccessTokenEphemeralResource = func() ephemeral.EphemeralResource {
 	return &AzureAccessTokenEphemeralResource{}
 }
 
-// COLE: This needed for request fields beforehand?
 // AzureAccessTokenEphemeralResource implements the methods that define this resource.
 type AzureAccessTokenEphemeralResource struct {
 	base.EphemeralResourceWithConfigure
@@ -138,7 +137,7 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	}
 
 	// Request the Azure access token from Vault
-	tokenResp, err := requestAzureAccessToken(ctx, cli, data.Mount.ValueString(), data.Role.ValueString(), data.Scope.ValueString())
+	tokenResp, err := requestAzureAccessToken(ctx, cli, data.Mount.ValueString(), data.Role.ValueString(), data.Scope.ValueString(), resp)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to get Azure access token", err.Error())
 		return
@@ -153,24 +152,30 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
-func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
+func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string, resp *ephemeral.OpenResponse) (*AzureAccessTokenAPIModel, error) {
 
-	path := fmt.Sprintf("%s/token/%s", strings.Trim(mount, "/"), strings.Trim(role, "/")) //COLE: Trim?
-	accessToken, err := cli.Logical().WriteWithContext(ctx, path, map[string]interface{}{
+	path := fmt.Sprintf("%s/token/%s", mount, role)
+	secret, err := cli.Logical().WriteWithContext(ctx, path, map[string]interface{}{
 		"scope": scope,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to write to Vault: %w", err)
 	}
 
-	if accessToken == nil {
-		return nil, fmt.Errorf("failed to obtain access token from Vault")
+	if secret == nil || secret.Auth == nil {
+		resp.Diagnostics.AddError(
+			"Azure access token request failed",
+			"No authentication data returned from Vault",
+		)
+		return nil, fmt.Errorf("no authentication data returned from Vault")
 	}
 
-	return &AzureAccessTokenAPIModel{
-		AccessToken:  accessToken.Auth.ClientToken,
-		TokenType:    "Bearer", //COLE: This is hardcoded for now, but we should get it from the response if possible
-		ExpiresIn:    3600,
-		ExtExpiresIn: 3600,
-	}, nil
+	var readResp AzureAccessTokenAPIModel
+	err = model.ToAPIModel(secret.Data, &readResp)
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+		return nil, fmt.Errorf("unable to translate Vault response data: %w", err)
+	}
+
+	return &readResp, nil
 }
