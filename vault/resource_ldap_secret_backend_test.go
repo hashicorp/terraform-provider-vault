@@ -399,8 +399,8 @@ func TestLDAPSecretBackendResource_autoUnlockSchema(t *testing.T) {
 	if !field.Optional {
 		t.Errorf("expected %q to be Optional", consts.FieldAutoUnlock)
 	}
-	if field.Default != false {
-		t.Errorf("expected %q default to be false, got %v", consts.FieldAutoUnlock, field.Default)
+	if !field.Computed {
+		t.Errorf("expected %q to be Computed", consts.FieldAutoUnlock)
 	}
 }
 
