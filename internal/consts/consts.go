@@ -866,6 +866,7 @@ const (
 	FieldRotateOnRead              = "rotate_on_read"
 	FieldRotateOnReadCooldown      = "rotate_on_read_cooldown"
 	FieldRotatedOnRead             = "rotated_on_read"
+	FieldAutoUnlock                = "auto_unlock"
 	FieldRotationPolicy            = "rotation_policy"
 	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
 	FieldSecretsWOVersion          = "secrets_wo_version"

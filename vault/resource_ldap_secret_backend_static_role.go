@@ -78,6 +78,16 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "Minimum seconds between rotate-on-read rotations for this role. Overrides the engine-level default when set. Requires Vault Enterprise ≥ 2.1.0.",
 		},
+		consts.FieldAutoUnlock: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+			Description: "Overrides the mount-level auto_unlock setting for this role. " +
+				"When true, Vault unlocks the account automatically after a successful rotation. " +
+				"When false, disables automatic unlock even if the mount enables it. " +
+				"When unset, inherits the mount-level setting. " +
+				"Currently only the Active Directory schema is supported. Requires Vault 2.1+",
+		},
 	}
 	resource := &schema.Resource{
 		CreateContext: createUpdateLDAPStaticRoleResource,
@@ -162,6 +172,13 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 		}
 	}
 
+	// only send auto_unlock if explicitly set — avoids overwriting mount-level default with false
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		if d.HasChange(consts.FieldAutoUnlock) {
+			data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
+		}
+	}
+
 	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", rolePath, err))
 	}
@@ -217,6 +234,14 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		if v, ok := resp.Data[consts.FieldRotateOnReadCooldown]; ok {
 			if err := d.Set(consts.FieldRotateOnReadCooldown, v); err != nil {
 				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnReadCooldown, err)
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		if val, ok := resp.Data[consts.FieldAutoUnlock]; ok {
+			if err := d.Set(consts.FieldAutoUnlock, val); err != nil {
+				return diag.FromErr(fmt.Errorf("error setting auto unlock field '%s': %s", consts.FieldAutoUnlock, err))
 			}
 		}
 	}
