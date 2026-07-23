@@ -28,10 +28,11 @@ const (
 
 	// envAWSSecretsSyncOwnerTag is the environment variable used to inject an
 	// "Owner" custom tag into the AWS secrets sync destination acceptance test
-	// resources. When set, its value is applied as the value of the "Owner"
-	// custom tag on every destination created by these tests, which is required
-	// for permission issues encountered in doormat AWS account.
-	// When unset, no "Owner" tag is added and test behavior is unchanged.
+	// resources. Only valid when using static credentials. When set, its value is
+	// applied as the value of the "Owner" custom tag on every destination
+	// created by these tests, which is required for permission issues
+	// encountered in doormat AWS account. When unset, no "Owner" tag is added
+	// and test behavior is unchanged.
 	envAWSSecretsSyncOwnerTag = "TEST_AWS_SECRETS_SYNC_OWNER_TAG"
 
 	// awsSecretsSyncOwnerTagKey is the custom tag key used for the owner tag.

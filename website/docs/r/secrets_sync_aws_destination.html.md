@@ -155,15 +155,6 @@ The following arguments are supported:
   allowed IP addresses and ports. Defaults to `false`.
   **Requires Vault 1.19.0+**.
 
-### Encryption and Replication Configuration (Vault 2.1.0+)
-
-* `kms_key_id` - (Optional) Specifies the ARN or alias of the AWS KMS key used to encrypt synced secrets.
-  **Requires Vault 2.1.0+**.
-
-* `replica_regions` - (Optional) Map of AWS regions to KMS key ARN values for replica region encryption.
-  KMS key values are optional and may be set to an empty string.
-  **Requires Vault 2.1.0+**.
-
 ### Workload Identity Federation (Vault 2.0.0+)
 
 * `identity_token_audience_wo` - (Optional) The audience claim value for identity tokens. This is a write-only
@@ -185,6 +176,15 @@ The following arguments are supported:
 * `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key_wo` to track
   updates as `identity_token_key_wo` is a write-only field. Increment this field to update `identity_token_key_wo`.
   Required with `identity_token_key_wo`. **Requires Vault 2.0.0+**.
+
+### Encryption and Replication Configuration (Vault 2.1.0+)
+
+* `kms_key_id` - (Optional) Specifies the ARN or alias of the AWS KMS key used to encrypt synced secrets.
+  **Requires Vault 2.1.0+**.
+
+* `replica_regions` - (Optional) Map of AWS regions to KMS key ARN values for replica region encryption.
+  KMS key values are optional and may be set to an empty string.
+  **Requires Vault 2.1.0+**.
 
 ## Attributes Reference
 

@@ -220,7 +220,7 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 			consts.FieldKmsKeyID: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "KMS key ID for encryption.",
+				Description: "Specifies the ID of the GCP KMS key to be used to encrypt the secret.",
 				ConflictsWith: []string{
 					consts.FieldGlobalKmsKey,
 					consts.FieldLocationalKmsKeys,

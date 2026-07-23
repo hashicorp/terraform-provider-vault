@@ -430,42 +430,39 @@ func TestGCPSecretsSyncDestination_AdvancedFeatures(t *testing.T) {
 		})
 	}
 
-	// Vault 2.1.0+ features require a separate test or conditional checks
-	if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion210) {
-		resource.Test(t, resource.TestCase{
-			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-			PreCheck: func() {
-				acctestutil.TestAccPreCheck(t)
-				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
-			},
-			Steps: []resource.TestStep{
-				// Step 1: Test global encryption
-				{
-					Config: testGCPSecretsSyncDestinationConfig_encryptionKMSKeyID(credentials, project, destName+"-enc"),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldKmsKeyID, "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"),
-					),
-				},
-				testutil.GetImportTestStep(resourceName, false, nil,
-					consts.FieldCredentials,
-				),
-				// Step 2: Test replication with regional KMS Keys
-				{
-					Config: testGCPSecretsSyncDestinationConfig_replicationBasicRegionalKMSKeys(credentials, project, destName+"-rep-kms"),
-					Check: resource.ComposeTestCheckFunc(
-						resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".%", "2"),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-central1", "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"),
-						resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-east1", "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"),
-					),
-				},
-				testutil.GetImportTestStep(resourceName, false, nil,
-					consts.FieldCredentials,
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		Steps: []resource.TestStep{
+			// Step 1: Test global encryption
+			{
+				Config: testGCPSecretsSyncDestinationConfig_encryptionKMSKeyID(credentials, project, destName+"-enc"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKmsKeyID, "projects/my-project/locations/global/keyRings/my-keyring/cryptoKeys/my-key"),
 				),
 			},
-		})
-	}
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldCredentials,
+			),
+			// Step 2: Test replication with regional KMS Keys
+			{
+				Config: testGCPSecretsSyncDestinationConfig_replicationBasicRegionalKMSKeys(credentials, project, destName+"-rep-kms"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProjectID, project),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".%", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-central1", "projects/my-project/locations/us-central1/keyRings/kr/cryptoKeys/key"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldReplicaRegions+".us-east1", "projects/my-project/locations/us-east1/keyRings/kr/cryptoKeys/key"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldCredentials,
+			),
+		},
+	})
 }
 
 func TestGCPSecretsSyncDestination_NegativeTests(t *testing.T) {

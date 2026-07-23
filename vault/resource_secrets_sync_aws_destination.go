@@ -98,7 +98,7 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 			consts.FieldKmsKeyID: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Specifies the ARN or alias of the AWS KMS key to be used to encrypt the secret.",
+				Description: "Specifies the ARN of the AWS KMS key to be used to encrypt the secret.",
 			},
 			consts.FieldReplicaRegions: {
 				Type:        schema.TypeMap,
