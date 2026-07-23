@@ -113,6 +113,11 @@ The following arguments are supported:
   Acts as the default cooldown for all static roles that do not provide their own override.
   Requires Vault Enterprise 2.1.0+.
 
+* `auto_unlock` - (Optional) If true, Vault automatically attempts to unlock the admin managed LDAP account
+  after every successful static-role password rotation. Applies to all static roles on this mount
+  unless overridden at the role level. Defaults to false. Active Directory schema only.
+  Requires Vault 2.1+.
+
 ### Common Mount Arguments
 These arguments are common across all resources that mount a secret engine.
 
