@@ -154,6 +154,7 @@ func (r *GCPOAuth2AccessTokenEphemeralResource) Open(ctx context.Context, req ep
 		return
 	}
 
+	//COLE: 1
 	// Validate that exactly one of roleset, static_account, or impersonated_account is provided
 	hasRoleset := !data.Roleset.IsNull() && data.Roleset.ValueString() != ""
 	hasStaticAccount := !data.StaticAccount.IsNull() && data.StaticAccount.ValueString() != ""

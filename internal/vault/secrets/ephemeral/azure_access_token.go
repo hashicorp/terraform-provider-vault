@@ -5,11 +5,7 @@ package ephemeralsecrets
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -19,25 +15,15 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
-	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
 )
-
-var azureAccessTokenBaseURL = "https://login.microsoftonline.com"
 
 const (
 	fieldAccessToken  = "access_token"
 	fieldExtExpiresIn = "ext_expires_in"
 	fieldExpiresIn    = "expires_in"
 	fieldTokenType    = "token_type"
-	fieldGrantType    = "grant_type"
-	fieldClientSecret = "client_secret"
-	fieldClientID     = "client_id"
 )
-
-var azureTokenRequestDoer = func(req *http.Request) (*http.Response, error) {
-	return http.DefaultClient.Do(req)
-}
 
 // Ensure the implementation satisfies the ephemeral.EphemeralResource interface.
 var _ ephemeral.EphemeralResource = &AzureAccessTokenEphemeralResource{}
@@ -48,6 +34,7 @@ var NewAzureAccessTokenEphemeralResource = func() ephemeral.EphemeralResource {
 	return &AzureAccessTokenEphemeralResource{}
 }
 
+// COLE: This needed for request fields beforehand?
 // AzureAccessTokenEphemeralResource implements the methods that define this resource.
 type AzureAccessTokenEphemeralResource struct {
 	base.EphemeralResourceWithConfigure
@@ -58,9 +45,9 @@ type AzureAccessTokenEphemeralResource struct {
 type AzureAccessTokenModel struct {
 	base.BaseModelEphemeral
 
-	Backend types.String `tfsdk:"backend"`
-	Role    types.String `tfsdk:"role"`
-	Scope   types.String `tfsdk:"scope"`
+	Mount types.String `tfsdk:"mount"`
+	Scope types.String `tfsdk:"scope"`
+	Role  types.String `tfsdk:"role"`
 
 	AccessToken  types.String `tfsdk:"access_token"`
 	TokenType    types.String `tfsdk:"token_type"`
@@ -76,23 +63,12 @@ type AzureAccessTokenAPIModel struct {
 	ExtExpiresIn int64  `json:"ext_expires_in" mapstructure:"ext_expires_in"`
 }
 
-// AzureAccessTokenBackendConfigModel describes the Azure backend config response.
-type AzureAccessTokenBackendConfigModel struct {
-	TenantID string `json:"tenant_id" mapstructure:"tenant_id"`
-}
-
-// AzureAccessTokenStaticCredsModel describes the Azure static creds response.
-type AzureAccessTokenStaticCredsModel struct {
-	ClientID     string `json:"client_id" mapstructure:"client_id"`
-	ClientSecret string `json:"client_secret" mapstructure:"client_secret"`
-}
-
 // Schema defines this resource's schema.
 func (r *AzureAccessTokenEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
-				MarkdownDescription: "Azure Secret Backend to read credentials from.",
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "Azure Secret mount to fetch an access token for.",
 				Required:            true,
 			},
 			consts.FieldRole: schema.StringAttribute{
@@ -140,30 +116,35 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 		return
 	}
 
+	// Validate that required fields are provided
+	if data.Mount.IsNull() || data.Mount.ValueString() == "" {
+		resp.Diagnostics.AddError("Missing required field", "The 'mount' field is required.")
+		return
+	}
+	if data.Scope.IsNull() || data.Scope.ValueString() == "" {
+		resp.Diagnostics.AddError("Missing required field", "The 'scope' field is required.")
+		return
+	}
+	if data.Role.IsNull() || data.Role.ValueString() == "" {
+		resp.Diagnostics.AddError("Missing required field", "The 'role' field is required.")
+		return
+	}
+
+	// Get the Vault client from the provider configuration
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
 	}
 
-	tenantID, err := readAzureBackendTenantID(ctx, cli, data.Backend.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to read Azure backend configuration", err.Error())
-		return
-	}
-
-	staticCreds, err := readAzureStaticRoleCredentials(ctx, cli, data.Backend.ValueString(), data.Role.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to read Azure static role credentials", err.Error())
-		return
-	}
-
-	tokenResp, err := requestAzureAccessToken(ctx, tenantID, staticCreds.ClientID, staticCreds.ClientSecret, data.Scope.ValueString())
+	// Request the Azure access token from Vault
+	tokenResp, err := requestAzureAccessToken(ctx, cli, data.Mount.ValueString(), data.Role.ValueString(), data.Scope.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to get Azure access token", err.Error())
 		return
 	}
 
+	// Set the response data
 	data.AccessToken = types.StringValue(tokenResp.AccessToken)
 	data.TokenType = types.StringValue(tokenResp.TokenType)
 	data.ExpiresIn = types.Int64Value(tokenResp.ExpiresIn)
@@ -172,87 +153,24 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
-func readAzureBackendTenantID(ctx context.Context, cli *api.Client, backend string) (string, error) {
-	resp, err := cli.Logical().ReadWithContext(ctx, strings.Trim(backend, "/")+"/config")
+func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
+
+	path := fmt.Sprintf("%s/token/%s", strings.Trim(mount, "/"), strings.Trim(role, "/")) //COLE: Trim?
+	accessToken, err := cli.Logical().WriteWithContext(ctx, path, map[string]interface{}{
+		"scope": scope,
+	})
 	if err != nil {
-		title, detail := errutil.VaultReadErr(err)
-		return "", fmt.Errorf("%s: %s", title, detail)
-	}
-	if resp == nil {
-		title, detail := errutil.VaultReadResponseNil()
-		return "", fmt.Errorf("%s: %s", title, detail)
+		return nil, fmt.Errorf("unable to write to Vault: %w", err)
 	}
 
-	var apiResp AzureAccessTokenBackendConfigModel
-	if err := model.ToAPIModel(resp.Data, &apiResp); err != nil {
-		return "", fmt.Errorf("unable to translate Vault response data: %w", err)
-	}
-	if apiResp.TenantID == "" {
-		return "", fmt.Errorf("azure backend config did not return tenant_id")
+	if accessToken == nil {
+		return nil, fmt.Errorf("failed to obtain access token from Vault")
 	}
 
-	return apiResp.TenantID, nil
-}
-
-func readAzureStaticRoleCredentials(ctx context.Context, cli *api.Client, backend, role string) (*AzureAccessTokenStaticCredsModel, error) {
-	path := fmt.Sprintf("%s/static-creds/%s", strings.Trim(backend, "/"), strings.Trim(role, "/"))
-	resp, err := cli.Logical().ReadWithContext(ctx, path)
-	if err != nil {
-		title, detail := errutil.VaultReadErr(err)
-		return nil, fmt.Errorf("%s: %s", title, detail)
-	}
-	if resp == nil {
-		title, detail := errutil.VaultReadResponseNil()
-		return nil, fmt.Errorf("%s: %s", title, detail)
-	}
-
-	var apiResp AzureAccessTokenStaticCredsModel
-	if err := model.ToAPIModel(resp.Data, &apiResp); err != nil {
-		return nil, fmt.Errorf("unable to translate Vault response data: %w", err)
-	}
-	if apiResp.ClientID == "" || apiResp.ClientSecret == "" {
-		return nil, fmt.Errorf("azure static role did not return client_id and client_secret")
-	}
-
-	return &apiResp, nil
-}
-
-func requestAzureAccessToken(ctx context.Context, tenantID, clientID, clientSecret, scope string) (*AzureAccessTokenAPIModel, error) {
-	formData := url.Values{}
-	formData.Set(fieldGrantType, "client_credentials")
-	formData.Set(fieldClientID, clientID)
-	formData.Set(fieldClientSecret, clientSecret)
-	formData.Set(consts.FieldScope, scope)
-
-	tokenURL := strings.TrimRight(azureAccessTokenBaseURL, "/") + "/" + url.PathEscape(tenantID) + "/oauth2/v2.0/token"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(formData.Encode()))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create token request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := azureTokenRequestDoer(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute token request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read token response: %w", err)
-	}
-
-	if resp.StatusCode >= http.StatusBadRequest {
-		return nil, fmt.Errorf("azure token request failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
-	}
-
-	var apiResp AzureAccessTokenAPIModel
-	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return nil, fmt.Errorf("failed to decode token response: %w", err)
-	}
-	if apiResp.AccessToken == "" {
-		return nil, fmt.Errorf("azure token response did not contain access_token")
-	}
-
-	return &apiResp, nil
+	return &AzureAccessTokenAPIModel{
+		AccessToken:  accessToken.Auth.ClientToken,
+		TokenType:    "Bearer", //COLE: This is hardcoded for now, but we should get it from the response if possible
+		ExpiresIn:    3600,
+		ExtExpiresIn: 3600,
+	}, nil
 }
