@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -158,6 +159,67 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName, consts.FieldSkipImportRotation, consts.FieldPasswordPolicy),
 		},
 	})
+}
+
+// TestAccLDAPSecretBackendStaticRole_autoUnlock verifies the per-role auto_unlock
+// override semantics: a role-level value takes precedence over the mount-level
+// setting. auto_unlock is Active Directory only (Phase 1) and requires Vault 2.1+,
+// so this test is gated on VaultVersion210 and AD_* env vars.
+func TestAccLDAPSecretBackendStaticRole_autoUnlock(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-ldap-static-role")
+	resourceType := "vault_ldap_secret_backend_static_role"
+	resourceName := resourceType + ".role"
+
+	envVars := testutil.SkipTestEnvUnset(t, "AD_URL", "AD_STATIC_ROLE_DN", "AD_STATIC_ROLE_USERNAME")
+	url := envVars[0]
+	dn := envVars[1]
+	username := envVars[2]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
+		Steps: []resource.TestStep{
+			{
+				// mount enables auto_unlock, role overrides it to false.
+				Config: testLDAPSecretBackendStaticRoleConfig_autoUnlock(path, url, username, dn, username, "true", "false"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAutoUnlock, "false"),
+				),
+			},
+			{
+				// role override flips to true, winning over the mount default.
+				Config: testLDAPSecretBackendStaticRoleConfig_autoUnlock(path, url, username, dn, username, "false", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAutoUnlock, "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
+		},
+	})
+}
+
+// TestLDAPSecretBackendStaticRoleResource_autoUnlockSchema is a unit test (no live
+// Vault required) confirming the static-role resource exposes the auto_unlock field
+// with Optional+Computed semantics so that an unset value inherits the mount setting.
+func TestLDAPSecretBackendStaticRoleResource_autoUnlockSchema(t *testing.T) {
+	s := ldapSecretBackendStaticRoleResource().Schema
+	field, ok := s[consts.FieldAutoUnlock]
+	if !ok {
+		t.Fatalf("expected %q field in static-role resource schema", consts.FieldAutoUnlock)
+	}
+	if field.Type != schema.TypeBool {
+		t.Errorf("expected %q to be TypeBool, got %v", consts.FieldAutoUnlock, field.Type)
+	}
+	if !field.Optional {
+		t.Errorf("expected %q to be Optional", consts.FieldAutoUnlock)
+	}
+	if !field.Computed {
+		t.Errorf("expected %q to be Computed (to inherit the mount-level value when unset)", consts.FieldAutoUnlock)
+	}
 }
 
 func testLDAPSecretBackendStaticRoleConfig(mount, bindDN, bindPass, url, username, dn, role, rotationPeriod string) string {
@@ -338,4 +400,31 @@ resource "vault_ldap_secret_backend_static_role" "role" {
   skip_import_rotation     = true
 }
 `, mount, bindDN, bindPass, url, username, dn, username, rotateOnRead, cooldown)
+}
+
+// testLDAPSecretBackendStaticRoleConfig_autoUnlock builds an Active Directory mount
+// and static role with configurable mount-level and role-level auto_unlock values,
+// used to exercise the per-role override semantics.
+func testLDAPSecretBackendStaticRoleConfig_autoUnlock(mount, url, username, dn, role, mountAutoUnlock, roleAutoUnlock string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path         = "%s"
+  binddn       = "CN=Administrator,CN=Users,DC=corp,DC=example,DC=net"
+  bindpass     = "SuperSecretPassw0rd"
+  url          = "%s"
+  insecure_tls = "true"
+  userdn       = "CN=Users,DC=corp,DC=example,DC=net"
+  schema       = "ad"
+  auto_unlock  = %s
+}
+
+resource "vault_ldap_secret_backend_static_role" "role" {
+  mount           = vault_ldap_secret_backend.test.path
+  username        = "%s"
+  dn              = "%s"
+  role_name       = "%s"
+  rotation_period = 60
+  auto_unlock     = %s
+}
+`, mount, url, mountAutoUnlock, username, dn, role, roleAutoUnlock)
 }
