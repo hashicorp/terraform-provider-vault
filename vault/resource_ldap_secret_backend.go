@@ -165,7 +165,7 @@ func ldapSecretBackendResource() *schema.Resource {
 		consts.FieldAutoUnlock: {
 			Type:     schema.TypeBool,
 			Optional: true,
-			Default:  false,
+			Computed: true,
 			Description: "If true, Vault automatically unlocks the admin managed LDAP account after a successful " +
 				"static-role rotation. Applies to all roles on this mount unless overridden per role. " +
 				"Active Directory schema only. Requires Vault 2.1+.",
