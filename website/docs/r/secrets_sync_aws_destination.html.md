@@ -69,6 +69,34 @@ resource "vault_secrets_sync_aws_destination" "aws_wif" {
 }
 ```
 
+### With Custom KMS Key (Vault 2.1.0+)
+
+```hcl
+resource "vault_secrets_sync_aws_destination" "aws_kms_key_id" {
+  name              = "aws-dest-kms-key-id"
+  access_key_id     = var.access_key_id
+  secret_access_key = var.secret_access_key
+  region            = "us-east-1"
+  kms_key_id        = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+}
+```
+
+### With Replica Regions (Vault 2.1.0+)
+
+```hcl
+resource "vault_secrets_sync_aws_destination" "aws_replica_regions" {
+  name              = "aws-dest-replica-regions"
+  access_key_id     = var.access_key_id
+  secret_access_key = var.secret_access_key
+  region            = "us-east-1"
+
+  replica_regions = {
+    "us-east-2" = "arn:aws:kms:us-east-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
+    "us-west-1" = "arn:aws:kms:us-west-1:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -148,6 +176,15 @@ The following arguments are supported:
 * `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key_wo` to track
   updates as `identity_token_key_wo` is a write-only field. Increment this field to update `identity_token_key_wo`.
   Required with `identity_token_key_wo`. **Requires Vault 2.0.0+**.
+
+### Encryption and Replication Configuration (Vault 2.1.0+)
+
+* `kms_key_id` - (Optional) Specifies the ARN or alias of the AWS KMS key used to encrypt synced secrets.
+  **Requires Vault 2.1.0+**.
+
+* `replica_regions` - (Optional) Map of AWS regions to KMS key ARN values for replica region encryption.
+  KMS key values are optional and may be set to an empty string.
+  **Requires Vault 2.1.0+**.
 
 ## Attributes Reference
 

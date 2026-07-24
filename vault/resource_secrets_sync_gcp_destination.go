@@ -51,6 +51,13 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 		)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		fields = append(fields,
+			consts.FieldReplicaRegions,
+			consts.FieldKmsKeyID,
+		)
+	}
+
 	return fields
 }
 
@@ -81,6 +88,13 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 		fields = append(fields,
 			consts.FieldIdentityTokenTTL,
 			consts.FieldServiceAccountEmail,
+		)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		fields = append(fields,
+			consts.FieldReplicaRegions,
+			consts.FieldKmsKeyID,
 		)
 	}
 
@@ -183,24 +197,68 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Locational KMS keys for encryption.",
+				Deprecated:  "Deprecated in favor of replica_regions for Vault Enterprise 2.1.0+.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldGlobalKmsKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Global KMS key for encryption.",
+				Deprecated:  "Deprecated in favor of kms_key_id for Vault Enterprise 2.1.0+.",
+			},
+			consts.FieldReplicaRegions: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Map of regions to KMS key resource names for replica region encryption. KMS key values are optional.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				ConflictsWith: []string{
+					consts.FieldGlobalKmsKey,
+					consts.FieldLocationalKmsKeys,
+					consts.FieldReplicationLocations,
+				},
+			},
+			consts.FieldKmsKeyID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the ID of the GCP KMS key to be used to encrypt the secret.",
+				ConflictsWith: []string{
+					consts.FieldGlobalKmsKey,
+					consts.FieldLocationalKmsKeys,
+					consts.FieldReplicationLocations,
+				},
 			},
 			consts.FieldReplicationLocations: {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Replication locations for secrets.",
+				Deprecated:  "Deprecated in favor of replica_regions for Vault Enterprise 2.1.0+.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 		},
 	})
 }
 
+func validateGCPSync210Fields(d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		return nil
+	}
+
+	if _, ok := d.GetOk(consts.FieldKmsKeyID); ok {
+		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1.0 and later")
+	}
+
+	if _, ok := d.GetOk(consts.FieldReplicaRegions); ok {
+		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.1.0 and later")
+	}
+
+	return nil
+}
+
 func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if diags := validateGCPSync210Fields(d, meta); diags != nil {
+		return diags
+	}
+
 	writeFields := buildGCPSyncWriteFields(meta)
 	readFields := buildGCPSyncReadFields(meta)
 	// typeSetFields indicates which fields are of TypeSet type and need conversion to List during write
