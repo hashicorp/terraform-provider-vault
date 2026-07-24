@@ -40,18 +40,21 @@ func GetCertLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldName: {
-				Type:        schema.TypeString,
+				Type: schema.TypeString,
+				// can be set via an env var
 				Optional:    true,
 				Description: "Name of the certificate's role",
 			},
 			consts.FieldCertFile: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Path to a file containing the client certificate.",
 			},
 			consts.FieldKeyFile: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Path to a file containing the private key that the certificate was issued for.",
 			},
 		},
@@ -78,7 +81,27 @@ func (l *AuthLoginCert) LoginPath() string {
 }
 
 func (l *AuthLoginCert) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldName,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldName)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldCertFile,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldCertFile)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldKeyFile,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldKeyFile)},
+			defaultVal: "",
+		},
+	}
 	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
 		func(data *schema.ResourceData, params map[string]interface{}) error {
 			return l.checkRequiredFields(d, params, consts.FieldCertFile, consts.FieldKeyFile)
 		},
@@ -159,7 +182,7 @@ func (l *AuthLoginCert) Login(client *api.Client) (*api.Secret, error) {
 	}
 
 	params := make(map[string]interface{})
-	if v, ok := l.params[consts.FieldName]; ok {
+	if v, ok := l.params[consts.FieldName]; ok && v.(string) != "" {
 		// the cert auth API only supports the role name parameter
 		params[consts.FieldName] = v
 	}

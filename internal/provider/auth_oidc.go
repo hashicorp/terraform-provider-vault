@@ -39,8 +39,9 @@ func GetOIDCLoginSchemaResource(authField string) *schema.Resource {
 	s := mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldCallbackListenerAddress: {
@@ -85,7 +86,27 @@ func (l *AuthLoginOIDC) LoginPath() string {
 }
 
 func (l *AuthLoginOIDC) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldRole,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldRole)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldCallbackListenerAddress,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldCallbackListenerAddress)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldCallbackAddress,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldCallbackAddress)},
+			defaultVal: "",
+		},
+	}
 	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
 		func(data *schema.ResourceData, params map[string]interface{}) error {
 			return l.checkRequiredFields(d, params, consts.FieldRole)
 		},

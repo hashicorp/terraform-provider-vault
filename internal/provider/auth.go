@@ -7,8 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
 
@@ -22,6 +25,29 @@ type (
 	validateFunc      func(data *schema.ResourceData, params map[string]interface{}) error
 	authLoginFunc     func(*schema.ResourceData) (AuthLogin, error)
 )
+
+// authLoginEnvVarPrefix is the common prefix for all generated auth login
+// environment variables.
+const authLoginEnvVarPrefix = "TERRAFORM_VAULT_AUTH_"
+
+// authLoginEnvVar returns the conventional environment variable name for a
+// given auth login field. The name has the form
+// TERRAFORM_VAULT_AUTH_<METHOD>_<FIELD>, where METHOD is derived from the auth
+// login's top level schema field (e.g. auth_login_jwt -> JWT,
+// auth_login_token_file -> TOKEN_FILE, auth_login -> GENERIC) and FIELD is the
+// upper-cased field name (e.g. role -> ROLE, subscription_id -> SUBSCRIPTION_ID).
+//
+// This provides a consistent, collision-free scheme for configuring auth login
+// fields that do not already have a well-known environment variable.
+func authLoginEnvVar(authField, field string) string {
+	method := strings.TrimPrefix(authField, "auth_login_")
+	if method == "auth_login" {
+		// the generic auth_login method has no trailing method segment
+		method = "generic"
+	}
+	return authLoginEnvVarPrefix +
+		strings.ToUpper(method) + "_" + strings.ToUpper(field)
+}
 
 // authLoginEntry is the tuple of authLoginFunc, schemaFunc.
 type authLoginEntry struct {
@@ -244,6 +270,16 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 		path = v.(string)
 	} else if v, ok := l.getOk(d, consts.FieldMount); ok {
 		path = v.(string)
+		// mount has a schema Default, so getOk cannot distinguish an
+		// explicitly configured value from the applied default. When mount is
+		// not explicitly set in the configuration, fall back to the
+		// TERRAFORM_VAULT_AUTH_<METHOD>_MOUNT environment variable before
+		// using the default.
+		if !l.isFieldSetInConfig(d, consts.FieldMount) {
+			if env := os.Getenv(authLoginEnvVar(l.authField, consts.FieldMount)); env != "" {
+				path = env
+			}
+		}
 	} else if l.mount != consts.MountTypeNone {
 		return "", nil, fmt.Errorf("no valid path configured for %q", l.authField)
 	}
@@ -266,9 +302,64 @@ func (l *AuthLoginCommon) init(d *schema.ResourceData) (string, map[string]inter
 		}
 	}
 
+	// keep the mount param in sync with the resolved path (which may have come
+	// from an environment variable) for methods that expose a mount field.
+	if _, ok := params[consts.FieldMount]; ok {
+		params[consts.FieldMount] = path
+	}
+
+	// resolve the common namespace fields from environment variables when they
+	// are not explicitly configured.
+	if err := l.applyCommonEnvDefaults(d, params); err != nil {
+		return "", nil, err
+	}
+
 	l.initialized = true
 
 	return path, params, nil
+}
+
+// isFieldSetInConfig reports whether the given field within this auth login's
+// nested block was explicitly set in the raw Terraform configuration (as
+// opposed to being absent or resolved from a schema default). It is used to
+// decide when an environment variable fallback should apply.
+func (l *AuthLoginCommon) isFieldSetInConfig(d *schema.ResourceData, field string) bool {
+	v, diags := d.GetRawConfigAt(cty.Path{
+		cty.GetAttrStep{Name: l.authField},
+		cty.IndexStep{Key: cty.NumberIntVal(0)},
+		cty.GetAttrStep{Name: field},
+	})
+	if diags.HasError() || v.IsNull() || !v.IsKnown() {
+		return false
+	}
+
+	return true
+}
+
+// applyCommonEnvDefaults resolves the namespace and use_root_namespace fields
+// (common to every auth login method) from their
+// TERRAFORM_VAULT_AUTH_<METHOD>_<FIELD> environment variables when they are not
+// explicitly set in the configuration.
+func (l *AuthLoginCommon) applyCommonEnvDefaults(d *schema.ResourceData, params map[string]interface{}) error {
+	if _, ok := params[consts.FieldNamespace]; ok && !l.isFieldSetInConfig(d, consts.FieldNamespace) {
+		if env := os.Getenv(authLoginEnvVar(l.authField, consts.FieldNamespace)); env != "" {
+			params[consts.FieldNamespace] = env
+		}
+	}
+
+	if _, ok := params[consts.FieldUseRootNamespace]; ok && !l.isFieldSetInConfig(d, consts.FieldUseRootNamespace) {
+		if env := os.Getenv(authLoginEnvVar(l.authField, consts.FieldUseRootNamespace)); env != "" {
+			b, err := strconv.ParseBool(env)
+			if err != nil {
+				return fmt.Errorf(
+					"invalid boolean value %q for field %q: %w",
+					env, consts.FieldUseRootNamespace, err)
+			}
+			params[consts.FieldUseRootNamespace] = b
+		}
+	}
+
+	return nil
 }
 
 type authDefault struct {
@@ -278,8 +369,11 @@ type authDefault struct {
 	// If there are multiple entries in the slice, we use the first value we
 	// find that is set in the environment.
 	envVars []string
-	// defaultVal is the fallback if an env var is not set
-	defaultVal string
+	// defaultVal is the fallback if an env var is not set. Its concrete type
+	// determines how environment variable values are coerced: a bool
+	// defaultVal causes env var values to be parsed with strconv.ParseBool,
+	// while any other type is treated as a string.
+	defaultVal interface{}
 }
 
 type authDefaults []authDefault
@@ -292,7 +386,11 @@ func (l *AuthLoginCommon) setDefaultFields(d *schema.ResourceData, defaults auth
 			for _, envVar := range f.envVars {
 				val := os.Getenv(envVar)
 				if val != "" {
-					params[f.field] = val
+					v, err := coerceAuthDefaultValue(f.field, val, f.defaultVal)
+					if err != nil {
+						return err
+					}
+					params[f.field] = v
 					// found a value, no need to check other options
 					break
 				}
@@ -301,6 +399,23 @@ func (l *AuthLoginCommon) setDefaultFields(d *schema.ResourceData, defaults auth
 	}
 
 	return nil
+}
+
+// coerceAuthDefaultValue converts an environment variable's string value to the
+// type indicated by defaultVal. Bool defaults are parsed with
+// strconv.ParseBool; all other types are returned as the raw string. This
+// mirrors how the Terraform SDK coerces schema.EnvDefaultFunc values for
+// bool schema fields.
+func coerceAuthDefaultValue(field, val string, defaultVal interface{}) (interface{}, error) {
+	if _, ok := defaultVal.(bool); ok {
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"invalid boolean value %q for field %q: %w", val, field, err)
+		}
+		return b, nil
+	}
+	return val, nil
 }
 
 func (l *AuthLoginCommon) checkRequiredFields(d *schema.ResourceData, params map[string]interface{}, required ...string) error {

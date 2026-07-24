@@ -54,6 +54,35 @@ func TestAuthLoginKerberos_Init(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "with-token-and-bool-env",
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginKerberos: []interface{}{
+					map[string]interface{}{
+						consts.FieldToken: testNegTokenInit,
+					},
+				},
+			},
+			authField: consts.FieldAuthLoginKerberos,
+			envVars: map[string]string{
+				authLoginEnvVar(consts.FieldAuthLoginKerberos, consts.FieldDisableFastNegotiation): "true",
+				authLoginEnvVar(consts.FieldAuthLoginKerberos, consts.FieldRemoveInstanceName):     "1",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:              "",
+				consts.FieldUseRootNamespace:       false,
+				consts.FieldToken:                  testNegTokenInit,
+				consts.FieldMount:                  consts.MountTypeKerberos,
+				consts.FieldUsername:               "",
+				consts.FieldService:                "",
+				consts.FieldRealm:                  "",
+				consts.FieldKeytabPath:             "",
+				consts.FieldKRB5ConfPath:           "",
+				consts.FieldRemoveInstanceName:     true,
+				consts.FieldDisableFastNegotiation: true,
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginKerberos,
 			expectParams: nil,

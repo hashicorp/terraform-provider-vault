@@ -136,6 +136,31 @@ func (l *AuthLoginKerberos) Init(d *schema.ResourceData, authField string) (Auth
 			envVars:    []string{consts.EnvVarKRBKeytab},
 			defaultVal: "",
 		},
+		{
+			field:      consts.FieldUsername,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldUsername)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldService,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldService)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldRealm,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldRealm)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldDisableFastNegotiation,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldDisableFastNegotiation)},
+			defaultVal: false,
+		},
+		{
+			field:      consts.FieldRemoveInstanceName,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldRemoveInstanceName)},
+			defaultVal: false,
+		},
 	}
 
 	if err := l.AuthLoginCommon.Init(d, authField,
