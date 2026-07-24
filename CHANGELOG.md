@@ -14,6 +14,10 @@ IMPROVEMENTS:
 
 * **Autosnapshot support for AWS IRSA**: Added documentation for IRSA usage per changes in Vault ([hashicorp/raft-snapshotagent#49](https://github.com/hashicorp/raft-snapshotagent/pull/49)). IRSA feature requires Vault 2.1.0+
 
+IMPROVEMENTS:
+
+* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `elasticsearch` engine block, so the connection password can be configured without being persisted in Terraform state (parity with the connection-URL engines). ([#2961](https://github.com/hashicorp/terraform-provider-vault/pull/2961))
+
 BUG FIXES:
 
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
