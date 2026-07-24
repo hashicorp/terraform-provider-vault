@@ -304,10 +304,25 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 						Description: "The username to use when authenticating with Cassandra.",
 					},
 					"password": {
-						Type:        schema.TypeString,
-						Optional:    true,
-						Description: "The password to use when authenticating with Cassandra.",
-						Sensitive:   true,
+						Type:          schema.TypeString,
+						Optional:      true,
+						Description:   "The password to use when authenticating with Cassandra.",
+						Sensitive:     true,
+						ConflictsWith: []string{fmt.Sprintf("%s.0.%s", dbEngineCassandra.name, consts.FieldPasswordWO)},
+					},
+					consts.FieldPasswordWO: {
+						Type:          schema.TypeString,
+						Optional:      true,
+						Description:   "Write-only field for the password to use when authenticating with Cassandra.",
+						Sensitive:     true,
+						WriteOnly:     true,
+						ConflictsWith: []string{fmt.Sprintf("%s.0.%s", dbEngineCassandra.name, consts.FieldPassword)},
+					},
+					consts.FieldPasswordWOVersion: {
+						Type:         schema.TypeInt,
+						Optional:     true,
+						Description:  "Version counter for the Cassandra password write-only field.",
+						RequiredWith: []string{fmt.Sprintf("%s.0.%s", dbEngineCassandra.name, consts.FieldPasswordWO)},
 					},
 					"tls": {
 						Type:        schema.TypeBool,
@@ -1168,10 +1183,34 @@ func setCassandraDatabaseConnectionData(d *schema.ResourceData, prefix string, d
 		data["username"] = v.(string)
 	}
 
+	// Vault does not return the password in the API. If the root credentials have been rotated, sending
+	// the old password in the update request would break the connection config. Thus we only send it,
+	// if it actually changed to still support updating it for non-rotated cases.
 	passwordKey := prefix + consts.FieldPassword
-	if v, ok := d.GetOk(passwordKey); ok {
-		if d.IsNewResource() || d.HasChange(passwordKey) {
+	passwordWriteOnlyVersionKey := prefix + consts.FieldPasswordWOVersion
+	if d.IsNewResource() || d.HasChange(passwordKey) || d.HasChange(passwordWriteOnlyVersionKey) {
+		if v, ok := d.GetOk(passwordKey); ok && v != nil {
+			log.Printf("[DEBUG] using persisted password; please use new write-only attributes `password_wo` " +
+				"and `password_wo_version` for security")
 			data[consts.FieldPassword] = v.(string)
+		} else if d.HasChange(passwordWriteOnlyVersionKey) {
+			engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
+			if err != nil {
+				// this should not happen, since we control how the prefix is created
+				panic(fmt.Sprintf("[ERROR] invalid prefix %q for database connection: %s", prefix, err))
+			}
+
+			idx, err := strconv.Atoi(engineIdx)
+			if err != nil {
+				// this should not happen, since we control how the index has been set
+				panic(fmt.Sprintf("[ERROR] unable to convert string index to integer: %s", err))
+			}
+
+			// construct path to use GetRawConfig
+			path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPasswordWO)
+			if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+				data[consts.FieldPassword] = pwWo.AsString()
+			}
 		}
 	}
 
@@ -2382,6 +2421,10 @@ func getConnectionDetailsCassandra(d *schema.ResourceData, prefix string, resp *
 		} else if v, ok := d.GetOk(prefix + "password"); ok {
 			// keep the password we have in state/config if the API doesn't return one
 			result["password"] = v.(string)
+		}
+		// ensure password_wo_version is updated in state
+		if v, ok := d.GetOk(prefix + consts.FieldPasswordWOVersion); ok {
+			result[consts.FieldPasswordWOVersion] = v.(int)
 		}
 		if v, ok := data["tls"]; ok {
 			result["tls"] = v.(bool)

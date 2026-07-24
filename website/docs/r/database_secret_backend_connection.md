@@ -165,7 +165,7 @@ Exactly one of the nested blocks of configuration options must be supplied.
 
 * `username` - (Required) The username to authenticate with.
 
-* `password` - (Required) The password to authenticate with.
+* `password` - (Optional) The password to authenticate with. Prefer `password_wo` to avoid storing the password in state.
 
 * `port` - (Optional) The default port to connect to if no port is specified as
   part of the host.
