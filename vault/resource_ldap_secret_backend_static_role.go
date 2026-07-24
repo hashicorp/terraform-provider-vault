@@ -173,7 +173,7 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 	}
 
 	// only send auto_unlock if explicitly set — avoids overwriting mount-level default with false
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
 		if d.HasChange(consts.FieldAutoUnlock) {
 			data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
 		}
@@ -238,7 +238,7 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
 		if val, ok := resp.Data[consts.FieldAutoUnlock]; ok {
 			if err := d.Set(consts.FieldAutoUnlock, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting auto unlock field '%s': %s", consts.FieldAutoUnlock, err))

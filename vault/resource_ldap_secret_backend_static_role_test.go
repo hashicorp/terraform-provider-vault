@@ -6,8 +6,9 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"testing"
+
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -163,7 +164,7 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 
 // TestAccLDAPSecretBackendStaticRole_autoUnlock verifies the per-role auto_unlock
 // override semantics: a role-level value takes precedence over the mount-level
-// setting. auto_unlock is Active Directory only (Phase 1) and requires Vault 2.1+,
+// setting. auto_unlock is Active Directory only and requires Vault 2.1+,
 // so this test is gated on VaultVersion210 and AD_* env vars.
 func TestAccLDAPSecretBackendStaticRole_autoUnlock(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-static-role")
@@ -178,7 +179,7 @@ func TestAccLDAPSecretBackendStaticRole_autoUnlock(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),

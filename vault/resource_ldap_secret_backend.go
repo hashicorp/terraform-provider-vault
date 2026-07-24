@@ -301,8 +301,8 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		}
 	}
 
-	// auto_unlock (mount-level), gated on Vault 2.1+
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	// auto_unlock (mount-level), gated on Vault 2.1+ Enterprise
+	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
 		data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
 	}
 
@@ -396,7 +396,7 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
 		if val, ok := resp.Data[consts.FieldAutoUnlock]; ok {
 			if err := d.Set(consts.FieldAutoUnlock, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting auto unlock field '%s': %s", consts.FieldAutoUnlock, err))
