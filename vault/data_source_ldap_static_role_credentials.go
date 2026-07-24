@@ -69,6 +69,11 @@ func ldapStaticCredDataSource() *schema.Resource {
 				Computed:    true,
 				Description: "Name of the static role.",
 			},
+			consts.FieldRotatedOnRead: {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "Whether the credential was rotated during this read (rotate-on-read feature). Requires Vault Enterprise.",
+			},
 		},
 	}
 }
@@ -119,6 +124,9 @@ func readLDAPStaticCreds(ctx context.Context, d *schema.ResourceData, meta inter
 	if err := d.Set(consts.FieldUsername, response.username); err != nil {
 		return diag.FromErr(err)
 	}
+	if err := d.Set(consts.FieldRotatedOnRead, response.rotatedOnRead); err != nil {
+		return diag.FromErr(err)
+	}
 	return nil
 }
 
@@ -130,6 +138,7 @@ type lDAPStaticCredResponse struct {
 	rotationPeriod    int64
 	ttl               int64
 	username          string
+	rotatedOnRead     bool
 }
 
 func parseLDAPStaticCredSecret(secret *api.Secret) (lDAPStaticCredResponse, error) {
@@ -139,6 +148,7 @@ func parseLDAPStaticCredSecret(secret *api.Secret) (lDAPStaticCredResponse, erro
 		lastVaultRotation string
 		rotationPeriod    int64
 		ttl               int64
+		rotatedOnRead     bool
 	)
 	if dnRaw, ok := secret.Data[consts.FieldDN]; ok {
 		dn = dnRaw.(string)
@@ -160,6 +170,10 @@ func parseLDAPStaticCredSecret(secret *api.Secret) (lDAPStaticCredResponse, erro
 		ttl, _ = ttlRaw.(json.Number).Int64()
 	}
 
+	if rotatedOnReadRaw, ok := secret.Data[consts.FieldRotatedOnRead]; ok {
+		rotatedOnRead, _ = rotatedOnReadRaw.(bool)
+	}
+
 	username := secret.Data[consts.FieldUsername].(string)
 	if username == "" {
 		return lDAPStaticCredResponse{}, fmt.Errorf("username is not set in response")
@@ -178,5 +192,6 @@ func parseLDAPStaticCredSecret(secret *api.Secret) (lDAPStaticCredResponse, erro
 		rotationPeriod:    rotationPeriod,
 		ttl:               ttl,
 		username:          username,
+		rotatedOnRead:     rotatedOnRead,
 	}, nil
 }

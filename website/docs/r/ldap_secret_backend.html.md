@@ -106,6 +106,13 @@ The following arguments are supported:
   using its current password (no privileged bind DN). Immutable after creation. Enforces `password`
   requirement when creating static roles. Requires Vault Enterprise 2.0+.
 
+* `rotate_on_read` - (Optional) If true, static role credentials are rotated on each read. Acts as
+  the default for all static roles that do not provide their own override. Requires Vault Enterprise 2.1.0+.
+
+* `rotate_on_read_cooldown` - (Optional) Minimum number of seconds between rotate-on-read rotations.
+  Acts as the default cooldown for all static roles that do not provide their own override.
+  Requires Vault Enterprise 2.1.0+.
+
 ### Common Mount Arguments
 These arguments are common across all resources that mount a secret engine.
 

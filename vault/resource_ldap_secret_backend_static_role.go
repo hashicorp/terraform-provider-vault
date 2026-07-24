@@ -6,9 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/hashicorp/go-cty/cty"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
-	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -66,6 +67,16 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Name of the password policy to use to generate passwords for this role.",
+		},
+		consts.FieldRotateOnRead: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Description: "If true, credentials are rotated on each read. Overrides the engine-level default when set. Requires Vault Enterprise ≥ 2.1.0.",
+		},
+		consts.FieldRotateOnReadCooldown: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Description: "Minimum seconds between rotate-on-read rotations for this role. Overrides the engine-level default when set. Requires Vault Enterprise ≥ 2.1.0.",
 		},
 	}
 	resource := &schema.Resource{
@@ -141,6 +152,16 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 		}
 	}
 
+	// get rotate-on-read role-level overrides
+	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
+		if d.HasChange(consts.FieldRotateOnRead) {
+			data[consts.FieldRotateOnRead] = d.Get(consts.FieldRotateOnRead)
+		}
+		if d.HasChange(consts.FieldRotateOnReadCooldown) {
+			data[consts.FieldRotateOnReadCooldown] = d.Get(consts.FieldRotateOnReadCooldown)
+		}
+	}
+
 	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", rolePath, err))
 	}
@@ -184,6 +205,19 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
 		if err := automatedrotationutil.PopulateAutomatedRotationFieldsWithPolicy(d, resp, rolePath); err != nil {
 			return diag.Errorf("error setting automated rotation fields: %s", err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := resp.Data[consts.FieldRotateOnRead]; ok {
+			if err := d.Set(consts.FieldRotateOnRead, v); err != nil {
+				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnRead, err)
+			}
+		}
+		if v, ok := resp.Data[consts.FieldRotateOnReadCooldown]; ok {
+			if err := d.Set(consts.FieldRotateOnReadCooldown, v); err != nil {
+				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnReadCooldown, err)
+			}
 		}
 	}
 
