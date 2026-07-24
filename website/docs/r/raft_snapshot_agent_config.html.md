@@ -160,7 +160,11 @@ The following arguments are supported:
   Conflicts with `aws_secret_access_key_wo`.
 
 - `aws_secret_access_key_wo` - AWS secret access key (write-only).
-  This value is sent to Vault but never stored in Terraform state.
+  This value is sent to Vault but never stored in Terraform state. With Vault 2.1.0 
+  if omitted (along with `aws_access_key_id`), Vault authenticates to
+  S3 using the AWS SDK default credential chain, which supports IAM Roles for
+  Service Accounts (IRSA) on EKS. When set, an Access Key ID must also be
+  provided.
   Conflicts with `aws_secret_access_key`.
 
 - `secrets_wo_version` - Version used with write-only secrets.

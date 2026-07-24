@@ -737,8 +737,6 @@ const (
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
 	FieldDeferInitialCreds                    = "defer_initial_creds"
-	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
-	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
@@ -897,6 +895,16 @@ const (
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
 	FieldBindPassWO                 = "bindpass_wo"
 	FieldBindPassWOVersion          = "bindpass_wo_version"
+	FieldKeytab                     = "keytab"
+	FieldKeytabWO                   = "keytab_wo"
+	FieldKeytabWOVersion            = "keytab_wo_version"
+	FieldClientTLSKeyWO             = "client_tls_key_wo"
+	FieldClientTLSKeyWOVersion      = "client_tls_key_wo_version"
+	FieldClientTLSCertWO            = "client_tls_cert_wo"
+	FieldClientTLSCertWOVersion     = "client_tls_cert_wo_version"
+	FieldAddGroupAliases            = "add_group_aliases"
+	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
+	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
 
 	/*
 		common environment variables
