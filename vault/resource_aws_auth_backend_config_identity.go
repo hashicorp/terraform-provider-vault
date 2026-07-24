@@ -36,7 +36,7 @@ func awsAuthBackendConfigIdentityResource() *schema.Resource {
 				Optional:     true,
 				Default:      "role_id",
 				Description:  "How to generate the identity alias when using the iam auth method.",
-				ValidateFunc: validation.StringInSlice([]string{"role_id", "unique_id", "full_arn"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"role_id", "unique_id", "full_arn", "canonical_arn"}, false),
 			},
 			consts.FieldIAMMetadata: {
 				Type:        schema.TypeSet,
