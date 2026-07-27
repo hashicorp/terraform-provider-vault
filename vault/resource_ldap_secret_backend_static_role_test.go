@@ -278,3 +278,64 @@ resource "vault_ldap_secret_backend_static_role" "role" {
 }
 `, passwordPolicy, mount, bindDN, bindPass, url, username, dn, role, rotationPeriod)
 }
+
+func TestAccLDAPSecretBackendStaticRole_RotateOnRead(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-ldap-static-role")
+	bindDN, bindPass, url := testutil.GetTestLDAPCreds(t)
+	resourceType := "vault_ldap_secret_backend_static_role"
+	resourceName := resourceType + ".role"
+	username := "alice"
+	dn := "cn=alice,ou=users,dc=example,dc=org"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendStaticRoleConfig_rotateOnRead(path, bindDN, bindPass, url, username, dn, "true", "60"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUsername, username),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDN, dn),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnRead, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnReadCooldown, "60"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendStaticRoleConfig_rotateOnRead(path, bindDN, bindPass, url, username, dn, "true", "120"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnRead, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnReadCooldown, "120"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldMount, consts.FieldRoleName, consts.FieldSkipImportRotation),
+		},
+	})
+}
+
+func testLDAPSecretBackendStaticRoleConfig_rotateOnRead(mount, bindDN, bindPass, url, username, dn, rotateOnRead, cooldown string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path     = "%s"
+  binddn   = "%s"
+  bindpass = "%s"
+  url      = "%s"
+  userdn   = "CN=Users,DC=corp,DC=example,DC=net"
+}
+
+resource "vault_ldap_secret_backend_static_role" "role" {
+  mount                    = vault_ldap_secret_backend.test.path
+  username                 = "%s"
+  dn                       = "%s"
+  role_name                = "%s"
+  rotation_period          = 60
+  rotate_on_read           = %s
+  rotate_on_read_cooldown  = %s
+  skip_import_rotation     = true
+}
+`, mount, bindDN, bindPass, url, username, dn, username, rotateOnRead, cooldown)
+}

@@ -487,3 +487,53 @@ resource "vault_ldap_secret_backend" "test" {
   bindpass_wo_version  = 1
 }`, path)
 }
+
+func TestLDAPSecretBackend_RotateOnRead(t *testing.T) {
+	var (
+		path         = acctest.RandomWithPrefix("tf-test-ldap")
+		bindDN       = "test-bind-dn"
+		resourceType = "vault_ldap_secret_backend"
+		resourceName = resourceType + ".test"
+	)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		},
+		PreventPostDestroyRefresh: true,
+		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendConfig_rotateOnRead(path, bindDN, "true", "120"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnRead, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnReadCooldown, "120"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendConfig_rotateOnRead(path, bindDN, "true", "240"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnRead, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnReadCooldown, "240"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func testLDAPSecretBackendConfig_rotateOnRead(path, bindDN, rotateOnRead, cooldown string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                      = "%s"
+  description               = "test description"
+  binddn                    = "%s"
+  userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+  self_managed              = true
+  rotate_on_read            = %s
+  rotate_on_read_cooldown   = %s
+}`, path, bindDN, rotateOnRead, cooldown)
+}
