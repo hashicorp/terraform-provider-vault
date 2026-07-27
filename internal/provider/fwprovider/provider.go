@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
+	certauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cert"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
 	kerberosauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/kerberos"
@@ -25,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
 	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/identity"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
@@ -240,6 +242,9 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return append([]func() resource.Resource{
 		spiffe.NewSpiffeAuthConfigResource,
 		spiffe.NewSpiffeAuthRoleResource,
+		identity.NewIdentityTPMResource,
+		identity.NewIdentityTPMGroupResource,
+		certauth.NewAuthCertTPMRoleResource,
 		cloudfoundry.NewCFAuthBackendConfigResource,
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		userpass.NewUserpassAuthUserResource,
