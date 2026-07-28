@@ -17,8 +17,7 @@ import (
 const (
 	fieldAccessKeyID     = "access_key_id"
 	fieldSecretAccessKey = "secret_access_key"
-
-	awsSyncType = "aws-sm"
+	awsSyncType          = "aws-sm"
 )
 
 // awsSyncWriteFields contains base fields that work with all Vault versions (1.16+)
@@ -95,6 +94,17 @@ func awsSecretsSyncDestinationResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Extra protection that must match the trust policy granting access to the AWS IAM role ARN.",
+			},
+			consts.FieldKmsKeyID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies the ARN of the AWS KMS key to be used to encrypt the secret.",
+			},
+			consts.FieldReplicaRegions: {
+				Type:        schema.TypeMap,
+				Optional:    true,
+				Description: "Map of regions to KMS key ARN values for replica region encryption. KMS key values are optional.",
+				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldIdentityTokenKeyWO: {
 				Type:        schema.TypeString,
@@ -178,7 +188,37 @@ var awsSync200ReadFields = []string{
 	consts.FieldIdentityTokenTTL,
 }
 
+var awsSync210ReadFields = []string{
+	consts.FieldReplicaRegions,
+	consts.FieldKmsKeyID,
+}
+
+var awsSync210WriteFields = []string{
+	consts.FieldReplicaRegions,
+	consts.FieldKmsKeyID,
+}
+
+func validateAWSSync210Fields(d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		return nil
+	}
+
+	if _, ok := d.GetOk(consts.FieldKmsKeyID); ok {
+		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1.0 and later")
+	}
+
+	if _, ok := d.GetOk(consts.FieldReplicaRegions); ok {
+		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.1.0 and later")
+	}
+
+	return nil
+}
+
 func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if diags := validateAWSSync210Fields(d, meta); diags != nil {
+		return diags
+	}
+
 	readFields := awsSyncReadFields
 	writeFields := awsSyncWriteFields
 
@@ -193,6 +233,12 @@ func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 	if provider.IsAPISupported(meta, provider.VaultVersion200) {
 		writeFields = append(writeFields, awsSync200WriteFields...)
 		readFields = append(readFields, awsSync200ReadFields...)
+	}
+
+	// Add Vault 2.1.0+ fields if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		writeFields = append(writeFields, awsSync210WriteFields...)
+		readFields = append(readFields, awsSync210ReadFields...)
 	}
 
 	// Fields that need TypeSet to List conversion for JSON serialization
@@ -218,6 +264,11 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 	// Add Vault 2.0.0+ WIF fields only if version is supported
 	if provider.IsAPISupported(meta, provider.VaultVersion200) {
 		readFields = append(readFields, awsSync200ReadFields...)
+	}
+
+	// Add Vault 2.1.0+ fields only if version is supported
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+		readFields = append(readFields, awsSync210ReadFields...)
 	}
 
 	// since other fields come back as '******', we only set the non-sensitive region fields

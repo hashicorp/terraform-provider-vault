@@ -97,6 +97,9 @@ The following arguments are supported:
 
 * `max_ttl` - (Optional) Specifies the maximum TTL for the leases associated with this role.
 
+* `password_policy` - (Optional) Name of the password policy to use to generate passwords for this role.
+  Requires Vault 2.1.0+.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

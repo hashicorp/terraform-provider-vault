@@ -1,9 +1,31 @@
 ## Unreleased
 
+FEATURES:
+
+* **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
+* * **LDAP Rotate-on-Read Support**: Added `rotate_on_read` and `rotate_on_read_cooldown` parameters to `vault_ldap_secret_backend` and `vault_ldap_secret_backend_static_role` resources, and `rotated_on_read` attribute to `vault_ldap_static_role_credentials` data source to support credential rotation on each read ([#2960](https://github.com/hashicorp/terraform-provider-vault/pull/2960). Requires Vault Enterprise 2.1.0+.
+* * **Terraform Secret Engine Root Rotation Support**: Add support for automated root token rotation via the `rotation_period`, `rotation_schedule`, `rotation_window`, and `disable_automated_rotation` fields, and add `explicit_max_ttl` to bound the lifetime of the rotated root token. Requires Vault 2.1.0+. ([#2958](https://github.com/hashicorp/terraform-provider-vault/issues/2958))
+* * Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
+* * **Secrets Sync customer controlled encryption**: `vault_secrets_sync_aws_destination` and `vault_secrets_sync_gcp_destination` now support Vault 2.1.0+ fields `kms_key_id` and `replica_regions`; and deprecated GCP legacy fields `global_kms_key`, `locational_kms_keys`, and `replication_locations` in favor of `kms_key_id` and `replica_regions`. ([#2965](https://github.com/hashicorp/terraform-provider-vault/pull/2965))
+
+IMPROVEMENTS:
+
+* `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
+
+* **Autosnapshot support for AWS IRSA**: Added documentation for IRSA usage per changes in Vault ([hashicorp/raft-snapshotagent#49](https://github.com/hashicorp/raft-snapshotagent/pull/49)). IRSA feature requires Vault 2.1.0+
+
 BUG FIXES:
 
 * `vault_kmip_secret_scope`: Fix `terraform import` by adding custom import state handler to correctly populate `path` and `scope` attributes. Also fix double `/scope` suffix in read and update operations. ([#2943](https://github.com/hashicorp/terraform-provider-vault/pull/2943))
-* `vault_kmip_secret_role`: Fix `terraform import` by adding custom import state handler to correctly populate `path`, `scope`, and `role` attributes. ([#2943](https://github.com/hashicorp/terraform-provider-vault/pull/2943))
+* * `vault_kmip_secret_role`: Fix `terraform import` by adding custom import state handler to correctly populate `path`, `scope`, and `role` attributes. ([#2943](https://github.com/hashicorp/terraform-provider-vault/pull/2943))
+* * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
+* * `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2801](https://github.com/hashicorp/terraform-provider-vault/pull/2801))
+
+## 5.10.1 (June 26, 2026)
+
+BREAKING CHANGES:
+
+Reverted the 5.10.0 support for `pkcs12_bundle` and `jks_bundle` formats in formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` that forced resource recreation. Configurations using these formats or their related arguments are no longer supported. ([#2945](https://github.com/hashicorp/terraform-provider-vault/pull/2945))
 
 ## 5.10.0 (June 23, 2026)
 
@@ -24,11 +46,13 @@ FEATURES:
 * **New Resource**: `vault_config_group_policy_application` - Manages the global group policy application mode for Vault Enterprise. Controls how policies attached to identity groups are applied across namespace boundaries. Supports `within_namespace_hierarchy` (default) and `any` modes. Requires Vault Enterprise 1.13.8+. ([#2863](https://github.com/hashicorp/terraform-provider-vault/pull/2863))
 * Add support for `pkcs12_bundle` and `jks_bundle` formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2908](https://github.com/hashicorp/terraform-provider-vault/pull/2908)). Requires Vault 2.1+.
 * `vault_policy`: Added `allow_overwrite` to optionally prevent overwriting Vault policies.([#2895](https://github.com/hashicorp/terraform-provider-vault/pull/2895))
-* `vault_managed_keys`: Added support for `usages` and `max_parallel` fields. ([#2887](https://github.com/hashicorp/terraform-provider-vault/pull/2887/)) 
+* `vault_managed_keys`: Added support for `usages` and `max_parallel` fields. ([#2887](https://github.com/hashicorp/terraform-provider-vault/pull/2887/))
+
 
 IMPROVEMENTS:
 
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
+* Migrated AWS provider dependency from `aws-sdk-go` (v1) to `aws-sdk-go-v2` for improved performance and maintainability. ([#2882](https://github.com/hashicorp/terraform-provider-vault/pull/2882))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
 
 * Updated dependencies:
