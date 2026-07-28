@@ -81,7 +81,7 @@ func TestAccIdentityTPM(t *testing.T) {
 					},
 				},
 			},
-			},
+		},
 	})
 }
 
