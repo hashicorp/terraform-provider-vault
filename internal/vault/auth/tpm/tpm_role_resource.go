@@ -48,6 +48,7 @@ type TPMAuthRoleModel struct {
 	Mount       types.String `tfsdk:"mount"`
 	Name        types.String `tfsdk:"name"`
 	DisplayName types.String `tfsdk:"display_name"`
+	CertTTL     types.String `tfsdk:"cert_ttl"`
 	TPMIDs      types.Set    `tfsdk:"tpm_ids"`
 	TPMGroupIDs types.Set    `tfsdk:"tpmgroup_ids"`
 }
@@ -56,6 +57,7 @@ type tpmRoleAPIModel struct {
 	token.TokenAPIModel `mapstructure:",squash"`
 
 	DisplayName string   `json:"display_name" mapstructure:"display_name"`
+	CertTTL     string   `json:"cert_ttl" mapstructure:"cert_ttl"`
 	TPMIDs      []string `json:"tpm_ids" mapstructure:"tpm_ids"`
 	TPMGroupIDs []string `json:"tpmgroup_ids" mapstructure:"tpmgroup_ids"`
 }
@@ -85,6 +87,11 @@ func (r *TPMAuthRoleResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional:    true,
 				Computed:    true,
 				Description: "Display name for the role. Defaults to the role name.",
+			},
+			consts.FieldCertTTL: schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Certificate TTL for the TPM role.",
 			},
 			"tpm_ids": schema.SetAttribute{
 				ElementType: types.StringType,
@@ -260,6 +267,36 @@ func (r *TPMAuthRoleResource) ImportState(ctx context.Context, req resource.Impo
 		)
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
 	}
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), ns)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	roleResp, err := vaultClient.Logical().ReadWithContext(ctx, fmt.Sprintf("auth/%s/role/%s", strings.Trim(mount, "/"), name))
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+		return
+	}
+	if roleResp == nil {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		return
+	}
+
+	data := TPMAuthRoleModel{
+		Mount: types.StringValue(mount),
+		Name:  types.StringValue(name),
+	}
+	if ns != "" {
+		data.Namespace = types.StringValue(ns)
+	}
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, roleResp)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func extractTPMRoleIdentifiers(importID string) (mount, name string, err error) {
@@ -283,6 +320,7 @@ func (r *TPMAuthRoleResource) path(data *TPMAuthRoleModel) string {
 func (r *TPMAuthRoleResource) getAPIModel(ctx context.Context, data *TPMAuthRoleModel) (map[string]any, diag.Diagnostics) {
 	apiModel := tpmRoleAPIModel{
 		DisplayName: data.DisplayName.ValueString(),
+		CertTTL:     data.CertTTL.ValueString(),
 	}
 
 	if diags := data.TPMIDs.ElementsAs(ctx, &apiModel.TPMIDs, false); diags.HasError() {
@@ -322,6 +360,13 @@ func (r *TPMAuthRoleResource) populateDataModelFromAPI(ctx context.Context, data
 	}
 
 	data.DisplayName = types.StringValue(readResp.DisplayName)
+	if readResp.CertTTL == "" {
+		if data.CertTTL.IsNull() || data.CertTTL.IsUnknown() {
+			data.CertTTL = types.StringNull()
+		}
+	} else {
+		data.CertTTL = types.StringValue(readResp.CertTTL)
+	}
 
 	if len(readResp.TPMIDs) == 0 {
 		data.TPMIDs = types.SetNull(types.StringType)

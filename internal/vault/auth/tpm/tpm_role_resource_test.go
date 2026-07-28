@@ -37,6 +37,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
 					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "cert_ttl", "24h"),
 					resource.TestCheckResourceAttr(resourceName, "tpm_ids.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "tpmgroup_ids.#", "1"),
 				),
@@ -89,6 +90,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 				ImportStateIdFunc:                    testAccTPMAuthRoleImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "mount",
+				ImportStateVerifyIgnore:              []string{"cert_ttl"},
 			},
 			// Step 5: Destroy the role (keep the mount).
 			{
@@ -192,13 +194,18 @@ MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
 EOT
 }
 
+resource "vault_identity_tpm_group" "test" {
+  name = %q
+}
+
 resource "vault_tpm_auth_backend_role" "test" {
   mount        = vault_auth_backend.tpm.path
   name         = %q
+  cert_ttl     = "24h"
   tpm_ids      = [vault_identity_tpm.test.tpm_id]
-  tpmgroup_ids = ["example-group-id"]
+  tpmgroup_ids = [vault_identity_tpm_group.test.tpm_group_id]
 }
-`, testAccTPMAuthRoleMountOnlyConfig(mount), tpmName, roleName)
+`, testAccTPMAuthRoleMountOnlyConfig(mount), tpmName, roleName, roleName)
 }
 
 func testAccTPMAuthRoleWithTokenFieldsConfig(mount, roleName, tpmName string) string {
