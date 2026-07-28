@@ -4,7 +4,10 @@
 package identity_test
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
@@ -20,21 +23,12 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
-// tpmPublicKeyOne and tpmPublicKeyTwo are test EK public keys shared across TPM
-// and TPMGroup tests.
-const (
-	tpmPublicKeyOne = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
------END PUBLIC KEY-----`
-	tpmPublicKeyTwo = `-----BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAhshc3hm6ZNkBRDWdPDLKAf1mHGq9EsWx8MlidOWiZdw=
------END PUBLIC KEY-----`
-)
-
 func TestAccIdentityTPM(t *testing.T) {
 	name := acctest.RandomWithPrefix("tpm")
 	renamedName := acctest.RandomWithPrefix("tpm")
 	resourceName := "vault_identity_tpm.test"
+	publicKey := testTPMPublicKey(t)
+	var originalTPMID string
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -44,12 +38,16 @@ func TestAccIdentityTPM(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityTPMConfig(name, tpmPublicKeyOne, false),
+				Config: testAccIdentityTPMConfig(name, publicKey, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "tpm_ek_public_key", tpmPublicKeyOne+"\n"),
+					resource.TestCheckResourceAttr(resourceName, "tpm_ek_public_key", publicKey+"\n"),
 					resource.TestCheckResourceAttr(resourceName, "disabled", "false"),
 					resource.TestCheckResourceAttrSet(resourceName, "tpm_id"),
+					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
+						originalTPMID = value
+						return nil
+					}),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -58,11 +56,17 @@ func TestAccIdentityTPM(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccIdentityTPMConfig(renamedName, tpmPublicKeyOne, false),
+				Config: testAccIdentityTPMConfig(renamedName, publicKey, false),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", renamedName),
 					resource.TestCheckResourceAttr(resourceName, "disabled", "false"),
 					resource.TestCheckResourceAttrSet(resourceName, "tpm_id"),
+					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
+						if value != originalTPMID {
+							return fmt.Errorf("expected tpm_id %q after rename, got %q", originalTPMID, value)
+						}
+						return nil
+					}),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
@@ -74,7 +78,7 @@ func TestAccIdentityTPM(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccIdentityTPMConfig(renamedName, tpmPublicKeyOne, true),
+				Config: testAccIdentityTPMConfig(renamedName, publicKey, true),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", renamedName),
 					resource.TestCheckResourceAttr(resourceName, "disabled", "true"),
@@ -133,6 +137,23 @@ func testAccIdentityTPMImportStateIdFunc(resourceName string) resource.ImportSta
 		}
 		return rs.Primary.Attributes["name"], nil
 	}
+}
+
+func testTPMPublicKey(t *testing.T) string {
+	t.Helper()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate RSA key: %v", err)
+	}
+
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		t.Fatalf("failed to marshal public key: %v", err)
+	}
+
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes})
+	return strings.TrimSuffix(string(pemBytes), "\n")
 }
 
 // tpmIDFromPublicKey computes the TPM record ID (SHA256 of canonical PEM) the

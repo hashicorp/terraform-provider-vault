@@ -288,7 +288,11 @@ func (r *IdentityTPMResource) populateDataModelFromAPI(ctx context.Context, data
 	}
 
 	data.Name = types.StringValue(readResp.Name)
-	data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
+	if readResp.TPMEKPublicKey == "" {
+		data.TPMEKPublicKey = types.StringNull()
+	} else if data.TPMEKPublicKey.IsNull() || data.TPMEKPublicKey.IsUnknown() {
+		data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
+	}
 	data.Disabled = types.BoolValue(readResp.Disabled)
 	if len(readResp.Metadata) == 0 {
 		data.Metadata = types.MapNull(types.StringType)

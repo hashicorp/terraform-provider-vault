@@ -23,13 +23,15 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 	tpmOneName := acctest.RandomWithPrefix("tpm")
 	tpmTwoName := acctest.RandomWithPrefix("tpm")
 	resourceName := "vault_identity_tpm_group.test"
+	tpmOnePublicKey := testTPMPublicKey(t)
+	tpmTwoPublicKey := testTPMPublicKey(t)
 	var tpmGroupID string
 
-	tpmOneID, err := tpmIDFromPublicKey(tpmPublicKeyOne)
+	tpmOneID, err := tpmIDFromPublicKey(tpmOnePublicKey)
 	if err != nil {
 		t.Fatalf("failed to compute TPM 1 ID: %v", err)
 	}
-	tpmTwoID, err := tpmIDFromPublicKey(tpmPublicKeyTwo)
+	tpmTwoID, err := tpmIDFromPublicKey(tpmTwoPublicKey)
 	if err != nil {
 		t.Fatalf("failed to compute TPM 2 ID: %v", err)
 	}
@@ -42,7 +44,7 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityTPMGroupConfig(groupName, tpmOneName, tpmTwoName, nil),
+				Config: testAccIdentityTPMGroupConfig(groupName, tpmOneName, tpmTwoName, nil, tpmOnePublicKey, tpmTwoPublicKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", groupName),
 					resource.TestCheckResourceAttr(resourceName, "member_tpm_ids.#", "0"),
@@ -55,7 +57,7 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccIdentityTPMGroupConfig(groupName, tpmOneName, tpmTwoName, []string{tpmOneID, tpmTwoID}),
+				Config: testAccIdentityTPMGroupConfig(groupName, tpmOneName, tpmTwoName, []string{tpmOneID, tpmTwoID}, tpmOnePublicKey, tpmTwoPublicKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", groupName),
 					resource.TestCheckResourceAttr(resourceName, "member_tpm_ids.#", "2"),
@@ -80,7 +82,7 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccIdentityTPMGroupConfig(renamedGroupName, tpmOneName, tpmTwoName, []string{tpmOneID, tpmTwoID}),
+				Config: testAccIdentityTPMGroupConfig(renamedGroupName, tpmOneName, tpmTwoName, []string{tpmOneID, tpmTwoID}, tpmOnePublicKey, tpmTwoPublicKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", renamedGroupName),
 					resource.TestCheckResourceAttr(resourceName, "member_tpm_ids.#", "2"),
@@ -115,7 +117,7 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 				ImportStateVerifyIdentifierAttribute: "name",
 			},
 			{
-				Config: testAccIdentityTPMGroupConfigDestroyOnly(tpmOneName, tpmTwoName),
+				Config: testAccIdentityTPMGroupConfigDestroyOnly(tpmOneName, tpmTwoName, tpmOnePublicKey, tpmTwoPublicKey),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectNonEmptyPlan(),
@@ -127,7 +129,7 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 	})
 }
 
-func testAccIdentityTPMGroupConfig(groupName, tpmOneName, tpmTwoName string, members []string) string {
+func testAccIdentityTPMGroupConfig(groupName, tpmOneName, tpmTwoName string, members []string, tpmOnePublicKey, tpmTwoPublicKey string) string {
 	var membersAttr string
 	if len(members) > 0 {
 		var quoted []string
@@ -155,10 +157,10 @@ EOT
 resource "vault_identity_tpm_group" "test" {
   name = %q
 %s}
-`, tpmOneName, tpmPublicKeyOne, tpmTwoName, tpmPublicKeyTwo, groupName, membersAttr)
+`, tpmOneName, tpmOnePublicKey, tpmTwoName, tpmTwoPublicKey, groupName, membersAttr)
 }
 
-func testAccIdentityTPMGroupConfigDestroyOnly(tpmOneName, tpmTwoName string) string {
+func testAccIdentityTPMGroupConfigDestroyOnly(tpmOneName, tpmTwoName, tpmOnePublicKey, tpmTwoPublicKey string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_tpm" "one" {
   name = %q
@@ -173,7 +175,7 @@ resource "vault_identity_tpm" "two" {
 %s
 EOT
 }
-`, tpmOneName, tpmPublicKeyOne, tpmTwoName, tpmPublicKeyTwo)
+`, tpmOneName, tpmOnePublicKey, tpmTwoName, tpmTwoPublicKey)
 }
 
 func testAccIdentityTPMGroupImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
