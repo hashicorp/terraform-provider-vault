@@ -44,7 +44,7 @@ func TestAccGCPKMSSign_basic(t *testing.T) {
 	digest := "LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564="
 	keyVersion := "1"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -74,7 +74,7 @@ func TestAccGCPKMSSign_differentAlgorithms(t *testing.T) {
 	// SHA384 digest of "test message" (base64 encoded)
 	digestSHA384 := "qr3HFcjNg5ac9vH7kIpVTnzfW6VZLxPLlQsYcM3fQJ3VTLI/JZ3wN2a9c8mYgCN4"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -105,7 +105,7 @@ func TestAccGCPKMSSign_differentDigests(t *testing.T) {
 	digest2 := "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg="
 	keyVersion := "1"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -149,7 +149,7 @@ func TestAccGCPKMSSign_namespace(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 		keyName := acctest.RandomWithPrefix("test-key")
-		resource.Test(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -163,7 +163,7 @@ func TestAccGCPKMSSign_namespace(t *testing.T) {
 		backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 		keyName := acctest.RandomWithPrefix("test-key")
 		ns := acctest.RandomWithPrefix("tf-test-ns")
-		resource.Test(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){

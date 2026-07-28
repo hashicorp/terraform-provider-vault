@@ -19,14 +19,14 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestGCPKMSSecretBackend_basic(t *testing.T) {
+func TestAccGCPKMSSecretBackend_basic(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -63,14 +63,14 @@ func TestGCPKMSSecretBackend_basic(t *testing.T) {
 	})
 }
 
-func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
+func TestAccGCPKMSSecretBackend_writeOnly(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -92,18 +92,29 @@ func TestGCPKMSSecretBackend_writeOnly(t *testing.T) {
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCredentialsWO),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccGCPKMSSecretBackendImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldPath,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCredentialsWO,
+					consts.FieldCredentialsWOVersion,
+				},
+			},
 		},
 	})
 }
 
-func TestGCPKMSSecretBackend_mountConfig(t *testing.T) {
+func TestAccGCPKMSSecretBackend_mountConfig(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -162,14 +173,14 @@ func TestGCPKMSSecretBackend_mountConfig(t *testing.T) {
 	})
 }
 
-func TestGCPKMSSecretBackend_mountConfigImmutable(t *testing.T) {
+func TestAccGCPKMSSecretBackend_mountConfigImmutable(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -198,14 +209,14 @@ func TestGCPKMSSecretBackend_mountConfigImmutable(t *testing.T) {
 	})
 }
 
-func TestGCPKMSSecretBackend_mountConfigDefaults(t *testing.T) {
+func TestAccGCPKMSSecretBackend_mountConfigDefaults(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -229,7 +240,7 @@ func TestGCPKMSSecretBackend_mountConfigDefaults(t *testing.T) {
 	})
 }
 
-func TestGCPKMSSecretBackend_pathRequiresReplace(t *testing.T) {
+func TestAccGCPKMSSecretBackend_remount(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	updatedPath := acctest.RandomWithPrefix("tf-test-gcpkms-updated")
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
@@ -237,7 +248,7 @@ func TestGCPKMSSecretBackend_pathRequiresReplace(t *testing.T) {
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -270,12 +281,12 @@ func TestGCPKMSSecretBackend_pathRequiresReplace(t *testing.T) {
 	})
 }
 
-func TestGCPKMSSecretBackend_emptyCredentials(t *testing.T) {
+func TestAccGCPKMSSecretBackend_emptyCredentials(t *testing.T) {
 	// This test verifies that empty credentials are accepted by Vault.
 	// When empty, Vault will attempt to use Default Application Credentials.
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -292,7 +303,7 @@ func TestGCPKMSSecretBackend_emptyCredentials(t *testing.T) {
 	})
 }
 
-func TestGCPKMSSecretBackend_namespace(t *testing.T) {
+func TestAccGCPKMSSecretBackend_namespace(t *testing.T) {
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
@@ -344,7 +355,7 @@ func TestGCPKMSSecretBackend_namespace(t *testing.T) {
 
 	t.Run("basic", func(t *testing.T) {
 		path := acctest.RandomWithPrefix("tf-test-gcpkms")
-		resource.Test(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			Steps:                    getSteps(path, ""),
@@ -354,7 +365,7 @@ func TestGCPKMSSecretBackend_namespace(t *testing.T) {
 	t.Run("ns", func(t *testing.T) {
 		path := acctest.RandomWithPrefix("tf-test-gcpkms")
 		ns := acctest.RandomWithPrefix("tf-test-ns")
-		resource.Test(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			Steps:                    getSteps(path, ns),
@@ -362,17 +373,17 @@ func TestGCPKMSSecretBackend_namespace(t *testing.T) {
 	})
 }
 
-// TestGCPKMSSecretBackend_mountConfigEnterprise covers the Enterprise-only mount
+// TestAccGCPKMSSecretBackend_mountConfigEnterprise covers the Enterprise-only mount
 // fields identity_token_key and delegated_auth_accessors, which require a Vault
 // Enterprise server running 1.17+.
-func TestGCPKMSSecretBackend_mountConfigEnterprise(t *testing.T) {
+func TestAccGCPKMSSecretBackend_mountConfigEnterprise(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
 
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion117)
@@ -416,10 +427,10 @@ func TestGCPKMSSecretBackend_mountConfigEnterprise(t *testing.T) {
 	})
 }
 
-// TestGCPKMSSecretBackend_managedKeys covers the Enterprise-only mount field
+// TestAccGCPKMSSecretBackend_managedKeys covers the Enterprise-only mount field
 // allowed_managed_keys, which requires a Vault Enterprise server and a managed
 // key registered in Vault.
-func TestGCPKMSSecretBackend_managedKeys(t *testing.T) {
+func TestAccGCPKMSSecretBackend_managedKeys(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
 	keyName := acctest.RandomWithPrefix("kms-key")
 	credentials, _ := testutil.GetTestGCPKMSCreds(t)
@@ -427,7 +438,7 @@ func TestGCPKMSSecretBackend_managedKeys(t *testing.T) {
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{

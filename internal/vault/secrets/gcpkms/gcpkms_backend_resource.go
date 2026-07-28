@@ -10,11 +10,15 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -23,8 +27,9 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/mount"
 )
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
+// Ensure the implementation satisfies the expected interfaces
 var _ resource.ResourceWithConfigure = &GCPKMSSecretBackendResource{}
+var _ resource.ResourceWithImportState = &GCPKMSSecretBackendResource{}
 
 // NewGCPKMSSecretBackendResource returns the implementation for this resource
 func NewGCPKMSSecretBackendResource() resource.Resource {
@@ -77,7 +82,7 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 				MarkdownDescription: "JSON-encoded GCP service account credentials. Write-only — never " +
 					"stored in Terraform state. Leave this blank (`\"\"`) to use Default Application Credentials " +
 					"or instance metadata authentication. Requires Terraform 1.11+.",
-				Required:  true,
+				Optional:  true,
 				Sensitive: true,
 				WriteOnly: true,
 			},
@@ -85,6 +90,9 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
 					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
 				Required: true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldCredentialsWO)),
+				},
 			},
 			consts.FieldScopes: schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -163,23 +171,8 @@ func (r *GCPKMSSecretBackendResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	// Step 3: Read back mount information to get computed values
-	mountOutput, found, err := mount.ReadMount(ctx, cli, mountPath)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading GCP KMS mount",
-			fmt.Sprintf("Could not read mount at %s: %s", mountPath, err),
-		)
-		return
-	}
-
-	if found {
-		data.ApplyMountOutput(mountOutput)
-		data.ID = mountOutput.Path
-	}
-
-	// Read back the backend config state from Vault to ensure all computed values are set
-	// Set the data in state first so Read can use it
+	// Step 3: Read back the full resource state from Vault (mount + backend config).
+	// Set the plan data in state first so Read can retrieve the path from it.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -247,7 +240,15 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 	if scopes, ok := secret.Data[consts.FieldScopes].([]interface{}); ok && len(scopes) > 0 {
 		scopeList := make([]string, len(scopes))
 		for i, s := range scopes {
-			scopeList[i] = s.(string)
+			str, ok := s.(string)
+			if !ok {
+				resp.Diagnostics.AddError(
+					"Error reading GCP KMS backend scopes",
+					fmt.Sprintf("unexpected element type %T at index %d", s, i),
+				)
+				return
+			}
+			scopeList[i] = str
 		}
 		scopeTypes, diags := types.SetValueFrom(ctx, types.StringType, scopeList)
 		resp.Diagnostics.Append(diags...)
@@ -256,8 +257,9 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 		}
 		data.Scopes = scopeTypes
 	} else {
-		// Set to null if not in response
-		data.Scopes = types.SetNull(types.StringType)
+		// Use an empty set (not null) so Optional+Computed stabilises — a null value
+		// would cause perpetual drift if the user omits scopes and Vault applies its default.
+		data.Scopes = types.SetValueMust(types.StringType, []attr.Value{})
 	}
 
 	// Note: credentials are write-only and won't be returned by the API
@@ -329,22 +331,28 @@ func (r *GCPKMSSecretBackendResource) Update(ctx context.Context, req resource.U
 		}
 	}
 
-	// Step 2: Update backend configuration if needed
-	configPath := fmt.Sprintf("%s/config", mountPath)
+	// Step 2: Update backend configuration only when GCP-specific fields changed.
+	// Skipping this write on pure mount-tune updates (e.g. description change) avoids
+	// a redundant POST to <path>/config and prevents accidentally overwriting Vault's
+	// scope defaults when the user has not explicitly set scopes.
+	backendConfigChanged := includeCredentials || !plan.Scopes.Equal(state.Scopes)
+	if backendConfigChanged {
+		configPath := fmt.Sprintf("%s/config", mountPath)
 
-	configData, diags := buildBackendConfigFromModel(ctx, &plan, includeCredentials)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+		configData, diags := buildBackendConfigFromModel(ctx, &plan, includeCredentials)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 
-	tflog.Debug(ctx, "Updating GCP KMS backend config", map[string]any{
-		"path":                 configPath,
-		"credentials_included": includeCredentials,
-	})
-	if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
-		return
+		tflog.Debug(ctx, "Updating GCP KMS backend config", map[string]any{
+			"path":                 configPath,
+			"credentials_included": includeCredentials,
+		})
+		if _, err := cli.Logical().WriteWithContext(ctx, configPath, configData); err != nil {
+			resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
+			return
+		}
 	}
 
 	// Set the current plan in state first so Read can use it

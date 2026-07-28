@@ -70,7 +70,7 @@ func TestAccGCPKMSDecrypt_basic(t *testing.T) {
 			backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 			keyName := acctest.RandomWithPrefix("test-key")
 
-			resource.Test(t, resource.TestCase{
+			resource.ParallelTest(t, resource.TestCase{
 				PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 				ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 				ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -106,7 +106,7 @@ func TestAccGCPKMSDecrypt_namespace(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 		keyName := acctest.RandomWithPrefix("test-key")
-		resource.Test(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
@@ -120,7 +120,7 @@ func TestAccGCPKMSDecrypt_namespace(t *testing.T) {
 		backend := acctest.RandomWithPrefix("tf-test-gcpkms")
 		keyName := acctest.RandomWithPrefix("test-key")
 		ns := acctest.RandomWithPrefix("tf-test-ns")
-		resource.Test(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){

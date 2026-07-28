@@ -691,6 +691,12 @@ func DeleteMount(ctx context.Context, client *api.Client, path string) error {
 //   - Remount in place: drop RequiresReplace() and call RemountMount from Update.
 //   - SDKv2 disable_remount parity: add a disable_remount attribute with a path
 //     RequiresReplaceIf that forces replacement when it's set (or Vault < 1.10).
+//
+// Note: RemountWithContext in the Vault API client (vault/api@v1.12+) already
+// handles the async nature of sys/remount internally — it calls StartRemount,
+// obtains the migration ID, and polls RemountStatusWithContext until the migration
+// reaches "success" or "failure" before returning. This call is therefore blocking
+// and safe to follow immediately with UpdateMount against the new path.
 func RemountMount(ctx context.Context, client *api.Client, oldPath, newPath string) error {
 	log.Printf("[DEBUG] Remount %s to %s in Vault", oldPath, newPath)
 

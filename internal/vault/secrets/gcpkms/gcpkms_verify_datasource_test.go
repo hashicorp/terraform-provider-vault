@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-func TestGCPKMSVerifyDataSource_basic(t *testing.T) {
+func TestAccGCPKMSVerifyDataSource_basic(t *testing.T) {
 	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
@@ -25,7 +25,7 @@ func TestGCPKMSVerifyDataSource_basic(t *testing.T) {
 	dataSourceType := "vault_gcpkms_verify"
 	dataSourceName := "data." + dataSourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -43,7 +43,7 @@ func TestGCPKMSVerifyDataSource_basic(t *testing.T) {
 	})
 }
 
-func TestGCPKMSVerifyDataSource_validSignature(t *testing.T) {
+func TestAccGCPKMSVerifyDataSource_validSignature(t *testing.T) {
 	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	path := acctest.RandomWithPrefix("tf-test-gcpkms")
@@ -52,7 +52,7 @@ func TestGCPKMSVerifyDataSource_validSignature(t *testing.T) {
 	dataSourceType := "vault_gcpkms_verify"
 	dataSourceName := "data." + dataSourceType + ".test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -71,7 +71,7 @@ func TestGCPKMSVerifyDataSource_validSignature(t *testing.T) {
 	})
 }
 
-func TestGCPKMSVerifyDataSource_namespace(t *testing.T) {
+func TestAccGCPKMSVerifyDataSource_namespace(t *testing.T) {
 	credentials, keyRing := testutil.GetTestGCPKMSCreds(t)
 
 	dataSourceType := "vault_gcpkms_verify"
@@ -100,7 +100,7 @@ func TestGCPKMSVerifyDataSource_namespace(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		path := acctest.RandomWithPrefix("tf-test-gcpkms")
 		keyName := acctest.RandomWithPrefix("test-key")
-		resource.Test(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			Steps:                    getSteps(path, keyName, ""),
@@ -111,7 +111,7 @@ func TestGCPKMSVerifyDataSource_namespace(t *testing.T) {
 		path := acctest.RandomWithPrefix("tf-test-gcpkms")
 		keyName := acctest.RandomWithPrefix("test-key")
 		ns := acctest.RandomWithPrefix("tf-test-ns")
-		resource.Test(t, resource.TestCase{
+		resource.ParallelTest(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			Steps:                    getSteps(path, keyName, ns),
