@@ -44,11 +44,13 @@ type IdentityTPMGroupModel struct {
 
 	Name         types.String `tfsdk:"name"`
 	MemberTPMIDs types.Set    `tfsdk:"member_tpm_ids"`
+	Metadata     types.Map    `tfsdk:"metadata"`
 }
 
 type identityTPMGroupAPIModel struct {
-	Name         string   `json:"name" mapstructure:"name"`
-	MemberTPMIDs []string `json:"member_tpm_ids" mapstructure:"member_tpm_ids"`
+	Name         string            `json:"name" mapstructure:"name"`
+	MemberTPMIDs []string          `json:"member_tpm_ids" mapstructure:"member_tpm_ids"`
+	Metadata     map[string]string `json:"metadata" mapstructure:"metadata"`
 }
 
 func (r *IdentityTPMGroupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -69,6 +71,12 @@ func (r *IdentityTPMGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 				ElementType: types.StringType,
 				Optional:    true,
 				Description: "Set of TPM IDs that are members of this TPM group.",
+			},
+			consts.FieldMetadata: schema.MapAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Computed:    true,
+				Description: "Metadata to associate with the TPM group.",
 			},
 		},
 	}
@@ -249,6 +257,13 @@ func (r *IdentityTPMGroupResource) getAPIModel(ctx context.Context, data *Identi
 		return nil, diags
 	}
 	apiModel.MemberTPMIDs = memberTPMIDs
+	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+		var metadata map[string]string
+		if diags := data.Metadata.ElementsAs(ctx, &metadata, false); diags.HasError() {
+			return nil, diags
+		}
+		apiModel.Metadata = metadata
+	}
 
 	var requestBody map[string]any
 	if err := mapstructure.Decode(apiModel, &requestBody); err != nil {
@@ -259,6 +274,9 @@ func (r *IdentityTPMGroupResource) getAPIModel(ctx context.Context, data *Identi
 
 	if len(memberTPMIDs) == 0 {
 		delete(requestBody, fieldMemberTPMIDs)
+	}
+	if data.Metadata.IsNull() || data.Metadata.IsUnknown() {
+		delete(requestBody, consts.FieldMetadata)
 	}
 
 	return requestBody, nil
@@ -288,6 +306,15 @@ func (r *IdentityTPMGroupResource) populateDataModelFromAPI(ctx context.Context,
 			return diags
 		}
 		data.MemberTPMIDs = memberTPMIDs
+	}
+	if len(readResp.Metadata) == 0 {
+		data.Metadata = types.MapNull(types.StringType)
+	} else {
+		metadata, diags := types.MapValueFrom(ctx, types.StringType, readResp.Metadata)
+		if diags.HasError() {
+			return diags
+		}
+		data.Metadata = metadata
 	}
 
 	return nil

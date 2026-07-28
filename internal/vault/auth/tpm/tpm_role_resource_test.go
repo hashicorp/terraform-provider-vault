@@ -31,14 +31,14 @@ func TestAccTPMAuthRole(t *testing.T) {
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 1: Create a role bound to a TPM ID.
+			// Step 1: Create a role bound to a TPM ID and TPM group ID.
 			{
-				Config: testAccTPMAuthRoleWithTPMIDConfig(mount, roleName, tpmName),
+				Config: testAccTPMAuthRoleWithTPMIDAndTPMGroupIDConfig(mount, roleName, tpmName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
 					resource.TestCheckResourceAttr(resourceName, "name", roleName),
 					resource.TestCheckResourceAttr(resourceName, "tpm_ids.#", "1"),
-					resource.TestCheckResourceAttr(resourceName, "tpmgroup_ids.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "tpmgroup_ids.#", "1"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -67,7 +67,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 			},
 			// Step 3: Clear token fields, revert to minimal.
 			{
-				Config: testAccTPMAuthRoleWithTPMIDConfig(mount, roleName, tpmName),
+				Config: testAccTPMAuthRoleWithTPMIDAndTPMGroupIDConfig(mount, roleName, tpmName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
 					resource.TestCheckResourceAttr(resourceName, "name", roleName),
@@ -105,7 +105,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 }
 
 // TestAccTPMAuthRoleNamespace verifies that the role resource works correctly
-// when deployed inside a Vault namespace (Enterprise only).
+// when deployed inside a Vault namespace.
 func TestAccTPMAuthRoleNamespace(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tpm-mount")
 	ns := acctest.RandomWithPrefix("ns")
@@ -175,6 +175,28 @@ resource "vault_tpm_auth_backend_role" "test" {
   mount   = vault_auth_backend.tpm.path
   name    = %q
   tpm_ids = [vault_identity_tpm.test.tpm_id]
+}
+`, testAccTPMAuthRoleMountOnlyConfig(mount), tpmName, roleName)
+}
+
+func testAccTPMAuthRoleWithTPMIDAndTPMGroupIDConfig(mount, roleName, tpmName string) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_identity_tpm" "test" {
+  name = %q
+  tpm_ek_public_key = <<EOT
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
+-----END PUBLIC KEY-----
+EOT
+}
+
+resource "vault_tpm_auth_backend_role" "test" {
+  mount        = vault_auth_backend.tpm.path
+  name         = %q
+  tpm_ids      = [vault_identity_tpm.test.tpm_id]
+  tpmgroup_ids = ["example-group-id"]
 }
 `, testAccTPMAuthRoleMountOnlyConfig(mount), tpmName, roleName)
 }

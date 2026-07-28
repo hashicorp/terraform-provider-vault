@@ -45,14 +45,16 @@ type IdentityTPMModel struct {
 	Name           types.String `tfsdk:"name"`
 	TPMEKPublicKey types.String `tfsdk:"tpm_ek_public_key"`
 	Disabled       types.Bool   `tfsdk:"disabled"`
+	Metadata       types.Map    `tfsdk:"metadata"`
 	TPMID          types.String `tfsdk:"tpm_id"`
 }
 
 type identityTPMAPIModel struct {
-	Name           string `json:"name" mapstructure:"name"`
-	TPMEKPublicKey string `json:"tpm_ek_public_key" mapstructure:"tpm_ek_public_key"`
-	Disabled       bool   `json:"disabled" mapstructure:"disabled"`
-	TPMID          string `json:"id" mapstructure:"id"`
+	Name           string            `json:"name" mapstructure:"name"`
+	TPMEKPublicKey string            `json:"tpm_ek_public_key" mapstructure:"tpm_ek_public_key"`
+	Disabled       bool              `json:"disabled" mapstructure:"disabled"`
+	Metadata       map[string]string `json:"metadata" mapstructure:"metadata"`
+	TPMID          string            `json:"id" mapstructure:"id"`
 }
 
 func (r *IdentityTPMResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -80,6 +82,12 @@ func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional:    true,
 				Computed:    true,
 				Description: "Whether the TPM is disabled.",
+			},
+			consts.FieldMetadata: schema.MapAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Computed:    true,
+				Description: "Metadata to associate with the TPM record.",
 			},
 			"tpm_id": schema.StringAttribute{
 				Computed:    true,
@@ -254,7 +262,7 @@ func (r *IdentityTPMResource) path(data *IdentityTPMModel) string {
 	return fmt.Sprintf("identity/tpm/name/%s", data.Name.ValueString())
 }
 
-func (r *IdentityTPMResource) populateDataModelFromAPI(_ context.Context, data *IdentityTPMModel, resp *api.Secret) diag.Diagnostics {
+func (r *IdentityTPMResource) populateDataModelFromAPI(ctx context.Context, data *IdentityTPMModel, resp *api.Secret) diag.Diagnostics {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
@@ -271,6 +279,15 @@ func (r *IdentityTPMResource) populateDataModelFromAPI(_ context.Context, data *
 	data.Name = types.StringValue(readResp.Name)
 	data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
 	data.Disabled = types.BoolValue(readResp.Disabled)
+	if len(readResp.Metadata) == 0 {
+		data.Metadata = types.MapNull(types.StringType)
+	} else {
+		metadata, diags := types.MapValueFrom(ctx, types.StringType, readResp.Metadata)
+		if diags.HasError() {
+			return diags
+		}
+		data.Metadata = metadata
+	}
 	data.TPMID = types.StringValue(readResp.TPMID)
 
 	return nil
@@ -285,6 +302,13 @@ func (r *IdentityTPMResource) getAPIModel(ctx context.Context, data *IdentityTPM
 	if !data.Disabled.IsNull() && !data.Disabled.IsUnknown() {
 		apiModel.Disabled = data.Disabled.ValueBool()
 	}
+	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+		var metadata map[string]string
+		if diags := data.Metadata.ElementsAs(ctx, &metadata, false); diags.HasError() {
+			return nil, diags
+		}
+		apiModel.Metadata = metadata
+	}
 
 	var requestBody map[string]any
 	if err := mapstructure.Decode(apiModel, &requestBody); err != nil {
@@ -295,6 +319,9 @@ func (r *IdentityTPMResource) getAPIModel(ctx context.Context, data *IdentityTPM
 
 	if data.Disabled.IsNull() || data.Disabled.IsUnknown() {
 		delete(requestBody, "disabled")
+	}
+	if data.Metadata.IsNull() || data.Metadata.IsUnknown() {
+		delete(requestBody, consts.FieldMetadata)
 	}
 
 	return requestBody, nil
