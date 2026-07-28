@@ -104,12 +104,10 @@ func (r *IdentityTPMResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	requestBody := map[string]any{
-		consts.FieldName:    data.Name.ValueString(),
-		fieldTPMEKPublicKey: data.TPMEKPublicKey.ValueString(),
-	}
-	if !data.Disabled.IsNull() && !data.Disabled.IsUnknown() {
-		requestBody["disabled"] = data.Disabled.ValueBool()
+	requestBody, diags := r.getAPIModel(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	resourcePath := r.path(&data)
@@ -181,12 +179,10 @@ func (r *IdentityTPMResource) Update(ctx context.Context, req resource.UpdateReq
 		return
 	}
 
-	requestBody := map[string]any{
-		consts.FieldName:    data.Name.ValueString(),
-		fieldTPMEKPublicKey: data.TPMEKPublicKey.ValueString(),
-	}
-	if !data.Disabled.IsNull() && !data.Disabled.IsUnknown() {
-		requestBody["disabled"] = data.Disabled.ValueBool()
+	requestBody, diags := r.getAPIModel(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	resourcePath := r.path(&data)
