@@ -115,7 +115,7 @@ The following arguments are supported:
 	Currently read permissions to query compute resources are required.
 
 * `auth_type` - (Optional) Specifies how Vault authenticates to Azure APIs.
-	Valid values: `auto`, `root_creds`, `plugin_wif`, `msi`, `aks_wi`. Defaults
+	Valid values: `root_creds`, `plugin_wif`, `msi`, `aks_wi`. Defaults
 	to `auto` for backward compatibility.
 
 * `client_secret` - (Optional) The client secret for credentials to query the
