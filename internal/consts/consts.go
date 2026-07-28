@@ -89,6 +89,7 @@ const (
 	FieldRoles                              = "roles"
 	FieldDescription                        = "description"
 	FieldTTL                                = "ttl"
+	FieldCertTTL                            = "cert_ttl"
 	FieldMaxTTL                             = "max_ttl"
 	FieldDefaultLeaseTTL                    = "default_lease_ttl"
 	FieldDefaultLeaseTTLSeconds             = "default_lease_ttl_seconds"

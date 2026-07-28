@@ -244,6 +244,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffe.NewSpiffeAuthRoleResource,
 		identity.NewIdentityTPMResource,
 		identity.NewIdentityTPMGroupResource,
+		tpmauth.NewTPMAuthBackendConfigResource,
 		tpmauth.NewTPMAuthRoleResource,
 		cloudfoundry.NewCFAuthBackendConfigResource,
 		cloudfoundry.NewCFAuthBackendRoleResource,
