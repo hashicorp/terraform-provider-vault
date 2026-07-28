@@ -45,12 +45,14 @@ type IdentityTPMModel struct {
 	Name           types.String `tfsdk:"name"`
 	TPMEKPublicKey types.String `tfsdk:"tpm_ek_public_key"`
 	Disabled       types.Bool   `tfsdk:"disabled"`
+	TPMID          types.String `tfsdk:"tpm_id"`
 }
 
 type identityTPMAPIModel struct {
 	Name           string `json:"name" mapstructure:"name"`
 	TPMEKPublicKey string `json:"tpm_ek_public_key" mapstructure:"tpm_ek_public_key"`
 	Disabled       bool   `json:"disabled" mapstructure:"disabled"`
+	TPMID          string `json:"id" mapstructure:"id"`
 }
 
 func (r *IdentityTPMResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -78,6 +80,10 @@ func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Optional:    true,
 				Computed:    true,
 				Description: "Whether the TPM is disabled.",
+			},
+			"tpm_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "The unique ID Vault assigns to this TPM record (SHA256 of the EK public key).",
 			},
 		},
 	}
@@ -269,6 +275,7 @@ func (r *IdentityTPMResource) populateDataModelFromAPI(_ context.Context, data *
 	data.Name = types.StringValue(readResp.Name)
 	data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
 	data.Disabled = types.BoolValue(readResp.Disabled)
+	data.TPMID = types.StringValue(readResp.TPMID)
 
 	return nil
 }

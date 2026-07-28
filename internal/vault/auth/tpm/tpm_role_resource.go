@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package cert
+package tpm
 
 import (
 	"context"
@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -31,51 +30,49 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-var tpmRoleRegexp = regexp.MustCompile(`^auth/(.+)/tpmrole/(.+)$`)
+var tpmRoleRegexp = regexp.MustCompile(`^auth/(.+)/role/(.+)$`)
 
-var _ resource.ResourceWithImportState = &AuthCertTPMRoleResource{}
+var _ resource.ResourceWithImportState = &TPMAuthRoleResource{}
 
-func NewAuthCertTPMRoleResource() resource.Resource {
-	return &AuthCertTPMRoleResource{}
+func NewTPMAuthRoleResource() resource.Resource {
+	return &TPMAuthRoleResource{}
 }
 
-type AuthCertTPMRoleResource struct {
+type TPMAuthRoleResource struct {
 	base.ResourceWithConfigure
 }
 
-type AuthCertTPMRoleModel struct {
+type TPMAuthRoleModel struct {
 	token.TokenModel
 
-	Backend     types.String `tfsdk:"backend"`
+	Mount       types.String `tfsdk:"mount"`
 	Name        types.String `tfsdk:"name"`
 	DisplayName types.String `tfsdk:"display_name"`
-	EntityIDs   types.Set    `tfsdk:"entity_ids"`
-	GroupIDs    types.Set    `tfsdk:"group_ids"`
+	TPMIDs      types.Set    `tfsdk:"tpm_ids"`
+	TPMGroupIDs types.Set    `tfsdk:"tpmgroup_ids"`
 }
 
-type authCertTPMRoleAPIModel struct {
+type tpmRoleAPIModel struct {
 	token.TokenAPIModel `mapstructure:",squash"`
 
 	DisplayName string   `json:"display_name" mapstructure:"display_name"`
-	EntityIDs   []string `json:"entity_ids" mapstructure:"entity_ids"`
-	GroupIDs    []string `json:"group_ids" mapstructure:"group_ids"`
+	TPMIDs      []string `json:"tpm_ids" mapstructure:"tpm_ids"`
+	TPMGroupIDs []string `json:"tpmgroup_ids" mapstructure:"tpmgroup_ids"`
 }
 
-func (r *AuthCertTPMRoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_cert_auth_backend_tpm_role"
+func (r *TPMAuthRoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_tpm_auth_backend_role"
 }
 
-func (r *AuthCertTPMRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *TPMAuthRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			consts.FieldBackend: schema.StringAttribute{
-				Optional: true,
-				Computed: true,
-				Default:  stringdefault.StaticString("cert"),
+			consts.FieldMount: schema.StringAttribute{
+				Required: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Description: "Cert auth backend mount path.",
+				Description: "TPM auth backend mount path.",
 			},
 			consts.FieldName: schema.StringAttribute{
 				Required: true,
@@ -87,17 +84,17 @@ func (r *AuthCertTPMRoleResource) Schema(_ context.Context, _ resource.SchemaReq
 			consts.FieldDisplayName: schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "A display name for the role.",
+				Description: "Display name for the role. Defaults to the role name.",
 			},
-			"entity_ids": schema.SetAttribute{
+			"tpm_ids": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Set of entity IDs that are members of this TPM role.",
+				Description: "Set of TPM record IDs authorized to authenticate with this role.",
 			},
-			"group_ids": schema.SetAttribute{
+			"tpmgroup_ids": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "Set of group IDs that are members of this TPM role.",
+				Description: "Set of TPM group IDs authorized to authenticate with this role.",
 			},
 		},
 	}
@@ -105,8 +102,8 @@ func (r *AuthCertTPMRoleResource) Schema(_ context.Context, _ resource.SchemaReq
 	token.MustAddBaseAndTokenSchemas(&resp.Schema)
 }
 
-func (r *AuthCertTPMRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data AuthCertTPMRoleModel
+func (r *TPMAuthRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data TPMAuthRoleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -124,12 +121,7 @@ func (r *AuthCertTPMRoleResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	rolePath, err := r.path(&data)
-	if err != nil {
-		resp.Diagnostics.AddError("Error determining role path", err.Error())
-		return
-	}
-
+	rolePath := r.path(&data)
 	if _, err := vaultClient.Logical().WriteWithContext(ctx, rolePath, requestBody); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
@@ -153,8 +145,8 @@ func (r *AuthCertTPMRoleResource) Create(ctx context.Context, req resource.Creat
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *AuthCertTPMRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data AuthCertTPMRoleModel
+func (r *TPMAuthRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data TPMAuthRoleModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -166,19 +158,13 @@ func (r *AuthCertTPMRoleResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	rolePath, err := r.path(&data)
-	if err != nil {
-		resp.Diagnostics.AddError("Error determining role path", err.Error())
-		return
-	}
-
-	roleResp, err := vaultClient.Logical().ReadWithContext(ctx, rolePath)
+	roleResp, err := vaultClient.Logical().ReadWithContext(ctx, r.path(&data))
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 	if roleResp == nil {
-		tflog.Warn(ctx, "cert auth TPM role not found, removing from state")
+		tflog.Warn(ctx, "TPM role not found, removing from state")
 		resp.State.RemoveResource(ctx)
 		return
 	}
@@ -191,8 +177,8 @@ func (r *AuthCertTPMRoleResource) Read(ctx context.Context, req resource.ReadReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *AuthCertTPMRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data AuthCertTPMRoleModel
+func (r *TPMAuthRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data TPMAuthRoleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -210,12 +196,7 @@ func (r *AuthCertTPMRoleResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	rolePath, err := r.path(&data)
-	if err != nil {
-		resp.Diagnostics.AddError("Error determining role path", err.Error())
-		return
-	}
-
+	rolePath := r.path(&data)
 	if _, err := vaultClient.Logical().WriteWithContext(ctx, rolePath, requestBody); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
@@ -239,8 +220,8 @@ func (r *AuthCertTPMRoleResource) Update(ctx context.Context, req resource.Updat
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *AuthCertTPMRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data AuthCertTPMRoleModel
+func (r *TPMAuthRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data TPMAuthRoleModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -252,13 +233,7 @@ func (r *AuthCertTPMRoleResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	rolePath, err := r.path(&data)
-	if err != nil {
-		resp.Diagnostics.AddError("Error determining role path", err.Error())
-		return
-	}
-
-	if _, err := vaultClient.Logical().DeleteWithContext(ctx, rolePath); err != nil {
+	if _, err := vaultClient.Logical().DeleteWithContext(ctx, r.path(&data)); err != nil {
 		if util.Is404(err) {
 			return
 		}
@@ -266,23 +241,20 @@ func (r *AuthCertTPMRoleResource) Delete(ctx context.Context, req resource.Delet
 	}
 }
 
-func (r *AuthCertTPMRoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	backend, roleName, err := extractTPMRoleIdentifiers(req.ID)
+func (r *TPMAuthRoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	mount, name, err := extractTPMRoleIdentifiers(req.ID)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error parsing import identifier",
-			fmt.Sprintf("The import identifier %q is not valid: %s", req.ID, err.Error()),
-		)
+		resp.Diagnostics.AddError("Invalid import identifier",
+			fmt.Sprintf("Expected format: auth/<mount>/role/<name>. Got: %q. Error: %s", req.ID, err))
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldBackend), backend)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), roleName)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 
 	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
 	if ns != "" {
-		tflog.Info(
-			ctx,
+		tflog.Info(ctx,
 			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
 			map[string]any{consts.FieldNamespace: ns},
 		)
@@ -290,125 +262,93 @@ func (r *AuthCertTPMRoleResource) ImportState(ctx context.Context, req resource.
 	}
 }
 
-func (r *AuthCertTPMRoleResource) path(data *AuthCertTPMRoleModel) (string, error) {
-	backend := data.Backend.ValueString()
-	name := data.Name.ValueString()
-	if backend == "" || name == "" {
-		return "", fmt.Errorf("backend and name are required fields got backend: %q name: %q", backend, name)
+func extractTPMRoleIdentifiers(importID string) (mount, name string, err error) {
+	importID = strings.Trim(importID, "/")
+	if importID == "" {
+		return "", "", fmt.Errorf("import identifier cannot be empty")
 	}
-	return fmt.Sprintf("auth/%s/tpmrole/%s", backend, name), nil
+
+	matches := tpmRoleRegexp.FindStringSubmatch("auth/" + strings.TrimPrefix(importID, "auth/"))
+	if len(matches) != 3 {
+		return "", "", fmt.Errorf("must be of the form auth/<mount>/role/<name>")
+	}
+
+	return matches[1], matches[2], nil
 }
 
-func (r *AuthCertTPMRoleResource) getAPIModel(ctx context.Context, data *AuthCertTPMRoleModel) (map[string]any, diag.Diagnostics) {
-	apiModel := authCertTPMRoleAPIModel{
+func (r *TPMAuthRoleResource) path(data *TPMAuthRoleModel) string {
+	return fmt.Sprintf("auth/%s/role/%s", data.Mount.ValueString(), data.Name.ValueString())
+}
+
+func (r *TPMAuthRoleResource) getAPIModel(ctx context.Context, data *TPMAuthRoleModel) (map[string]any, diag.Diagnostics) {
+	apiModel := tpmRoleAPIModel{
 		DisplayName: data.DisplayName.ValueString(),
 	}
 
-	var entityIDs []string
-	if diags := data.EntityIDs.ElementsAs(ctx, &entityIDs, false); diags.HasError() {
+	if diags := data.TPMIDs.ElementsAs(ctx, &apiModel.TPMIDs, false); diags.HasError() {
 		return nil, diags
 	}
-	apiModel.EntityIDs = entityIDs
-
-	var groupIDs []string
-	if diags := data.GroupIDs.ElementsAs(ctx, &groupIDs, false); diags.HasError() {
+	if diags := data.TPMGroupIDs.ElementsAs(ctx, &apiModel.TPMGroupIDs, false); diags.HasError() {
 		return nil, diags
 	}
-	apiModel.GroupIDs = groupIDs
 
-	if diags := token.PopulateTokenAPIFromModel(ctx, &data.TokenModel, &apiModel.TokenAPIModel); diags.HasError() {
-		return nil, diags
+	tokenDiags := token.PopulateTokenAPIFromModel(ctx, &data.TokenModel, &apiModel.TokenAPIModel)
+	if tokenDiags.HasError() {
+		return nil, tokenDiags
 	}
 
 	var requestBody map[string]any
 	if err := mapstructure.Decode(apiModel, &requestBody); err != nil {
 		return nil, diag.Diagnostics{
-			diag.NewErrorDiagnostic("Failed to decode cert auth TPM role API model to map", err.Error()),
+			diag.NewErrorDiagnostic("Failed to decode TPM role API model to map", err.Error()),
 		}
 	}
 
-	if len(entityIDs) == 0 {
-		delete(requestBody, "entity_ids")
+	if len(apiModel.TPMIDs) == 0 {
+		delete(requestBody, "tpm_ids")
 	}
-	if len(groupIDs) == 0 {
-		delete(requestBody, "group_ids")
-	}
-	if apiModel.DisplayName == "" {
-		delete(requestBody, consts.FieldDisplayName)
+	if len(apiModel.TPMGroupIDs) == 0 {
+		delete(requestBody, "tpmgroup_ids")
 	}
 
 	return requestBody, nil
 }
 
-func (r *AuthCertTPMRoleResource) populateDataModelFromAPI(ctx context.Context, data *AuthCertTPMRoleModel, resp *api.Secret) diag.Diagnostics {
+func (r *TPMAuthRoleResource) populateDataModelFromAPI(ctx context.Context, data *TPMAuthRoleModel, resp *api.Secret) diag.Diagnostics {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
 		}
 	}
 
-	var readResp authCertTPMRoleAPIModel
+	var readResp tpmRoleAPIModel
 	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
 		}
 	}
 
-	if readResp.DisplayName == "" {
-		data.DisplayName = types.StringNull()
-	} else {
-		data.DisplayName = types.StringValue(readResp.DisplayName)
-	}
+	data.DisplayName = types.StringValue(readResp.DisplayName)
 
-	if len(readResp.EntityIDs) == 0 {
-		data.EntityIDs = types.SetNull(types.StringType)
+	if len(readResp.TPMIDs) == 0 {
+		data.TPMIDs = types.SetNull(types.StringType)
 	} else {
-		entityIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.EntityIDs)
+		tpmIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.TPMIDs)
 		if diags.HasError() {
 			return diags
 		}
-		data.EntityIDs = entityIDs
+		data.TPMIDs = tpmIDs
 	}
 
-	if len(readResp.GroupIDs) == 0 {
-		data.GroupIDs = types.SetNull(types.StringType)
+	if len(readResp.TPMGroupIDs) == 0 {
+		data.TPMGroupIDs = types.SetNull(types.StringType)
 	} else {
-		groupIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.GroupIDs)
+		tpmGroupIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.TPMGroupIDs)
 		if diags.HasError() {
 			return diags
 		}
-		data.GroupIDs = groupIDs
+		data.TPMGroupIDs = tpmGroupIDs
 	}
 
 	return token.PopulateTokenModelFromAPI(ctx, &data.TokenModel, &readResp.TokenAPIModel)
-}
-
-func extractTPMRoleIdentifiers(id string) (string, string, error) {
-	if id == "" {
-		return "", "", fmt.Errorf("import identifier cannot be empty")
-	}
-	id = strings.Trim(id, "/")
-
-	if !tpmRoleRegexp.MatchString(id) {
-		return "", "", fmt.Errorf("import identifier must be of the form 'auth/<backend>/tpmrole/<name>', "+
-			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
-	}
-
-	matches := tpmRoleRegexp.FindStringSubmatch(id)
-	if len(matches) != 3 {
-		return "", "", fmt.Errorf("import identifier must be of the form 'auth/<backend>/tpmrole/<name>', "+
-			"namespace can be specified using the env var %s", consts.EnvVarVaultNamespaceImport)
-	}
-
-	backend := strings.TrimSpace(matches[1])
-	if backend == "" {
-		return "", "", fmt.Errorf("backend cannot be empty")
-	}
-
-	name := strings.TrimSpace(matches[2])
-	if name == "" {
-		return "", "", fmt.Errorf("name cannot be empty")
-	}
-
-	return backend, name, nil
 }

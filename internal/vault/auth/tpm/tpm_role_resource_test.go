@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package cert
+package tpm
 
 import (
 	"context"
@@ -10,14 +10,14 @@ import (
 	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 )
 
-func TestAuthCertTPMRoleResourceSchema(t *testing.T) {
+func TestTPMAuthRoleResourceSchema(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 	schemaReq := fwresource.SchemaRequest{}
 	schemaResp := &fwresource.SchemaResponse{}
 
-	NewAuthCertTPMRoleResource().Schema(ctx, schemaReq, schemaResp)
+	NewTPMAuthRoleResource().Schema(ctx, schemaReq, schemaResp)
 	if schemaResp.Diagnostics.HasError() {
 		t.Fatalf("schema diagnostics: %+v", schemaResp.Diagnostics)
 	}
@@ -39,14 +39,14 @@ func TestExtractTPMRoleIdentifiers(t *testing.T) {
 	}{
 		{
 			name:      "valid import id",
-			importID:  "auth/cert/tpmrole/my-role",
-			wantMount: "cert",
+			importID:  "auth/tpm/role/my-role",
+			wantMount: "tpm",
 			wantRole:  "my-role",
 		},
 		{
-			name:      "valid import id with slashes",
-			importID:  "/auth/custom/tpmrole/role-1/",
-			wantMount: "custom",
+			name:      "valid import id with custom mount",
+			importID:  "auth/my-tpm-mount/role/role-1",
+			wantMount: "my-tpm-mount",
 			wantRole:  "role-1",
 		},
 		{
@@ -56,7 +56,7 @@ func TestExtractTPMRoleIdentifiers(t *testing.T) {
 		},
 		{
 			name:     "invalid format",
-			importID: "auth/cert/role/my-role",
+			importID: "auth/tpm/tpmrole/my-role",
 			wantErr:  true,
 		},
 	}
@@ -74,7 +74,6 @@ func TestExtractTPMRoleIdentifiers(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error for import id %q: %v", tt.importID, err)
 			}
-
 			if gotMount != tt.wantMount {
 				t.Fatalf("mount mismatch: got %q, want %q", gotMount, tt.wantMount)
 			}

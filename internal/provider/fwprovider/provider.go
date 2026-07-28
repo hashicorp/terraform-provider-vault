@@ -18,12 +18,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
-	certauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cert"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
 	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
 	kerberosauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/kerberos"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	tpmauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/tpm"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
 	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/identity"
@@ -244,7 +244,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		spiffe.NewSpiffeAuthRoleResource,
 		identity.NewIdentityTPMResource,
 		identity.NewIdentityTPMGroupResource,
-		certauth.NewAuthCertTPMRoleResource,
+		tpmauth.NewTPMAuthRoleResource,
 		cloudfoundry.NewCFAuthBackendConfigResource,
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		userpass.NewUserpassAuthUserResource,
