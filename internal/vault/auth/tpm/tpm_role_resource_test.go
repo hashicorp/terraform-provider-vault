@@ -27,7 +27,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -117,7 +117,7 @@ func TestAccTPMAuthRoleNamespace(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
