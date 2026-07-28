@@ -1,85 +1,237 @@
 // Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package tpm
+package tpm_test
 
 import (
-	"context"
+	"fmt"
 	"testing"
 
-	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
-func TestTPMAuthRoleResourceSchema(t *testing.T) {
-	t.Parallel()
+// TestAccTPMAuthRole tests the full CRUD lifecycle, token-field round-trip,
+// and import for the vault_tpm_auth_backend_role resource.
+func TestAccTPMAuthRole(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tpm-mount")
+	roleName := acctest.RandomWithPrefix("tpm-role")
+	tpmName := acctest.RandomWithPrefix("tpm")
+	resourceName := "vault_tpm_auth_backend_role.test"
 
-	ctx := context.Background()
-	schemaReq := fwresource.SchemaRequest{}
-	schemaResp := &fwresource.SchemaResponse{}
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create a role bound to a TPM ID.
+			{
+				Config: testAccTPMAuthRoleWithTPMIDConfig(mount, roleName, tpmName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "tpm_ids.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tpmgroup_ids.#", "0"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 2: Set token fields.
+			{
+				Config: testAccTPMAuthRoleWithTokenFieldsConfig(mount, roleName, tpmName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "token_ttl", "3600"),
+					resource.TestCheckResourceAttr(resourceName, "token_max_ttl", "7200"),
+					resource.TestCheckResourceAttr(resourceName, "token_policies.#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "token_policies.*", "policy-a"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "token_policies.*", "policy-b"),
+					resource.TestCheckResourceAttr(resourceName, "token_type", "service"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 3: Clear token fields, revert to minimal.
+			{
+				Config: testAccTPMAuthRoleWithTPMIDConfig(mount, roleName, tpmName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckNoResourceAttr(resourceName, "token_ttl"),
+					resource.TestCheckNoResourceAttr(resourceName, "token_max_ttl"),
+					resource.TestCheckNoResourceAttr(resourceName, "token_policies"),
+					resource.TestCheckResourceAttr(resourceName, "token_type", "default"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 4: Import state.
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccTPMAuthRoleImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "mount",
+			},
+			// Step 5: Destroy the role (keep the mount).
+			{
+				Config: testAccTPMAuthRoleMountOnlyConfig(mount),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectNonEmptyPlan(),
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionDestroy),
+					},
+				},
+			},
+		},
+	})
+}
 
-	NewTPMAuthRoleResource().Schema(ctx, schemaReq, schemaResp)
-	if schemaResp.Diagnostics.HasError() {
-		t.Fatalf("schema diagnostics: %+v", schemaResp.Diagnostics)
-	}
+// TestAccTPMAuthRoleNamespace verifies that the role resource works correctly
+// when deployed inside a Vault namespace (Enterprise only).
+func TestAccTPMAuthRoleNamespace(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tpm-mount")
+	ns := acctest.RandomWithPrefix("ns")
+	roleName := acctest.RandomWithPrefix("tpm-role")
+	tpmName := acctest.RandomWithPrefix("tpm")
+	resourceName := "vault_tpm_auth_backend_role.test"
 
-	if diags := schemaResp.Schema.ValidateImplementation(ctx); diags.HasError() {
-		t.Fatalf("schema validation diagnostics: %+v", diags)
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create the role inside a namespace.
+			{
+				Config: testAccTPMAuthRoleNamespaceConfig(ns, mount, roleName, tpmName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
+func testAccTPMAuthRoleImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+		return fmt.Sprintf("auth/%s/role/%s", rs.Primary.Attributes["mount"], rs.Primary.Attributes["name"]), nil
 	}
 }
 
-func TestExtractTPMRoleIdentifiers(t *testing.T) {
-	t.Parallel()
+func testAccTPMAuthRoleMountOnlyConfig(mount string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "tpm" {
+  type = "tpm"
+  path = %q
+}
+`, mount)
+}
 
-	tests := []struct {
-		name      string
-		importID  string
-		wantErr   bool
-		wantMount string
-		wantRole  string
-	}{
-		{
-			name:      "valid import id",
-			importID:  "auth/tpm/role/my-role",
-			wantMount: "tpm",
-			wantRole:  "my-role",
-		},
-		{
-			name:      "valid import id with custom mount",
-			importID:  "auth/my-tpm-mount/role/role-1",
-			wantMount: "my-tpm-mount",
-			wantRole:  "role-1",
-		},
-		{
-			name:     "invalid empty id",
-			importID: "",
-			wantErr:  true,
-		},
-		{
-			name:     "invalid format",
-			importID: "auth/tpm/tpmrole/my-role",
-			wantErr:  true,
-		},
-	}
+func testAccTPMAuthRoleWithTPMIDConfig(mount, roleName, tpmName string) string {
+	return fmt.Sprintf(`
+%s
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotMount, gotRole, err := extractTPMRoleIdentifiers(tt.importID)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatalf("expected error for import id %q", tt.importID)
-				}
-				return
-			}
+resource "vault_identity_tpm" "test" {
+  name = %q
+  tpm_ek_public_key = <<EOT
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
+-----END PUBLIC KEY-----
+EOT
+}
 
-			if err != nil {
-				t.Fatalf("unexpected error for import id %q: %v", tt.importID, err)
-			}
-			if gotMount != tt.wantMount {
-				t.Fatalf("mount mismatch: got %q, want %q", gotMount, tt.wantMount)
-			}
-			if gotRole != tt.wantRole {
-				t.Fatalf("role mismatch: got %q, want %q", gotRole, tt.wantRole)
-			}
-		})
-	}
+resource "vault_tpm_auth_backend_role" "test" {
+  mount   = vault_auth_backend.tpm.path
+  name    = %q
+  tpm_ids = [vault_identity_tpm.test.tpm_id]
+}
+`, testAccTPMAuthRoleMountOnlyConfig(mount), tpmName, roleName)
+}
+
+func testAccTPMAuthRoleWithTokenFieldsConfig(mount, roleName, tpmName string) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_identity_tpm" "test" {
+  name = %q
+  tpm_ek_public_key = <<EOT
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
+-----END PUBLIC KEY-----
+EOT
+}
+
+resource "vault_tpm_auth_backend_role" "test" {
+  mount   = vault_auth_backend.tpm.path
+  name    = %q
+  tpm_ids = [vault_identity_tpm.test.tpm_id]
+
+  token_ttl      = 3600
+  token_max_ttl  = 7200
+  token_policies = ["policy-a", "policy-b"]
+  token_type     = "service"
+}
+`, testAccTPMAuthRoleMountOnlyConfig(mount), tpmName, roleName)
+}
+
+func testAccTPMAuthRoleNamespaceConfig(ns, mount, roleName, tpmName string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = %q
+}
+
+resource "vault_auth_backend" "tpm" {
+  type      = "tpm"
+  path      = %q
+  namespace = vault_namespace.test.path
+}
+
+resource "vault_identity_tpm" "test" {
+  namespace = vault_namespace.test.path
+  name      = %q
+  tpm_ek_public_key = <<EOT
+-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
+-----END PUBLIC KEY-----
+EOT
+}
+
+resource "vault_tpm_auth_backend_role" "test" {
+  namespace = vault_namespace.test.path
+  mount     = vault_auth_backend.tpm.path
+  name      = %q
+  tpm_ids   = [vault_identity_tpm.test.tpm_id]
+}
+`, ns, mount, tpmName, roleName)
 }
