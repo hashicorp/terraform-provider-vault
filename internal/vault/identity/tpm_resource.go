@@ -65,10 +65,7 @@ func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldName: schema.StringAttribute{
-				Required: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Required:    true,
 				Description: "Name of the TPM record.",
 			},
 			fieldTPMEKPublicKey: schema.StringAttribute{
@@ -90,7 +87,10 @@ func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Description: "Metadata to associate with the TPM record.",
 			},
 			"tpm_id": schema.StringAttribute{
-				Computed:    true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				Description: "The unique ID Vault assigns to this TPM record (SHA256 of the EK public key).",
 			},
 		},
@@ -180,6 +180,14 @@ func (r *IdentityTPMResource) Update(ctx context.Context, req resource.UpdateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	var stateData IdentityTPMModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if data.TPMID.IsNull() || data.TPMID.IsUnknown() {
+		data.TPMID = stateData.TPMID
+	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -259,6 +267,9 @@ func (r *IdentityTPMResource) ImportState(ctx context.Context, req resource.Impo
 }
 
 func (r *IdentityTPMResource) path(data *IdentityTPMModel) string {
+	if !data.TPMID.IsNull() && !data.TPMID.IsUnknown() && data.TPMID.ValueString() != "" {
+		return fmt.Sprintf("identity/tpm/id/%s", data.TPMID.ValueString())
+	}
 	return fmt.Sprintf("identity/tpm/name/%s", data.Name.ValueString())
 }
 

@@ -45,12 +45,14 @@ type IdentityTPMGroupModel struct {
 	Name         types.String `tfsdk:"name"`
 	MemberTPMIDs types.Set    `tfsdk:"member_tpm_ids"`
 	Metadata     types.Map    `tfsdk:"metadata"`
+	TPMGroupID   types.String `tfsdk:"tpm_group_id"`
 }
 
 type identityTPMGroupAPIModel struct {
 	Name         string            `json:"name" mapstructure:"name"`
 	MemberTPMIDs []string          `json:"member_tpm_ids" mapstructure:"member_tpm_ids"`
 	Metadata     map[string]string `json:"metadata" mapstructure:"metadata"`
+	TPMGroupID   string            `json:"id" mapstructure:"id"`
 }
 
 func (r *IdentityTPMGroupResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -61,10 +63,7 @@ func (r *IdentityTPMGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldName: schema.StringAttribute{
-				Required: true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Required:    true,
 				Description: "Name of the TPM group.",
 			},
 			fieldMemberTPMIDs: schema.SetAttribute{
@@ -77,6 +76,13 @@ func (r *IdentityTPMGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:    true,
 				Computed:    true,
 				Description: "Metadata to associate with the TPM group.",
+			},
+			"tpm_group_id": schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Description: "The unique ID Vault assigns to this TPM group.",
 			},
 		},
 	}
@@ -165,6 +171,14 @@ func (r *IdentityTPMGroupResource) Update(ctx context.Context, req resource.Upda
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	var stateData IdentityTPMGroupModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if data.TPMGroupID.IsNull() || data.TPMGroupID.IsUnknown() {
+		data.TPMGroupID = stateData.TPMGroupID
+	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -244,6 +258,9 @@ func (r *IdentityTPMGroupResource) ImportState(ctx context.Context, req resource
 }
 
 func (r *IdentityTPMGroupResource) path(data *IdentityTPMGroupModel) string {
+	if !data.TPMGroupID.IsNull() && !data.TPMGroupID.IsUnknown() && data.TPMGroupID.ValueString() != "" {
+		return fmt.Sprintf("identity/tpmgroup/id/%s", data.TPMGroupID.ValueString())
+	}
 	return fmt.Sprintf("identity/tpmgroup/name/%s", data.Name.ValueString())
 }
 
@@ -297,6 +314,7 @@ func (r *IdentityTPMGroupResource) populateDataModelFromAPI(ctx context.Context,
 	}
 
 	data.Name = types.StringValue(readResp.Name)
+	data.TPMGroupID = types.StringValue(readResp.TPMGroupID)
 
 	if len(readResp.MemberTPMIDs) == 0 {
 		data.MemberTPMIDs = types.SetNull(types.StringType)

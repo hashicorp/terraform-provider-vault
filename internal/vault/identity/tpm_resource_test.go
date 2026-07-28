@@ -33,6 +33,7 @@ MCowBQYDK2VwAyEAhshc3hm6ZNkBRDWdPDLKAf1mHGq9EsWx8MlidOWiZdw=
 
 func TestAccIdentityTPM(t *testing.T) {
 	name := acctest.RandomWithPrefix("tpm")
+	renamedName := acctest.RandomWithPrefix("tpm")
 	resourceName := "vault_identity_tpm.test"
 
 	resource.Test(t, resource.TestCase{
@@ -48,6 +49,7 @@ func TestAccIdentityTPM(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "tpm_ek_public_key", tpmPublicKeyOne+"\n"),
 					resource.TestCheckResourceAttr(resourceName, "disabled", "false"),
+					resource.TestCheckResourceAttrSet(resourceName, "tpm_id"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -56,9 +58,25 @@ func TestAccIdentityTPM(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccIdentityTPMConfig(name, tpmPublicKeyOne, true),
+				Config: testAccIdentityTPMConfig(renamedName, tpmPublicKeyOne, false),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "name", renamedName),
+					resource.TestCheckResourceAttr(resourceName, "disabled", "false"),
+					resource.TestCheckResourceAttrSet(resourceName, "tpm_id"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
+				Config: testAccIdentityTPMConfig(renamedName, tpmPublicKeyOne, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", renamedName),
 					resource.TestCheckResourceAttr(resourceName, "disabled", "true"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{

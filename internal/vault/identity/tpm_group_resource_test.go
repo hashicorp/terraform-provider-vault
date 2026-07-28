@@ -19,9 +19,11 @@ import (
 
 func TestAccIdentityTPMGroup(t *testing.T) {
 	groupName := acctest.RandomWithPrefix("tpm-group")
+	renamedGroupName := acctest.RandomWithPrefix("tpm-group")
 	tpmOneName := acctest.RandomWithPrefix("tpm")
 	tpmTwoName := acctest.RandomWithPrefix("tpm")
 	resourceName := "vault_identity_tpm_group.test"
+	var tpmGroupID string
 
 	tpmOneID, err := tpmIDFromPublicKey(tpmPublicKeyOne)
 	if err != nil {
@@ -44,6 +46,7 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", groupName),
 					resource.TestCheckResourceAttr(resourceName, "member_tpm_ids.#", "0"),
+					resource.TestCheckResourceAttrSet(resourceName, "tpm_group_id"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -58,8 +61,47 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "member_tpm_ids.#", "2"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "member_tpm_ids.*", tpmOneID),
 					resource.TestCheckTypeSetElemAttr(resourceName, "member_tpm_ids.*", tpmTwoID),
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return fmt.Errorf("not found: %s", resourceName)
+						}
+						tpmGroupID = rs.Primary.Attributes["tpm_group_id"]
+						if tpmGroupID == "" {
+							return fmt.Errorf("empty tpm_group_id")
+						}
+						return nil
+					},
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
+				Config: testAccIdentityTPMGroupConfig(renamedGroupName, tpmOneName, tpmTwoName, []string{tpmOneID, tpmTwoID}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", renamedGroupName),
+					resource.TestCheckResourceAttr(resourceName, "member_tpm_ids.#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "member_tpm_ids.*", tpmOneID),
+					resource.TestCheckTypeSetElemAttr(resourceName, "member_tpm_ids.*", tpmTwoID),
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return fmt.Errorf("not found: %s", resourceName)
+						}
+						if rs.Primary.Attributes["tpm_group_id"] != tpmGroupID {
+							return fmt.Errorf("tpm_group_id changed across rename: got %q want %q",
+								rs.Primary.Attributes["tpm_group_id"], tpmGroupID)
+						}
+						return nil
+					},
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},

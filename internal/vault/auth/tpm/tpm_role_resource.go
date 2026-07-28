@@ -304,13 +304,6 @@ func (r *TPMAuthRoleResource) getAPIModel(ctx context.Context, data *TPMAuthRole
 		}
 	}
 
-	if len(apiModel.TPMIDs) == 0 {
-		delete(requestBody, "tpm_ids")
-	}
-	if len(apiModel.TPMGroupIDs) == 0 {
-		delete(requestBody, "tpmgroup_ids")
-	}
-
 	return requestBody, nil
 }
 
