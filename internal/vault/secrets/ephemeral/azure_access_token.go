@@ -137,7 +137,7 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	}
 
 	// Request the Azure access token from Vault
-	tokenResp, err := requestAzureAccessToken(ctx, cli, data.Mount.ValueString(), data.Role.ValueString(), data.Scope.ValueString(), resp)
+	tokenResp, err := requestAzureAccessToken(ctx, cli, data.Mount.ValueString(), data.Role.ValueString(), data.Scope.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to get Azure access token", err.Error())
 		return
@@ -152,9 +152,10 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
-func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string, resp *ephemeral.OpenResponse) (*AzureAccessTokenAPIModel, error) {
-
+func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
 	path := fmt.Sprintf("%s/token/%s", mount, role)
+
+	// Write to Vault endpoint to request an Azure access token.
 	secret, err := cli.Logical().WriteWithContext(ctx, path, map[string]interface{}{
 		"scope": scope,
 	})
@@ -162,19 +163,17 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 		return nil, fmt.Errorf("unable to write to Vault: %w", err)
 	}
 
-	if secret == nil || secret.Auth == nil {
-		resp.Diagnostics.AddError(
-			"Azure access token request failed",
-			"No authentication data returned from Vault",
-		)
-		return nil, fmt.Errorf("no authentication data returned from Vault")
+	if secret == nil {
+		return nil, fmt.Errorf("no response returned from Vault")
 	}
 
 	var readResp AzureAccessTokenAPIModel
-	err = model.ToAPIModel(secret.Data, &readResp)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+	if err := model.ToAPIModel(secret.Data, &readResp); err != nil {
 		return nil, fmt.Errorf("unable to translate Vault response data: %w", err)
+	}
+
+	if readResp.AccessToken == "" {
+		return nil, fmt.Errorf("access_token missing in Vault response")
 	}
 
 	return &readResp, nil
