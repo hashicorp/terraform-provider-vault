@@ -3,81 +3,191 @@
 
 package ephemeralsecrets
 
-// Commenting out for testing purposes
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
-// func TestRequestAzureAccessToken(t *testing.T) {
-// 	t.Helper()
+	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
 
-// 	oldBaseURL := azureAccessTokenBaseURL
-// 	oldDoer := azureTokenRequestDoer
-// 	t.Cleanup(func() {
-// 		azureAccessTokenBaseURL = oldBaseURL
-// 		azureTokenRequestDoer = oldDoer
-// 	})
+const (
+	testMount         = "my-azure"
+	testRole          = "my-role"
+	testGraphScope    = "https://graph.microsoft.com/.default"
+	testTokenType     = "Bearer"
+	testExpiresIn     = float64(3599)
+	testExpiresInAlt  = float64(1800)
+)
 
-// 	var gotBody string
-// 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		if r.Method != http.MethodPost {
-// 			t.Fatalf("method = %s, want %s", r.Method, http.MethodPost)
-// 		}
-// 		if want := "/tenant-123/oauth2/v2.0/token"; r.URL.Path != want {
-// 			t.Fatalf("path = %s, want %s", r.URL.Path, want)
-// 		}
-// 		body, err := io.ReadAll(r.Body)
-// 		if err != nil {
-// 			t.Fatal(err)
-// 		}
-// 		gotBody = string(body)
-// 		if ct := r.Header.Get("Content-Type"); ct != "application/x-www-form-urlencoded" {
-// 			t.Fatalf("content-type = %s, want application/x-www-form-urlencoded", ct)
-// 		}
-// 		w.Header().Set("Content-Type", "application/json")
-// 		_, _ = w.Write([]byte(`{"token_type":"Bearer","expires_in":3599,"ext_expires_in":3599,"access_token":"eyJ0eXAiOiJKV1Q..."}`))
-// 	}))
-// 	defer server.Close()
+// newFakeVaultClient creates a Vault API client pointed at a test HTTP server.
+func newFakeVaultClient(t *testing.T, server *httptest.Server) *api.Client {
+	t.Helper()
+	cfg := api.DefaultConfig()
+	cfg.Address = server.URL
+	cli, err := api.NewClient(cfg)
+	if err != nil {
+		t.Fatalf("failed to create Vault client: %v", err)
+	}
+	return cli
+}
 
-// 	azureAccessTokenBaseURL = server.URL
-// 	azureTokenRequestDoer = http.DefaultClient.Do
+// newAzureTokenServer starts an httptest.Server that records the request path
+// and scope, validates the HTTP method, then responds with tc.handlerStatus and
+// tc.handlerPayload. The returned pointers are populated on the first request.
+func newAzureTokenServer(t *testing.T, status int, payload interface{}) (*httptest.Server, *string, *string) {
+	t.Helper()
+	gotPath := new(string)
+	gotScope := new(string)
 
-// 	resp, err := requestAzureAccessToken(t.Context(), "tenant-123", "client-123", "secret-123", "https://graph.microsoft.com/.default")
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*gotPath = r.URL.Path
 
-// 	if resp.AccessToken == "" || resp.TokenType != "Bearer" || resp.ExpiresIn != 3599 || resp.ExtExpiresIn != 3599 {
-// 		t.Fatalf("unexpected response: %+v", resp)
-// 	}
+		if r.Method != http.MethodPut {
+			t.Errorf("method = %s, want PUT", r.Method)
+		}
 
-// 	form, err := url.ParseQuery(gotBody)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	if form.Get("grant_type") != "client_credentials" || form.Get("client_id") != "client-123" || form.Get("client_secret") != "secret-123" || form.Get("scope") != "https://graph.microsoft.com/.default" {
-// 		t.Fatalf("unexpected form body: %s", gotBody)
-// 	}
-// }
+		var body map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
+			if s, ok := body["scope"].(string); ok {
+				*gotScope = s
+			}
+		}
 
-// func TestRequestAzureAccessToken_HTTPError(t *testing.T) {
-// 	t.Helper()
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		_ = json.NewEncoder(w).Encode(payload)
+	}))
 
-// 	oldBaseURL := azureAccessTokenBaseURL
-// 	oldDoer := azureTokenRequestDoer
-// 	t.Cleanup(func() {
-// 		azureAccessTokenBaseURL = oldBaseURL
-// 		azureTokenRequestDoer = oldDoer
-// 	})
+	return server, gotPath, gotScope
+}
 
-// 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		_, _ = w.Write([]byte(`AADSTS70011: invalid scope`))
-// 	}))
-// 	defer server.Close()
+// makeErrorPayload builds the Vault error response map used by handler stubs.
+func makeErrorPayload(msg string) map[string]interface{} {
+	return map[string]interface{}{
+		"errors": []string{msg},
+	}
+}
 
-// 	azureAccessTokenBaseURL = server.URL
-// 	azureTokenRequestDoer = http.DefaultClient.Do
+// makeTokenPayload builds the nested Vault response map used by handler stubs.
+// ext_expires_in is always set equal to expires_in, matching all current cases.
+func makeTokenPayload(token, tokenType string, expiresIn float64) map[string]interface{} {
+	return map[string]interface{}{
+		"data": map[string]interface{}{
+			"access_token":   token,
+			"token_type":     tokenType,
+			"expires_in":     expiresIn,
+			"ext_expires_in": expiresIn,
+		},
+	}
+}
 
-// 	_, err := requestAzureAccessToken(t.Context(), "tenant-123", "client-123", "secret-123", "bad-scope")
-// 	if err == nil || !strings.Contains(err.Error(), "AADSTS70011") {
-// 		t.Fatalf("expected Azure error, got %v", err)
-// 	}
-// }
+func TestRequestAzureAccessToken(t *testing.T) {
+	cases := map[string]struct {
+		mount          string
+		role           string
+		scope          string
+		handlerStatus  int
+		handlerPayload interface{}
+		wantErr        bool
+		wantErrContain string
+		wantToken      string
+		wantTokenType  string
+		wantExpiresIn  int64
+		wantPath       string
+	}{
+		"success": {
+			mount:          testMount,
+			role:           testRole,
+			scope:          testGraphScope,
+			handlerStatus:  http.StatusOK,
+			handlerPayload: makeTokenPayload("eyJ0eXAiOiJKV1Q.test-token", testTokenType, testExpiresIn),
+			wantToken:      "eyJ0eXAiOiJKV1Q.test-token",
+			wantTokenType:  testTokenType,
+			wantExpiresIn: int64(testExpiresIn),
+			wantPath:      "/v1/my-azure/token/my-role",
+		},
+		"alternate mount and role in path": {
+			mount:          "azure",
+			role:           "reader",
+			scope:          testGraphScope,
+			handlerStatus:  http.StatusOK,
+			handlerPayload: makeTokenPayload("tok", testTokenType, testExpiresInAlt),
+			wantToken:      "tok",
+			wantTokenType:  testTokenType,
+			wantExpiresIn: int64(testExpiresInAlt),
+			wantPath:      "/v1/azure/token/reader",
+		},
+		"vault returns 404 - role not found": {
+			mount:          testMount,
+			role:           "missing-role",
+			scope:          testGraphScope,
+			handlerStatus:  http.StatusNotFound,
+			handlerPayload: makeErrorPayload(`static role "missing-role" not found`),
+			wantErr:        true,
+			wantErrContain: "unable to write to Vault",
+		},
+		"vault returns 500 - internal error": {
+			mount:          testMount,
+			role:           testRole,
+			scope:          testGraphScope,
+			handlerStatus:  http.StatusInternalServerError,
+			handlerPayload: makeErrorPayload("internal server error"),
+			wantErr:        true,
+			wantErrContain: "unable to write to Vault",
+		},
+		"vault returns empty data - no access_token field": {
+			mount:         testMount,
+			role:          testRole,
+			scope:         testGraphScope,
+			handlerStatus: http.StatusOK,
+			handlerPayload: map[string]interface{}{
+				"data": map[string]interface{}{},
+			},
+			wantErr:        true,
+			wantErrContain: "access_token missing",
+		},
+		"scope sent in request body": {
+			mount:          testMount,
+			role:           testRole,
+			scope:          "https://management.azure.com/.default",
+			handlerStatus:  http.StatusOK,
+			handlerPayload: makeTokenPayload("mgmt-token", testTokenType, testExpiresIn),
+			wantToken:      "mgmt-token",
+			wantTokenType:  testTokenType,
+			wantExpiresIn: int64(testExpiresIn),
+			wantPath:      "/v1/my-azure/token/my-role",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			// Arrange
+			server, gotPath, gotScope := newAzureTokenServer(t, tc.handlerStatus, tc.handlerPayload)
+			defer server.Close()
+			cli := newFakeVaultClient(t, server)
+
+			// Act
+			got, err := requestAzureAccessToken(context.Background(), cli, tc.mount, tc.role, tc.scope)
+
+			// Assert
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tc.wantErrContain)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantPath, *gotPath)
+			assert.Equal(t, tc.scope, *gotScope)
+			assert.Equal(t, tc.wantToken, got.AccessToken)
+			assert.Equal(t, tc.wantTokenType, got.TokenType)
+			assert.Equal(t, tc.wantExpiresIn, got.ExpiresIn)
+			assert.Equal(t, tc.wantExpiresIn, got.ExtExpiresIn)
+		})
+	}
+}
