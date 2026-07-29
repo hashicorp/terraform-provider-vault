@@ -173,10 +173,11 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 	}
 
 	// only send auto_unlock if explicitly set — avoids overwriting mount-level default with false
-	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
-		if d.HasChange(consts.FieldAutoUnlock) {
-			data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
+	if d.HasChange(consts.FieldAutoUnlock) {
+		if !provider.IsAPISupported(meta, provider.VaultVersion210) || !provider.IsEnterpriseSupported(meta) {
+			return diag.Errorf("auto_unlock is only supported in Vault Enterprise 2.1.0 and later")
 		}
+		data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
 	}
 
 	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
