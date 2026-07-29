@@ -21,9 +21,9 @@ resource "vault_mount" "mount_transform" {
 }
 
 resource "vault_transform_key_configuration" "test" {
-  path = vault_mount.mount_transform.path
-  name = "credit-card"
-  auto_rotate_period = "48h"
+  path                   = vault_mount.mount_transform.path
+  name                   = "credit-card"
+  auto_rotate_period     = 172800
   min_decryption_version = 2
 }
 ```
@@ -40,7 +40,7 @@ The following arguments are supported:
 * `path` - (Required) Path to where the back-end is mounted within Vault.
 * `name` - (Required) Specifies the transform name to use for this operation.
 * `min_decryption_version` - (Optional) Specifies the minimum key version that vault can use to decode values for the corresponding transform.
-* `auto_rotate_period` - (Optional) The period at which this key should be rotated automatically. Setting this to "0" will disable automatic key rotation. This value cannot be shorter than one hour. Uses [duration format](https://developer.hashicorp.com/vault/docs/concepts/duration-format) strings.
+* `auto_rotate_period` - (Optional) The amount of time in seconds the key should live before being automatically rotated. Setting this to `0` disables automatic rotation.
 
 ## Attributes Reference
 

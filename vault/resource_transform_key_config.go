@@ -30,7 +30,7 @@ func transformKeyConfigResource() *schema.Resource {
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
-			Description: "The name of the tokenization key.",
+			Description: "The name of the transform.",
 			ForceNew:    true,
 		},
 		consts.FieldMinDecryptionVersion: {
@@ -39,8 +39,8 @@ func transformKeyConfigResource() *schema.Resource {
 			Optional:    true,
 		},
 		consts.FieldAutoRotatePeriod: {
-			Type:        schema.TypeString,
-			Description: "Period that key should be rotated at. Uses duration format string.",
+			Type:        schema.TypeInt,
+			Description: "Amount of time the key should live before being automatically rotated. A value of 0 disables automatic rotation for the key.",
 			Optional:    true,
 		},
 		consts.FieldMinAvailableVersion: {
