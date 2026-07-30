@@ -27,10 +27,12 @@ func TestAccTPMAuthBackendConfig(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccTPMAuthBackendConfigConfig(mount, "10m"),
+				Config: testAccTPMAuthBackendConfigConfig(mount, "2000h", "1h", ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
-					resource.TestCheckResourceAttr(resourceName, "cert_ttl", "10m"),
+					resource.TestCheckResourceAttr(resourceName, "ca_lifetime", "2000h"),
+					resource.TestCheckResourceAttr(resourceName, "ca_soft_expiry", "1h"),
+					resource.TestCheckNoResourceAttr(resourceName, "default_cert_ttl"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -39,10 +41,12 @@ func TestAccTPMAuthBackendConfig(t *testing.T) {
 				},
 			},
 			{
-				Config: testAccTPMAuthBackendConfigConfig(mount, "20m"),
+				Config: testAccTPMAuthBackendConfigConfig(mount, "3000h", "2h", "30m"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
-					resource.TestCheckResourceAttr(resourceName, "cert_ttl", "20m"),
+					resource.TestCheckResourceAttr(resourceName, "ca_lifetime", "3000h"),
+					resource.TestCheckResourceAttr(resourceName, "ca_soft_expiry", "2h"),
+					resource.TestCheckResourceAttr(resourceName, "default_cert_ttl", "30m"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -54,7 +58,12 @@ func TestAccTPMAuthBackendConfig(t *testing.T) {
 	})
 }
 
-func testAccTPMAuthBackendConfigConfig(mount, certTTL string) string {
+func testAccTPMAuthBackendConfigConfig(mount, caLifetime, caSoftExpiry, defaultCertTTL string) string {
+	defaultCertTTLAttr := ""
+	if defaultCertTTL != "" {
+		defaultCertTTLAttr = fmt.Sprintf("\n  default_cert_ttl = %q", defaultCertTTL)
+	}
+
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "tpm" {
   type = "tpm"
@@ -62,8 +71,9 @@ resource "vault_auth_backend" "tpm" {
 }
 
 resource "vault_tpm_auth_backend_config" "test" {
-  mount    = vault_auth_backend.tpm.path
-  cert_ttl = %q
+  mount          = vault_auth_backend.tpm.path
+  ca_lifetime    = %q
+  ca_soft_expiry = %q%s
 }
-`, mount, certTTL)
+`, mount, caLifetime, caSoftExpiry, defaultCertTTLAttr)
 }

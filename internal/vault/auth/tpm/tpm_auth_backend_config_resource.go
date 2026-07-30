@@ -9,6 +9,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -41,12 +42,16 @@ type TPMAuthBackendConfigResource struct {
 type TPMAuthBackendConfigModel struct {
 	base.BaseModel
 
-	Mount   types.String `tfsdk:"mount"`
-	CertTTL types.String `tfsdk:"cert_ttl"`
+	Mount          types.String `tfsdk:"mount"`
+	CALifetime     types.String `tfsdk:"ca_lifetime"`
+	CASoftExpiry   types.String `tfsdk:"ca_soft_expiry"`
+	DefaultCertTTL types.String `tfsdk:"default_cert_ttl"`
 }
 
 type tpmAuthBackendConfigAPIModel struct {
-	CertTTL string `json:"cert_ttl" mapstructure:"cert_ttl"`
+	CALifetime     string `json:"ca_lifetime" mapstructure:"ca_lifetime"`
+	CASoftExpiry   string `json:"ca_soft_expiry" mapstructure:"ca_soft_expiry"`
+	DefaultCertTTL string `json:"default_cert_ttl" mapstructure:"default_cert_ttl"`
 }
 
 func (r *TPMAuthBackendConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -60,10 +65,20 @@ func (r *TPMAuthBackendConfigResource) Schema(_ context.Context, _ resource.Sche
 				Required:    true,
 				Description: "Path of the enabled TPM auth backend mount to configure.",
 			},
-			consts.FieldCertTTL: schema.StringAttribute{
+			consts.FieldCALifetime: schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Certificate TTL for the TPM auth backend.",
+				Description: "How long each CA is valid once it becomes active.",
+			},
+			consts.FieldCASoftExpiry: schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "How long before hard expiry the active CA stops signing new certificates.",
+			},
+			consts.FieldDefaultCertTTL: schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Default lifetime for issued client certificates.",
 			},
 		},
 	}
@@ -221,15 +236,25 @@ func (r *TPMAuthBackendConfigResource) path(data *TPMAuthBackendConfigModel) str
 }
 
 func (r *TPMAuthBackendConfigResource) getAPIModel(data *TPMAuthBackendConfigModel) (map[string]any, diag.Diagnostics) {
-	apiModel := tpmAuthBackendConfigAPIModel{CertTTL: data.CertTTL.ValueString()}
+	apiModel := tpmAuthBackendConfigAPIModel{
+		CALifetime:     data.CALifetime.ValueString(),
+		CASoftExpiry:   data.CASoftExpiry.ValueString(),
+		DefaultCertTTL: data.DefaultCertTTL.ValueString(),
+	}
 
 	var requestBody map[string]any
 	if err := mapstructure.Decode(apiModel, &requestBody); err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Failed to decode TPM auth backend config API model to map", err.Error())}
 	}
 
-	if data.CertTTL.IsNull() || data.CertTTL.IsUnknown() || data.CertTTL.ValueString() == "" {
-		delete(requestBody, consts.FieldCertTTL)
+	if data.CALifetime.IsNull() || data.CALifetime.IsUnknown() || data.CALifetime.ValueString() == "" {
+		delete(requestBody, consts.FieldCALifetime)
+	}
+	if data.CASoftExpiry.IsNull() || data.CASoftExpiry.IsUnknown() || data.CASoftExpiry.ValueString() == "" {
+		delete(requestBody, consts.FieldCASoftExpiry)
+	}
+	if data.DefaultCertTTL.IsNull() || data.DefaultCertTTL.IsUnknown() || data.DefaultCertTTL.ValueString() == "" {
+		delete(requestBody, consts.FieldDefaultCertTTL)
 	}
 
 	return requestBody, nil
@@ -245,13 +270,42 @@ func (r *TPMAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Cont
 		return diag.Diagnostics{diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error())}
 	}
 
-	if readResp.CertTTL == "" {
-		if data.CertTTL.IsNull() || data.CertTTL.IsUnknown() {
-			data.CertTTL = types.StringNull()
-		}
-	} else {
-		data.CertTTL = types.StringValue(readResp.CertTTL)
-	}
+	data.CALifetime = resolveDurationFieldState(data.CALifetime, readResp.CALifetime)
+	data.CASoftExpiry = resolveDurationFieldState(data.CASoftExpiry, readResp.CASoftExpiry)
+	data.DefaultCertTTL = resolveDurationFieldState(data.DefaultCertTTL, readResp.DefaultCertTTL)
 
 	return nil
+}
+
+func resolveDurationFieldState(current types.String, fromAPI string) types.String {
+	if fromAPI == "" {
+		if current.IsNull() || current.IsUnknown() {
+			return types.StringNull()
+		}
+		return current
+	}
+
+	if !current.IsNull() && !current.IsUnknown() && equivalentDurationString(current.ValueString(), fromAPI) {
+		return current
+	}
+
+	return types.StringValue(fromAPI)
+}
+
+func equivalentDurationString(a, b string) bool {
+	if a == b {
+		return true
+	}
+
+	da, err := time.ParseDuration(a)
+	if err != nil {
+		return false
+	}
+
+	db, err := time.ParseDuration(b)
+	if err != nil {
+		return false
+	}
+
+	return da == db
 }
