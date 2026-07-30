@@ -128,6 +128,13 @@ func getDatabaseSecretsMountSchema() schemaMap {
 	for k, v := range getDatabaseSchema(schema.TypeList) {
 		v.ConflictsWith = nil
 		v.MaxItems = 0
+		// variable-length blocks here: ".0." child validators are invalid, strip them
+		if res, ok := v.Elem.(*schema.Resource); ok {
+			for _, cs := range res.Schema {
+				cs.ConflictsWith = nil
+				cs.RequiredWith = nil
+			}
+		}
 		addCommonDatabaseSchema(v)
 		s[k] = v
 	}

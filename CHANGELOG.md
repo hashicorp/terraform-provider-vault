@@ -10,6 +10,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `cassandra` engine to set the password without storing it in state. ([#2968](https://github.com/hashicorp/terraform-provider-vault/pull/2968))
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
 
 * **Autosnapshot support for AWS IRSA**: Added documentation for IRSA usage per changes in Vault ([hashicorp/raft-snapshotagent#49](https://github.com/hashicorp/raft-snapshotagent/pull/49)). IRSA feature requires Vault 2.1.0+
