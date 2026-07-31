@@ -119,10 +119,6 @@ func (r *GCPKMSReencryptEphemeralResource) Open(ctx context.Context, req ephemer
 
 	secret, err := c.Logical().WriteWithContext(ctx, path, requestData)
 	if err != nil {
-		tflog.Error(ctx, "Failed to re-encrypt with GCP KMS", map[string]interface{}{
-			"path":  path,
-			"error": err.Error(),
-		})
 		resp.Diagnostics.AddError(
 			"Error re-encrypting with Vault",
 			fmt.Sprintf("Error re-encrypting with GCP KMS at path %q: %s", path, err),
@@ -131,9 +127,6 @@ func (r *GCPKMSReencryptEphemeralResource) Open(ctx context.Context, req ephemer
 	}
 
 	if secret == nil {
-		tflog.Error(ctx, "No response from GCP KMS re-encryption endpoint", map[string]interface{}{
-			"path": path,
-		})
 		resp.Diagnostics.AddError(
 			"No response from re-encryption endpoint",
 			fmt.Sprintf("No response from re-encryption endpoint at path %q", path),
@@ -141,15 +134,21 @@ func (r *GCPKMSReencryptEphemeralResource) Open(ctx context.Context, req ephemer
 		return
 	}
 
-	if ciphertext, ok := secret.Data[consts.FieldCiphertext]; ok {
-		data.NewCiphertext = types.StringValue(ciphertext.(string))
-		tflog.Debug(ctx, "Successfully re-encrypted with GCP KMS", map[string]interface{}{
-			"path": path,
-		})
+	ciphertext, ok := secret.Data[consts.FieldCiphertext].(string)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected API response",
+			fmt.Sprintf("expected string for %q, got %T", consts.FieldCiphertext, secret.Data[consts.FieldCiphertext]),
+		)
+		return
 	}
+	data.NewCiphertext = types.StringValue(ciphertext)
+	tflog.Debug(ctx, "Successfully re-encrypted with GCP KMS", map[string]any{"path": path})
 
 	if keyVersion, ok := secret.Data[consts.FieldKeyVersion]; ok {
 		data.KeyVersionReturned = types.StringValue(fmt.Sprintf("%v", keyVersion))
+	} else {
+		data.KeyVersionReturned = types.StringNull()
 	}
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)

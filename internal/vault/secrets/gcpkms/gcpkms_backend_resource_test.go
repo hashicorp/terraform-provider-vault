@@ -355,7 +355,7 @@ func TestAccGCPKMSSecretBackend_namespace(t *testing.T) {
 
 	t.Run("basic", func(t *testing.T) {
 		path := acctest.RandomWithPrefix("tf-test-gcpkms")
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			Steps:                    getSteps(path, ""),
@@ -365,7 +365,7 @@ func TestAccGCPKMSSecretBackend_namespace(t *testing.T) {
 	t.Run("ns", func(t *testing.T) {
 		path := acctest.RandomWithPrefix("tf-test-gcpkms")
 		ns := acctest.RandomWithPrefix("tf-test-ns")
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			Steps:                    getSteps(path, ns),

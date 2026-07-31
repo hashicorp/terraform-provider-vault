@@ -31,8 +31,9 @@ import (
 
 var idRe = regexp.MustCompile(`^([^/]+)/keys/([^/]+)$`)
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
+// Ensure the implementation satisfies the expected interfaces
 var _ resource.ResourceWithConfigure = &GCPKMSSecretBackendKeyResource{}
+var _ resource.ResourceWithImportState = &GCPKMSSecretBackendKeyResource{}
 
 // NewGCPKMSSecretBackendKeyResource returns the implementation for this resource
 func NewGCPKMSSecretBackendKeyResource() resource.Resource {
@@ -58,7 +59,6 @@ type GCPKMSSecretBackendKeyModel struct {
 	Labels                  types.Map    `tfsdk:"labels"`
 	RotationPeriod          types.String `tfsdk:"rotation_period"`
 	RotationScheduleSeconds types.Int64  `tfsdk:"rotation_schedule_seconds"`
-	LatestVersion           types.Int64  `tfsdk:"latest_version"`
 	PrimaryVersion          types.Int64  `tfsdk:"primary_version"`
 	NextRotationTimeSeconds types.Int64  `tfsdk:"next_rotation_time_seconds"`
 }
@@ -137,13 +137,6 @@ func (r *GCPKMSSecretBackendKeyResource) Schema(_ context.Context, _ resource.Sc
 				MarkdownDescription: "Rotation period in seconds as returned by the Vault API. Populated from the API response; " +
 					"use rotation_period to configure the desired rotation schedule.",
 				Computed: true,
-			},
-			consts.FieldLatestVersion: schema.Int64Attribute{
-				MarkdownDescription: "Latest version of the crypto key.",
-				Computed:            true,
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
-				},
 			},
 			consts.FieldPrimaryVersion: schema.Int64Attribute{
 				MarkdownDescription: "Primary version of the crypto key.",
@@ -286,10 +279,8 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 		// primary_version is returned by the API as a string (e.g. "1").
 		if version, ok := getInt64FromData(secret.Data, consts.FieldPrimaryVersion); ok {
 			data.PrimaryVersion = types.Int64Value(version)
-			data.LatestVersion = types.Int64Value(version)
 		} else if data.PrimaryVersion.IsNull() || data.PrimaryVersion.IsUnknown() {
 			data.PrimaryVersion = types.Int64Value(1)
-			data.LatestVersion = types.Int64Value(1)
 		}
 	} else {
 		// rotation_period: preserve the user's configured value exactly (e.g. "72h").
@@ -314,10 +305,8 @@ func (r *GCPKMSSecretBackendKeyResource) Read(ctx context.Context, req resource.
 			data.NextRotationTimeSeconds = types.Int64Null()
 		}
 
-		// primary_version / latest_version
 		if version, ok := getInt64FromData(secret.Data, consts.FieldPrimaryVersion); ok {
 			data.PrimaryVersion = types.Int64Value(version)
-			data.LatestVersion = types.Int64Value(version)
 		}
 	}
 
@@ -356,8 +345,8 @@ func (r *GCPKMSSecretBackendKeyResource) Update(ctx context.Context, req resourc
 		updateData[consts.FieldKeyRing] = state.KeyRing.ValueString()
 	}
 
-	// Only include mutable fields
-	if !plan.RotationPeriod.IsNull() && !plan.RotationPeriod.IsUnknown() {
+	// Only include mutable fields if they actually changed
+	if rotationChanged && !plan.RotationPeriod.IsNull() && !plan.RotationPeriod.IsUnknown() {
 		updateData[consts.FieldRotationPeriod] = plan.RotationPeriod.ValueString()
 	}
 
@@ -470,15 +459,6 @@ func buildKeyPath(backend, name string) string {
 func buildKeyConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendKeyModel) (map[string]interface{}, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	keyData := make(map[string]interface{})
-
-	// key_ring is required
-	if data.KeyRing.IsNull() || data.KeyRing.ValueString() == "" {
-		diags.AddError(
-			"Missing required field",
-			"key_ring is required when creating a GCP KMS key",
-		)
-		return nil, diags
-	}
 
 	keyData[consts.FieldKeyRing] = data.KeyRing.ValueString()
 	tflog.Debug(ctx, "buildKeyConfigFromModel: using key_ring", map[string]any{"key_ring": data.KeyRing.ValueString()})

@@ -69,10 +69,10 @@ func TestAccGCPKMSSign_differentAlgorithms(t *testing.T) {
 	keyNameP256 := acctest.RandomWithPrefix("test-key-p256")
 	keyNameP384 := acctest.RandomWithPrefix("test-key-p384")
 
-	// SHA256 digest of "test message" (base64 encoded)
-	digestSHA256 := "LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564="
-	// SHA384 digest of "test message" (base64 encoded)
-	digestSHA384 := "qr3HFcjNg5ac9vH7kIpVTnzfW6VZLxPLlQsYcM3fQJ3VTLI/JZ3wN2a9c8mYgCN4"
+	// SHA256 digest of "test message" (base64 encoded): echo -n "test message" | openssl dgst -sha256 -binary | base64
+	digestSHA256 := "Pwo3e6CkpGDsthb2UHzg2M+j5wQCXU/aPtDFygVGhyg="
+	// SHA384 digest of "test message" (base64 encoded): echo -n "test message" | openssl dgst -sha384 -binary | base64
+	digestSHA384 := "kr9EWBDbjL2YAs1YX7duCIAbggLpI+6EK+gXmpfuxAeNTPRaOz1SAR0Mp7v9nC4r"
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },

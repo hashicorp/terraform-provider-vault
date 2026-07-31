@@ -103,10 +103,6 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 
 	secret, err := c.Logical().WriteWithContext(ctx, path, requestData)
 	if err != nil {
-		tflog.Error(ctx, "Failed to sign with GCP KMS", map[string]interface{}{
-			"path":  path,
-			"error": err.Error(),
-		})
 		resp.Diagnostics.AddError(
 			"Error signing with Vault",
 			fmt.Sprintf("Error signing with GCP KMS at path %q: %s", path, err),
@@ -115,9 +111,6 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 	}
 
 	if secret == nil {
-		tflog.Error(ctx, "No response from GCP KMS signing endpoint", map[string]interface{}{
-			"path": path,
-		})
 		resp.Diagnostics.AddError(
 			"No response from signing endpoint",
 			fmt.Sprintf("No response from signing endpoint at path %q", path),
@@ -125,12 +118,16 @@ func (r *GCPKMSSignEphemeralResource) Open(ctx context.Context, req ephemeral.Op
 		return
 	}
 
-	if signature, ok := secret.Data[consts.FieldSignature]; ok {
-		data.Signature = types.StringValue(signature.(string))
-		tflog.Debug(ctx, "Successfully signed with GCP KMS", map[string]interface{}{
-			"path": path,
-		})
+	signature, ok := secret.Data[consts.FieldSignature].(string)
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected API response",
+			fmt.Sprintf("expected string for %q, got %T", consts.FieldSignature, secret.Data[consts.FieldSignature]),
+		)
+		return
 	}
+	data.Signature = types.StringValue(signature)
+	tflog.Debug(ctx, "Successfully signed with GCP KMS", map[string]any{"path": path})
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }

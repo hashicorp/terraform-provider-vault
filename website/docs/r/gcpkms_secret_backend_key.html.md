@@ -22,20 +22,15 @@ runs. Protect these artifacts accordingly. See
 ### Symmetric Encryption Key
 
 ```hcl
-resource "vault_mount" "gcpkms" {
-  path = "gcpkms"
-  type = "gcpkms"
-}
-
 resource "vault_gcpkms_secret_backend" "gcpkms" {
-  mount                  = vault_mount.gcpkms.path
+  path                   = "gcpkms"
   credentials_wo         = file("gcp-credentials.json")
   credentials_wo_version = 1
 }
 
 resource "vault_gcpkms_secret_backend_key" "encryption" {
-  mount            = vault_mount.gcpkms.path
-  name             = "my-encryption-key"
+  mount            = vault_gcpkms_secret_backend.gcpkms.path
+  key_name         = "my-encryption-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
@@ -53,10 +48,10 @@ resource "vault_gcpkms_secret_backend_key" "encryption" {
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "signing" {
-  mount     = vault_mount.gcpkms.path
-  name      = "my-signing-key"
-  key_ring  = "projects/my-project/locations/us-central1/keyRings/my-keyring"
-  purpose   = "asymmetric_sign"
+  mount    = vault_gcpkms_secret_backend.gcpkms.path
+  key_name = "my-signing-key"
+  key_ring = "projects/my-project/locations/us-central1/keyRings/my-keyring"
+  purpose  = "asymmetric_sign"
   algorithm = "rsa_sign_pss_2048_sha256"
 }
 ```
@@ -65,10 +60,10 @@ resource "vault_gcpkms_secret_backend_key" "signing" {
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "decrypt" {
-  mount     = vault_mount.gcpkms.path
-  name      = "my-decrypt-key"
-  key_ring  = "projects/my-project/locations/us-central1/keyRings/my-keyring"
-  purpose   = "asymmetric_decrypt"
+  mount    = vault_gcpkms_secret_backend.gcpkms.path
+  key_name = "my-decrypt-key"
+  key_ring = "projects/my-project/locations/us-central1/keyRings/my-keyring"
+  purpose  = "asymmetric_decrypt"
   algorithm = "rsa_decrypt_oaep_2048_sha256"
 }
 ```
@@ -77,8 +72,8 @@ resource "vault_gcpkms_secret_backend_key" "decrypt" {
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "hsm" {
-  mount            = vault_mount.gcpkms.path
-  name             = "hsm-key"
+  mount            = vault_gcpkms_secret_backend.gcpkms.path
+  key_name         = "hsm-key"
   key_ring         = "projects/my-project/locations/us-central1/keyRings/hsm-keyring"
   purpose          = "encrypt_decrypt"
   algorithm        = "symmetric_encryption"
@@ -93,8 +88,8 @@ By default, the GCP KMS crypto key uses the same name as the Vault key. Override
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "custom" {
-  mount      = vault_mount.gcpkms.path
-  name       = "vault-key-name"
+  mount      = vault_gcpkms_secret_backend.gcpkms.path
+  key_name   = "vault-key-name"
   key_ring   = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   crypto_key = "different-gcp-key-name"
   purpose    = "encrypt_decrypt"
@@ -107,8 +102,8 @@ Only `rotation_period` and `labels` can be updated in-place. All other fields re
 
 ```hcl
 resource "vault_gcpkms_secret_backend_key" "updatable" {
-  mount           = vault_mount.gcpkms.path
-  name            = "my-key"
+  mount           = vault_gcpkms_secret_backend.gcpkms.path
+  key_name        = "my-key"
   key_ring        = "projects/my-project/locations/us-central1/keyRings/my-keyring"
   rotation_period = "72h"  # Duration strings ("72h") and second strings ("259200s") are both accepted
 
@@ -130,7 +125,7 @@ The following arguments are supported:
 
 * `mount` - (Required, Forces new resource) Path where the GCP KMS secrets engine is mounted.
 
-* `name` - (Required, Forces new resource) Name of the key in Vault. Used to reference the key for
+* `key_name` - (Required, Forces new resource) Name of the key in Vault. Used to reference the key for
   cryptographic operations.
 
 * `key_ring` - (Required, Forces new resource) Full resource name of the GCP KMS key ring where the
@@ -190,8 +185,6 @@ In addition to the arguments above, the following attributes are exported:
 * `primary_version` - The primary version number of the GCP KMS crypto key used for new
   cryptographic operations. Increments only when a key rotation occurs in GCP.
 
-* `latest_version` - The latest version number of the GCP KMS crypto key.
-
 * `rotation_schedule_seconds` - The rotation period in seconds as stored and returned by Vault. For
   example, if `rotation_period = "72h"` then this will be `259200`. Always refreshed from the API on
   each read. Set to `null` for asymmetric keys.
@@ -212,6 +205,11 @@ $ terraform import vault_gcpkms_secret_backend_key.encryption gcpkms/keys/my-enc
 `"2592000s"`). If your configuration uses a different format (e.g. `"720h"`), Terraform will show a
 diff on the next plan. Update your configuration to match, or leave `rotation_period` unset to
 accept the API-formatted value.
+
+~> **Note:** The Vault API does not return `key_ring` or `crypto_key` on read. After import, both
+fields will be `null` in state. Ensure your Terraform configuration includes the correct `key_ring`
+(and `crypto_key` if applicable) values before running `terraform plan` after an import — otherwise,
+because both fields have `RequiresReplace`, Terraform will plan a **destroy and recreate** of the key.
 
 ## Key Purposes and Algorithms
 
@@ -262,7 +260,6 @@ GCP KMS keys support multiple versions for key rotation:
 - `primary_version` — The version used by default for new cryptographic operations. Only changes
   when a key rotation occurs in GCP KMS (triggered by `rotation_period`). Preserved in state between
   applies using `UseStateForUnknown`.
-- `latest_version` — The most recently created version. Equal to `primary_version` in most cases.
 - `rotation_schedule_seconds` — The rotation interval in seconds exactly as stored by Vault.
   Refreshed from the API on every read.
 - `next_rotation_time_seconds` — Unix timestamp of the next scheduled rotation. Refreshed from the

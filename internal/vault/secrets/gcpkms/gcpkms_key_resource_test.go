@@ -41,7 +41,6 @@ func TestAccGCPKMSSecretBackendKey_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "symmetric_encryption"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProtectionLevel, "software"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "2592000s"),
-					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldPrimaryVersion),
 				),
 			},
@@ -89,6 +88,17 @@ func TestAccGCPKMSSecretBackendKey_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "3600000s"),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCryptoKey,
+					consts.FieldKeyRing,
+				},
+			},
 		},
 	})
 }
@@ -120,6 +130,17 @@ func TestAccGCPKMSSecretBackendKey_withCryptoKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProtectionLevel, "software"),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCryptoKey,
+					consts.FieldKeyRing,
+				},
+			},
 		},
 	})
 }
@@ -147,6 +168,17 @@ func TestAccGCPKMSSecretBackendKey_signingKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "rsa_sign_pss_2048_sha256"),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCryptoKey,
+					consts.FieldKeyRing,
+				},
+			},
 		},
 	})
 }
@@ -172,6 +204,17 @@ func TestAccGCPKMSSecretBackendKey_labels(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLabels+".managed-by", "terraform"),
 				),
 			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccGCPKMSSecretBackendKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCryptoKey,
+					consts.FieldKeyRing,
+				},
+			},
 		},
 	})
 }
@@ -191,7 +234,6 @@ func TestAccGCPKMSSecretBackendKey_namespace(t *testing.T) {
 			resource.TestCheckResourceAttr(resourceName, consts.FieldAlgorithm, "symmetric_encryption"),
 			resource.TestCheckResourceAttr(resourceName, consts.FieldProtectionLevel, "software"),
 			resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, "2592000s"),
-			resource.TestCheckResourceAttrSet(resourceName, consts.FieldLatestVersion),
 			resource.TestCheckResourceAttrSet(resourceName, consts.FieldPrimaryVersion),
 		)
 		if ns != "" {
@@ -236,7 +278,7 @@ func TestAccGCPKMSSecretBackendKey_namespace(t *testing.T) {
 	t.Run("basic", func(t *testing.T) {
 		path := acctest.RandomWithPrefix("tf-test-gcpkms")
 		keyName := acctest.RandomWithPrefix("test-key")
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			Steps:                    getSteps(path, keyName, ""),
@@ -247,7 +289,7 @@ func TestAccGCPKMSSecretBackendKey_namespace(t *testing.T) {
 		path := acctest.RandomWithPrefix("tf-test-gcpkms")
 		keyName := acctest.RandomWithPrefix("test-key")
 		ns := acctest.RandomWithPrefix("tf-test-ns")
-		resource.ParallelTest(t, resource.TestCase{
+		resource.Test(t, resource.TestCase{
 			PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 			ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 			Steps:                    getSteps(path, keyName, ns),
