@@ -1,193 +1,292 @@
 // Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
-package ephemeralsecrets
+package ephemeralsecrets_test
 
 import (
-	"context"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"fmt"
+	"regexp"
 	"testing"
 
-	"github.com/hashicorp/vault/api"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-const (
-	testMount         = "my-azure"
-	testRole          = "my-role"
-	testGraphScope    = "https://graph.microsoft.com/.default"
-	testTokenType     = "Bearer"
-	testExpiresIn     = float64(3599)
-	testExpiresInAlt  = float64(1800)
-)
+// TestAccAzureAccessToken_basic verifies that the ephemeral resource retrieves a
+// non-empty access token and populates all computed fields from a Vault Azure
+// static role.
+func TestAccAzureAccessToken_basic(t *testing.T) {
+	conf := testutil.GetTestAzureConfExistingSP(t)
+	conf.Scope = testutil.SkipTestEnvUnset(t, "AZURE_ROLE_SCOPE")[0]
 
-// newFakeVaultClient creates a Vault API client pointed at a test HTTP server.
-func newFakeVaultClient(t *testing.T, server *httptest.Server) *api.Client {
-	t.Helper()
-	cfg := api.DefaultConfig()
-	cfg.Address = server.URL
-	cli, err := api.NewClient(cfg)
-	if err != nil {
-		t.Fatalf("failed to create Vault client: %v", err)
-	}
-	return cli
-}
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+	role := acctest.RandomWithPrefix("tf-role")
+	nonEmpty := regexp.MustCompile(`^.+$`)
 
-// newAzureTokenServer starts an httptest.Server that records the request path
-// and scope, validates the HTTP method, then responds with tc.handlerStatus and
-// tc.handlerPayload. The returned pointers are populated on the first request.
-func newAzureTokenServer(t *testing.T, status int, payload interface{}) (*httptest.Server, *string, *string) {
-	t.Helper()
-	gotPath := new(string)
-	gotScope := new(string)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		*gotPath = r.URL.Path
-
-		if r.Method != http.MethodPut {
-			t.Errorf("method = %s, want PUT", r.Method)
-		}
-
-		var body map[string]interface{}
-		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
-			if s, ok := body["scope"].(string); ok {
-				*gotScope = s
-			}
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(status)
-		_ = json.NewEncoder(w).Encode(payload)
-	}))
-
-	return server, gotPath, gotScope
-}
-
-// makeErrorPayload builds the Vault error response map used by handler stubs.
-func makeErrorPayload(msg string) map[string]interface{} {
-	return map[string]interface{}{
-		"errors": []string{msg},
-	}
-}
-
-// makeTokenPayload builds the nested Vault response map used by handler stubs.
-// ext_expires_in is always set equal to expires_in, matching all current cases.
-func makeTokenPayload(token, tokenType string, expiresIn float64) map[string]interface{} {
-	return map[string]interface{}{
-		"data": map[string]interface{}{
-			"access_token":   token,
-			"token_type":     tokenType,
-			"expires_in":     expiresIn,
-			"ext_expires_in": expiresIn,
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
 		},
-	}
-}
-
-func TestRequestAzureAccessToken(t *testing.T) {
-	cases := map[string]struct {
-		mount          string
-		role           string
-		scope          string
-		handlerStatus  int
-		handlerPayload interface{}
-		wantErr        bool
-		wantErrContain string
-		wantToken      string
-		wantTokenType  string
-		wantExpiresIn  int64
-		wantPath       string
-	}{
-		"success": {
-			mount:          testMount,
-			role:           testRole,
-			scope:          testGraphScope,
-			handlerStatus:  http.StatusOK,
-			handlerPayload: makeTokenPayload("eyJ0eXAiOiJKV1Q.test-token", testTokenType, testExpiresIn),
-			wantToken:      "eyJ0eXAiOiJKV1Q.test-token",
-			wantTokenType:  testTokenType,
-			wantExpiresIn: int64(testExpiresIn),
-			wantPath:      "/v1/my-azure/token/my-role",
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
 		},
-		"alternate mount and role in path": {
-			mount:          "azure",
-			role:           "reader",
-			scope:          testGraphScope,
-			handlerStatus:  http.StatusOK,
-			handlerPayload: makeTokenPayload("tok", testTokenType, testExpiresInAlt),
-			wantToken:      "tok",
-			wantTokenType:  testTokenType,
-			wantExpiresIn: int64(testExpiresInAlt),
-			wantPath:      "/v1/azure/token/reader",
-		},
-		"vault returns 404 - role not found": {
-			mount:          testMount,
-			role:           "missing-role",
-			scope:          testGraphScope,
-			handlerStatus:  http.StatusNotFound,
-			handlerPayload: makeErrorPayload(`static role "missing-role" not found`),
-			wantErr:        true,
-			wantErrContain: "unable to write to Vault",
-		},
-		"vault returns 500 - internal error": {
-			mount:          testMount,
-			role:           testRole,
-			scope:          testGraphScope,
-			handlerStatus:  http.StatusInternalServerError,
-			handlerPayload: makeErrorPayload("internal server error"),
-			wantErr:        true,
-			wantErrContain: "unable to write to Vault",
-		},
-		"vault returns empty data - no access_token field": {
-			mount:         testMount,
-			role:          testRole,
-			scope:         testGraphScope,
-			handlerStatus: http.StatusOK,
-			handlerPayload: map[string]interface{}{
-				"data": map[string]interface{}{},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureAccessTokenConfig(backend, role, conf),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("access_token"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("token_type"), knownvalue.StringExact("Bearer")),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("expires_in"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("ext_expires_in"), knownvalue.NotNull()),
+				},
 			},
-			wantErr:        true,
-			wantErrContain: "access_token missing",
 		},
-		"scope sent in request body": {
-			mount:          testMount,
-			role:           testRole,
-			scope:          "https://management.azure.com/.default",
-			handlerStatus:  http.StatusOK,
-			handlerPayload: makeTokenPayload("mgmt-token", testTokenType, testExpiresIn),
-			wantToken:      "mgmt-token",
-			wantTokenType:  testTokenType,
-			wantExpiresIn: int64(testExpiresIn),
-			wantPath:      "/v1/my-azure/token/my-role",
+	})
+}
+
+// TestAccAzureAccessToken_invalidRole verifies that the ephemeral resource
+// returns a meaningful error when the specified role does not exist in Vault.
+func TestAccAzureAccessToken_invalidRole(t *testing.T) {
+	conf := testutil.GetTestAzureConfExistingSP(t)
+	conf.Scope = testutil.SkipTestEnvUnset(t, "AZURE_ROLE_SCOPE")[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
 		},
-	}
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccAzureAccessTokenInvalidRoleConfig(backend, conf),
+				ExpectError: regexp.MustCompile(`Unable to get Azure access token`),
+			},
+		},
+	})
+}
 
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			// Arrange
-			server, gotPath, gotScope := newAzureTokenServer(t, tc.handlerStatus, tc.handlerPayload)
-			defer server.Close()
-			cli := newFakeVaultClient(t, server)
+// TestAccAzureAccessToken_invalidMount verifies that referencing a Vault mount
+// path that does not exist produces a meaningful error.
+func TestAccAzureAccessToken_invalidMount(t *testing.T) {
+	conf := testutil.GetTestAzureConfExistingSP(t)
+	conf.Scope = testutil.SkipTestEnvUnset(t, "AZURE_ROLE_SCOPE")[0]
 
-			// Act
-			got, err := requestAzureAccessToken(context.Background(), cli, tc.mount, tc.role, tc.scope)
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccAzureAccessTokenInvalidMountConfig(conf),
+				ExpectError: regexp.MustCompile(`Unable to get Azure access token`),
+			},
+		},
+	})
+}
 
-			// Assert
-			if tc.wantErr {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tc.wantErrContain)
-				return
-			}
+// TestAccAzureAccessToken_namespace verifies that the ephemeral resource works
+// correctly when scoped to a Vault namespace (Enterprise only).
+func TestAccAzureAccessToken_namespace(t *testing.T) {
+	conf := testutil.GetTestAzureConfExistingSP(t)
+	conf.Scope = testutil.SkipTestEnvUnset(t, "AZURE_ROLE_SCOPE")[0]
 
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantPath, *gotPath)
-			assert.Equal(t, tc.scope, *gotScope)
-			assert.Equal(t, tc.wantToken, got.AccessToken)
-			assert.Equal(t, tc.wantTokenType, got.TokenType)
-			assert.Equal(t, tc.wantExpiresIn, got.ExpiresIn)
-			assert.Equal(t, tc.wantExpiresIn, got.ExtExpiresIn)
-		})
-	}
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+	role := acctest.RandomWithPrefix("tf-role")
+	namespace := acctest.RandomWithPrefix("tf-ns")
+	nonEmpty := regexp.MustCompile(`^.+$`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion121)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureAccessTokenNamespaceConfig(backend, role, namespace, conf),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("access_token"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("token_type"), knownvalue.StringExact("Bearer")),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("expires_in"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("ext_expires_in"), knownvalue.NotNull()),
+				},
+			},
+		},
+	})
+}
+
+// TODO: replace terraform_data workaround with vault_azure_secret_backend once
+// the token/ endpoint ships in an official Vault release.
+func testAccAzureAccessTokenConfig(backend, role string, conf *testutil.AzureTestConf) string {
+	return fmt.Sprintf(`
+resource "terraform_data" "azure_mount" {
+  input = "%[1]s"
+
+  provisioner "local-exec" {
+    command = "vault secrets enable -path=%[1]s vault-plugin-secrets-azure && vault write %[1]s/config subscription_id='%[2]s' tenant_id='%[3]s' client_id='%[4]s' client_secret='%[5]s'"
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "vault secrets disable ${self.output}"
+  }
+}
+
+resource "vault_azure_secret_backend_static_role" "role" {
+  depends_on            = [terraform_data.azure_mount]
+  backend               = terraform_data.azure_mount.output
+  role                  = "%[6]s"
+  application_object_id = "%[7]s"
+  ttl                   = 31536000
+}
+
+resource "terraform_data" "rotate_role" {
+  depends_on = [vault_azure_secret_backend_static_role.role]
+
+  provisioner "local-exec" {
+    command = "vault write -f %[1]s/rotate-role/%[6]s"
+  }
+}
+
+ephemeral "vault_azure_access_token" "token" {
+  mount_id = terraform_data.rotate_role.id
+  mount    = terraform_data.azure_mount.output
+  role     = vault_azure_secret_backend_static_role.role.role
+  scope    = "%[8]s"
+}
+
+provider "echo" {
+  data = ephemeral.vault_azure_access_token.token
+}
+
+resource "echo" "azure_token" {}
+`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, role, conf.AppObjectID, conf.Scope)
+}
+
+// TODO: replace terraform_data workaround with vault_azure_secret_backend once
+// the token/ endpoint ships in an official Vault release.
+func testAccAzureAccessTokenInvalidRoleConfig(backend string, conf *testutil.AzureTestConf) string {
+	return fmt.Sprintf(`
+resource "terraform_data" "azure_mount" {
+  input = "%[1]s"
+
+  provisioner "local-exec" {
+    command = "vault secrets enable -path=%[1]s vault-plugin-secrets-azure && vault write %[1]s/config subscription_id='%[2]s' tenant_id='%[3]s' client_id='%[4]s' client_secret='%[5]s'"
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "vault secrets disable ${self.output}"
+  }
+}
+
+ephemeral "vault_azure_access_token" "token" {
+  mount_id = terraform_data.azure_mount.id
+  mount    = terraform_data.azure_mount.output
+  role     = "nonexistent-role"
+  scope    = "%[6]s"
+}
+
+provider "echo" {
+  data = ephemeral.vault_azure_access_token.token
+}
+
+resource "echo" "azure_token" {}
+`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, conf.Scope)
+}
+
+func testAccAzureAccessTokenInvalidMountConfig(conf *testutil.AzureTestConf) string {
+	return fmt.Sprintf(`
+ephemeral "vault_azure_access_token" "token" {
+  mount = "nonexistent-mount"
+  role  = "my-role"
+  scope = "%[1]s"
+}
+
+provider "echo" {
+  data = ephemeral.vault_azure_access_token.token
+}
+
+resource "echo" "azure_token" {}
+`, conf.Scope)
+}
+
+// TODO: replace terraform_data workaround with vault_azure_secret_backend once
+// the token/ endpoint ships in an official Vault release.
+func testAccAzureAccessTokenNamespaceConfig(backend, role, namespace string, conf *testutil.AzureTestConf) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%[1]s"
+}
+
+resource "terraform_data" "azure_mount" {
+  depends_on = [vault_namespace.test]
+  input      = "%[2]s"
+
+  provisioner "local-exec" {
+    command = "VAULT_NAMESPACE=%[1]s vault secrets enable -path=%[2]s vault-plugin-secrets-azure && VAULT_NAMESPACE=%[1]s vault write %[2]s/config subscription_id='%[3]s' tenant_id='%[4]s' client_id='%[5]s' client_secret='%[6]s'"
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "VAULT_NAMESPACE=%[1]s vault secrets disable ${self.output}"
+  }
+}
+
+resource "vault_azure_secret_backend_static_role" "role" {
+  depends_on            = [terraform_data.azure_mount]
+  namespace             = vault_namespace.test.path
+  backend               = terraform_data.azure_mount.output
+  role                  = "%[7]s"
+  application_object_id = "%[8]s"
+  ttl                   = 31536000
+}
+
+resource "terraform_data" "rotate_role" {
+  depends_on = [vault_azure_secret_backend_static_role.role]
+
+  provisioner "local-exec" {
+    command = "VAULT_NAMESPACE=%[1]s vault write -f %[2]s/rotate-role/%[7]s"
+  }
+}
+
+ephemeral "vault_azure_access_token" "token" {
+  namespace = vault_namespace.test.path
+  mount_id  = terraform_data.rotate_role.id
+  mount     = terraform_data.azure_mount.output
+  role      = vault_azure_secret_backend_static_role.role.role
+  scope     = "%[9]s"
+}
+
+provider "echo" {
+  data = ephemeral.vault_azure_access_token.token
+}
+
+resource "echo" "azure_token" {}
+`, namespace, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, role, conf.AppObjectID, conf.Scope)
 }

@@ -6,6 +6,8 @@ package ephemeralsecrets
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
@@ -44,10 +46,12 @@ type AzureAccessTokenEphemeralResource struct {
 type AzureAccessTokenModel struct {
 	base.BaseModelEphemeral
 
+	// Inputs
 	Mount types.String `tfsdk:"mount"`
 	Scope types.String `tfsdk:"scope"`
 	Role  types.String `tfsdk:"role"`
 
+	// Outputs
 	AccessToken  types.String `tfsdk:"access_token"`
 	TokenType    types.String `tfsdk:"token_type"`
 	ExpiresIn    types.Int64  `tfsdk:"expires_in"`
@@ -83,7 +87,7 @@ func (r *AzureAccessTokenEphemeralResource) Schema(_ context.Context, _ ephemera
 				Computed:            true,
 				Sensitive:           true,
 			},
-			fieldTokenType: schema.StringAttribute{
+			consts.FieldTokenType: schema.StringAttribute{
 				MarkdownDescription: "The token type returned by Azure.",
 				Computed:            true,
 			},
@@ -152,29 +156,57 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
+// azureCredPropagationRetries is the number of times to retry when Azure
+// returns AADSTS7000215, which occurs when a freshly rotated credential has
+// not yet propagated across Azure's directory.
+const azureCredPropagationRetries = 3
+
+// azureCredPropagationDelay is the time to wait between retries.
+const azureCredPropagationDelay = 5 * time.Second
+
 func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
 	path := fmt.Sprintf("%s/token/%s", mount, role)
 
-	// Write to Vault endpoint to request an Azure access token.
-	secret, err := cli.Logical().WriteWithContext(ctx, path, map[string]interface{}{
-		"scope": scope,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to write to Vault: %w", err)
+	var lastErr error
+	for attempt := 0; attempt <= azureCredPropagationRetries; attempt++ {
+		if attempt > 0 {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(azureCredPropagationDelay):
+			}
+		}
+
+		// Write to Vault endpoint to request an Azure access token.
+		secret, err := cli.Logical().WriteWithContext(ctx, path, map[string]interface{}{
+			"scope": scope,
+		})
+		if err != nil {
+			// Retry on Azure credential propagation delay (AADSTS7000215) or
+			// when Vault hasn't finished its initial credential rotation yet.
+			if strings.Contains(err.Error(), "AADSTS7000215") ||
+				strings.Contains(err.Error(), "rotate the role once before token generation") {
+				lastErr = fmt.Errorf("unable to write to Vault: %w", err)
+				continue
+			}
+			return nil, fmt.Errorf("unable to write to Vault: %w", err)
+		}
+
+		if secret == nil {
+			return nil, fmt.Errorf("no response returned from Vault")
+		}
+
+		var readResp AzureAccessTokenAPIModel
+		if err := model.ToAPIModel(secret.Data, &readResp); err != nil {
+			return nil, fmt.Errorf("unable to translate Vault response data: %w", err)
+		}
+
+		if readResp.AccessToken == "" {
+			return nil, fmt.Errorf("access_token missing in Vault response")
+		}
+
+		return &readResp, nil
 	}
 
-	if secret == nil {
-		return nil, fmt.Errorf("no response returned from Vault")
-	}
-
-	var readResp AzureAccessTokenAPIModel
-	if err := model.ToAPIModel(secret.Data, &readResp); err != nil {
-		return nil, fmt.Errorf("unable to translate Vault response data: %w", err)
-	}
-
-	if readResp.AccessToken == "" {
-		return nil, fmt.Errorf("access_token missing in Vault response")
-	}
-
-	return &readResp, nil
+	return nil, fmt.Errorf("azure credential not yet propagated after %d attempts: %w", azureCredPropagationRetries, lastErr)
 }
