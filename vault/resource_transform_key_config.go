@@ -76,11 +76,11 @@ func createTransformKeyConfigResource(ctx context.Context, d *schema.ResourceDat
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if version, ok := d.GetOk("min_decryption_version"); ok {
-		data["min_decryption_version"] = version
+	if version, ok := d.GetOk(consts.FieldMinDecryptionVersion); ok {
+		data[consts.FieldMinDecryptionVersion] = version
 	}
-	if rotatePeriod, ok := d.GetOk("auto_rotate_period"); ok {
-		data["auto_rotate_period"] = rotatePeriod
+	if rotatePeriod, ok := d.GetOk(consts.FieldAutoRotatePeriod); ok {
+		data[consts.FieldAutoRotatePeriod] = rotatePeriod
 	}
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
@@ -143,11 +143,11 @@ func updateTransformKeyConfigResource(ctx context.Context, d *schema.ResourceDat
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 
 	data := map[string]interface{}{}
-	if version, ok := d.GetOk("min_decryption_version"); ok {
-		data["min_decryption_version"] = version
+	if version, ok := d.GetOk(consts.FieldMinDecryptionVersion); ok {
+		data[consts.FieldMinDecryptionVersion] = version
 	}
-	if rotatePeriod, ok := d.GetOk("auto_rotate_period"); ok {
-		data["auto_rotate_period"] = rotatePeriod
+	if rotatePeriod, ok := d.GetOk(consts.FieldAutoRotatePeriod); ok {
+		data[consts.FieldAutoRotatePeriod] = rotatePeriod
 	}
 	if _, err := client.Logical().Write(vaultPath, data); err != nil {
 		return diag.Errorf("error updating %q: %s", vaultPath, err)
