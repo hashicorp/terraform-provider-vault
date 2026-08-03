@@ -15,10 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
@@ -88,11 +85,9 @@ func (r *GCPKMSSecretBackendResource) Schema(_ context.Context, _ resource.Schem
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version number for the write-only credentials. Increment this value to trigger a credential rotation. " +
-					"Changing this value will cause the credentials to be re-sent to Vault during the next apply.",
+					"Changing this value will cause the credentials to be re-sent to Vault during the next apply. " +
+					"Set `credentials_wo = \"\"` to rotate to Default Application Credentials.",
 				Required: true,
-				Validators: []validator.Int64{
-					int64validator.AlsoRequires(path.MatchRoot(consts.FieldCredentialsWO)),
-				},
 			},
 			consts.FieldScopes: schema.SetAttribute{
 				ElementType:         types.StringType,
@@ -231,8 +226,16 @@ func (r *GCPKMSSecretBackendResource) Read(ctx context.Context, req resource.Rea
 	}
 
 	if secret == nil {
-		tflog.Warn(ctx, "GCP KMS backend config not found, removing from state", map[string]any{"path": configPath})
-		resp.State.RemoveResource(ctx)
+		// The mount is alive but /config returned nil. This is defensive — in
+		// practice the GCP KMS engine always re-serves defaults after a DELETE,
+		// so this branch is unreachable under normal operation.
+		// Calling RemoveResource here would be wrong: the mount still exists in
+		// Vault, so the next apply would fail with "mount already in use".
+		// Instead, zero out Scopes so Terraform detects drift and queues a
+		// config re-apply on the next plan/apply cycle.
+		tflog.Warn(ctx, "GCP KMS backend config not found but mount is alive, preserving state for drift detection", map[string]any{"path": configPath})
+		data.Scopes = types.SetValueMust(types.StringType, []attr.Value{})
+		resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 		return
 	}
 

@@ -121,6 +121,12 @@ func GetMountAttributes(excludes ...string) map[string]schema.Attribute {
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers: []planmodifier.Bool{
+				// UseStateForUnknown preserves the prior value when the field is
+				// not changing, preventing it from becoming (unknown) in the plan.
+				// Without this, a path change (remount) causes these Computed fields
+				// to become unknown, which combined with RequiresReplace incorrectly
+				// triggers a destroy/recreate instead of an in-place remount.
+				boolplanmodifier.UseStateForUnknown(),
 				boolplanmodifier.RequiresReplace(),
 			},
 		},
@@ -130,6 +136,7 @@ func GetMountAttributes(excludes ...string) map[string]schema.Attribute {
 			Computed:            true,
 			Default:             booldefault.StaticBool(false),
 			PlanModifiers: []planmodifier.Bool{
+				boolplanmodifier.UseStateForUnknown(),
 				boolplanmodifier.RequiresReplace(),
 			},
 		},
@@ -138,12 +145,16 @@ func GetMountAttributes(excludes ...string) map[string]schema.Attribute {
 			Optional:            true,
 			Computed:            true,
 			PlanModifiers: []planmodifier.Bool{
+				boolplanmodifier.UseStateForUnknown(),
 				boolplanmodifier.RequiresReplace(),
 			},
 		},
 		consts.FieldAccessor: schema.StringAttribute{
 			MarkdownDescription: "Accessor of the mount",
 			Computed:            true,
+			PlanModifiers: []planmodifier.String{
+				stringplanmodifier.UseStateForUnknown(),
+			},
 		},
 	}
 

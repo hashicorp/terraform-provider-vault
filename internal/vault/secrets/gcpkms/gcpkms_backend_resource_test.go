@@ -180,10 +180,15 @@ func TestAccGCPKMSSecretBackend_mountConfigImmutable(t *testing.T) {
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
+	// accessorBefore is captured in step 1 and compared in step 3 to confirm
+	// that destroy/recreate produced a brand-new mount (new accessor).
+	var accessorBefore string
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
+			// Step 1: create with immutable fields set; capture the accessor.
 			{
 				Config: testGCPKMSSecretBackend_mountConfigImmutable(path, credentials),
 				Check: resource.ComposeTestCheckFunc(
@@ -192,8 +197,10 @@ func TestAccGCPKMSSecretBackend_mountConfigImmutable(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSealWrap, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalEntropyAccess, "true"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+					testAccGCPKMSCaptureAccessor(resourceName, &accessorBefore),
 				),
 			},
+			// Step 2: import round-trip.
 			{
 				ResourceName:                         resourceName,
 				ImportState:                          true,
@@ -204,6 +211,20 @@ func TestAccGCPKMSSecretBackend_mountConfigImmutable(t *testing.T) {
 					consts.FieldCredentialsWO,
 					consts.FieldCredentialsWOVersion,
 				},
+			},
+			// Step 3: change an immutable field (local=false) — Terraform must
+			// destroy the old mount and recreate it. A changed accessor proves
+			// a new mount was created rather than an in-place update.
+			{
+				Config: testGCPKMSSecretBackend_mountConfigImmutableUpdated(path, credentials),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSealWrap, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldExternalEntropyAccess, "true"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+					testAccGCPKMSCheckAccessorChanged(resourceName, &accessorBefore),
+				),
 			},
 		},
 	})
@@ -248,6 +269,12 @@ func TestAccGCPKMSSecretBackend_remount(t *testing.T) {
 	resourceType := "vault_gcpkms_secret_backend"
 	resourceName := resourceType + ".test"
 
+	// Vault preserves the accessor across a remount — the mount moves to a new
+	// path but keeps its identity. Capture it in step 1 and assert it is
+	// unchanged in step 2 to confirm the accessor was correctly re-read from
+	// the new path rather than being stale or zeroed out.
+	var accessorBeforeRemount string
+
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -257,6 +284,7 @@ func TestAccGCPKMSSecretBackend_remount(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+					testAccGCPKMSCaptureAccessor(resourceName, &accessorBeforeRemount),
 				),
 			},
 			{
@@ -264,6 +292,8 @@ func TestAccGCPKMSSecretBackend_remount(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, updatedPath),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+					// accessor must be unchanged — same mount, new path
+					testAccGCPKMSCheckAccessorUnchanged(resourceName, &accessorBeforeRemount),
 				),
 			},
 			{
@@ -522,6 +552,21 @@ EOT
 `, path, credentials)
 }
 
+func testGCPKMSSecretBackend_mountConfigImmutableUpdated(path, credentials string) string {
+	return fmt.Sprintf(`
+resource "vault_gcpkms_secret_backend" "test" {
+  path                    = "%s"
+  local                   = false
+  seal_wrap               = true
+  external_entropy_access = true
+  credentials_wo          = <<-EOT
+%s
+EOT
+  credentials_wo_version  = 1
+}
+`, path, credentials)
+}
+
 func testGCPKMSSecretBackend_mountConfigDefaults(path, credentials string) string {
 	return fmt.Sprintf(`
 resource "vault_gcpkms_secret_backend" "test" {
@@ -717,5 +762,52 @@ func testAccGCPKMSSecretBackendImportStateIdFunc(resourceName string) resource.I
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
 		return rs.Primary.Attributes[consts.FieldPath], nil
+	}
+}
+
+// testAccGCPKMSCaptureAccessor stores the accessor attribute of resourceName
+// into dest so it can be compared in a later test step.
+func testAccGCPKMSCaptureAccessor(resourceName string, dest *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+		*dest = rs.Primary.Attributes[consts.FieldAccessor]
+		return nil
+	}
+}
+
+// testAccGCPKMSCheckAccessorChanged asserts that the current accessor of
+// resourceName differs from the value previously stored in before, confirming
+// that a destroy/recreate cycle produced a brand-new mount.
+func testAccGCPKMSCheckAccessorChanged(resourceName string, before *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+		accessorAfter := rs.Primary.Attributes[consts.FieldAccessor]
+		if accessorAfter == *before {
+			return fmt.Errorf("expected accessor to change after destroy/recreate of immutable field: got %q both before and after", accessorAfter)
+		}
+		return nil
+	}
+}
+
+// testAccGCPKMSCheckAccessorUnchanged asserts that the accessor of resourceName
+// is identical to the value previously stored in before, confirming that a
+// remount preserved the mount's identity rather than recreating it.
+func testAccGCPKMSCheckAccessorUnchanged(resourceName string, before *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+		accessorAfter := rs.Primary.Attributes[consts.FieldAccessor]
+		if accessorAfter != *before {
+			return fmt.Errorf("expected accessor to remain unchanged after remount: got %q before and %q after", *before, accessorAfter)
+		}
+		return nil
 	}
 }
