@@ -119,20 +119,6 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 		return
 	}
 
-	// Validate that required fields are provided
-	if data.Mount.IsNull() || data.Mount.ValueString() == "" {
-		resp.Diagnostics.AddError("Missing required field", "The 'mount' field is required.")
-		return
-	}
-	if data.Scope.IsNull() || data.Scope.ValueString() == "" {
-		resp.Diagnostics.AddError("Missing required field", "The 'scope' field is required.")
-		return
-	}
-	if data.Role.IsNull() || data.Role.ValueString() == "" {
-		resp.Diagnostics.AddError("Missing required field", "The 'role' field is required.")
-		return
-	}
-
 	// Get the Vault client from the provider configuration
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -165,12 +151,8 @@ const azureCredPropagationRetries = 3
 const azureCredPropagationDelay = 5 * time.Second
 
 func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
-	// The vault-plugin-secrets-azure token/ endpoint requires the static
-	// credential to already exist in storage. For roles created without
-	// defer_initial_creds, the plugin provisions the credential lazily on the
-	// first read of the static-creds/ endpoint — not during role creation or
-	// via token/ itself. Reading static-creds/ here ensures the credential is
-	// provisioned before we attempt to exchange it for an access token.
+	// static-creds/ provisions the credential on first read if it doesn't exist yet;
+	// token/ has no such logic and will error if called before provisioning has occurred.
 	staticCredsPath := fmt.Sprintf("%s/static-creds/%s", mount, role)
 	if _, err := cli.Logical().ReadWithContext(ctx, staticCredsPath); err != nil {
 		return nil, fmt.Errorf("unable to initialize static credential: %w", err)
