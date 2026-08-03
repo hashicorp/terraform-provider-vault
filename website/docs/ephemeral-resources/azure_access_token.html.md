@@ -7,13 +7,13 @@ description: |-
 
 ---
 
-# vault_azure_access_token
+# vault\_azure\_access\_token (Ephemeral)
 
 Generates ephemeral Azure OAuth2 access tokens from the Vault Azure Secrets engine using static role credentials.
-The token is not stored in Terraform state.
+These tokens are not stored in Terraform state.
 
-For more information, please refer to [the Vault documentation](https://developer.hashicorp.com/vault/docs/secrets/azure)
-for the Azure Secrets engine.
+For more information, refer to
+the [Vault Azure Secrets Engine documentation](https://developer.hashicorp.com/vault/docs/secrets/azure).
 
 ## Example Usage
 
@@ -35,7 +35,7 @@ resource "vault_azure_secret_backend_static_role" "role" {
 
 ephemeral "vault_azure_access_token" "token" {
   mount_id = vault_azure_secret_backend_static_role.role.id
-  backend  = vault_azure_secret_backend.azure.path
+  mount    = vault_azure_secret_backend.azure.path
   role     = vault_azure_secret_backend_static_role.role.role
   scope    = "https://graph.microsoft.com/.default"
 }
@@ -50,14 +50,14 @@ output "access_token" {
 
 The following arguments are supported:
 
-* `backend` - (Required) Path where the Azure secrets engine is mounted in Vault.
+* `mount` - (Required) Path where the Azure Secrets engine is mounted in Vault.
 
 * `role` - (Required) Name of the Azure static role to generate an access token for.
 
 * `scope` - (Required) The full Azure scope to request a token for (for example, `https://graph.microsoft.com/.default`).
 
-* `mount_id` - (Optional) If value is set, will defer provisioning the ephemeral resource until
-  `terraform apply`. For more details, please refer to the official documentation around
+* `mount_id` - (Optional) If set, defers provisioning of the ephemeral resource until
+  `terraform apply`. For more details, refer to the official documentation around
   [using ephemeral resources in the Vault Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_ephemeral_resources).
 
 * `namespace` - (Optional) The namespace of the target resource.
@@ -67,7 +67,7 @@ The following arguments are supported:
 
 ## Attributes Reference
 
-The following attributes are exported in addition to the arguments listed above:
+In addition to the arguments above, the following attributes are exported:
 
 * `access_token` - The Azure OAuth2 access token.
 
@@ -79,7 +79,7 @@ The following attributes are exported in addition to the arguments listed above:
 
 ## Required Vault Capabilities
 
-Use of this resource requires the `read` capability on both the backend config path and static credentials path:
+Use of this resource requires the `read` and `update` capabilities on the following paths:
 
-* `<backend>/config`
-* `<backend>/static-creds/<role>`
+* `<mount>/static-creds/<role>` - read
+* `<mount>/token/<role>` - update
