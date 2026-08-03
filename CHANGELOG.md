@@ -2,8 +2,6 @@
 
 FEATURES:
 
-* Add support for `canonical_arn` as a valid value for `iam_alias` parameter on `vault_aws_auth_backend_config_identity` resource. Requires Vault 1.16+. ([VAULT-48640](https://hashicorp.atlassian.net/browse/VAULT-48640))
-
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
 * **LDAP Rotate-on-Read Support**: Added `rotate_on_read` and `rotate_on_read_cooldown` parameters to `vault_ldap_secret_backend` and `vault_ldap_secret_backend_static_role` resources, and `rotated_on_read` attribute to `vault_ldap_static_role_credentials` data source to support credential rotation on each read ([#2960](https://github.com/hashicorp/terraform-provider-vault/pull/2960). Requires Vault Enterprise 2.1.0+.
@@ -12,6 +10,8 @@ FEATURES:
 * **Secrets Sync customer controlled encryption**: `vault_secrets_sync_aws_destination` and `vault_secrets_sync_gcp_destination` now support Vault 2.1.0+ fields `kms_key_id` and `replica_regions`; and deprecated GCP legacy fields `global_kms_key`, `locational_kms_keys`, and `replication_locations` in favor of `kms_key_id` and `replica_regions`. ([#2965](https://github.com/hashicorp/terraform-provider-vault/pull/2965))
 
 IMPROVEMENTS:
+
+* `vault_aws_auth_backend_config_identity`: Add support for `canonical_arn` as a valid value for the `iam_alias` parameter. Requires Vault 1.16+. ([#2982](https://github.com/hashicorp/terraform-provider-vault/pull/2982))
 
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
 
