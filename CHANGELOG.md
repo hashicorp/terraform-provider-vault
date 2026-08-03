@@ -2,7 +2,7 @@
 
 FEATURES:
 
-* Add support for `canonical_arn` as a valid value for `iam_alias` parameter on `vault_aws_auth_backend_config_identity` resource. Requires Vault 1.16+. ([VAULT-48640](https://hashicorp.atlassian.net/browse/VAULT-48640))
+* Add support for `canonical_arn` as a valid value for `iam_alias` parameter on `vault_aws_auth_backend_config_identity` resource. Requires Vault 1.16+. ([#2982](https://github.com/hashicorp/terraform-provider-vault/pull/2982))
 
 
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.1.0+.
