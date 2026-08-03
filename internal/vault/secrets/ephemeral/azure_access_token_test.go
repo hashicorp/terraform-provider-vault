@@ -165,16 +165,8 @@ resource "vault_azure_secret_backend_static_role" "role" {
   ttl                   = 31536000
 }
 
-resource "terraform_data" "rotate_role" {
-  depends_on = [vault_azure_secret_backend_static_role.role]
-
-  provisioner "local-exec" {
-    command = "vault write -f %[1]s/rotate-role/%[6]s"
-  }
-}
-
 ephemeral "vault_azure_access_token" "token" {
-  mount_id = terraform_data.rotate_role.id
+  mount_id = vault_azure_secret_backend_static_role.role.id
   mount    = terraform_data.azure_mount.output
   role     = vault_azure_secret_backend_static_role.role.role
   scope    = "%[8]s"
@@ -267,17 +259,9 @@ resource "vault_azure_secret_backend_static_role" "role" {
   ttl                   = 31536000
 }
 
-resource "terraform_data" "rotate_role" {
-  depends_on = [vault_azure_secret_backend_static_role.role]
-
-  provisioner "local-exec" {
-    command = "VAULT_NAMESPACE=%[1]s vault write -f %[2]s/rotate-role/%[7]s"
-  }
-}
-
 ephemeral "vault_azure_access_token" "token" {
   namespace = vault_namespace.test.path
-  mount_id  = terraform_data.rotate_role.id
+  mount_id  = vault_azure_secret_backend_static_role.role.id
   mount     = terraform_data.azure_mount.output
   role      = vault_azure_secret_backend_static_role.role.role
   scope     = "%[9]s"
