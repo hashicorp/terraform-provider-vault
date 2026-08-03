@@ -165,6 +165,17 @@ const azureCredPropagationRetries = 3
 const azureCredPropagationDelay = 5 * time.Second
 
 func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
+	// The vault-plugin-secrets-azure token/ endpoint requires the static
+	// credential to already exist in storage. For roles created without
+	// defer_initial_creds, the plugin provisions the credential lazily on the
+	// first read of the static-creds/ endpoint — not during role creation or
+	// via token/ itself. Reading static-creds/ here ensures the credential is
+	// provisioned before we attempt to exchange it for an access token.
+	staticCredsPath := fmt.Sprintf("%s/static-creds/%s", mount, role)
+	if _, err := cli.Logical().ReadWithContext(ctx, staticCredsPath); err != nil {
+		return nil, fmt.Errorf("unable to initialize static credential: %w", err)
+	}
+
 	path := fmt.Sprintf("%s/token/%s", mount, role)
 
 	var lastErr error
@@ -182,10 +193,10 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 			"scope": scope,
 		})
 		if err != nil {
-			// Retry on Azure credential propagation delay (AADSTS7000215) or
-			// when Vault hasn't finished its initial credential rotation yet.
-			if strings.Contains(err.Error(), "AADSTS7000215") ||
-				strings.Contains(err.Error(), "rotate the role once before token generation") {
+			// Retry on Azure credential propagation delay (AADSTS7000215),
+			// which occurs when a freshly rotated credential has not yet
+			// propagated across Azure's directory.
+			if strings.Contains(err.Error(), "AADSTS7000215") {
 				lastErr = fmt.Errorf("unable to write to Vault: %w", err)
 				continue
 			}
