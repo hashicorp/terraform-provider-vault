@@ -89,6 +89,10 @@ const (
 	FieldRoles                              = "roles"
 	FieldDescription                        = "description"
 	FieldTTL                                = "ttl"
+	FieldCertTTL                            = "cert_ttl"
+	FieldCALifetime                         = "ca_lifetime"
+	FieldCASoftExpiry                       = "ca_soft_expiry"
+	FieldDefaultCertTTL                     = "default_cert_ttl"
 	FieldMaxTTL                             = "max_ttl"
 	FieldDefaultLeaseTTL                    = "default_lease_ttl"
 	FieldDefaultLeaseTTLSeconds             = "default_lease_ttl_seconds"
@@ -1005,7 +1009,7 @@ const (
 	VaultVersion200  = "2.0.0"
 	VaultVersion201  = "2.0.1"
 	VaultVersion203  = "2.0.3"
-	VaultVersion210  = "2.1.0"
+	VaultVersion210  = "2.1.0-beta1"
 
 	/*
 		CloudFoundry auth backend field names
