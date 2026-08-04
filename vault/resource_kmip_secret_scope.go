@@ -4,9 +4,11 @@
 package vault
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -23,7 +25,7 @@ func kmipSecretScopeResource() *schema.Resource {
 		Update: kmipSecretScopeUpdate,
 		Delete: kmipSecretScopeDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: kmipSecretScopeImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -80,7 +82,7 @@ func kmipSecretScopeRead(d *schema.ResourceData, meta interface{}) error {
 	if e != nil {
 		return e
 	}
-	scopeListPath := d.Get("path").(string) + "/scope"
+	scopeListPath := d.Get("path").(string)
 	scope := d.Get("scope").(string)
 
 	log.Printf("[DEBUG] Reading KMIP scope at %s", scopeListPath)
@@ -106,7 +108,7 @@ func kmipSecretScopeUpdate(d *schema.ResourceData, meta interface{}) error {
 	scope := d.Get("scope").(string)
 
 	if d.HasChange("path") {
-		scopeListPath := d.Get("path").(string) + "/scope"
+		scopeListPath := d.Get("path").(string)
 		log.Printf("[DEBUG] Confirming KMIP scope exists at %s", scopeListPath)
 		configured, err := isScopeConfigured(client, scopeListPath, scope)
 		if err != nil {
@@ -167,4 +169,30 @@ func getKMIPScopePath(d *schema.ResourceData) string {
 	scope := d.Get("scope").(string)
 
 	return path + "/scope/" + scope
+}
+
+func kmipSecretScopeImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	id := d.Id()
+
+	// Parse the ID to extract path and scope
+	// Expected format: "<KMIP Mpunt Path>/scope/<Scope Name>"
+	// where the scope name is the last segment after the final slash
+	parts := strings.Split(id, "/")
+	if len(parts) < 4 {
+		return nil, fmt.Errorf("invalid KMIP scope import ID format: %s", id)
+	}
+
+	scope := parts[len(parts)-1]
+	path := strings.Join(parts[:len(parts)-1], "/") // e.g., "<KMIP Mpunt Path>/scope"
+
+	// Set the attributes that will be used by the Read function
+	if err := d.Set("path", path); err != nil {
+		return nil, err
+	}
+	if err := d.Set("scope", scope); err != nil {
+		return nil, err
+	}
+
+	return []*schema.ResourceData{d}, nil
+
 }

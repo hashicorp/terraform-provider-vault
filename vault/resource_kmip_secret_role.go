@@ -6,6 +6,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -51,7 +52,7 @@ func kmipSecretRoleResource() *schema.Resource {
 		Update: kmipSecretRoleUpdate,
 		Delete: kmipSecretRoleDelete,
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			State: kmipSecretRoleImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -388,14 +389,14 @@ func kmipSecretRoleDelete(d *schema.ResourceData, meta interface{}) error {
 	if e != nil {
 		return e
 	}
-	rolePath := d.Id()
+	roleListPath := d.Id()
 
-	log.Printf("[DEBUG] Deleting KMIP role %s", rolePath)
-	_, err := client.Logical().Delete(rolePath)
+	log.Printf("[DEBUG] Deleting KMIP role %s", roleListPath)
+	_, err := client.Logical().Delete(roleListPath)
 	if err != nil {
-		return fmt.Errorf("error deleting role %s", rolePath)
+		return fmt.Errorf("error deleting role %s", roleListPath)
 	}
-	log.Printf("[DEBUG] Deleted KMIP role %q", rolePath)
+	log.Printf("[DEBUG] Deleted KMIP role %q", roleListPath)
 
 	return nil
 }
@@ -438,4 +439,33 @@ func getKMIPRolePath(d *schema.ResourceData) string {
 	role := d.Get(consts.FieldRole).(string)
 
 	return getKMIPScopePath(d) + "/role/" + role
+}
+
+func kmipSecretRoleImportState(d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	id := d.Id()
+
+	// Parse the ID to extract path, scope, and role
+	// Expected format: "<KMIP Mpunt Path>/scope/<Scope Name>/role/<role name>"
+	parts := strings.Split(id, "/")
+	if len(parts) < 6 {
+		return nil, fmt.Errorf("invalid KMIP role import ID format: %s", id)
+	}
+
+	role := parts[len(parts)-1]
+	scope := parts[len(parts)-3]
+	path := strings.Join(parts[:len(parts)-3], "/") // e.g., "<KMIP Mpunt Path>/scope"
+
+	// Set the attributes that will be used by the Read function
+	if err := d.Set("path", path); err != nil {
+		return nil, err
+	}
+	if err := d.Set("scope", scope); err != nil {
+		return nil, err
+	}
+	if err := d.Set("role", role); err != nil {
+		return nil, err
+	}
+
+	return []*schema.ResourceData{d}, nil
+
 }
