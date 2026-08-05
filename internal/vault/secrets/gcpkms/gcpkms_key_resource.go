@@ -406,7 +406,7 @@ func (r *GCPKMSSecretBackendKeyResource) Delete(ctx context.Context, req resourc
 
 	tflog.Debug(ctx, "Deleting GCP KMS key", map[string]any{"path": keyPath})
 	if _, err := cli.Logical().DeleteWithContext(ctx, keyPath); err != nil {
-		// Check if this is the known issue with asymmetric keys and rotation
+		// TODO: remove this work-around once VAULT-45130 is fixed.
 		// This is a Vault backend bug where it tries to disable rotation on asymmetric keys during deletion
 		// which GCP KMS doesn't allow. We can safely ignore this error because:
 		// 1. The key is being deleted anyway (not just having rotation disabled)

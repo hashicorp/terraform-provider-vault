@@ -2,6 +2,7 @@
 
 FEATURES:
 
+* **New Resources**: Add support for GCP KMS secrets engine with `vault_gcpkms_secret_backend` and `vault_gcpkms_secret_backend_key` resources, `vault_gcpkms_verify` data source, and ephemeral resources `vault_gcpkms_encrypt`, `vault_gcpkms_decrypt`, `vault_gcpkms_reencrypt`, and `vault_gcpkms_sign` for cryptographic operations. Includes internal Plugin Framework `mount_helpers` for Vault mount operations to support incremental migration from SDKv2. ([#2763](https://github.com/hashicorp/terraform-provider-vault/pull/2763))
 * `vault_config_control_group`: Added initial implementation for `vault_config_control_group` resource in sys/config/control-group. ([#2840](https://github.com/hashicorp/terraform-provider-vault/pull/2840))
 * **New Resource**: `vault_config_ui_header` - Manages custom HTTP headers for the Vault UI. Supports security headers (CSP, HSTS, X-Frame-Options), CORS configuration, and custom organizational headers. Requires Vault 1.16.0+. ([#2842](https://github.com/hashicorp/terraform-provider-vault/pull/2842))
 * **New Resource**: Add support for RADIUS auth backend: `vault_radius_auth_backend` and `vault_radius_auth_backend_user` resource and `vault_radius_auth_login` ephemeral resource.([#2814](https://github.com/hashicorp/terraform-provider-vault/pull/2814))
@@ -14,7 +15,6 @@ FEATURES:
 
 IMPROVEMENTS: 
 
-* Added Plugin Framework `mount_helpers` for Vault mount operations to support incremental migration from SDKv2. These internal helpers provide CRUD operations for self managing mounts for resources using Plugin Framework types. ([#2917](https://github.com/hashicorp/terraform-provider-vault/pull/2917))
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
 
