@@ -414,9 +414,13 @@ func buildBackendConfigFromModel(ctx context.Context, data *GCPKMSSecretBackendM
 	var diags diag.Diagnostics
 	configData := make(map[string]interface{})
 
-	// Only include credentials when explicitly requested
-	// Empty string is valid and tells Vault to use Default Application Credentials
-	if includeCredentials {
+	// Only include credentials when explicitly requested AND the field was
+	// explicitly set in config (non-null). A null value means the user omitted
+	// credentials_wo entirely — we must not send anything to Vault in that case,
+	// because ValueString() on null returns "" which would silently overwrite
+	// previously configured service-account credentials with ADC.
+	// An explicit credentials_wo = "" is non-null and correctly signals ADC intent.
+	if includeCredentials && !data.CredentialsWO.IsNull() {
 		configData[consts.FieldCredentials] = data.CredentialsWO.ValueString()
 	}
 
