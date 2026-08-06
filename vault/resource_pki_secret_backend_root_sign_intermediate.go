@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -106,7 +106,7 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion210),
+				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion205),
 				ForceNew:     true,
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, false),
@@ -119,7 +119,6 @@ func pkiSecretBackendRootSignIntermediateResource() *schema.Resource {
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 				ForceNew: true,
-				Default:  "changeit",
 			},
 			consts.FieldPKCS12Encoder: {
 				Type:     schema.TypeString,
@@ -129,7 +128,6 @@ format is set to "pkcs12_bundle". Valid values are "modern2026" and
 "modern2023". Defaults to "modern2026", which uses the newer PKCS#12 
 integrity format (PBMAC1).`,
 				ForceNew:     true,
-				Default:      "modern2026",
 				ValidateFunc: validation.StringInSlice([]string{"modern2026", "modern2023"}, false),
 			},
 			consts.FieldJKSPassword: {
@@ -140,7 +138,6 @@ integrity format (PBMAC1).`,
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 				ForceNew: true,
-				Default:  "changeit",
 			},
 			consts.FieldMaxPathLength: {
 				Type:        schema.TypeInt,
@@ -393,7 +390,7 @@ func pkiSecretBackendRootSignIntermediateCreate(ctx context.Context, d *schema.R
 	}
 
 	// Only add additional format parameters if supported
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion205) {
 		intermediateSignAPIFields = append(intermediateSignAPIFields,
 			consts.FieldPKCS12Password,
 			consts.FieldPKCS12Encoder,

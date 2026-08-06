@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -9,11 +9,10 @@ import (
 	"log"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -261,27 +260,28 @@ func testAccDataSourceAWSAccessCredentialsCheck_tokenWorks(region string) resour
 		credType := iState.Attributes["type"]
 		securityToken := iState.Attributes["security_token"]
 
-		awsConfig := &aws.Config{
-			Credentials: credentials.NewStaticCredentials(accessKey, secretKey, securityToken),
-			HTTPClient:  cleanhttp.DefaultClient(),
-			Region:      &region,
-		}
-		sess, err := session.NewSession(awsConfig)
+		cfg, err := config.LoadDefaultConfig(context.Background(),
+			config.WithCredentialsProvider(
+				credentials.NewStaticCredentialsProvider(accessKey, secretKey, securityToken),
+			),
+			config.WithHTTPClient(cleanhttp.DefaultClient()),
+			config.WithRegion(region),
+		)
 		if err != nil {
-			return fmt.Errorf("error creating new session: %s", err)
+			return fmt.Errorf("error creating AWS config: %s", err)
 		}
 
 		switch credType {
 		case "creds":
-			conn := iam.New(sess)
-			user, err := conn.GetUser(nil)
+			conn := iam.NewFromConfig(cfg)
+			user, err := conn.GetUser(context.Background(), nil)
 			if err != nil {
 				return fmt.Errorf("error retrieving credentials user: %s", err)
 			}
 			log.Printf("[DEBUG] User: %+v", user)
 		case "sts":
-			conn := sts.New(sess)
-			resp, err := conn.GetCallerIdentity(nil)
+			conn := sts.NewFromConfig(cfg)
+			resp, err := conn.GetCallerIdentity(context.Background(), &sts.GetCallerIdentityInput{})
 			if err != nil {
 				return fmt.Errorf("error retrieving STS user: %s", err)
 			}

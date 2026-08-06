@@ -59,6 +59,27 @@ on `token`. Changing the value, however, _will_ overwrite the previously stored 
 * `disable_remount` - (Optional) If set, opts out of mount migration on path updates.
   See here for more info on [Mount Migration](https://www.vaultproject.io/docs/concepts/mount-migration)
 
+* `explicit_max_ttl` - (Optional) The maximum amount of time in seconds the root token
+  issued by rotation is valid for. A value of `0` uses the Terraform Cloud/Enterprise
+  default token lifetime. Requires Vault 2.1.0+.
+
+* `rotation_period` - (Optional) The amount of time in seconds Vault should wait before
+  rotating the root token. A zero value tells Vault not to rotate the root token. The
+  minimum rotation period is 10 seconds. Requires Vault Enterprise 2.1.0+. Mutually
+  exclusive with `rotation_schedule`.
+
+* `rotation_schedule` - (Optional) The schedule, in cron-style time format
+  defining the schedule on which Vault should rotate the root token. Requires Vault
+  Enterprise 2.1.0+. Mutually exclusive with `rotation_period`.
+
+* `rotation_window` - (Optional) The maximum amount of time in seconds allowed to complete
+  a rotation when a scheduled token rotation occurs. The default rotation window is
+  unbound and the minimum allowable window is `3600`. Only valid with `rotation_schedule`.
+  Requires Vault Enterprise 2.1.0+.
+
+* `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root token
+  until unset. Requires Vault Enterprise 2.1.0+.
+
 ### Common Mount Arguments
 These arguments are common across all resources that mount a secret engine.
 

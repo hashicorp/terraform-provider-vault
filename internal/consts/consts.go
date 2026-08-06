@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package consts
@@ -28,6 +28,7 @@ const (
 	FieldAllowedEmailSans                   = "allowed_email_sans"
 	FieldAllowedNames                       = "allowed_names"
 	FieldAllowedOrganizationalUnits         = "allowed_organizational_units"
+	FieldAllowOverwrite                     = "allow_overwrite"
 	FieldRequiredExtensions                 = "required_extensions"
 	FieldOCSPCACertificates                 = "ocsp_ca_certificates"
 	FieldOCSPEnabled                        = "ocsp_enabled"
@@ -74,6 +75,7 @@ const (
 	FieldPathWrapTTL                        = "path_wrap_ttl"
 	FieldName                               = "name"
 	FieldValues                             = "values"
+	FieldGroupPolicyApplicationMode         = "group_policy_application_mode"
 	FieldVersion                            = "version"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
@@ -124,6 +126,7 @@ const (
 	FieldSKID                               = "skid"
 	FieldUsePSS                             = "use_pss"
 	FieldForceRWSession                     = "force_rw_session"
+	FieldMaxParallel                        = "max_parallel"
 	FieldAccessKey                          = "access_key"
 	FieldSecretKey                          = "secret_key"
 	FieldSecretKeyWO                        = "secret_key_wo"
@@ -150,6 +153,7 @@ const (
 	FieldAllowGenerateKey                   = "allow_generate_key"
 	FieldAllowReplaceKey                    = "allow_replace_key"
 	FieldAllowStoreKey                      = "allow_store_key"
+	FieldUsages                             = "usages"
 	FieldAnyMount                           = "any_mount"
 	FieldID                                 = "id"
 	FieldUUID                               = "uuid"
@@ -232,6 +236,7 @@ const (
 	FieldPushInfo                           = "push_info"
 	FieldUsePasscode                        = "use_passcode"
 	FieldIssuer                             = "issuer"
+	FieldIssuerId                           = "issuer_id"
 	FieldPeriod                             = "period"
 	FieldKeySize                            = "key_size"
 	FieldQRSize                             = "qr_size"
@@ -264,6 +269,7 @@ const (
 	FieldOIDCResponseMode                   = "oidc_response_mode"
 	FieldOIDCResponseTypes                  = "oidc_response_types"
 	FieldJWKSURL                            = "jwks_url"
+	FieldJWKSURI                            = "jwks_uri"
 	FieldJWKSCAPEM                          = "jwks_ca_pem"
 	FieldJWKSPairs                          = "jwks_pairs"
 	FieldJWTValidationPubkeys               = "jwt_validation_pubkeys"
@@ -280,6 +286,16 @@ const (
 	FieldPolicies                           = "policies"
 	FieldNoParent                           = "no_parent"
 	FieldNoDefaultPolicy                    = "no_default_policy"
+	FieldPublicKeys                         = "public_keys"
+	FieldPEM                                = "pem"
+	FieldUseJWKS                            = "use_jwks"
+	FieldAudiences                          = "audiences"
+	FieldUserClaim                          = "user_claim"
+	FieldSupportedAlgorithms                = "supported_algorithms"
+	FieldJwtType                            = "jwt_type"
+	FieldClockSkewLeeway                    = "clock_skew_leeway"
+	FieldConfigID                           = "config_id"
+	FieldProfileName                        = "profile_name"
 	FieldRenewable                          = "renewable"
 	FieldExplicitMaxTTL                     = "explicit_max_ttl"
 	FieldPersistApp                         = "persist_app"
@@ -483,6 +499,9 @@ const (
 	FieldCredentialType                     = "credential_type"
 	FieldFilename                           = "filename"
 	FieldDefault                            = "default"
+	FieldDefaultAuthType                    = "default_auth_type"
+	FieldBackupAuthTypes                    = "backup_auth_types"
+	FieldDisableInheritance                 = "disable_inheritance"
 	FieldRotationStatements                 = "rotation_statements"
 	FieldRotationSchedule                   = "rotation_schedule"
 	FieldRotationWindow                     = "rotation_window"
@@ -548,6 +567,7 @@ const (
 	FieldWrappingToken                      = "wrapping_token"
 	FieldWithWrappedAccessor                = "with_wrapped_accessor"
 	FieldExternalID                         = "external_id"
+	FieldKmsKeyID                           = "kms_key_id"
 	FieldAppName                            = "app_name"
 	FieldInstallationID                     = "installation_id"
 	FieldAppID                              = "app_id"
@@ -736,8 +756,6 @@ const (
 	FieldTokenMaxTTL                          = "token_max_ttl"
 	FieldTokenPeriod                          = "token_period"
 	FieldDeferInitialCreds                    = "defer_initial_creds"
-	FieldTokenExplicitMaxTTL                  = "token_explicit_max_ttl"
-	FieldTokenNoDefaultPolicy                 = "token_no_default_policy"
 	FieldTokenDefaultAudiences                = "token_default_audiences"
 	FieldDeletionAllowed                      = "deletion_allowed"
 	FieldConvergentEncryption                 = "convergent_encryption"
@@ -823,6 +841,16 @@ const (
 	FieldValidateResponseSignature  = "validate_response_signature"
 
 	/*
+		agent registry fields
+	*/
+	FieldCeilingPolicies              = "ceiling_policies"
+	FieldNoDefaultCeilingPolicy       = "no_default_ceiling_policy"
+	FieldOwner                        = "owner"
+	FieldCreationTime                 = "creation_time"
+	FieldLastUpdatedTime              = "last_updated_time"
+	FieldOptionalAuthorizationDetails = "optional_authorization_details"
+
+	/*
 		raft snapshot agent config fields
 	*/
 	FieldInterval                  = "interval"
@@ -853,6 +881,9 @@ const (
 	FieldAzureClientID             = "azure_client_id"
 	FieldAzureAuthMode             = "azure_auth_mode"
 	FieldSelfManaged               = "self_managed"
+	FieldRotateOnRead              = "rotate_on_read"
+	FieldRotateOnReadCooldown      = "rotate_on_read_cooldown"
+	FieldRotatedOnRead             = "rotated_on_read"
 	FieldRotationPolicy            = "rotation_policy"
 	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
 	FieldSecretsWOVersion          = "secrets_wo_version"
@@ -883,6 +914,16 @@ const (
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
 	FieldBindPassWO                 = "bindpass_wo"
 	FieldBindPassWOVersion          = "bindpass_wo_version"
+	FieldKeytab                     = "keytab"
+	FieldKeytabWO                   = "keytab_wo"
+	FieldKeytabWOVersion            = "keytab_wo_version"
+	FieldClientTLSKeyWO             = "client_tls_key_wo"
+	FieldClientTLSKeyWOVersion      = "client_tls_key_wo_version"
+	FieldClientTLSCertWO            = "client_tls_cert_wo"
+	FieldClientTLSCertWOVersion     = "client_tls_cert_wo_version"
+	FieldAddGroupAliases            = "add_group_aliases"
+	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
+	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
 
 	/*
 		common environment variables
@@ -981,6 +1022,9 @@ const (
 	VaultVersion121  = "1.21.0"
 	VaultVersion1215 = "1.21.5"
 	VaultVersion200  = "2.0.0"
+	VaultVersion201  = "2.0.1"
+	VaultVersion203  = "2.0.3"
+	VaultVersion205  = "2.0.5"
 	VaultVersion210  = "2.1.0"
 
 	/*

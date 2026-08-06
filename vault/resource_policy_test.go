@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -25,6 +26,12 @@ func TestResourcePolicy(t *testing.T) {
 			{
 				Config: testResourcePolicy_initialConfig(name),
 				Check:  testResourcePolicy_initialCheck(name),
+			},
+			{
+				ResourceName:            "vault_policy.test",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"allow_overwrite"},
 			},
 			{
 				Config: testResourcePolicy_updateConfig,
@@ -100,6 +107,70 @@ EOT
 
 `
 
+func TestResourcePolicy_defaultOverwrite(t *testing.T) {
+	name := acctest.RandomWithPrefix("test-")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					if err := client.Sys().PutPolicy(name, "path \"secret/*\" { capabilities = [\"read\"] }"); err != nil {
+						t.Fatalf("failed to pre-create policy %q: %s", name, err)
+					}
+				},
+				Config: testResourcePolicy_defaultOverwriteConfig(name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_policy.test", "name", name),
+				),
+			},
+		},
+	})
+}
+
+func TestResourcePolicy_allowOverwrite(t *testing.T) {
+	name := acctest.RandomWithPrefix("test-")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					if err := client.Sys().PutPolicy(name, "path \"secret/*\" { capabilities = [\"read\"] }"); err != nil {
+						t.Fatalf("failed to pre-create policy %q: %s", name, err)
+					}
+				},
+				Config: testResourcePolicy_allowOverwriteConfig(name),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_policy.test", "name", name),
+				),
+			},
+		},
+	})
+}
+
+func TestResourcePolicy_noOverwrite(t *testing.T) {
+	name := acctest.RandomWithPrefix("test-")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+					if err := client.Sys().PutPolicy(name, "path \"secret/*\" { capabilities = [\"read\"] }"); err != nil {
+						t.Fatalf("failed to pre-create policy %q: %s", name, err)
+					}
+				},
+				Config:      testResourcePolicy_noOverwriteConfig(name),
+				ExpectError: regexp.MustCompile(`already exists`),
+			},
+		},
+	})
+}
+
 func testResourcePolicy_updateCheck(s *terraform.State) error {
 	resourceState := s.Modules[0].Resources["vault_policy.test"]
 	instanceState := resourceState.Primary
@@ -129,4 +200,45 @@ func testResourcePolicy_updateCheck(s *terraform.State) error {
 	}
 
 	return nil
+}
+
+func testResourcePolicy_defaultOverwriteConfig(name string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "test" {
+  name            = "%s"
+  policy          = <<EOT
+path "secret/*" {
+  capabilities = ["read"]
+}
+EOT
+}
+`, name)
+}
+
+func testResourcePolicy_allowOverwriteConfig(name string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "test" {
+  name            = "%s"
+  allow_overwrite = true
+  policy          = <<EOT
+path "secret/*" {
+  capabilities = ["read"]
+}
+EOT
+}
+`, name)
+}
+
+func testResourcePolicy_noOverwriteConfig(name string) string {
+	return fmt.Sprintf(`
+resource "vault_policy" "test" {
+  name            = "%s"
+  allow_overwrite = false
+  policy          = <<EOT
+path "secret/*" {
+  capabilities = ["read"]
+}
+EOT
+}
+`, name)
 }

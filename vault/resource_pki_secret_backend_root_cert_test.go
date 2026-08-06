@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -106,7 +106,7 @@ func TestPkiSecretBackendRootCertificate_pkcs12Bundle(t *testing.T) {
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
-		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion205)
 	})
 }
 
@@ -130,7 +130,7 @@ func TestPkiSecretBackendRootCertificate_jksBundle(t *testing.T) {
 	}
 
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
-		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion205)
 	})
 }
 

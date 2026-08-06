@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -150,7 +150,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion210), nil
+					return !meta.IsAPISupported(provider.VaultVersion205), nil
 				},
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
 					certFields{format: "pkcs12_bundle", pkcs12Password: "123-secure-password", pkcs12Encoder: "modern2023"}),
@@ -163,7 +163,7 @@ func TestPkiSecretBackendCert_basic(t *testing.T) {
 			{
 				SkipFunc: func() (bool, error) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
-					return !meta.IsAPISupported(provider.VaultVersion210), nil
+					return !meta.IsAPISupported(provider.VaultVersion205), nil
 				},
 				Config: testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true,
 					certFields{format: "jks_bundle", jksPassword: "super-secure-password", jksAlias: "myapp"}),
@@ -184,7 +184,7 @@ func TestPkiSecretBackendCert_customizeDiffFormatVersionGate(t *testing.T) {
 
 	skipVersion210OrLater := func() (bool, error) {
 		meta := testProvider.Meta().(*provider.ProviderMeta)
-		return meta.IsAPISupported(provider.VaultVersion210), nil
+		return meta.IsAPISupported(provider.VaultVersion205), nil
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -195,15 +195,77 @@ func TestPkiSecretBackendCert_customizeDiffFormatVersionGate(t *testing.T) {
 			{
 				SkipFunc:    skipVersion210OrLater,
 				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "pkcs12_bundle"}),
-				ExpectError: regexp.MustCompile(`"pkcs12_bundle" format is only supported on Vault 2.1.0 or later`),
+				ExpectError: regexp.MustCompile(`"pkcs12_bundle" format is only supported on Vault 2.0.5 or later`),
 			},
 			{
 				SkipFunc:    skipVersion210OrLater,
 				Config:      testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath, true, certFields{format: "jks_bundle"}),
-				ExpectError: regexp.MustCompile(`"jks_bundle" format is only supported on Vault 2.1.0 or later`),
+				ExpectError: regexp.MustCompile(`"jks_bundle" format is only supported on Vault 2.0.5 or later`),
 			},
 		},
 	})
+}
+
+// TestPkiSecretBackendCert_Upgrade verifies upgrades do not force recreation of "vault_pki_secret_backend_cert"
+// and "vault_pki_secret_backend_root_cert" resources.
+// This safeguards against unintended schema changes that would trigger resource replacement.
+func TestPkiSecretBackendCert_Upgrade(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"vault": {
+						VersionConstraint: "5.9.0",
+						Source:            "hashicorp/vault",
+					},
+				},
+				Config: testPkiSecretBackendCertConfig_upgrade(path),
+			},
+			{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Config:                   testPkiSecretBackendCertConfig_upgrade(path),
+				PlanOnly:                 true,
+				ExpectNonEmptyPlan:       false,
+				// Upgrading from v5.9.x to the current provider should be a no-op plan.
+				// If this step fails and the diff is intentional, update the baseline version (preferred) or
+				// expected assertions to reflect the new upgrade contract.
+				// Do not just flip ExpectNonEmptyPlan to true.
+			},
+		},
+	})
+}
+
+// Minimal definition of resources with only required parameters
+func testPkiSecretBackendCertConfig_upgrade(path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path  = "%s"
+  type  = "pki"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  common_name = "RootOrg Root CA"
+}
+
+resource "vault_pki_secret_backend_role" "test" {
+  backend          = vault_mount.test.path
+  name             = "test"
+  allowed_domains  = ["test.my.domain"]
+  allow_subdomains = true
+}
+
+resource "vault_pki_secret_backend_cert" "test" {
+  backend     = vault_mount.test.path
+  name        = vault_pki_secret_backend_role.test.name
+  common_name = "cert.test.my.domain"
+	ttl         = "1h"
+}
+`, path)
 }
 
 func testPkiSecretBackendCertConfig_basic(rootPath, intermediatePath string, withCert bool, certFields certFields) string {

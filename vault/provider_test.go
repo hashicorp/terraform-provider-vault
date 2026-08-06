@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package vault
@@ -6,12 +6,13 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"io/ioutil"
 	"os"
 	"path"
 	"sync"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 
 	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -21,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/go-homedir"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -278,6 +280,146 @@ func TestAccNamespaceProviderConfigure(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAccNamespaceProviderConfigure_setNamespaceFromToken verifies that
+// set_namespace_from_token controls whether a namespace derived from the auth
+// token is prepended to a resource's namespace.
+//
+// The flag only has an effect when the provider namespace (and VAULT_NAMESPACE)
+// are unset and the token is scoped to a namespace — the
+// `namespace == "" && tokenNamespace != ""` branch in
+// internal/provider/meta.go setClient. When the flag is honored (false) the
+// token namespace is NOT adopted as the provider root, so GetNSClient does not
+// prepend it to a resource's namespace; when true, it is.
+//
+// The flag is read via GetResourceDataBool, which depends on RawConfig.
+// RawConfig is only populated when the provider is configured from real HCL
+// through the plugin protocol, so the provider block is embedded in the test
+// config string and the assertion inspects the configured ProviderMeta. A
+// hand-built ResourceData leaves RawConfig null and the flag would silently
+// fall back to its default of true.
+func TestAccNamespaceProviderConfigure_setNamespaceFromToken(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+	acctestutil.SkipTestAcc(t)
+
+	rootClient := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+	// Create the namespace that the auth token will be scoped to. It needs no
+	// child namespaces: the assertion only inspects the namespace GetNSClient
+	// resolves locally, so teardown is a single-level delete.
+	tokenNS := acctest.RandomWithPrefix("test-ns-token")
+	if _, err := rootClient.Logical().Write(consts.SysNamespaceRoot+tokenNS, nil); err != nil {
+		t.Fatalf("failed to create token namespace %q: %s", tokenNS, err)
+	}
+	t.Cleanup(func() {
+		if _, err := rootClient.Logical().Delete(consts.SysNamespaceRoot + tokenNS); err != nil {
+			t.Errorf("failed to delete token namespace %q: %s", tokenNS, err)
+		}
+	})
+
+	// A root-derived client bound to tokenNS, used to provision the policy and
+	// token that live inside it.
+	nsClient, err := rootClient.Clone()
+	if err != nil {
+		t.Fatalf("failed to clone client: %s", err)
+	}
+	nsClient.SetNamespace(tokenNS)
+
+	// Grant the token permission to create the limited child token that
+	// setClient mints during provider configuration.
+	const tokenPolicy = `path "auth/token/create" { capabilities = ["create", "update", "sudo"] }`
+	if err := nsClient.Sys().PutPolicy("token-create", tokenPolicy); err != nil {
+		t.Fatalf("failed to create policy in %q: %s", tokenNS, err)
+	}
+
+	// Mint a token scoped to tokenNS. Its namespace_path is what setClient
+	// inspects to derive the provider namespace.
+	secret, err := nsClient.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"token-create"},
+		TTL:      "1h",
+	})
+	if err != nil {
+		t.Fatalf("failed to create namespaced token: %s", err)
+	}
+	nsToken := secret.Auth.ClientToken
+
+	// The resource namespace whose resolution we assert.
+	const childNS = "child"
+
+	tests := []struct {
+		name                  string
+		setNamespaceFromToken bool
+		// wantNS is the namespace GetNSClient should apply to a resource that
+		// sets namespace = childNS, once the provider has derived its root from
+		// the token.
+		wantNS string
+	}{
+		{
+			name:                  "false_does_not_prepend_token_namespace",
+			setNamespaceFromToken: false,
+			wantNS:                childNS,
+		},
+		{
+			name:                  "true_prepends_token_namespace",
+			setNamespaceFromToken: true,
+			wantNS:                tokenNS + "/" + childNS,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				Steps: []resource.TestStep{
+					{
+						Config: testNamespaceFromTokenConfig(nsToken, tt.setNamespaceFromToken),
+						Check:  checkResolvedNamespaceFromToken(childNS, tt.wantNS),
+					},
+				},
+			})
+		})
+	}
+}
+
+// checkResolvedNamespaceFromToken asserts that the configured provider resolves
+// resourceNS to wantNS. It inspects the namespace GetNSClient applies to a
+// cloned client, which is where the token namespace is (or is not) prepended.
+func checkResolvedNamespaceFromToken(resourceNS, wantNS string) resource.TestCheckFunc {
+	return func(*terraform.State) error {
+		pm, ok := testProvider.Meta().(*provider.ProviderMeta)
+		if !ok {
+			return fmt.Errorf("provider meta is %T, want *provider.ProviderMeta", testProvider.Meta())
+		}
+
+		c, err := pm.GetNSClient(resourceNS)
+		if err != nil {
+			return fmt.Errorf("GetNSClient(%q) failed: %w", resourceNS, err)
+		}
+
+		if got := c.Namespace(); got != wantNS {
+			return fmt.Errorf("resolved namespace for %q = %q, want %q", resourceNS, got, wantNS)
+		}
+		return nil
+	}
+}
+
+// testNamespaceFromTokenConfig configures the provider with a namespaced token
+// and NO namespace, so the namespace is derived from the token and governed by
+// set_namespace_from_token. The data source only serves to trigger provider
+// configuration.
+func testNamespaceFromTokenConfig(token string, setNamespaceFromToken bool) string {
+	return fmt.Sprintf(`
+provider "vault" {
+  token                    = %q
+  set_namespace_from_token = %t
+}
+
+data "vault_generic_secret" "test" {
+  path = "/auth/token/lookup-self"
+}
+`, token, setNamespaceFromToken)
 }
 
 func testResourceApproleConfig_basic() string {
