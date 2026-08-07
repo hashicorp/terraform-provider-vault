@@ -13,6 +13,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* Send a standard Terraform `User-Agent` header on all Vault requests, e.g. `Terraform/1.15.8 (+https://www.terraform.io) Terraform-Plugin-SDK/2.40.1 terraform-provider-vault/5.10.1`. Previously requests were sent with the Go default of `Go-http-client/1.1`. The `TF_APPEND_USER_AGENT` environment variable is now honored and appended to this value. A `User-Agent` set explicitly via the provider `headers` block or the `VAULT_HEADERS` environment variable continues to take precedence.
+
 * `vault_aws_auth_backend_config_identity`: Add support for `canonical_arn` as a valid value for the `iam_alias` parameter. Requires Vault 1.16+. ([#2982](https://github.com/hashicorp/terraform-provider-vault/pull/2982))
 
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))

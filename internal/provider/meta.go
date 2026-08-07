@@ -27,6 +27,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/helper"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	providerversion "github.com/hashicorp/terraform-provider-vault/version"
 )
 
 const (
@@ -69,7 +70,23 @@ type ProviderMeta struct {
 	resourceData *schema.ResourceData
 	clientCache  map[string]*api.Client
 	vaultVersion *version.Version
+	userAgent    string
 	mu           sync.RWMutex
+}
+
+// getUserAgent returns the User-Agent to send with every Vault request.
+//
+// The value is normally set during provider configuration, where the Terraform
+// version is known. ProviderMeta can also be constructed directly (notably in
+// tests), so fall back to building the string without it rather than sending no
+// User-Agent at all. Both paths go through schema.Provider.UserAgent, which
+// appends TF_APPEND_USER_AGENT when it is set.
+func (p *ProviderMeta) getUserAgent() string {
+	if p.userAgent != "" {
+		return p.userAgent
+	}
+
+	return (&schema.Provider{}).UserAgent(providerversion.ProviderName, providerversion.ProviderVersion())
 }
 
 // GetClient returns the providers default Vault client.
@@ -268,6 +285,16 @@ func (p *ProviderMeta) setClient() error {
 			parsedHeaders.Add(name.(string), header["value"].(string))
 		}
 	}
+
+	// Send a standard Terraform User-Agent, but let an explicitly configured one
+	// win. A User-Agent may already be present here from the headers block above
+	// or from VAULT_HEADERS, which api.NewClient applies. Note that net/http
+	// writes a single User-Agent line taken from the first value, so adding ours
+	// unconditionally would be silently ignored in that case anyway.
+	if parsedHeaders.Get("User-Agent") == "" {
+		parsedHeaders.Set("User-Agent", p.getUserAgent())
+	}
+
 	client.SetHeaders(parsedHeaders)
 
 	client.SetMaxRetries(GetResourceDataInt(d, "max_retries", "VAULT_MAX_RETRIES", DefaultMaxHTTPRetries))

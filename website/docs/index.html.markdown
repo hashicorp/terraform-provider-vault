@@ -228,6 +228,25 @@ The `headers` configuration block accepts the following arguments:
 
 * `value` - (Required) The value of the header.
 
+### User-Agent
+
+All requests to Vault are sent with a standard Terraform `User-Agent` header, for example:
+
+```
+Terraform/1.15.8 (+https://www.terraform.io) Terraform-Plugin-SDK/2.40.1 terraform-provider-vault/5.10.1
+```
+
+Setting the `TF_APPEND_USER_AGENT` environment variable appends its value to that string, which is
+useful for identifying traffic from wrapper tooling in Vault audit logs:
+
+```shell
+export TF_APPEND_USER_AGENT="my-tooling/1.2.3"
+```
+
+To replace the `User-Agent` entirely rather than append to it, set it explicitly through the
+`headers` block above or the `VAULT_HEADERS` environment variable; an explicitly configured value
+takes precedence over the default.
+
 
 ## Vault Authentication Configuration Options
 

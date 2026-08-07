@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
+	providerversion "github.com/hashicorp/terraform-provider-vault/version"
 )
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
@@ -65,8 +66,7 @@ type fwprovider struct {
 // version data.
 func (p *fwprovider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "vault"
-	// TODO: inject provider version during build time
-	// resp.Version = "0.0.0-dev"
+	resp.Version = providerversion.ProviderVersion()
 }
 
 // Schema returns the schema for this provider's configuration.
