@@ -795,6 +795,10 @@ var (
 			Resource:      UpdateSchemaResource(transformAlphabetResource()),
 			PathInventory: []string{"/transform/alphabet/{name}"},
 		},
+		"vault_transform_key_configuration": {
+			Resource:      UpdateSchemaResource(transformKeyConfigResource()),
+			PathInventory: []string{"/transform/tokenization/keys/{name}/config"},
+		},
 		"vault_saml_auth_backend": {
 			Resource:      UpdateSchemaResource(samlAuthBackendResource()),
 			PathInventory: []string{"/auth/saml/config"},
