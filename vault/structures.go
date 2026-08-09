@@ -25,6 +25,9 @@ func expandAuthMethodTune(raw interface{}) (api.MountConfigInput, error) {
 	if len(rawL) == 0 {
 		return data, nil
 	}
+	if rawL[0] == nil {
+		return data, nil
+	}
 	config := rawL[0].(map[string]interface{})
 
 	if v, ok := config[consts.FieldDefaultLeaseTTL]; ok {

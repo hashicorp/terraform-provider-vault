@@ -47,6 +47,16 @@ func TestExpandAuthMethodTune(t *testing.T) {
 	}
 }
 
+func TestExpandAuthMethodTuneNull(t *testing.T) {
+	actual, err := expandAuthMethodTune([]interface{}{nil})
+	if err != nil {
+		t.Fatalf("error expanding null auth method tune: %s", err)
+	}
+	if !reflect.DeepEqual(actual, api.MountConfigInput{}) {
+		t.Fatalf("got %#v, expected empty mount config", actual)
+	}
+}
+
 func TestFlattenAuthMethodTune(t *testing.T) {
 	expanded := &api.MountConfigOutput{
 		DefaultLeaseTTL:           600,
