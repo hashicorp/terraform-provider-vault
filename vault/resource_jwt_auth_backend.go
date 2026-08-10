@@ -348,7 +348,7 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			continue
 		}
 
-		// Handle provider_config specially - Vault returns native types (bool, float64) 
+		// Handle provider_config specially - Vault returns native types (bool, float64)
 		// but Terraform's TypeMap expects all values to be strings.
 		// Convert before setting state to prevent spurious diffs on every plan/apply.
 		if configOption == consts.FieldProviderConfig {
