@@ -6,7 +6,9 @@ package vault
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
@@ -144,6 +146,137 @@ func TestCertAuthBackend(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, FieldAliasMetadata+".%", "1"),
 					resource.TestCheckResourceAttr(resourceName, FieldAliasMetadata+".foo", "bar"),
 				),
+			},
+		},
+	})
+}
+
+func TestCertAuthBackend_ClearListFields(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
+	name := acctest.RandomWithPrefix("tf-test-cert-name")
+	resourceName := "vault_cert_auth_backend_role.test"
+
+	initialFields := certAuthBackendListFields{
+		allowedNames:               []string{"service.example.com"},
+		allowedCommonNames:         []string{"common.example.com"},
+		allowedDNSSans:             []string{"dns.example.com"},
+		allowedEmailSans:           []string{"service@example.com"},
+		allowedOrganizationalUnits: []string{"engineering"},
+		allowedURISans:             []string{"spiffe://old/*"},
+		ocspServersOverride:        []string{"server.example.com"},
+		requiredExtensions:         []string{"1.3.6.1.4.1.311.20.2.2:smartcardlogin"},
+	}
+	emptyFields := certAuthBackendListFields{}
+	preservedFields := certAuthBackendListFields{
+		allowedNames:               []string{"preserved.example.com"},
+		allowedOrganizationalUnits: []string{"preserved-ou"},
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion113)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testCertAuthBackendConfig_listFields(backend, name, "initial", initialFields),
+				Check:  testCertAuthBackendCheckListFields(resourceName, initialFields),
+			},
+			{
+				Config: testCertAuthBackendConfig_listFields(backend, name, "initial", emptyFields),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedNames+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedCommonNames+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedDNSSans+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedEmailSans+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedOrganizationalUnits+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedURISans+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPServersOverride+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRequiredExtensions+".#", "0"),
+					testCertAuthBackendCheckListFields(resourceName, emptyFields),
+				),
+			},
+			{
+				Config:             testCertAuthBackendConfig_listFields(backend, name, "initial", emptyFields),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
+			},
+			{
+				Config: testCertAuthBackendConfig_listFields(backend, name, "before unrelated update", preservedFields),
+				Check:  testCertAuthBackendCheckListFields(resourceName, preservedFields),
+			},
+			{
+				Config: testCertAuthBackendConfig_listFields(backend, name, "after unrelated update", preservedFields),
+				Check:  testCertAuthBackendCheckListFields(resourceName, preservedFields),
+			},
+		},
+	})
+}
+
+func TestCertAuthBackend_ClearListFieldsWhenOmitted(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
+	name := acctest.RandomWithPrefix("tf-test-cert-name")
+	resourceName := "vault_cert_auth_backend_role.test"
+
+	initialFields := certAuthBackendListFields{
+		allowedNames:       []string{"service.example.com"},
+		allowedCommonNames: []string{"common.example.com"},
+		allowedDNSSans:     []string{"dns.example.com"},
+		allowedEmailSans:   []string{"service@example.com"},
+		requiredExtensions: []string{"1.3.6.1.4.1.311.20.2.2:smartcardlogin"},
+	}
+	uriOnlyFields := certAuthBackendListFields{
+		allowedURISans: []string{"spiffe://new/service"},
+	}
+	nameOnlyFields := certAuthBackendListFields{
+		allowedNames: []string{"replacement.example.com"},
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testCertAuthBackendConfig_optionalListFields(backend, name, initialFields),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedNames+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedCommonNames+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedDNSSans+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedEmailSans+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedURISans+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRequiredExtensions+".#", "1"),
+					testCertAuthBackendCheckListFields(resourceName, initialFields),
+				),
+			},
+			{
+				Config: testCertAuthBackendConfig_optionalListFields(backend, name, uriOnlyFields),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedNames+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedCommonNames+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedDNSSans+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedEmailSans+".#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedURISans+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedURISans+".*", "spiffe://new/service"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRequiredExtensions+".#", "0"),
+					testCertAuthBackendCheckListFields(resourceName, uriOnlyFields),
+				),
+			},
+			{
+				Config: testCertAuthBackendConfig_optionalListFields(backend, name, nameOnlyFields),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedNames+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldAllowedNames+".*", "replacement.example.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedURISans+".#", "0"),
+					testCertAuthBackendCheckListFields(resourceName, nameOnlyFields),
+				),
+			},
+			{
+				Config:             testCertAuthBackendConfig_optionalListFields(backend, name, nameOnlyFields),
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: false,
 			},
 		},
 	})
@@ -354,6 +487,79 @@ func testCertAuthBackendCheck_attrs(resourceName, backend, name string) resource
 	}
 }
 
+type certAuthBackendListFields struct {
+	allowedNames               []string
+	allowedCommonNames         []string
+	allowedDNSSans             []string
+	allowedEmailSans           []string
+	allowedOrganizationalUnits []string
+	allowedURISans             []string
+	ocspServersOverride        []string
+	requiredExtensions         []string
+}
+
+func (f certAuthBackendListFields) values() map[string][]string {
+	return map[string][]string{
+		consts.FieldAllowedNames:               f.allowedNames,
+		consts.FieldAllowedCommonNames:         f.allowedCommonNames,
+		consts.FieldAllowedDNSSans:             f.allowedDNSSans,
+		consts.FieldAllowedEmailSans:           f.allowedEmailSans,
+		consts.FieldAllowedOrganizationalUnits: f.allowedOrganizationalUnits,
+		consts.FieldAllowedURISans:             f.allowedURISans,
+		consts.FieldOCSPServersOverride:        f.ocspServersOverride,
+		consts.FieldRequiredExtensions:         f.requiredExtensions,
+	}
+}
+
+func testCertAuthBackendCheckListFields(resourceName string, expected certAuthBackendListFields) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, resourceName)
+		if err != nil {
+			return err
+		}
+
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+
+		secret, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return fmt.Errorf("error reading certificate auth role %q: %w", rs.Primary.ID, err)
+		}
+		if secret == nil {
+			return fmt.Errorf("certificate auth role %q does not exist", rs.Primary.ID)
+		}
+
+		fields := expected.values()
+		fieldNames := make([]string, 0, len(fields))
+		for field := range fields {
+			fieldNames = append(fieldNames, field)
+		}
+		sort.Strings(fieldNames)
+
+		for _, field := range fieldNames {
+			actual, ok := util.GetStringSliceFromSecret(secret, field)
+			if !ok {
+				value, exists := secret.Data[field]
+				if exists && value != nil {
+					return fmt.Errorf("expected Vault field %q to be a string list, got %T", field, value)
+				}
+				actual = []string{}
+			}
+
+			want := append([]string{}, fields[field]...)
+			sort.Strings(actual)
+			sort.Strings(want)
+			if !reflect.DeepEqual(actual, want) {
+				return fmt.Errorf("expected Vault field %q to be %#v, got %#v", field, want, actual)
+			}
+		}
+
+		return nil
+	}
+}
+
 func testCertAuthBackendConfig_basic(backend, name, certificate, extraConfig string, allowedNames, allowedOrgUnits []string) string {
 	config := fmt.Sprintf(`
 
@@ -400,6 +606,80 @@ __CERTIFICATE__
 	)
 
 	return config
+}
+
+func testCertAuthBackendConfig_listFields(backend, name, displayName string, fields certAuthBackendListFields) string {
+	return fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                         = "%s"
+    display_name                 = "%s"
+    backend                      = vault_auth_backend.cert.path
+    allowed_names                = %s
+    allowed_common_names         = %s
+    allowed_dns_sans             = %s
+    allowed_email_sans           = %s
+    allowed_organizational_units = %s
+    allowed_uri_sans             = %s
+    ocsp_servers_override        = %s
+    required_extensions          = %s
+
+    certificate = <<EOF
+%s
+EOF
+}
+`, backend, name, displayName,
+		util.ArrayToTerraformList(fields.allowedNames),
+		util.ArrayToTerraformList(fields.allowedCommonNames),
+		util.ArrayToTerraformList(fields.allowedDNSSans),
+		util.ArrayToTerraformList(fields.allowedEmailSans),
+		util.ArrayToTerraformList(fields.allowedOrganizationalUnits),
+		util.ArrayToTerraformList(fields.allowedURISans),
+		util.ArrayToTerraformList(fields.ocspServersOverride),
+		util.ArrayToTerraformList(fields.requiredExtensions),
+		testCertificate,
+	)
+}
+
+func testCertAuthBackendConfig_optionalListFields(backend, name string, fields certAuthBackendListFields) string {
+	fieldValues := fields.values()
+	fieldNames := make([]string, 0, len(fieldValues))
+	for field := range fieldValues {
+		fieldNames = append(fieldNames, field)
+	}
+	sort.Strings(fieldNames)
+
+	configFields := make([]string, 0, len(fieldNames))
+	for _, field := range fieldNames {
+		values := fieldValues[field]
+		if values == nil {
+			continue
+		}
+		configFields = append(configFields,
+			fmt.Sprintf("    %s = %s", field, util.ArrayToTerraformList(values)))
+	}
+
+	return fmt.Sprintf(`
+
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name        = "%s"
+    backend     = vault_auth_backend.cert.path
+    certificate = <<EOF
+%s
+EOF
+%s
+}
+`, backend, name, testCertificate, strings.Join(configFields, "\n"))
 }
 
 func testCertAuthBackendConfig_OCSP_default(backend, name string) string {
