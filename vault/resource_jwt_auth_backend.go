@@ -348,15 +348,22 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			continue
 		}
 
-		// Handle provider_config specially - preserve api_token from state (sensitive, like oidc_client_secret)
+		// Handle provider_config specially - Vault returns native types (bool, float64) 
+		// but Terraform's TypeMap expects all values to be strings.
+		// Convert before setting state to prevent spurious diffs on every plan/apply.
 		if configOption == consts.FieldProviderConfig {
 			if providerConfig, ok := config.Data[configOption].(map[string]interface{}); ok {
+				// Convert all values to strings to match TypeMap(TypeString) schema.
+				providerConfig = convertProviderConfigValuesToStrings(providerConfig)
+
 				// Get existing provider_config from state
 				existingConfig := d.Get(consts.FieldProviderConfig).(map[string]interface{})
 
-				// Preserve api_token from state if it exists (sensitive, not returned by Vault)
-				if val, exists := existingConfig["api_token"]; exists {
-					providerConfig["api_token"] = val
+				// Preserve every key from state if it exists (sensitive, not returned by Vault)
+				for k, val := range existingConfig {
+					if _, returnedByVault := providerConfig[k]; !returnedByVault {
+						providerConfig[k] = val
+					}
 				}
 
 				d.Set(configOption, providerConfig)
@@ -387,6 +394,36 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	}
 
 	return nil
+}
+
+// Vault returns provider_config values as native types (bool, float64, int) but Terraform's TypeMap schema expects
+// all values to be strings. Without this conversion d.Set silently drops non-string values,
+// which makes the next plan show those keys as needing to be added
+// Input:  {"fetch_groups": true, "groups_recurse_max_depth": float64(5)}
+// Output: {"fetch_groups": "true", "groups_recurse_max_depth": "5"}
+func convertProviderConfigValuesToStrings(input map[string]interface{}) map[string]interface{} {
+	newConfig := make(map[string]interface{}, len(input))
+	for k, v := range input {
+		switch val := v.(type) {
+		case bool:
+			newConfig[k] = strconv.FormatBool(val)
+		case float64:
+			if val == float64(int64(val)) {
+				newConfig[k] = strconv.FormatInt(int64(val), 10)
+			} else {
+				newConfig[k] = strconv.FormatFloat(val, 'f', -1, 64)
+			}
+		case int:
+			newConfig[k] = strconv.Itoa(val)
+		case int64:
+			newConfig[k] = strconv.FormatInt(val, 10)
+		case string:
+			newConfig[k] = val
+		default:
+			newConfig[k] = fmt.Sprintf("%v", val)
+		}
+	}
+	return newConfig
 }
 
 func convertProviderConfigValues(input map[string]interface{}) (map[string]interface{}, error) {
