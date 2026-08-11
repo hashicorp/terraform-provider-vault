@@ -408,6 +408,8 @@ func convertProviderConfigValuesToStrings(input map[string]interface{}) map[stri
 		case bool:
 			newConfig[k] = strconv.FormatBool(val)
 		case float64:
+			// JSON unmarshaling represents all numbers as float64
+			// Check if it's actually an integer to preserve the original format
 			if val == float64(int64(val)) {
 				newConfig[k] = strconv.FormatInt(int64(val), 10)
 			} else {
@@ -420,6 +422,7 @@ func convertProviderConfigValuesToStrings(input map[string]interface{}) map[stri
 		case string:
 			newConfig[k] = val
 		default:
+			log.Printf("[WARN] provider_config key %q has unexpected type %T, converting to string", k, val)
 			newConfig[k] = fmt.Sprintf("%v", val)
 		}
 	}
