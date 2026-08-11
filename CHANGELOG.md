@@ -15,6 +15,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_identity_entity_alias`: Add support for `external_id` and `issuer` fields. Available only for Vault Enterprise. ([#2994](https://github.com/hashicorp/terraform-provider-vault/pull/2994))
+
 * `vault_aws_auth_backend_config_identity`: Add support for `canonical_arn` as a valid value for the `iam_alias` parameter. Requires Vault 1.16+. ([#2982](https://github.com/hashicorp/terraform-provider-vault/pull/2982))
 
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
