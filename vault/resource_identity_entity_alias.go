@@ -55,6 +55,18 @@ func identityEntityAliasResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldExternalID: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Unique external identifier from the external IdP.",
+			},
+			consts.FieldIssuer: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Description: "Issuer name associated with this alias.",
+			},
 		},
 	}
 }
@@ -76,6 +88,8 @@ func identityEntityAliasCreate(ctx context.Context, d *schema.ResourceData, meta
 		consts.FieldMountAccessor: "",
 		"canonical_id":            "",
 		"custom_metadata":         "",
+		consts.FieldExternalID:    "",
+		consts.FieldIssuer:        "",
 	})
 
 	diags := diag.Diagnostics{}
@@ -160,6 +174,8 @@ func identityEntityAliasUpdate(ctx context.Context, d *schema.ResourceData, meta
 		consts.FieldMountAccessor: "",
 		"canonical_id":            "",
 		"custom_metadata":         "",
+		consts.FieldExternalID:    "",
+		consts.FieldIssuer:        "",
 	})
 	if _, err := client.Logical().Write(path, data); err != nil {
 		diags = append(diags, diag.Diagnostic{
@@ -205,7 +221,7 @@ func identityEntityAliasRead(ctx context.Context, d *schema.ResourceData, meta i
 	}
 
 	d.SetId(resp.Data["id"].(string))
-	for _, k := range []string{"name", consts.FieldMountAccessor, "canonical_id", "custom_metadata"} {
+	for _, k := range []string{"name", consts.FieldMountAccessor, "canonical_id", "custom_metadata", consts.FieldExternalID, consts.FieldIssuer} {
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
