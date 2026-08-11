@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	providerversion "github.com/hashicorp/terraform-provider-vault/version"
 )
 
 const DefaultMaxHTTPRetriesCCC = 10
@@ -199,9 +200,24 @@ func NewProvider(
 				},
 			},
 		},
-		ConfigureFunc:  NewProviderMeta,
 		DataSourcesMap: dataSourcesMap,
 		ResourcesMap:   coreResourcesMap,
+	}
+
+	// Configured here rather than in the literal above so that the closure can
+	// capture r, whose TerraformVersion is populated by the SDK before this is
+	// called. That version is part of the standard Terraform User-Agent.
+	r.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+		meta, err := NewProviderMeta(d)
+		if err != nil {
+			return nil, diag.FromErr(err)
+		}
+
+		if p, ok := meta.(*ProviderMeta); ok {
+			p.userAgent = r.UserAgent(providerversion.ProviderName, providerversion.ProviderVersion())
+		}
+
+		return meta, nil
 	}
 
 	MustAddAuthLoginSchema(r.Schema)
