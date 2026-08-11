@@ -90,6 +90,12 @@ The following arguments are supported:
 
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the static credential until unset. Requires Vault Enterprise 2.0+.
 
+* `auto_unlock` - (Optional) Overrides the mount-level auto_unlock setting for this role.
+  When true, Vault unlocks the admin managed LDAP account automatically after a successful rotation.
+  When false, disables automatic unlock for this role even if the mount has `auto_unlock = true`.
+  When unset, the role inherits the mount-level setting. Active Directory schema only.
+  Requires Vault 2.1+.
+
 * `password_wo_version` - (Optional) The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
   Requires Vault Enterprise 2.0+.
 
