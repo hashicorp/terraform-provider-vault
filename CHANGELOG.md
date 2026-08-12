@@ -16,6 +16,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* `vault_jwt_auth_backend`: Fixed a perpetual diff where Vault returned non-string values that were silently dropped by Terraform’s TypeMap(TypeString) schema. All values are now converted to strings when read, preventing keys such as `fetch_groups` and `groups_recurse_max_depth` from appearing missing on every plan.([#2993](https://github.com/hashicorp/terraform-provider-vault/pull/2993))
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
 * `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2801](https://github.com/hashicorp/terraform-provider-vault/pull/2801))
 
