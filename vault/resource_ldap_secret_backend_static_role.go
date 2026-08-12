@@ -86,7 +86,7 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 				"When true, Vault unlocks the account automatically after a successful rotation. " +
 				"When false, disables automatic unlock even if the mount enables it. " +
 				"When unset, inherits the mount-level setting. " +
-				"Currently only the Active Directory schema is supported. Requires Vault ≥ 2.2.0+",
+				"Currently only the Active Directory schema is supported. Requires Vault 2.2.0+",
 		},
 	}
 	resource := &schema.Resource{
