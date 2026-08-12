@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -16,6 +17,8 @@ import (
 )
 
 func mustAddLoginSchema(s *schema.ListNestedBlock, defaultMount string) schema.Block {
+	s.Validators = append(s.Validators, listvalidator.SizeAtMost(1))
+
 	m := map[string]schema.Attribute{
 		consts.FieldNamespace: schema.StringAttribute{
 			Optional: true,
