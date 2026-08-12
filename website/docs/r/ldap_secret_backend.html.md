@@ -107,16 +107,16 @@ The following arguments are supported:
   requirement when creating static roles. Requires Vault Enterprise 2.0+.
 
 * `rotate_on_read` - (Optional) If true, static role credentials are rotated on each read. Acts as
-  the default for all static roles that do not provide their own override. Requires Vault Enterprise 2.1.0+.
+  the default for all static roles that do not provide their own override. Requires Vault Enterprise 2.2.0+.
 
 * `rotate_on_read_cooldown` - (Optional) Minimum number of seconds between rotate-on-read rotations.
   Acts as the default cooldown for all static roles that do not provide their own override.
-  Requires Vault Enterprise 2.1.0+.
+  Requires Vault Enterprise 2.2.0+.
 
 * `auto_unlock` - (Optional) If true, Vault automatically attempts to unlock the admin managed LDAP account
   after every successful static-role password rotation. Applies to all static roles on this mount
   unless overridden at the role level. Defaults to false. Active Directory schema only.
-  Requires Vault 2.1+.
+  Requires Vault 2.2.0+.
 
 ### Common Mount Arguments
 These arguments are common across all resources that mount a secret engine.

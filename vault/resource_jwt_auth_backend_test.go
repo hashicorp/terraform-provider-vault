@@ -196,9 +196,9 @@ func TestAccJWTAuthBackendProviderConfigOkta(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			// Skip if Vault < 2.1.0 (Okta provider with groups_cap requires 2.1.0+)
-			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion210) {
-				t.Skip("Okta provider with groups_cap requires Vault 2.1.0+")
+			// Skip if Vault < 2.2.0 (Okta provider with groups_cap requires 2.2.0+)
+			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion220) {
+				t.Skip("Okta provider with groups_cap requires Vault 2.2.0+")
 			}
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),

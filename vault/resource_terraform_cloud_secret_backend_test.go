@@ -155,7 +155,7 @@ func TestTerraformCloudSecretBackend_automatedRotation(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeTerraform, consts.FieldBackend),
 		Steps: []resource.TestStep{

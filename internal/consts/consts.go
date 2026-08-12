@@ -1027,6 +1027,7 @@ const (
 	VaultVersion203  = "2.0.3"
 	VaultVersion205  = "2.0.5"
 	VaultVersion210  = "2.1.0"
+	VaultVersion220  = "2.2.0"
 
 	/*
 		CloudFoundry auth backend field names
