@@ -348,7 +348,7 @@ func TestLDAPSecretBackend_selfManaged(t *testing.T) {
 
 // TestLDAPSecretBackend_autoUnlock verifies that the mount-level auto_unlock
 // field round-trips correctly. auto_unlock is Active Directory only
-// and requires Vault 2.1+, so this test is gated on VaultVersion210 and AD_URL.
+// and requires Vault 2.2.0+, so this test is gated on VaultVersion220 and AD_URL.
 func TestLDAPSecretBackend_autoUnlock(t *testing.T) {
 	var (
 		path         = acctest.RandomWithPrefix("tf-test-ldap")
@@ -361,7 +361,7 @@ func TestLDAPSecretBackend_autoUnlock(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
 		Steps: []resource.TestStep{
@@ -559,7 +559,7 @@ func TestLDAPSecretBackend_RotateOnRead(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		PreventPostDestroyRefresh: true,
 		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),

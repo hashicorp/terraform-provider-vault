@@ -125,7 +125,7 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
 		Steps: []resource.TestStep{
@@ -164,8 +164,8 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 
 // TestAccLDAPSecretBackendStaticRole_autoUnlock verifies the per-role auto_unlock
 // override semantics: a role-level value takes precedence over the mount-level
-// setting. auto_unlock is Active Directory only and requires Vault 2.1+,
-// so this test is gated on VaultVersion210 and AD_* env vars.
+// setting. auto_unlock is Active Directory only and requires Vault 2.2.0+,
+// so this test is gated on VaultVersion220 and AD_* env vars.
 func TestAccLDAPSecretBackendStaticRole_autoUnlock(t *testing.T) {
 	path := acctest.RandomWithPrefix("tf-test-ldap-static-role")
 	resourceType := "vault_ldap_secret_backend_static_role"
@@ -180,7 +180,7 @@ func TestAccLDAPSecretBackendStaticRole_autoUnlock(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
 		Steps: []resource.TestStep{
@@ -354,7 +354,7 @@ func TestAccLDAPSecretBackendStaticRole_RotateOnRead(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
 		Steps: []resource.TestStep{
