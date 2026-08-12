@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
@@ -429,9 +430,20 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	mount, err := mountutil.GetAuthMount(ctx, client, path)
 	if err != nil {
 		if mountutil.IsMountNotFoundError(err) {
-			log.Printf("[WARN] Mount %q not found, removing from state.", path)
 			d.SetId("")
-			return nil
+			return diag.Diagnostics{
+				{
+					Severity: diag.Warning,
+					Summary:  "Mount not found in current namespace",
+					Detail: fmt.Sprintf(
+						"Mount %q was not found in the current namespace and has been removed "+
+							"from state. If you recently migrated the namespace from a provider "+
+							"block to the resource's namespace attribute, the resource still "+
+							"exists in Vault but Terraform is searching in the wrong namespace "+
+							"during refresh. To recover, manually update the state to add the "+
+							"namespace attribute. See https://hashicorp.atlassian.net/browse/VAULT-15732 for details.", path),
+				},
+			}
 		}
 		return diag.FromErr(err)
 	}
@@ -451,9 +463,20 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	log.Printf("[DEBUG] Read LDAP auth backend config %q", path)
 
 	if resp == nil {
-		log.Printf("[WARN] LDAP auth backend config %q not found, removing from state", path)
 		d.SetId("")
-		return nil
+		return diag.Diagnostics{
+			{
+				Severity: diag.Warning,
+				Summary:  "LDAP auth backend config not found in current namespace",
+				Detail: fmt.Sprintf(
+					"LDAP auth backend config %q was not found in the current namespace and "+
+						"has been removed from state. If you recently migrated the namespace "+
+						"from a provider block to the resource's namespace attribute, the "+
+						"resource still exists in Vault but Terraform is searching in the "+
+						"wrong namespace during refresh. To recover, manually update the "+
+						"state to add the namespace attribute. See https://hashicorp.atlassian.net/browse/VAULT-15732 for details.", path),
+			},
+		}
 	}
 
 	if err := readTokenFields(d, resp); err != nil {
