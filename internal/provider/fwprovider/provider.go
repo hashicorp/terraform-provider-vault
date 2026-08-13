@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
 	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/gcpkms"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
@@ -260,6 +261,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		sysconfig.NewControlGroupConfigResource,
 		sys.NewRaftSnapshotAgentConfigResource,
 		azure.NewAzureStaticRoleResource,
+		gcpkms.NewGCPKMSSecretBackendResource,
+		gcpkms.NewGCPKMSSecretBackendKeyResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
 		kmip.NewKMIPCAImportedResource,
@@ -308,6 +311,10 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralauth.NewTokenEphemeralResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
+		gcpkms.NewGCPKMSEncryptEphemeralResource,
+		gcpkms.NewGCPKMSDecryptEphemeralResource,
+		gcpkms.NewGCPKMSReencryptEphemeralResource,
+		gcpkms.NewGCPKMSSignEphemeralResource,
 		kerberosauth.NewKerberosAuthBackendLoginEphemeralResource,
 	}
 }
@@ -321,6 +328,7 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 	return []func() datasource.DataSource{
 		sys.NewActivationFlagsDataSource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
+		gcpkms.NewGCPKMSVerifyDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
 	}

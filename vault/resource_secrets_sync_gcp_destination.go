@@ -51,7 +51,7 @@ func buildGCPSyncWriteFields(meta interface{}) []string {
 		)
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
 		fields = append(fields,
 			consts.FieldReplicaRegions,
 			consts.FieldKmsKeyID,
@@ -91,7 +91,7 @@ func buildGCPSyncReadFields(meta interface{}) []string {
 		)
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
 		fields = append(fields,
 			consts.FieldReplicaRegions,
 			consts.FieldKmsKeyID,
@@ -197,14 +197,14 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Type:        schema.TypeMap,
 				Optional:    true,
 				Description: "Locational KMS keys for encryption.",
-				Deprecated:  "Deprecated in favor of replica_regions for Vault Enterprise 2.1.0+.",
+				Deprecated:  "Deprecated in favor of replica_regions for Vault Enterprise 2.2.0+.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			consts.FieldGlobalKmsKey: {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Global KMS key for encryption.",
-				Deprecated:  "Deprecated in favor of kms_key_id for Vault Enterprise 2.1.0+.",
+				Deprecated:  "Deprecated in favor of kms_key_id for Vault Enterprise 2.2.0+.",
 			},
 			consts.FieldReplicaRegions: {
 				Type:        schema.TypeMap,
@@ -231,31 +231,31 @@ func gcpSecretsSyncDestinationResource() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Description: "Replication locations for secrets.",
-				Deprecated:  "Deprecated in favor of replica_regions for Vault Enterprise 2.1.0+.",
+				Deprecated:  "Deprecated in favor of replica_regions for Vault Enterprise 2.2.0+.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 		},
 	})
 }
 
-func validateGCPSync210Fields(d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+func validateGCPSync220Fields(d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
 		return nil
 	}
 
 	if _, ok := d.GetOk(consts.FieldKmsKeyID); ok {
-		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1.0 and later")
+		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.2.0 and later")
 	}
 
 	if _, ok := d.GetOk(consts.FieldReplicaRegions); ok {
-		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.1.0 and later")
+		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.2.0 and later")
 	}
 
 	return nil
 }
 
 func gcpSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if diags := validateGCPSync210Fields(d, meta); diags != nil {
+	if diags := validateGCPSync220Fields(d, meta); diags != nil {
 		return diags
 	}
 
