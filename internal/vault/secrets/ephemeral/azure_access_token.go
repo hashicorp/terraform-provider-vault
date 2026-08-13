@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -116,6 +117,15 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	var data AzureAccessTokenModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !r.Meta().IsAPISupported(provider.VaultVersion220) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			"vault_azure_access_token requires Vault version 2.2.0 or later. "+
+				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
+		)
 		return
 	}
 
