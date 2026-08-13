@@ -77,7 +77,7 @@ resource "vault_azure_auth_backend_config" "example" {
 }
 ```
 
-You can configure the Azure auth engine to use static credentials with `root_creds`:
+You can configure the Azure auth engine to use static credentials with `root_creds`. Requires Vault 2.2.0+:
 
 ```hcl
 resource "vault_auth_backend" "example" {
@@ -94,7 +94,7 @@ resource "vault_azure_auth_backend_config" "example" {
 }
 ```
 
-You can configure the Azure auth engine to use Vault Plugin Workload Identity Federation with `plugin_wif` (Vault Enterprise 1.17+):
+You can configure the Azure auth engine to use Vault Plugin Workload Identity Federation with `plugin_wif`. Requires Vault Enterprise 2.2.0+:
 
 ```hcl
 resource "vault_auth_backend" "example" {
@@ -113,7 +113,7 @@ resource "vault_azure_auth_backend_config" "example" {
 }
 ```
 
-You can configure the Azure auth engine to use AKS Workload Identity with `aks_wi` for a secretless, cross-tenant setup:
+You can configure the Azure auth engine to use AKS Workload Identity with `aks_wi` for a secretless, cross-tenant setup. Requires Vault 2.2.0+:
 
 ```hcl
 resource "vault_auth_backend" "example" {
@@ -129,7 +129,7 @@ resource "vault_azure_auth_backend_config" "example" {
 }
 ```
 
-You can configure the Azure auth engine to use Azure Managed Service Identity with `msi` for a secretless setup:
+You can configure the Azure auth engine to use Azure Managed Service Identity with `msi` for a secretless setup. Requires Vault 2.2.0+:
 
 ```hcl
 resource "vault_auth_backend" "example" {
@@ -167,7 +167,7 @@ The following arguments are supported:
 	Currently read permissions to query compute resources are required.
 
 * `auth_type` - (Optional) Specifies how Vault authenticates to Azure APIs.
-	Valid values: `root_creds`, `plugin_wif`, `msi`, `aks_wi`.
+	Valid values: `root_creds`, `plugin_wif`, `msi`, `aks_wi`. Requires Vault 2.2.0+.
 
 * `client_secret` - (Optional) The client secret for credentials to query the
 	Azure APIs. Mutually exclusive with `client_secret_wo`. **Note:** This field will be
