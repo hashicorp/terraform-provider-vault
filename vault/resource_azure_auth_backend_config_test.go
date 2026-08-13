@@ -177,25 +177,62 @@ func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 }
 
 func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
-	backend := acctest.RandomWithPrefix("azure")
+	resourceName := "vault_azure_auth_backend_config.config"
 
-	resourceType := "vault_azure_auth_backend_config"
-	resourceName := resourceType + ".config"
-
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
-		CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccAzureAuthBackendConfig_authType(backend),
-				Check: resource.ComposeTestCheckFunc(
-					testAccAzureAuthBackendConfigCheck_attrs(backend),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, "aks_wi"),
-				),
+	tests := []struct {
+		name       string
+		authType   string
+		configFunc func(backend string) string
+		preCheck   func(t *testing.T)
+	}{
+		{
+			name:       "aks_wi",
+			authType:   consts.AuthTypeAKSWI,
+			configFunc: testAccAzureAuthBackendConfig_authTypeAKSWI,
+			preCheck:   func(t *testing.T) { acctestutil.TestAccPreCheck(t) },
+		},
+		{
+			name:       "msi",
+			authType:   consts.AuthTypeMSI,
+			configFunc: testAccAzureAuthBackendConfig_authTypeMSI,
+			preCheck:   func(t *testing.T) { acctestutil.TestAccPreCheck(t) },
+		},
+		{
+			name:       "root_creds",
+			authType:   consts.AuthTypeRootCreds,
+			configFunc: testAccAzureAuthBackendConfig_authTypeRootCreds,
+			preCheck:   func(t *testing.T) { acctestutil.TestAccPreCheck(t) },
+		},
+		{
+			name:     "plugin_wif",
+			authType: consts.AuthTypePluginWIF,
+			configFunc: testAccAzureAuthBackendConfig_authTypePluginWIF,
+			preCheck: func(t *testing.T) {
+				acctestutil.TestEntPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
 			},
 		},
-	})
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			backend := acctest.RandomWithPrefix("azure")
+			resource.Test(t, resource.TestCase{
+				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+				PreCheck:                 func() { tc.preCheck(t) },
+				CheckDestroy:             testAccCheckAzureAuthBackendConfigDestroy,
+				Steps: []resource.TestStep{
+					{
+						Config: tc.configFunc(backend),
+						Check: resource.ComposeTestCheckFunc(
+							testAccAzureAuthBackendConfigCheck_attrs(backend),
+							resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, tc.authType),
+						),
+					},
+				},
+			})
+		})
+	}
 }
 
 func TestAccAzureAuthBackend_wif(t *testing.T) {
@@ -428,20 +465,77 @@ resource "vault_azure_auth_backend_config" "config" {
 `, backend)
 }
 
-func testAccAzureAuthBackendConfig_authType(backend string) string {
+func testAccAzureAuthBackendConfig_authTypeAKSWI(backend string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "azure" {
-  type = "azure"
-  path = "%s"
+  type        = "azure"
+  path        = %q
   description = "Test auth backend for Azure backend config"
 }
 
 resource "vault_azure_auth_backend_config" "config" {
-  backend = vault_auth_backend.azure.path
+  backend   = vault_auth_backend.azure.path
   tenant_id = "11111111-2222-3333-4444-555555555555"
   client_id = "11111111-2222-3333-4444-555555555555"
-  resource = "http://vault.hashicorp.com"
+  resource  = "http://vault.hashicorp.com"
   auth_type = "aks_wi"
+}
+`, backend)
+}
+
+func testAccAzureAuthBackendConfig_authTypeMSI(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  type        = "azure"
+  path        = %q
+  description = "Test auth backend for Azure backend config"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend   = vault_auth_backend.azure.path
+  tenant_id = "11111111-2222-3333-4444-555555555555"
+  client_id = "11111111-2222-3333-4444-555555555555"
+  resource  = "http://vault.hashicorp.com"
+  auth_type = "msi"
+}
+`, backend)
+}
+
+func testAccAzureAuthBackendConfig_authTypeRootCreds(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  type        = "azure"
+  path        = %q
+  description = "Test auth backend for Azure backend config"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend       = vault_auth_backend.azure.path
+  tenant_id     = "11111111-2222-3333-4444-555555555555"
+  client_id     = "11111111-2222-3333-4444-555555555555"
+  client_secret = "12345678901234567890"
+  resource      = "http://vault.hashicorp.com"
+  auth_type     = "root_creds"
+}
+`, backend)
+}
+
+func testAccAzureAuthBackendConfig_authTypePluginWIF(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  type        = "azure"
+  path        = %q
+  description = "Test auth backend for Azure backend config"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend                 = vault_auth_backend.azure.path
+  tenant_id               = "11111111-2222-3333-4444-555555555555"
+  client_id               = "11111111-2222-3333-4444-555555555555"
+  resource                = "http://vault.hashicorp.com"
+  auth_type               = "plugin_wif"
+  identity_token_audience = "wif-audience"
+  identity_token_ttl      = 600
 }
 `, backend)
 }

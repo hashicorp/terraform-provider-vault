@@ -85,10 +85,15 @@ func azureAuthBackendConfigResource() *schema.Resource {
 				Description: "The configured URL for the application registered in Azure Active Directory.",
 			},
 			consts.FieldAuthType: {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Description:  "Specifies how Vault authenticates to Azure APIs. Valid values: root_creds, plugin_wif, msi, aks_wi. Defaults to auto for backward compatibility.",
-				ValidateFunc: validation.StringInSlice([]string{"root_creds", "plugin_wif", "msi", "aks_wi"}, false),
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Specifies how Vault authenticates to Azure APIs. Valid values: root_creds, plugin_wif, msi, aks_wi.",
+				ValidateFunc: validation.StringInSlice([]string{
+					consts.AuthTypeRootCreds,
+					consts.AuthTypePluginWIF,
+					consts.AuthTypeMSI,
+					consts.AuthTypeAKSWI,
+				}, false),
 			},
 			consts.FieldEnvironment: {
 				Type:        schema.TypeString,

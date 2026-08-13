@@ -1038,6 +1038,14 @@ const (
 	AuthMethodAzure    = "azure"
 
 	/*
+		Azure auth_type values
+	*/
+	AuthTypeRootCreds = "root_creds"
+	AuthTypePluginWIF = "plugin_wif"
+	AuthTypeMSI       = "msi"
+	AuthTypeAKSWI     = "aks_wi"
+
+	/*
 		misc. path related constants
 	*/
 	PathDelim        = "/"
