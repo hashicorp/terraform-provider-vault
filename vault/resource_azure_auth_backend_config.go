@@ -162,8 +162,10 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldEnvironment: environment,
 	}
 
-	if v, ok := d.GetOk(consts.FieldAuthType); ok {
-		data[consts.FieldAuthType] = v.(string)
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		if v, ok := d.GetOk(consts.FieldAuthType); ok {
+			data[consts.FieldAuthType] = v.(string)
+		}
 	}
 
 	// Handle client_secret: legacy field or write-only field
@@ -266,11 +268,18 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 		consts.FieldResource,
 		consts.FieldEnvironment,
 		consts.FieldMaxRetries,
-		consts.FieldAuthType,
 	}
 	for _, k := range fields {
 		if v, ok := secret.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		if val, ok := secret.Data[consts.FieldAuthType]; ok {
+			if err := d.Set(consts.FieldAuthType, val); err != nil {
 				return diag.FromErr(err)
 			}
 		}

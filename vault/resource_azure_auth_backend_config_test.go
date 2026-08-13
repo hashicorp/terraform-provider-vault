@@ -176,6 +176,9 @@ func TestAccAzureAuthBackendConfig_basic(t *testing.T) {
 	})
 }
 
+// TestAccAzureAuthBackendConfig_authType verifies that auth_type is stored and
+// read back correctly for each valid value. auth_type requires Vault 2.2.0+,
+// so all sub-cases are gated on VaultVersion220.
 func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
 	resourceName := "vault_azure_auth_backend_config.config"
 
@@ -189,19 +192,28 @@ func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
 			name:       "aks_wi",
 			authType:   consts.AuthTypeAKSWI,
 			configFunc: testAccAzureAuthBackendConfig_authTypeAKSWI,
-			preCheck:   func(t *testing.T) { acctestutil.TestAccPreCheck(t) },
+			preCheck: func(t *testing.T) {
+				acctestutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+			},
 		},
 		{
 			name:       "msi",
 			authType:   consts.AuthTypeMSI,
 			configFunc: testAccAzureAuthBackendConfig_authTypeMSI,
-			preCheck:   func(t *testing.T) { acctestutil.TestAccPreCheck(t) },
+			preCheck: func(t *testing.T) {
+				acctestutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+			},
 		},
 		{
 			name:       "root_creds",
 			authType:   consts.AuthTypeRootCreds,
 			configFunc: testAccAzureAuthBackendConfig_authTypeRootCreds,
-			preCheck:   func(t *testing.T) { acctestutil.TestAccPreCheck(t) },
+			preCheck: func(t *testing.T) {
+				acctestutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+			},
 		},
 		{
 			name:       "plugin_wif",
@@ -209,7 +221,7 @@ func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
 			configFunc: testAccAzureAuthBackendConfig_authTypePluginWIF,
 			preCheck: func(t *testing.T) {
 				acctestutil.TestEntPreCheck(t)
-				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion117)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 			},
 		},
 	}
