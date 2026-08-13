@@ -142,13 +142,11 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
-// azureCredPropagationRetries is the number of times to retry when Azure
-// returns AADSTS7000215, which occurs when a freshly rotated credential has
-// not yet propagated across Azure's directory.
-const azureCredPropagationRetries = 3
+// credPropagationRetries is the number of times to retry
+const credPropagationRetries = 6
 
-// azureCredPropagationDelay is the time to wait between retries.
-const azureCredPropagationDelay = 5 * time.Second
+// credPropagationDelay is the wait between retries.
+const credPropagationDelay = 10 * time.Second
 
 func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
 	// static-creds/ provisions the credential on first read if it doesn't exist yet;
@@ -160,26 +158,22 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 
 	path := fmt.Sprintf("%s/token/%s", mount, role)
 
-	var lastErr error
-	for attempt := 0; attempt <= azureCredPropagationRetries; attempt++ {
+	for attempt := 0; attempt <= credPropagationRetries; attempt++ {
 		if attempt > 0 {
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case <-time.After(azureCredPropagationDelay):
+			case <-time.After(credPropagationDelay):
 			}
 		}
 
-		// Write to Vault endpoint to request an Azure access token.
 		secret, err := cli.Logical().WriteWithContext(ctx, path, map[string]interface{}{
 			"scope": scope,
 		})
 		if err != nil {
-			// Retry on Azure credential propagation delay (AADSTS7000215),
-			// which occurs when a freshly rotated credential has not yet
-			// propagated across Azure's directory.
+			// AADSTS7000215 means the client secret exists in Vault but has not
+			// yet propagated across Azure AD. Retry after a short wait.
 			if strings.Contains(err.Error(), "AADSTS7000215") {
-				lastErr = fmt.Errorf("unable to write to Vault: %w", err)
 				continue
 			}
 			return nil, fmt.Errorf("unable to write to Vault: %w", err)
@@ -201,5 +195,6 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 		return &readResp, nil
 	}
 
-	return nil, fmt.Errorf("azure credential not yet propagated after %d attempts: %w", azureCredPropagationRetries, lastErr)
+	return nil, fmt.Errorf("azure credential not yet accepted after %d attempts; "+
+		"the client secret may still be propagating across Azure AD", credPropagationRetries)
 }
