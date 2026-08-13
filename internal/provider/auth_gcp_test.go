@@ -25,6 +25,61 @@ func TestAuthLoginGCP_Init(t *testing.T) {
 
 	tests := []authLoginInitTest{
 		{
+			name:      "basic",
+			authField: consts.FieldAuthLoginGCP,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginGCP: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+						consts.FieldRole:      "alice",
+						consts.FieldJWT:       "jwt1",
+					},
+				},
+			},
+			envVars: map[string]string{
+				// neutralize any ambient GOOGLE_APPLICATION_CREDENTIALS
+				consts.EnvVarGoogleApplicationCreds: "",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "ns1",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeGCP,
+				consts.FieldRole:             "alice",
+				consts.FieldJWT:              "jwt1",
+				consts.FieldCredentials:      "",
+				consts.FieldServiceAccount:   "",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "role-and-service-account-from-env",
+			authField: consts.FieldAuthLoginGCP,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginGCP: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+						consts.FieldJWT:       "jwt1",
+					},
+				},
+			},
+			envVars: map[string]string{
+				// neutralize any ambient GOOGLE_APPLICATION_CREDENTIALS
+				consts.EnvVarGoogleApplicationCreds:                                   "",
+				authLoginEnvVar(consts.FieldAuthLoginGCP, consts.FieldRole):           "alice",
+				authLoginEnvVar(consts.FieldAuthLoginGCP, consts.FieldServiceAccount): "sa@example.com",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "ns1",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeGCP,
+				consts.FieldRole:             "alice",
+				consts.FieldJWT:              "jwt1",
+				consts.FieldCredentials:      "",
+				consts.FieldServiceAccount:   "sa@example.com",
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginGCP,
 			expectParams: nil,

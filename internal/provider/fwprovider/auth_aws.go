@@ -17,7 +17,8 @@ func AuthLoginAWSSchema() schema.Block {
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				consts.FieldRole: schema.StringAttribute{
-					Required:    true,
+					// can be set via an env var
+					Optional:    true,
 					Description: `The Vault role to use when logging into Vault.`,
 				},
 				// static credential fields

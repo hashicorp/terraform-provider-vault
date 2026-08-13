@@ -30,16 +30,19 @@ func AuthLoginAzureSchema() schema.Block {
 					},
 				},
 				consts.FieldRole: schema.StringAttribute{
-					Required:    true,
+					// can be set via an env var
+					Optional:    true,
 					Description: "Name of the login role.",
 				},
 				consts.FieldSubscriptionID: schema.StringAttribute{
-					Required: true,
+					// can be set via an env var
+					Optional: true,
 					Description: "The subscription ID for the machine that generated the MSI token. " +
 						"This information can be obtained through instance metadata.",
 				},
 				consts.FieldResourceGroupName: schema.StringAttribute{
-					Required: true,
+					// can be set via an env var
+					Optional: true,
 					Description: "The resource group for the machine that generated the MSI token. " +
 						"This information can be obtained through instance metadata.",
 				},

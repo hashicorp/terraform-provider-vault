@@ -53,6 +53,39 @@ func TestAuthLoginAzure_Init(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:      "required-fields-from-env",
+			authField: consts.FieldAuthLoginAzure,
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginAzure: []interface{}{
+					map[string]interface{}{
+						consts.FieldNamespace: "ns1",
+						consts.FieldJWT:       "jwt1",
+						consts.FieldVMName:    "vm1",
+					},
+				},
+			},
+			envVars: map[string]string{
+				authLoginEnvVar(consts.FieldAuthLoginAzure, consts.FieldRole):              "alice",
+				authLoginEnvVar(consts.FieldAuthLoginAzure, consts.FieldSubscriptionID):    "sub1",
+				authLoginEnvVar(consts.FieldAuthLoginAzure, consts.FieldResourceGroupName): "res1",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:         "ns1",
+				consts.FieldUseRootNamespace:  false,
+				consts.FieldMount:             consts.MountTypeAzure,
+				consts.FieldRole:              "alice",
+				consts.FieldJWT:               "jwt1",
+				consts.FieldSubscriptionID:    "sub1",
+				consts.FieldResourceGroupName: "res1",
+				consts.FieldVMName:            "vm1",
+				consts.FieldVMSSName:          "",
+				consts.FieldTenantID:          "",
+				consts.FieldClientID:          "",
+				consts.FieldScope:             defaultAzureScope,
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginAzure,
 			expectParams: nil,

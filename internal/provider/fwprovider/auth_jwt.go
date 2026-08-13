@@ -9,13 +9,22 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
+// NOTE: This framework schema must remain field-for-field identical to the
+// SDKv2 auth login schema (internal/provider/auth_jwt.go), because the provider
+// is served as a muxed SDKv2 + framework provider and terraform requires the
+// combined schemas to match exactly. In particular, fields that are env-var
+// settable are declared Optional here to mirror the SDKv2 side. The actual
+// env-var resolution (TERRAFORM_VAULT_AUTH_<METHOD>_<FIELD>) currently lives in
+// the SDKv2 login logic; when framework-based login logic is added, the same
+// fallbacks should be applied there for parity.
 func AuthLoginJWTSchema() schema.Block {
 	return mustAddLoginSchema(&schema.ListNestedBlock{
 		Description: "Login to vault using the jwt method",
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				consts.FieldRole: schema.StringAttribute{
-					Required:    true,
+					// can be set via an env var
+					Optional:    true,
 					Description: "Name of the login role.",
 				},
 				consts.FieldJWT: schema.StringAttribute{

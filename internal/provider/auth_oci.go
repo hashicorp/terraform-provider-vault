@@ -47,13 +47,15 @@ func GetOCILoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldAuthType: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Authentication type to use when getting OCI credentials.",
 				ValidateDiagFunc: GetValidateDiagChoices(
 					[]string{ociAuthTypeInstance, ociAuthTypeAPIKeys},
@@ -84,7 +86,22 @@ func (l *AuthLoginOCI) LoginPath() string {
 }
 
 func (l *AuthLoginOCI) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
+	defaults := authDefaults{
+		{
+			field:      consts.FieldRole,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldRole)},
+			defaultVal: "",
+		},
+		{
+			field:      consts.FieldAuthType,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldAuthType)},
+			defaultVal: "",
+		},
+	}
 	if err := l.AuthLoginCommon.Init(d, authField,
+		func(data *schema.ResourceData, params map[string]interface{}) error {
+			return l.setDefaultFields(d, defaults, params)
+		},
 		func(data *schema.ResourceData, params map[string]interface{}) error {
 			return l.checkRequiredFields(d, params, consts.FieldRole, consts.FieldAuthType)
 		},

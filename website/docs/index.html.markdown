@@ -233,6 +233,22 @@ The `headers` configuration block accepts the following arguments:
 
 The Vault provider supports the following Vault authentication engines.
 
+In addition to any method-specific environment variables noted below, most
+`auth_login_*` fields can be set via a conventionally-named environment
+variable of the form `TERRAFORM_VAULT_AUTH_<METHOD>_<FIELD>`, where `<METHOD>`
+is the upper-cased auth method (e.g. `JWT`, `AWS`, `TOKEN_FILE`) and `<FIELD>`
+is the upper-cased field name (e.g. `ROLE`, `MOUNT`, `SUBSCRIPTION_ID`). For
+example, the `role` field of `auth_login_jwt` can be set with
+`TERRAFORM_VAULT_AUTH_JWT_ROLE`, and its mount with
+`TERRAFORM_VAULT_AUTH_JWT_MOUNT`. An explicit value in the configuration always
+takes precedence over the environment variable, and a field's dedicated
+environment variable (such as `AWS_ACCESS_KEY_ID`) takes precedence over the
+generated one. Boolean fields accept any value understood by Go's
+`strconv.ParseBool` (e.g. `true`, `false`, `1`, `0`).
+
+The common `mount`, `namespace`, and `use_root_namespace` fields are supported
+for every method via this scheme.
+
 ### Userpass
 
 Provides support for authenticating to Vault using the Username & Password authentication engine.
@@ -275,10 +291,11 @@ The `auth_login_aws` configuration block accepts the following arguments:
 
 * `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
-* `mount` - (Optional) The name of the authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.
   Default: `aws`
 
 * `role` - (Required) The name of the role against which the login is being attempted.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AWS_ROLE` environment variable.
 
 * `aws_access_key_id` - (Optional) The AWS access key ID.  
  *Can be specified with the `AWS_ACCESS_KEY_ID` environment variable.*
@@ -309,10 +326,13 @@ The `auth_login_aws` configuration block accepts the following arguments:
   *Can be specified with the `AWS_ROLE_SESSION_NAME` environment variable.*
 
 * `aws_sts_endpoint` - (Optional) The STS endpoint URL.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AWS_AWS_STS_ENDPOINT` environment variable.
 
 * `aws_iam_endpoint` - (Optional) The IAM endpoint URL.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AWS_AWS_IAM_ENDPOINT` environment variable.
 
 * `header_value` - (Optional) The Vault header value to include in the STS signing request.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AWS_HEADER_VALUE` environment variable.
 
 ### TLS Certificate
 
@@ -334,12 +354,15 @@ The `auth_login_cert` configuration block accepts the following arguments:
   Default: `cert`
 
 * `name` - (Optional) Authenticate against only the named certificate role.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_CERT_NAME` environment variable.
 
 * `cert_file` - (Required) Path to a file on local disk that contains the
   PEM-encoded certificate to present to the server.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_CERT_CERT_FILE` environment variable.
 
 * `key_file` - (Required) Path to a file on local disk that contains the
   PEM-encoded private key for which the authentication certificate was issued.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_CERT_KEY_FILE` environment variable.
 
 *This login configuration honors the top-level TLS configuration parameters:
 [ca_cert_file](#ca_cert_file), [ca_cert_dir](#ca_cert_dir), [skip_tls_verify](#skip_tls_verify),
@@ -361,18 +384,20 @@ The `auth_login_gcp` configuration block accepts the following arguments:
 
 * `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
-* `mount` - (Optional) The name of the authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.
   Default: `gcp`
 
 * `role` - (Required) The name of the role against which the login is being attempted.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_GCP_ROLE` environment variable.
 
 * `jwt` - (Optional) The signed JSON Web Token against which the login is being attempted.
 
-* `credentials` - (Optional) Path to the Google Cloud credentials to use when getting the signed 
-  JWT token from the IAM service.  
+* `credentials` - (Optional) Path to the Google Cloud credentials to use when getting the signed
+  JWT token from the IAM service.
 *conflicts with `jwt`*
 
-* `service_account` - (Optional) Name of the service account to issue the JWT token for.  
+* `service_account` - (Optional) Name of the service account to issue the JWT token for.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_GCP_SERVICE_ACCOUNT` environment variable.
 *requires `credentials`*
 
 *This login configuration will attempt to get a signed JWT token if `jwt` is not specified. 
@@ -401,20 +426,25 @@ The `auth_login_kerberos` configuration block accepts the following arguments:
   Can be specified with the `KRB_SPNEGO_TOKEN` environment variable.
 
 * `username` - (Conflicts with `token`)  The username to login into Kerberos with.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_KERBEROS_USERNAME` environment variable.
 
 * `service` - (Conflicts with `token`) The service principle name.
- 
+  Can be specified with the `TERRAFORM_VAULT_AUTH_KERBEROS_SERVICE` environment variable.
+
 * `realm` - (Conflicts with `token`) The Kerberos server's authoritative authentication domain.
- 
+  Can be specified with the `TERRAFORM_VAULT_AUTH_KERBEROS_REALM` environment variable.
+
 * `krb5conf_path` - (Conflicts with `token`) A valid Kerberos configuration file e.g. /etc/krb5.conf.
   Can be specified with the `KRB5_CONFIG` environment variable.
- 
+
 * `keytab_path` - (Conflicts with `token`)  The Kerberos keytab file containing the entry of the login entity.
   Can be specified with the `KRB_KEYTAB` environment variable.
 
 * `disable_fast_negotiation` - (Conflicts with `token`) Disable the Kerberos FAST negotiation.
- 
+  Can be specified with the `TERRAFORM_VAULT_AUTH_KERBEROS_DISABLE_FAST_NEGOTIATION` environment variable.
+
 * `remove_instance_name` - (Conflicts with `token`) Strip the host from the username found in the keytab.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_KERBEROS_REMOVE_INSTANCE_NAME` environment variable.
 
 *This login configuration will attempt to get a SPNEGO init token from the `service` domain if `token` is not specified.
 The following fields are required when token is not specified:
@@ -463,8 +493,10 @@ The `auth_login_oci` configuration block accepts the following arguments:
   Default: `oci`
 
 * `role` - (Required) The name of the role against which the login is being attempted.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_OCI_ROLE` environment variable.
 
 * `auth_type` - (Required) The OCI authentication type to use. Valid choices are: *apikeys*, *instance*
+  Can be specified with the `TERRAFORM_VAULT_AUTH_OCI_AUTH_TYPE` environment variable.
 
 ### OIDC
 
@@ -489,10 +521,13 @@ The `auth_login_oidc` configuration block accepts the following arguments:
   Default: `oidc`
 
 * `role` - (Required) The name of the role against which the login is being attempted.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_OIDC_ROLE` environment variable.
 
 * `callback_listener_address` - (Optional) The callback listener's address. *Must be a valid URI without the path.*
- 
+  Can be specified with the `TERRAFORM_VAULT_AUTH_OIDC_CALLBACK_LISTENER_ADDRESS` environment variable.
+
 * `callback_address` - (Optional)  The callback address. *Must be a valid URI without the path.*
+  Can be specified with the `TERRAFORM_VAULT_AUTH_OIDC_CALLBACK_ADDRESS` environment variable.
 
 ### JWT
 
@@ -510,12 +545,13 @@ The `auth_login_jwt` configuration block accepts the following arguments:
 
 * `use_root_namespace` - (Optional) Authenticate to the root Vault namespace. Conflicts with `namespace`.
 
-* `mount` - (Optional) The name of the authentication engine mount.  
+* `mount` - (Optional) The name of the authentication engine mount.
   Default: `jwt`
 
 * `role` - (Required) The name of the role against which the login is being attempted.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_JWT_ROLE` environment variable.
 
-* `jwt` - (Required) The signed JSON Web Token against which the login is being attempted.  
+* `jwt` - (Required) The signed JSON Web Token against which the login is being attempted.
   *Can be specified with the `TERRAFORM_VAULT_AUTH_JWT` environment variable.*
 
 * `distributed_claim_access_token` - (Optional) A token used to fetch group memberships specified by the distributed claim source in the jwt. This is supported only on Azure/Entra ID. Requires Vault 1.18+.
@@ -541,17 +577,20 @@ The `auth_login_azure` configuration block accepts the following arguments:
   Default: `azure`
 
 * `role` - (Required) The name of the role against which the login is being attempted.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AZURE_ROLE` environment variable.
 
-* `jwt` - (Optional) The signed JSON Web Token against which the login is being attempted. 
+* `jwt` - (Optional) The signed JSON Web Token against which the login is being attempted.
  If not provided a token will be created from Azure's managed identities for Azure resources API.
   *Can be specified with the `TERRAFORM_VAULT_AZURE_AUTH_JWT` environment variable.*
 
 * `subscription_id` - (Required) The subscription ID for the machine that generated the MSI token.
   This information can be obtained through instance metadata.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AZURE_SUBSCRIPTION_ID` environment variable.
 
 * `resource_group_name` - (Required) The resource group for the machine that generated the MSI token.
   This information can be obtained through instance metadata.
- 
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AZURE_RESOURCE_GROUP_NAME` environment variable.
+
 * `vm_name` - (Optional) The virtual machine name for the machine that generated the MSI token.
   This information can be obtained through instance metadata.
 
@@ -559,10 +598,13 @@ The `auth_login_azure` configuration block accepts the following arguments:
   the MSI token. This information can be obtained through instance metadata.
 
 * `tenant_id` - (Optional) Provides the tenant ID to use in a multi-tenant authentication scenario.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AZURE_TENANT_ID` environment variable.
 
 * `client_id` - (Optional) The identity's client ID.
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AZURE_CLIENT_ID` environment variable.
 
 * `scope` - (Optional) The scopes to include in the token request. Defaults to `https://management.azure.com/`
+  Can be specified with the `TERRAFORM_VAULT_AUTH_AZURE_SCOPE` environment variable.
 
 
 ### Token File

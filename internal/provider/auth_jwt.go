@@ -37,8 +37,9 @@ func GetJWTLoginSchemaResource(authField string) *schema.Resource {
 	return mustAddLoginSchema(&schema.Resource{
 		Schema: map[string]*schema.Schema{
 			consts.FieldRole: {
-				Type:        schema.TypeString,
-				Required:    true,
+				Type: schema.TypeString,
+				// can be set via an env var
+				Optional:    true,
 				Description: "Name of the login role.",
 			},
 			consts.FieldJWT: {
@@ -78,6 +79,11 @@ func (l *AuthLoginJWT) LoginPath() string {
 
 func (l *AuthLoginJWT) Init(d *schema.ResourceData, authField string) (AuthLogin, error) {
 	defaults := authDefaults{
+		{
+			field:      consts.FieldRole,
+			envVars:    []string{authLoginEnvVar(authField, consts.FieldRole)},
+			defaultVal: "",
+		},
 		{
 			field:      consts.FieldJWT,
 			envVars:    []string{consts.EnvVarVaultAuthJWT},

@@ -477,6 +477,60 @@ func TestAuthLoginCommon_setDefaultFields(t *testing.T) {
 				"foo": "qux",
 			},
 		},
+		{
+			name: "bool-default-and-env-unset",
+			params: map[string]interface{}{
+				"foo": false,
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: false,
+				},
+			},
+			expectParams: map[string]interface{}{
+				"foo": false,
+			},
+		},
+		{
+			name: "bool-env-true",
+			params: map[string]interface{}{
+				"foo": false,
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: false,
+				},
+			},
+			setEnv: map[string]string{
+				"TEST_TERRAFORM_VAULT_PROVIDER_FOO": "true",
+			},
+			expectParams: map[string]interface{}{
+				"foo": true,
+			},
+		},
+		{
+			name: "bool-env-numeric-true",
+			params: map[string]interface{}{
+				"foo": false,
+			},
+			defaults: authDefaults{
+				{
+					field:      "foo",
+					envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_FOO"},
+					defaultVal: false,
+				},
+			},
+			setEnv: map[string]string{
+				"TEST_TERRAFORM_VAULT_PROVIDER_FOO": "1",
+			},
+			expectParams: map[string]interface{}{
+				"foo": true,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -510,6 +564,52 @@ func TestAuthLoginCommon_setDefaultFields(t *testing.T) {
 
 			if !reflect.DeepEqual(tt.expectParams, l.Params()) {
 				t.Errorf("setDefaultFields() expected params %#v, actual %#v", tt.expectParams, l.Params())
+			}
+		})
+	}
+}
+
+func TestAuthLoginCommon_setDefaultFieldsBoolError(t *testing.T) {
+	t.Setenv("TEST_TERRAFORM_VAULT_PROVIDER_BOOL", "not-a-bool")
+
+	l := &AuthLoginCommon{initialized: true}
+	rootProvider := NewProvider(nil, nil)
+	pr := &schema.Resource{Schema: rootProvider.Schema}
+	d := pr.TestResourceData()
+
+	params := map[string]interface{}{"foo": false}
+	defaults := authDefaults{
+		{
+			field:      "foo",
+			envVars:    []string{"TEST_TERRAFORM_VAULT_PROVIDER_BOOL"},
+			defaultVal: false,
+		},
+	}
+
+	err := l.setDefaultFields(d, defaults, params)
+	if err == nil {
+		t.Fatal("setDefaultFields() expected an error for an invalid boolean value, got nil")
+	}
+}
+
+func TestAuthLoginEnvVar(t *testing.T) {
+	tests := []struct {
+		authField string
+		field     string
+		want      string
+	}{
+		{consts.FieldAuthLoginJWT, consts.FieldRole, "TERRAFORM_VAULT_AUTH_JWT_ROLE"},
+		{consts.FieldAuthLoginJWT, consts.FieldMount, "TERRAFORM_VAULT_AUTH_JWT_MOUNT"},
+		{consts.FieldAuthLoginAzure, consts.FieldSubscriptionID, "TERRAFORM_VAULT_AUTH_AZURE_SUBSCRIPTION_ID"},
+		{consts.FieldAuthLoginTokenFile, consts.FieldNamespace, "TERRAFORM_VAULT_AUTH_TOKEN_FILE_NAMESPACE"},
+		{consts.FieldAuthLoginKerberos, consts.FieldRemoveInstanceName, "TERRAFORM_VAULT_AUTH_KERBEROS_REMOVE_INSTANCE_NAME"},
+		{consts.FieldAuthLoginGeneric, consts.FieldMethod, "TERRAFORM_VAULT_AUTH_GENERIC_METHOD"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			if got := authLoginEnvVar(tt.authField, tt.field); got != tt.want {
+				t.Errorf("authLoginEnvVar(%q, %q) = %q, want %q",
+					tt.authField, tt.field, got, tt.want)
 			}
 		})
 	}

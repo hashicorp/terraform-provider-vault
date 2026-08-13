@@ -20,6 +20,7 @@ IMPROVEMENTS:
 * `vault_aws_auth_backend_config_identity`: Add support for `canonical_arn` as a valid value for the `iam_alias` parameter. Requires Vault 1.16+. ([#2982](https://github.com/hashicorp/terraform-provider-vault/pull/2982))
 
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
+* Provider `auth_login_*` blocks: Add support for configuring most auth login fields (including the common `mount`, `namespace`, and `use_root_namespace` fields, and method-specific fields such as `role`) via conventionally-named `TERRAFORM_VAULT_AUTH_<METHOD>_<FIELD>` environment variables. Explicit configuration values and existing dedicated environment variables continue to take precedence.
 
 * **Autosnapshot support for AWS IRSA**: Added documentation for IRSA usage per changes in Vault ([hashicorp/raft-snapshotagent#49](https://github.com/hashicorp/raft-snapshotagent/pull/49)). IRSA feature requires Vault 2.2.0+
 

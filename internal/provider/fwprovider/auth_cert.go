@@ -19,11 +19,13 @@ func AuthLoginCertSchema() schema.Block {
 					Description: "Name of the certificate's role",
 				},
 				consts.FieldCertFile: schema.StringAttribute{
-					Required:    true,
+					// can be set via an env var
+					Optional:    true,
 					Description: "Path to a file containing the client certificate.",
 				},
 				consts.FieldKeyFile: schema.StringAttribute{
-					Required:    true,
+					// can be set via an env var
+					Optional:    true,
 					Description: "Path to a file containing the private key that the certificate was issued for.",
 				},
 			},

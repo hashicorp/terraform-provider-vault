@@ -142,6 +142,30 @@ func TestAuthLoginCert_Init(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "cert-and-key-from-env",
+			raw: map[string]interface{}{
+				consts.FieldAuthLoginCert: []interface{}{
+					map[string]interface{}{
+						consts.FieldName: "bob",
+					},
+				},
+			},
+			authField: consts.FieldAuthLoginCert,
+			envVars: map[string]string{
+				authLoginEnvVar(consts.FieldAuthLoginCert, consts.FieldCertFile): "cert.crt",
+				authLoginEnvVar(consts.FieldAuthLoginCert, consts.FieldKeyFile):  "cert.key",
+			},
+			expectParams: map[string]interface{}{
+				consts.FieldNamespace:        "",
+				consts.FieldUseRootNamespace: false,
+				consts.FieldMount:            consts.MountTypeCert,
+				consts.FieldName:             "bob",
+				consts.FieldCertFile:         "cert.crt",
+				consts.FieldKeyFile:          "cert.key",
+			},
+			wantErr: false,
+		},
+		{
 			name:         "error-missing-resource",
 			authField:    consts.FieldAuthLoginCert,
 			expectParams: nil,
