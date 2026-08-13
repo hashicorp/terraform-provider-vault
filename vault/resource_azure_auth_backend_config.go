@@ -162,10 +162,11 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldEnvironment: environment,
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion220) {
-		if v, ok := d.GetOk(consts.FieldAuthType); ok {
-			data[consts.FieldAuthType] = v.(string)
+	if d.HasChange(consts.FieldAuthType) {
+		if !provider.IsAPISupported(meta, provider.VaultVersion220) {
+			return diag.Errorf("%s is only supported in Vault 2.2.0 and later", consts.FieldAuthType)
 		}
+		data[consts.FieldAuthType] = d.Get(consts.FieldAuthType)
 	}
 
 	// Handle client_secret: legacy field or write-only field

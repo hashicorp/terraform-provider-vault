@@ -166,7 +166,7 @@ The following arguments are supported:
 * `client_id` - (Optional) The client id for credentials to query the Azure APIs.
 	Currently read permissions to query compute resources are required.
 
-* `auth_type` - (Optional) Specifies how Vault authenticates to Azure APIs.
+* `auth_type` - (Optional) The authentication method used by Vault to access Azure APIs.
 	Valid values: `root_creds`, `plugin_wif`, `msi`, `aks_wi`. Requires Vault 2.2.0+.
 
 * `client_secret` - (Optional) The client secret for credentials to query the
