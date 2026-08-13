@@ -348,7 +348,31 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			continue
 		}
 
-		d.Set(configOption, config.Data[configOption])
+		// Handle provider_config specially - Vault returns native types (bool, float64)
+		// but Terraform's TypeMap expects all values to be strings.
+		// Convert before setting state to prevent spurious diffs on every plan/apply.
+		if configOption == consts.FieldProviderConfig {
+			if providerConfig, ok := config.Data[configOption].(map[string]interface{}); ok {
+				// Convert all values to strings to match TypeMap(TypeString) schema.
+				providerConfig = convertProviderConfigValuesToStrings(providerConfig)
+
+				// Get existing provider_config from state
+				existingConfig := d.Get(consts.FieldProviderConfig).(map[string]interface{})
+
+				// Preserve every key from state if it exists (sensitive, not returned by Vault)
+				for k, val := range existingConfig {
+					if _, returnedByVault := providerConfig[k]; !returnedByVault {
+						providerConfig[k] = val
+					}
+				}
+
+				d.Set(configOption, providerConfig)
+			} else {
+				d.Set(configOption, config.Data[configOption])
+			}
+		} else {
+			d.Set(configOption, config.Data[configOption])
+		}
 	}
 
 	log.Printf("[DEBUG] Reading jwt auth tune from %q", path+"/tune")
@@ -372,6 +396,39 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 	return nil
 }
 
+// Vault returns provider_config values as native types (bool, float64, int) but Terraform's TypeMap schema expects
+// all values to be strings. Without this conversion d.Set silently drops non-string values,
+// which makes the next plan show those keys as needing to be added
+// Input:  {"fetch_groups": true, "groups_recurse_max_depth": float64(5)}
+// Output: {"fetch_groups": "true", "groups_recurse_max_depth": "5"}
+func convertProviderConfigValuesToStrings(input map[string]interface{}) map[string]interface{} {
+	newConfig := make(map[string]interface{}, len(input))
+	for k, v := range input {
+		switch val := v.(type) {
+		case bool:
+			newConfig[k] = strconv.FormatBool(val)
+		case float64:
+			// JSON unmarshaling represents all numbers as float64
+			// Check if it's actually an integer to preserve the original format
+			if val == float64(int64(val)) {
+				newConfig[k] = strconv.FormatInt(int64(val), 10)
+			} else {
+				newConfig[k] = strconv.FormatFloat(val, 'f', -1, 64)
+			}
+		case int:
+			newConfig[k] = strconv.Itoa(val)
+		case int64:
+			newConfig[k] = strconv.FormatInt(val, 10)
+		case string:
+			newConfig[k] = val
+		default:
+			log.Printf("[WARN] provider_config key %q has unexpected type %T, converting to string", k, val)
+			newConfig[k] = fmt.Sprintf("%v", val)
+		}
+	}
+	return newConfig
+}
+
 func convertProviderConfigValues(input map[string]interface{}) (map[string]interface{}, error) {
 	newConfig := make(map[string]interface{})
 	for k, v := range input {
@@ -383,7 +440,7 @@ func convertProviderConfigValues(input map[string]interface{}) (map[string]inter
 				return nil, fmt.Errorf("could not convert %s to bool: %s", k, err)
 			}
 			newConfig[k] = valBool
-		case "groups_recurse_max_depth":
+		case "groups_recurse_max_depth", "groups_cap":
 			valInt, err := strconv.ParseInt(val, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("could not convert %s to int: %s", k, err)
