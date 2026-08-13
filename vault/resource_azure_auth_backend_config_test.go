@@ -204,8 +204,8 @@ func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
 			preCheck:   func(t *testing.T) { acctestutil.TestAccPreCheck(t) },
 		},
 		{
-			name:     "plugin_wif",
-			authType: consts.AuthTypePluginWIF,
+			name:       "plugin_wif",
+			authType:   consts.AuthTypePluginWIF,
 			configFunc: testAccAzureAuthBackendConfig_authTypePluginWIF,
 			preCheck: func(t *testing.T) {
 				acctestutil.TestEntPreCheck(t)
