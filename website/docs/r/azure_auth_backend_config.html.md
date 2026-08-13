@@ -113,7 +113,7 @@ resource "vault_azure_auth_backend_config" "example" {
 }
 ```
 
-You can configure the Azure auth engine to use AKS Workload Identity for a secretless, cross-tenant setup:
+You can configure the Azure auth engine to use AKS Workload Identity with `aks_wi` for a secretless, cross-tenant setup:
 
 ```hcl
 resource "vault_auth_backend" "example" {
@@ -129,7 +129,7 @@ resource "vault_azure_auth_backend_config" "example" {
 }
 ```
 
-You can configure the Azure auth engine to use Azure Managed Service Identity for a secretless setup:
+You can configure the Azure auth engine to use Azure Managed Service Identity with `msi` for a secretless setup:
 
 ```hcl
 resource "vault_auth_backend" "example" {
