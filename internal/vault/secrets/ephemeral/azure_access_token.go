@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
@@ -25,7 +26,6 @@ const (
 	fieldAccessToken  = "access_token"
 	fieldExtExpiresIn = "ext_expires_in"
 	fieldExpiresIn    = "expires_in"
-	fieldTokenType    = "token_type"
 )
 
 // Ensure the implementation satisfies the ephemeral.EphemeralResource interface.
@@ -72,7 +72,7 @@ func (r *AzureAccessTokenEphemeralResource) Schema(_ context.Context, _ ephemera
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
-				MarkdownDescription: "Azure Secret mount to fetch an access token for.",
+				MarkdownDescription: "Mount path for the Azure secret engine in Vault.",
 				Required:            true,
 			},
 			consts.FieldRole: schema.StringAttribute{
@@ -80,7 +80,7 @@ func (r *AzureAccessTokenEphemeralResource) Schema(_ context.Context, _ ephemera
 				Required:            true,
 			},
 			consts.FieldScope: schema.StringAttribute{
-				MarkdownDescription: "The Azure scope to request a token for.",
+				MarkdownDescription: "The Azure OAuth2 scope to request the access token for (e.g. \"https://management.azure.com/.default\").",
 				Required:            true,
 			},
 			fieldAccessToken: schema.StringAttribute{
@@ -101,7 +101,7 @@ func (r *AzureAccessTokenEphemeralResource) Schema(_ context.Context, _ ephemera
 				Computed:            true,
 			},
 		},
-		MarkdownDescription: "Provides an ephemeral resource to generate Azure access tokens from Vault static role credentials.",
+		MarkdownDescription: "Provides an ephemeral resource to fetch Azure access tokens from Vault static role credentials.",
 	}
 
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
@@ -123,8 +123,7 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	if !r.Meta().IsAPISupported(provider.VaultVersion220) {
 		resp.Diagnostics.AddError(
 			"Feature Not Supported",
-			"vault_azure_access_token requires Vault version 2.2.0 or later. "+
-				"Current Vault version: "+r.Meta().GetVaultVersion().String(),
+			"vault_azure_access_token requires Vault version 2.2.0 or later.",
 		)
 		return
 	}
@@ -153,20 +152,14 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 }
 
 // credPropagationRetries is the number of times to retry
-const credPropagationRetries = 6
+const credPropagationRetries = 4
 
 // credPropagationDelay is the wait between retries.
-const credPropagationDelay = 10 * time.Second
+const credPropagationDelay = 4 * time.Second
 
 func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
-	// static-creds/ provisions the credential on first read if it doesn't exist yet;
-	// token/ has no such logic and will error if called before provisioning has occurred.
-	staticCredsPath := fmt.Sprintf("%s/static-creds/%s", mount, role)
-	if _, err := cli.Logical().ReadWithContext(ctx, staticCredsPath); err != nil {
-		return nil, fmt.Errorf("unable to initialize static credential: %w", err)
-	}
-
 	path := fmt.Sprintf("%s/token/%s", mount, role)
+	initialized := false
 
 	for attempt := 0; attempt <= credPropagationRetries; attempt++ {
 		if attempt > 0 {
@@ -181,28 +174,54 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 			"scope": scope,
 		})
 		if err != nil {
+			errStr := err.Error()
 			// AADSTS7000215 means the client secret exists in Vault but has not
 			// yet propagated across Azure AD. Retry after a short wait.
-			if strings.Contains(err.Error(), "AADSTS7000215") {
+			if strings.Contains(errStr, "AADSTS7000215") {
+				tflog.Warn(ctx, fmt.Sprintf(
+					"Azure AD has not yet accepted the client secret (AADSTS7000215); "+
+						"retrying in %s (attempt %d/%d)",
+					credPropagationDelay, attempt+1, credPropagationRetries,
+				))
 				continue
 			}
-			return nil, fmt.Errorf("unable to write to Vault: %w", err)
+			// token/ returns a 400 when the static credential has not yet been
+			// provisioned. Reading static-creds/ initializes it on first access.
+			// This only happens once — on every subsequent Open() the credential
+			// already exists and token/ succeeds on the first attempt.
+			if !initialized && strings.Contains(errStr, "rotate the role once before token generation") {
+				tflog.Info(ctx, fmt.Sprintf(
+					"Static credential for role %q not yet provisioned; initializing via static-creds/",
+					role,
+				))
+				staticCredsPath := fmt.Sprintf("%s/static-creds/%s", mount, role)
+				sec, initErr := cli.Logical().ReadWithContext(ctx, staticCredsPath)
+				if initErr != nil {
+					return nil, fmt.Errorf("unable to initialize static credential: %w", initErr)
+				}
+				if sec == nil {
+					return nil, fmt.Errorf("unable to initialize static credential: role %q not found", role)
+				}
+				initialized = true
+				continue
+			}
+			return nil, fmt.Errorf("unable to get Azure access token from Vault: %w", err)
 		}
 
 		if secret == nil {
 			return nil, fmt.Errorf("no response returned from Vault")
 		}
 
-		var readResp AzureAccessTokenAPIModel
-		if err := model.ToAPIModel(secret.Data, &readResp); err != nil {
+		var tokenResp AzureAccessTokenAPIModel
+		if err := model.ToAPIModel(secret.Data, &tokenResp); err != nil {
 			return nil, fmt.Errorf("unable to translate Vault response data: %w", err)
 		}
 
-		if readResp.AccessToken == "" {
+		if tokenResp.AccessToken == "" {
 			return nil, fmt.Errorf("access_token missing in Vault response")
 		}
 
-		return &readResp, nil
+		return &tokenResp, nil
 	}
 
 	return nil, fmt.Errorf("azure credential not yet accepted after %d attempts; "+
