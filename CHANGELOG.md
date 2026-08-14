@@ -1,10 +1,9 @@
-## Unreleased
+## 5.11.0 (August 14, 2026)
 
 FEATURES:
 
 * **New Resources**: Add support for GCP KMS secrets engine with `vault_gcpkms_secret_backend` and `vault_gcpkms_secret_backend_key` resources, `vault_gcpkms_verify` data source, and ephemeral resources `vault_gcpkms_encrypt`, `vault_gcpkms_decrypt`, `vault_gcpkms_reencrypt`, and `vault_gcpkms_sign` for cryptographic operations. Includes internal Plugin Framework `mount_helpers` for Vault mount operations to support incremental migration from SDKv2. ([#2763](https://github.com/hashicorp/terraform-provider-vault/pull/2763))
-
-* **New resource for transform key configurations**: `vault_transform_key_configuration` - Supports setting an `auto_rotate_period` and `min_decryption_version` to keys used in for tokenization transformations. This uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#update-tokenization-key-config) to modify the configuration and [this one](https://developer.hashicorp.com/vault/api-docs/secret/transform#read-tokenization-key-configuration) to read configurations.
+* **New resource for transform key configurations**: `vault_transform_key_configuration` - Supports setting an `auto_rotate_period` and `min_decryption_version` to keys used in for tokenization transformations. This uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#update-tokenization-key-config) to modify the configuration and [this one](https://developer.hashicorp.com/vault/api-docs/secret/transform#read-tokenization-key-configuration) to read configurations. ([#2980](https://github.com/hashicorp/terraform-provider-vault/pull/2980))
 * **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.2.0+.
 * **LDAP Rotate-on-Read Support**: Added `rotate_on_read` and `rotate_on_read_cooldown` parameters to `vault_ldap_secret_backend` and `vault_ldap_secret_backend_static_role` resources, and `rotated_on_read` attribute to `vault_ldap_static_role_credentials` data source to support credential rotation on each read ([#2960](https://github.com/hashicorp/terraform-provider-vault/pull/2960). Requires Vault Enterprise 2.2.0+.
 * **LDAP Account Unlock for Static Role**: Added `auto_unlock` field (Optional+Computed) to `vault_ldap_secret_backend` and `vault_ldap_secret_backend_static_role`. When set at the mount level, Vault automatically unlocks the managed AD account after every successful static-role rotation, the per-role field overrides the mount-level setting, and when unset the role inherits the mount default. Active Directory schema only. Requires Vault Enterprise 2.2.0+.([#2977](https://github.com/hashicorp/terraform-provider-vault/pull/2977))
@@ -15,19 +14,48 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* Migrated AWS provider dependency from `aws-sdk-go` (v1) to `aws-sdk-go-v2` for improved performance and maintainability. ([#2882](https://github.com/hashicorp/terraform-provider-vault/pull/2882))
 * `vault_identity_entity_alias`: Add support for `external_id` and `issuer` fields. Available only for Vault Enterprise. ([#2994](https://github.com/hashicorp/terraform-provider-vault/pull/2994))
-
 * `vault_aws_auth_backend_config_identity`: Add support for `canonical_arn` as a valid value for the `iam_alias` parameter. Requires Vault 1.16+. ([#2982](https://github.com/hashicorp/terraform-provider-vault/pull/2982))
-
 * `vault_jwt_auth_backend`: Add string-to-integer conversion for `groups_cap` field in `provider_config` to support Okta provider configuration. ([#2939](https://github.com/hashicorp/terraform-provider-vault/pull/2939))
-
 * **Autosnapshot support for AWS IRSA**: Added documentation for IRSA usage per changes in Vault ([hashicorp/raft-snapshotagent#49](https://github.com/hashicorp/raft-snapshotagent/pull/49)). IRSA feature requires Vault 2.2.0+
+* **Updated dependencies**:
+  * Bumped 13 Go module dependencies ([#2969](https://github.com/hashicorp/terraform-provider-vault/pull/2969))
+  * Bumped 10 Go module dependencies ([#2990](https://github.com/hashicorp/terraform-provider-vault/pull/2990))
+  * `actions/checkout` v7.0.0 → v7.0.1
+  * `actions/setup-go` v6.4.0 → v7.0.0
+  * `actions/cache` v5.0.5 → v6.1.0
+  * `golang.org/x/mod` v0.37.0 → v0.40.0 (fixes GO-2026-6179, GO-2026-6180)
+  * `golang.org/x/crypto` v0.54.0 → v0.55.0
+  * `golang.org/x/net` v0.57.0 → v0.58.0
+  * `golang.org/x/text` v0.40.0 → v0.41.0
+  * `golang.org/x/tools` v0.47.0 → v0.49.0
+  * `cloud.google.com/go/iam` v1.12.0 → v1.13.0
+  * `cloud.google.com/go/auth` v0.20.0 → v0.23.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.22.0 → v1.23.0
+  * `github.com/aws/aws-sdk-go-v2` v1.43.0 → v1.43.5
+  * `github.com/aws/aws-sdk-go-v2/config` v1.32.31 → v1.32.36
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.19.30 → v1.19.35
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.18.31 → v1.18.36
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.56.0 → v1.59.0
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.45.0 → v1.45.5
+  * `github.com/aws/smithy-go` v1.27.3 → v1.27.7
+  * `github.com/hashicorp/terraform-plugin-log` v0.10.0 → v0.11.0
+  * `github.com/moby/moby/client` v0.5.0 → v0.5.1
+  * `google.golang.org/api` v0.287.1 → v0.293.0
+  * `google.golang.org/genproto` v0.0.0-20260622175928 → v0.0.0-20260810153831
+  * `google.golang.org/grpc` v1.82.1 → v1.83.0
+  * `k8s.io/utils` v0.0.0-20260617174310 → v0.0.0-20260707023825
+* **Build and CI changes**:
+  * Go `1.26.4` → `1.26.6` (fixes GO-2026-6088, GO-2026-6089, GO-2026-6090, GO-2026-6091, GO-2026-6218 in stdlib)
+  * Vault Enterprise test images: `1.19.19-ent` → `1.19.20-ent`, `1.20.13-ent` → `1.20.14-ent`, `1.21.8-ent` → `1.21.9-ent`, `2.0.3-ent` → `2.0.4-ent`
+
 
 BUG FIXES:
 
 * `vault_jwt_auth_backend`: Fixed a perpetual diff where Vault returned non-string values that were silently dropped by Terraform’s TypeMap(TypeString) schema. All values are now converted to strings when read, preventing keys such as `fetch_groups` and `groups_recurse_max_depth` from appearing missing on every plan.([#2993](https://github.com/hashicorp/terraform-provider-vault/pull/2993))
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
-* `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2801](https://github.com/hashicorp/terraform-provider-vault/pull/2801))
+* `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2964](https://github.com/hashicorp/terraform-provider-vault/pull/2964))
 
 ## 5.10.1 (June 26, 2026)
 
@@ -60,7 +88,6 @@ FEATURES:
 IMPROVEMENTS:
 
 * `resource/vault_token`: Added deprecation warning to guide users toward the new ephemeral `vault_token` resource for better security and batch token support. ([#2877](https://github.com/hashicorp/terraform-provider-vault/pull/2877))
-* Migrated AWS provider dependency from `aws-sdk-go` (v1) to `aws-sdk-go-v2` for improved performance and maintainability. ([#2882](https://github.com/hashicorp/terraform-provider-vault/pull/2882))
 * Replaced backend with mount in `vault_aws_access_credentials` resource's documentation and improved descriptions for a few other parameters.([#2911](https://github.com/hashicorp/terraform-provider-vault/pull/2911))
 
 * Updated dependencies:
