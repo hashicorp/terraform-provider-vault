@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/go-cty/cty"
 
@@ -1230,7 +1229,7 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 		}
 	}
 	if v, ok := data["max_open_connections"]; ok {
-		n, err := v.(json.Number).Int64()
+		n, err := parseutil.ParseInt(v)
 		if err != nil {
 			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
 		} else {
@@ -1238,7 +1237,7 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 		}
 	}
 	if v, ok := data["max_idle_connections"]; ok {
-		n, err := v.(json.Number).Int64()
+		n, err := parseutil.ParseInt(v)
 		if err != nil {
 			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
 		} else {
@@ -1246,7 +1245,7 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 		}
 	}
 	if v, ok := data["max_connection_lifetime"]; ok {
-		n, err := time.ParseDuration(v.(string))
+		n, err := parseutil.ParseDurationSecond(v)
 		if err != nil {
 			log.Printf("[WARN] Non-number %s returned from Vault server: %s", v, err)
 		} else {
