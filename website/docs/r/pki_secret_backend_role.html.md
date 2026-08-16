@@ -133,7 +133,7 @@ The following arguments are supported:
 
 * `policy_identifiers` - (Optional) Specify the list of allowed policies OIDs. Use with Vault 1.10 or before. For Vault 1.11+, use `policy_identifier` blocks instead
 
-* `policy_identifier` - (Optional) (Vault 1.11+ only) A block for specifying policy identifers. The `policy_identifier` block can be repeated, and supports the following arguments:
+* `policy_identifier` - (Optional) (Vault 1.11+ only) A block for specifying policy identifiers. The `policy_identifier` block can be repeated, and supports the following arguments:
 
    - `oid` - (Required) The OID for the policy identifier
 
