@@ -9,7 +9,7 @@ description: |-
 
 # vault\_azure\_access\_token (Ephemeral)
 
-Generates ephemeral Azure OAuth2 access tokens from the Vault Azure Secrets engine using static role credentials.
+Generates ephemeral Azure OAuth2 access tokens from the Vault Azure Secrets Engine using static role credentials.
 These tokens are not stored in Terraform state.
 
 For more information, refer to
@@ -50,7 +50,7 @@ output "access_token" {
 
 The following arguments are supported:
 
-* `mount` - (Required) Path where the Azure Secrets engine is mounted in Vault.
+* `mount` - (Required) Path where the Azure Secrets Engine is mounted in Vault.
 
 * `role` - (Required) Name of the Azure static role to generate an access token for.
 
@@ -79,7 +79,7 @@ In addition to the arguments above, the following attributes are exported:
 
 ## Required Vault Capabilities
 
-Use of this resource requires the `read` and `update` capabilities on the following paths:
+Use of this resource requires the following capabilities:
 
-* `<mount>/static-creds/<role>` - read
-* `<mount>/token/<role>` - update
+* `<mount>/token/<role>` - `update` (required on every call)
+* `<mount>/static-creds/<role>` - `read` (required only on first use, to initialize the static credential)

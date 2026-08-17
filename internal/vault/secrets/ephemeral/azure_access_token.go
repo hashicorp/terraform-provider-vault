@@ -80,7 +80,7 @@ func (r *AzureAccessTokenEphemeralResource) Schema(_ context.Context, _ ephemera
 				Required:            true,
 			},
 			consts.FieldScope: schema.StringAttribute{
-				MarkdownDescription: "The Azure OAuth2 scope to request the access token for (e.g. \"https://management.azure.com/.default\").",
+				MarkdownDescription: "The Azure OAuth2 scope to request the access token for (e.g. \"https://graph.microsoft.com/.default\").",
 				Required:            true,
 			},
 			fieldAccessToken: schema.StringAttribute{
