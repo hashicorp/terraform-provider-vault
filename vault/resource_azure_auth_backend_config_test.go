@@ -222,6 +222,7 @@ func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
 			preCheck: func(t *testing.T) {
 				acctestutil.TestEntPreCheck(t)
 				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+				SkipIfNotEnterprise(t, testProvider.Meta())
 			},
 		},
 	}
