@@ -162,16 +162,14 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldEnvironment: environment,
 	}
 
-	if d.IsNewResource() || d.HasChange(consts.FieldAuthType) {
+	if authType, ok := d.GetOk(consts.FieldAuthType); ok && (d.IsNewResource() || d.HasChange(consts.FieldAuthType)) {
 		if !provider.IsAPISupported(meta, provider.VaultVersion220) {
 			return diag.Errorf("%s is only supported in Vault 2.2.0 and later", consts.FieldAuthType)
 		}
-		if authType, ok := d.GetOk(consts.FieldAuthType); ok {
-			if authType.(string) == consts.AuthTypePluginWIF && !provider.IsEnterpriseSupported(meta) {
-				return diag.Errorf("%s %q is only supported in Vault Enterprise", consts.FieldAuthType, consts.AuthTypePluginWIF)
-			}
-			data[consts.FieldAuthType] = authType
+		if authType.(string) == consts.AuthTypePluginWIF && !provider.IsEnterpriseSupported(meta) {
+			return diag.Errorf("%s %q is only supported in Vault Enterprise", consts.FieldAuthType, consts.AuthTypePluginWIF)
 		}
+		data[consts.FieldAuthType] = authType
 	}
 
 	// Handle client_secret: legacy field or write-only field
