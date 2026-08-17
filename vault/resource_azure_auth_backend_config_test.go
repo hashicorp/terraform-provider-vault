@@ -247,6 +247,47 @@ func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
 	}
 }
 
+// TestAccAzureAuthBackendConfig_authTypeTransition verifies that auth_type can
+// be updated from one value to another without requiring resource replacement.
+// Only CE-compatible types (aks_wi, msi, root_creds) are used so this test
+// does not require Vault Enterprise.
+func TestAccAzureAuthBackendConfig_authTypeTransition(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+	resourceName := "vault_azure_auth_backend_config.config"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		CheckDestroy: testAccCheckAzureAuthBackendConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Step 1: create with aks_wi
+				Config: testAccAzureAuthBackendConfig_authTypeWithBackend(backend, consts.AuthTypeAKSWI, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, consts.AuthTypeAKSWI),
+				),
+			},
+			{
+				// Step 2: transition aks_wi → msi (in-place update, no ForceNew)
+				Config: testAccAzureAuthBackendConfig_authTypeWithBackend(backend, consts.AuthTypeMSI, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, consts.AuthTypeMSI),
+				),
+			},
+			{
+				// Step 3: transition msi → root_creds (requires client_secret)
+				Config: testAccAzureAuthBackendConfig_authTypeWithBackend(backend, consts.AuthTypeRootCreds, "12345678901234567890"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, consts.AuthTypeRootCreds),
+				),
+			},
+		},
+	})
+}
+
 func TestAccAzureAuthBackend_wif(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-azure")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-azure-updated")
@@ -801,4 +842,29 @@ resource "vault_auth_backend" "azure" {
   type = "azure"
 }
 `, backend)
+}
+
+// testAccAzureAuthBackendConfig_authTypeWithBackend produces a minimal config
+// for a given backend name and auth_type. Pass a non-empty clientSecret only
+// when authType is "root_creds".
+func testAccAzureAuthBackendConfig_authTypeWithBackend(backend, authType, clientSecret string) string {
+	secretLine := ""
+	if clientSecret != "" {
+		secretLine = fmt.Sprintf("  client_secret = %q\n", clientSecret)
+	}
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "azure" {
+  type        = "azure"
+  path        = %q
+  description = "Test auth backend for Azure auth_type transition"
+}
+
+resource "vault_azure_auth_backend_config" "config" {
+  backend   = vault_auth_backend.azure.path
+  tenant_id = "11111111-2222-3333-4444-555555555555"
+  client_id = "11111111-2222-3333-4444-555555555555"
+  resource  = "http://vault.hashicorp.com"
+  auth_type = %q
+%s}
+`, backend, authType, secretLine)
 }
