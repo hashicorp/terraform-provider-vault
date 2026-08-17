@@ -430,18 +430,16 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	mount, err := mountutil.GetAuthMount(ctx, client, path)
 	if err != nil {
 		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", path)
 			d.SetId("")
 			return diag.Diagnostics{
 				{
 					Severity: diag.Warning,
-					Summary:  "Mount not found in current namespace",
+					Summary:  "Mount not found",
 					Detail: fmt.Sprintf(
-						"Mount %q was not found in the current namespace and has been removed "+
-							"from state. If you recently migrated the namespace from a provider "+
-							"block to the resource's namespace attribute, the resource still "+
-							"exists in Vault but Terraform is searching in the wrong namespace "+
-							"during refresh. To recover, manually update the state to add the "+
-							"namespace attribute. See https://hashicorp.atlassian.net/browse/VAULT-15732 for details.", path),
+						"Mount %q was not found and has been removed from state. "+
+							"If this is unexpected, verify the mount exists in the current "+
+							"namespace and that your provider configuration is correct.", path),
 				},
 			}
 		}
@@ -463,18 +461,16 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	log.Printf("[DEBUG] Read LDAP auth backend config %q", path)
 
 	if resp == nil {
+		log.Printf("[WARN] LDAP auth backend config %q not found, removing from state", path)
 		d.SetId("")
 		return diag.Diagnostics{
 			{
 				Severity: diag.Warning,
-				Summary:  "LDAP auth backend config not found in current namespace",
+				Summary:  "LDAP auth backend config not found",
 				Detail: fmt.Sprintf(
-					"LDAP auth backend config %q was not found in the current namespace and "+
-						"has been removed from state. If you recently migrated the namespace "+
-						"from a provider block to the resource's namespace attribute, the "+
-						"resource still exists in Vault but Terraform is searching in the "+
-						"wrong namespace during refresh. To recover, manually update the "+
-						"state to add the namespace attribute. See https://hashicorp.atlassian.net/browse/VAULT-15732 for details.", path),
+					"LDAP auth backend config %q was not found and has been removed from state. "+
+						"If this is unexpected, verify the mount exists in the current "+
+						"namespace and that your provider configuration is correct.", path),
 			},
 		}
 	}
