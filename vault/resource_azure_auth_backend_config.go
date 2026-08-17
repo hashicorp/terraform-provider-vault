@@ -87,7 +87,7 @@ func azureAuthBackendConfigResource() *schema.Resource {
 			consts.FieldAuthType: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Specifies how Vault authenticates to Azure APIs. Valid values: root_creds, plugin_wif, msi, aks_wi. Note: plugin_wif requires Vault Enterprise.",
+				Description: "Specifies how Vault authenticates to Azure APIs. Valid values: root_creds, plugin_wif, msi, aks_wi. plugin_wif requires Vault Enterprise.",
 				ValidateFunc: validation.StringInSlice([]string{
 					consts.AuthTypeRootCreds,
 					consts.AuthTypePluginWIF,
