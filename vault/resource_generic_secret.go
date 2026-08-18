@@ -53,6 +53,13 @@ func genericSecretResource(name string) *schema.Resource {
 				Sensitive:    true,
 			},
 
+			"skip_destroy": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Preserve resource on destroy",
+			},
+
 			"disable_read": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -159,6 +166,11 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 }
 
 func genericSecretResourceDelete(d *schema.ResourceData, meta interface{}) error {
+	if v, ok := d.GetOk("skip_destroy"); ok && v.(bool) {
+		log.Printf("[DEBUG] Retaining vault_generic_secret: %s", d.Id())
+		return nil
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
 		return e
