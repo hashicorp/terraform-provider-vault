@@ -205,6 +205,9 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 	if err := readMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
+	if d.Id() == "" {
+		return nil
+	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().ReadWithContext(ctx, configPath)
