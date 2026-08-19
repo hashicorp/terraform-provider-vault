@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -91,5 +92,19 @@ type EphemeralResourceWithConfigure struct {
 func (r *EphemeralResourceWithConfigure) Configure(_ context.Context, request ephemeral.ConfigureRequest, response *ephemeral.ConfigureResponse) {
 	if v, ok := request.ProviderData.(*provider.ProviderMeta); ok {
 		r.meta = v
+	}
+}
+
+// ActionWithConfigure is a structure to be embedded within an Action that
+// implements the ActionWithConfigure interface.
+type ActionWithConfigure struct {
+	withMeta
+}
+
+// Configure enables provider-level data or clients to be set in the
+// provider-defined Action type.
+func (a *ActionWithConfigure) Configure(_ context.Context, request action.ConfigureRequest, response *action.ConfigureResponse) {
+	if v, ok := request.ProviderData.(*provider.ProviderMeta); ok {
+		a.meta = v
 	}
 }

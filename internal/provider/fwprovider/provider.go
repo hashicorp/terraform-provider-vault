@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -33,6 +34,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/rotate"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
@@ -40,6 +42,7 @@ import (
 )
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
+var _ provider.ProviderWithActions = &fwprovider{}
 
 // Ensure the implementation satisfies the provider.Provider interface
 var _ provider.Provider = &fwprovider{}
@@ -230,6 +233,7 @@ func (p *fwprovider) Configure(ctx context.Context, req provider.ConfigureReques
 	resp.DataSourceData = v
 	resp.ResourceData = v
 	resp.EphemeralResourceData = v
+	resp.ActionData = v
 }
 
 // Resources returns a slice of functions to instantiate each Resource
@@ -331,5 +335,16 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 		gcpkms.NewGCPKMSVerifyDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
+	}
+}
+
+// Actions returns a slice of functions to instantiate each Action
+// implementation.
+//
+// The action type name is determined by the Action implementing
+// the Metadata method. All actions must have unique names.
+func (p *fwprovider) Actions(_ context.Context) []func() action.Action {
+	return []func() action.Action{
+		rotate.NewRotateRootAction,
 	}
 }

@@ -6,6 +6,7 @@ package base
 import (
 	"fmt"
 
+	actionschema "github.com/hashicorp/terraform-plugin-framework/action/schema"
 	ephemeralschema "github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -150,6 +151,40 @@ func mustAddSchema(s *schema.Schema, schemaFuncs ...schemaFunc) {
 }
 
 func mustAddEphemeralSchema(s *ephemeralschema.Schema, schemaFuncs ...ephemeralSchemaFunc) {
+	for _, f := range schemaFuncs {
+		for k, v := range f() {
+			if _, ok := s.Attributes[k]; ok {
+				panic(fmt.Sprintf("cannot add schema field %q, already exists in the Schema map", k))
+			}
+
+			s.Attributes[k] = v
+		}
+	}
+}
+
+// MustAddBaseActionSchema adds the schema fields that are required for all
+// actions built with the TF Plugin Framework.
+//
+// This should be called from an action's Schema() method.
+func MustAddBaseActionSchema(s *actionschema.Schema) {
+	mustAddActionSchema(s, baseActionSchema)
+}
+
+type actionSchemaFunc func() map[string]actionschema.Attribute
+
+func baseActionSchema() map[string]actionschema.Attribute {
+	return map[string]actionschema.Attribute{
+		consts.FieldNamespace: actionschema.StringAttribute{
+			Optional:            true,
+			MarkdownDescription: "Target namespace. (requires Enterprise)",
+			Validators: []validator.String{
+				validators.PathValidator(),
+			},
+		},
+	}
+}
+
+func mustAddActionSchema(s *actionschema.Schema, schemaFuncs ...actionSchemaFunc) {
 	for _, f := range schemaFuncs {
 		for k, v := range f() {
 			if _, ok := s.Attributes[k]; ok {
