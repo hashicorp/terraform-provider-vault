@@ -67,7 +67,7 @@ var _ ephemeral.EphemeralResource = &AzureAccessTokenEphemeralResource{}
 
 // NewAzureAccessTokenEphemeralResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider.
-var NewAzureAccessTokenEphemeralResource = func() ephemeral.EphemeralResource {
+func NewAzureAccessTokenEphemeralResource() ephemeral.EphemeralResource {
 	return &AzureAccessTokenEphemeralResource{}
 }
 
