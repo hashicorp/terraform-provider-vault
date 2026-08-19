@@ -49,15 +49,17 @@ func (a *RotateRootAction) Schema(_ context.Context, _ action.SchemaRequest, res
 			"The new password is not accessible after rotation.",
 		Attributes: map[string]actionschema.Attribute{
 			consts.FieldBackend: actionschema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "The path of the secret backend mount.",
+				Required: true,
+				MarkdownDescription: "The path of the secret backend mount. For AWS and GCP, " +
+					"include the `/config` suffix (for example, `aws/config` or `gcp/config`).",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			consts.FieldName: actionschema.StringAttribute{
-				Required:            true,
-				MarkdownDescription: "The name of the connection to rotate root credentials for.",
+				Optional: true,
+				MarkdownDescription: "The name of the connection to rotate root credentials for. " +
+					"Required for database secret backends. Omit for AWS, GCP, Azure, AD, and LDAP.",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
@@ -97,7 +99,7 @@ func (a *RotateRootAction) Invoke(ctx context.Context, req action.InvokeRequest,
 		return
 	}
 
-	rotatePath := fmt.Sprintf("%s/rotate-root/%s", config.Backend.ValueString(), config.Name.ValueString())
+	rotatePath := rotateRootPath(config.Backend.ValueString(), config.Name.ValueString())
 
 	resp.SendProgress(action.InvokeProgressEvent{
 		Message: fmt.Sprintf("Rotating root credentials at %s", rotatePath),
@@ -114,4 +116,14 @@ func (a *RotateRootAction) Invoke(ctx context.Context, req action.InvokeRequest,
 	resp.SendProgress(action.InvokeProgressEvent{
 		Message: fmt.Sprintf("Successfully rotated root credentials at %s", rotatePath),
 	})
+}
+
+// rotateRootPath returns the Vault API path for rotate-root. When name is
+// empty the path does not include a trailing slash (e.g. "aws/config/rotate-root").
+func rotateRootPath(backend, name string) string {
+	path := fmt.Sprintf("%s/rotate-root", backend)
+	if name != "" {
+		path = fmt.Sprintf("%s/%s", path, name)
+	}
+	return path
 }

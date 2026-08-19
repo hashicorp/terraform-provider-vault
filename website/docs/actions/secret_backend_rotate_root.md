@@ -18,11 +18,12 @@ actual root user. See the
 for more details.
 
 Rotates the root credentials stored for a secret backend connection in Vault.
-This action calls `POST /{backend}/rotate-root/{name}` against the Vault API.
+This action calls `POST /{backend}/rotate-root` against the Vault API. When
+`name` is set, the path is `POST /{backend}/rotate-root/{name}`.
 
 ## Example Usage
 
-### Rotate After Connection Creation
+### Database Connection
 
 ```hcl
 resource "vault_mount" "db" {
@@ -55,13 +56,67 @@ action "vault_secret_backend_rotate_root" "postgres" {
 }
 ```
 
+### AWS / GCP
+
+AWS and GCP rotate root credentials at `{mount}/config/rotate-root`. Set
+`backend` to `{mount}/config` and omit `name`.
+
+```hcl
+resource "vault_aws_secret_backend" "aws" {
+  access_key = "AKIA....."
+  secret_key = "AWS secret key"
+
+  lifecycle {
+    action_trigger {
+      events  = [after_create]
+      actions = [action.vault_secret_backend_rotate_root.aws]
+    }
+  }
+}
+
+action "vault_secret_backend_rotate_root" "aws" {
+  config {
+    backend = "${vault_aws_secret_backend.aws.path}/config"
+  }
+}
+```
+
+### Azure / AD / LDAP
+
+Azure, Active Directory, and LDAP rotate root credentials at
+`{mount}/rotate-root`. Set `backend` to the mount path and omit `name`.
+
+```hcl
+resource "vault_azure_secret_backend" "azure" {
+  subscription_id = "11111111-2222-3333-4444-111111111111"
+  tenant_id       = "11111111-2222-3333-4444-222222222222"
+  client_id       = "11111111-2222-3333-4444-333333333333"
+  client_secret   = "12345678901234567890"
+
+  lifecycle {
+    action_trigger {
+      events  = [after_create]
+      actions = [action.vault_secret_backend_rotate_root.azure]
+    }
+  }
+}
+
+action "vault_secret_backend_rotate_root" "azure" {
+  config {
+    backend = vault_azure_secret_backend.azure.path
+  }
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported inside the `config` block:
 
-* `backend` - (Required) The path of the secret backend mount.
+* `backend` - (Required) The path of the secret backend mount. For AWS and GCP,
+  include the `/config` suffix (for example, `aws/config` or `gcp/config`).
 
-* `name` - (Required) The name of the connection to rotate root credentials for.
+* `name` - (Optional) The name of the connection to rotate root credentials for.
+  Required for database secret backends. Omit for AWS, GCP, Azure, AD, and LDAP.
 
 * `timeout_seconds` - (Optional) Maximum time in seconds to wait for the
   rotation to complete. Must be between 60 and 7200. Defaults to `1800`.
