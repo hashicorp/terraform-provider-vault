@@ -187,6 +187,49 @@ func TestAccJWTAuthBackendProviderConfig(t *testing.T) {
 	)
 }
 
+func TestAccJWTAuthBackendProviderConfigOkta(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("oidc")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".oidc"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			// Skip if Vault < 2.2.0 (Okta provider with groups_cap requires 2.2.0+)
+			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion220) {
+				t.Skip("Okta provider with groups_cap requires Vault 2.2.0+")
+			}
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccJWTAuthBackendProviderConfigOkta(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOIDCDiscoveryURL, "https://myco.auth0.com/"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "oidc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".provider", "okta"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".org_url", "https://myco.auth0.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProviderConfig+".groups_cap", "200"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldProviderConfig + ".api_token",
+					consts.FieldProviderConfig + ".%", // Map count differs due to api_token exclusion
+					consts.FieldOIDCClientSecret,
+					consts.FieldDescription,
+					consts.FieldDisableRemount,
+				},
+			},
+		},
+	})
+}
+
 func TestAccJWTAuthBackend_OIDC(t *testing.T) {
 	t.Parallel()
 	resourceType := "vault_jwt_auth_backend"
@@ -472,6 +515,23 @@ resource "vault_namespace" "test" {
 	return strings.Join(append(fragments, config, "}"), "\n")
 }
 
+func testAccJWTAuthBackendProviderConfigOkta(path string) string {
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "oidc" {
+  description        = "OIDC backend"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  path               = "%s"
+  type               = "oidc"
+  provider_config = {
+    provider      = "okta"
+    org_url       = "https://myco.auth0.com"
+    api_token     = "test-token-12345"
+    groups_cap    = "200"
+  }
+}
+`, path)
+}
+
 func TestAccJWTAuthBackend_missingMandatory(t *testing.T) {
 	t.Parallel()
 
@@ -589,6 +649,11 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 		{name: "groups_recurse_max_depth", value: "0", err: false, want: int64(0)},
 		{name: "groups_recurse_max_depth", value: "-1", err: false, want: int64(-1)},
 		{name: "groups_recurse_max_depth", value: "foo", err: true, want: int64(0)},
+
+		{name: "groups_cap", value: "100", err: false, want: int64(100)},
+		{name: "groups_cap", value: "0", err: false, want: int64(0)},
+		{name: "groups_cap", value: "-1", err: false, want: int64(-1)},
+		{name: "groups_cap", value: "bar", err: true, want: int64(0)},
 	}
 
 	for _, tc := range tests {
@@ -605,6 +670,46 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 				t.Fatalf("exepcted %s, got %s", tc.want, actual[tc.name])
 			}
 		}
+	}
+}
+
+func TestJWTAuthBackendProviderConfigToStrings(t *testing.T) {
+	t.Parallel()
+	type test struct {
+		name  string
+		input interface{}
+		want  string
+	}
+
+	tests := []test{
+		{name: "fetch_groups true", input: true, want: "true"},
+		{name: "fetch_groups false", input: false, want: "false"},
+		{name: "fetch_user_info true", input: true, want: "true"},
+		{name: "fetch_user_info false", input: false, want: "false"},
+
+		{name: "groups_recurse_max_depth", input: float64(5), want: "5"},
+		{name: "groups_recurse_max_depth negative", input: float64(-1), want: "-1"},
+		{name: "groups_cap", input: float64(200), want: "200"},
+
+		{name: "some_float", input: float64(1.5), want: "1.5"},
+
+		{name: "int value", input: int(10), want: "10"},
+		{name: "int64 value", input: int64(20), want: "20"},
+
+		{name: "provider", input: "gsuite", want: "gsuite"},
+		{name: "gsuite_service_account", input: "/vault/userconfig/sa.json", want: "/vault/userconfig/sa.json"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := convertProviderConfigValuesToStrings(map[string]interface{}{
+				"key": tc.input,
+			})
+			if actual["key"] != tc.want {
+				t.Fatalf("convertProviderConfigValuesToStrings(%T(%v)) = %q, want %q",
+					tc.input, tc.input, actual["key"], tc.want)
+			}
+		})
 	}
 }
 

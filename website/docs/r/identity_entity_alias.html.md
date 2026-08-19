@@ -42,10 +42,21 @@ The following arguments are supported:
 
 * `canonical_id` - (Required) Entity ID to which this alias belongs to.
 
+* `custom_metadata` - (Optional) Custom metadata to be associated with this alias.
+
+* `external_id` - (Optional, Forces new resource) Unique external identifier from the external IdP.
+  *Available only for Vault Enterprise*.
+
+* `issuer` - (Optional, Forces new resource) Issuer name associated with this alias.
+  *Available only for Vault Enterprise*.
 
 ## Attributes Reference
 
 * `id` - ID of the entity alias.
+
+* `issuer` - Issuer name stored on the alias.
+
+* `external_id` - External identifier stored on the alias.
 
 ## Import
 
