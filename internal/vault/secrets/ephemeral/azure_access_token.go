@@ -5,7 +5,9 @@ package ephemeralsecrets
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -28,7 +30,37 @@ const (
 	fieldAccessToken  = "access_token"
 	fieldExtExpiresIn = "ext_expires_in"
 	fieldExpiresIn    = "expires_in"
+
+	// azureADClientSecretNotPropagated is the Azure AD error code returned when a
+	// client secret exists in Vault but has not yet replicated across Azure AD.
+	azureADClientSecretNotPropagated = "AADSTS7000215"
 )
+
+// isAzureCredPropagationError checks if the error indicates an Azure AD credential
+// that exists in Vault but has not yet propagated. This is a retryable condition.
+func isAzureCredPropagationError(err error) bool {
+	var respErr *api.ResponseError
+	if errors.As(err, &respErr) && respErr != nil {
+		if respErr.StatusCode == http.StatusBadRequest {
+			return len(respErr.Errors) == 1 &&
+				strings.Contains(respErr.Errors[0], azureADClientSecretNotPropagated)
+		}
+	}
+	return false
+}
+
+// isAzureCredNotInitializedError checks if the error indicates the static credential
+// has not yet been provisioned and needs to be initialized via static-creds/.
+func isAzureCredNotInitializedError(err error) bool {
+	var respErr *api.ResponseError
+	if errors.As(err, &respErr) && respErr != nil {
+		if respErr.StatusCode == http.StatusBadRequest {
+			return len(respErr.Errors) == 1 &&
+				strings.Contains(respErr.Errors[0], "rotate the role once before token generation")
+		}
+	}
+	return false
+}
 
 // Ensure the implementation satisfies the ephemeral.EphemeralResource interface.
 var _ ephemeral.EphemeralResource = &AzureAccessTokenEphemeralResource{}
@@ -186,6 +218,8 @@ const credPropagationRetries = 4
 // credPropagationDelay is the wait between retries.
 const credPropagationDelay = 4 * time.Second
 
+// requestAzureAccessToken fetches an Azure OAuth2 access token from Vault's token/ endpoint,
+// initializing the static credential on first use and retrying on Azure AD propagation errors.
 func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string, maxRetries int, retryDelay time.Duration) (*AzureAccessTokenAPIModel, error) {
 	path := fmt.Sprintf("%s/token/%s", mount, role)
 	initialized := false
@@ -203,10 +237,9 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 			"scope": scope,
 		})
 		if err != nil {
-			errStr := err.Error()
 			// AADSTS7000215 means the client secret exists in Vault but has not
 			// yet propagated across Azure AD. Retry after a short wait.
-			if strings.Contains(errStr, "AADSTS7000215") {
+			if isAzureCredPropagationError(err) {
 				tflog.Warn(ctx, fmt.Sprintf(
 					"Azure AD has not yet accepted the client secret (AADSTS7000215); "+
 						"retrying in %s (attempt %d/%d)",
@@ -218,7 +251,7 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 			// provisioned. Reading static-creds/ initializes it on first access.
 			// This only happens once — on every subsequent Open() the credential
 			// already exists and token/ succeeds on the first attempt.
-			if !initialized && strings.Contains(errStr, "rotate the role once before token generation") {
+			if !initialized && isAzureCredNotInitializedError(err) {
 				tflog.Info(ctx, fmt.Sprintf(
 					"Static credential for role %q not yet provisioned; initializing via static-creds/",
 					role,
