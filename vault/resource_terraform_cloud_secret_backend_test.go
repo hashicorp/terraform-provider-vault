@@ -274,10 +274,10 @@ resource "vault_terraform_cloud_secret_backend" "test" {
 }`, path, version)
 }
 
-// newUnitTestMeta spins up an httptest server with the given handler, creates
+// testProviderMeta spins up an httptest server with the given handler, creates
 // a Vault API client pointed at it, and returns a *provider.ProviderMeta
 // wired to that client (skip_get_vault_version=true).
-func newUnitTestMeta(t *testing.T, handler http.HandlerFunc) interface{} {
+func testProviderMeta(t *testing.T, handler http.HandlerFunc) interface{} {
 	t.Helper()
 
 	srv := httptest.NewServer(handler)
@@ -313,9 +313,9 @@ func newUnitTestMeta(t *testing.T, handler http.HandlerFunc) interface{} {
 	return meta
 }
 
-// tokenLookupHandler returns a minimal http.HandlerFunc that satisfies the
+// testTokenLookupHandler returns a minimal http.HandlerFunc that satisfies the
 // token setup calls (lookup-self + create) made by setClient().
-func tokenLookupHandler(next func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
+func testTokenLookupHandler(next func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
@@ -338,13 +338,14 @@ func tokenLookupHandler(next func(w http.ResponseWriter, r *http.Request)) http.
 	}
 }
 
-// TestTerraformCloudSecretBackendRead_configIs404 verifies that a 404 on the
-// /config read (after a successful mount check) removes the resource from
+// TestTerraformCloudSecretBackendRead_configNotFound verifies that when
+// /config returns 404 with no data, ParseRawResponseAndCloseBody returns
+// (nil, nil) and the existing secret == nil check removes the resource from
 // state cleanly with no error diagnostics.
-func TestTerraformCloudSecretBackendRead_configIs404(t *testing.T) {
+func TestTerraformCloudSecretBackendRead_configNotFound(t *testing.T) {
 	const backend = "terraform"
 
-	meta := newUnitTestMeta(t, tokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+	meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1/sys/mounts/" + backend:
 			json.NewEncoder(w).Encode(map[string]interface{}{
@@ -383,7 +384,7 @@ func TestTerraformCloudSecretBackendRead_configIs404(t *testing.T) {
 func TestTerraformCloudSecretBackendRead_configNon404Error(t *testing.T) {
 	const backend = "terraform"
 
-	meta := newUnitTestMeta(t, tokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+	meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1/sys/mounts/" + backend:
 			json.NewEncoder(w).Encode(map[string]interface{}{
@@ -420,7 +421,7 @@ func TestTerraformCloudSecretBackendRead_configNon404Error(t *testing.T) {
 func TestTerraformCloudSecretBackendDelete_mountIs404(t *testing.T) {
 	const backend = "terraform"
 
-	meta := newUnitTestMeta(t, tokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+	meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/sys/mounts/"+backend && r.Method == http.MethodDelete {
 			w.WriteHeader(http.StatusNotFound)
 			json.NewEncoder(w).Encode(map[string]interface{}{
@@ -450,7 +451,7 @@ func TestTerraformCloudSecretBackendDelete_mountIs404(t *testing.T) {
 func TestTerraformCloudSecretBackendDelete_mountNon404Error(t *testing.T) {
 	const backend = "terraform"
 
-	meta := newUnitTestMeta(t, tokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+	meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/v1/sys/mounts/"+backend && r.Method == http.MethodDelete {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(map[string]interface{}{

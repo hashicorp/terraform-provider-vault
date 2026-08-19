@@ -212,11 +212,6 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().ReadWithContext(ctx, configPath)
 	if err != nil {
-		if util.Is404(err) {
-			log.Printf("[WARN] No Terraform Cloud config found at %q, removing from state", configPath)
-			d.SetId("")
-			return nil
-		}
 		return diag.Errorf("error reading from Vault: %s", err)
 	}
 	if secret == nil {
