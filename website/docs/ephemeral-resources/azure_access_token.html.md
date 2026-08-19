@@ -54,7 +54,14 @@ The following arguments are supported:
 
 * `role` - (Required) Name of the Azure static role to generate an access token for.
 
-* `scope` - (Required) The full Azure scope to request a token for (for example, `https://graph.microsoft.com/.default`).
+* `scope` - (Required) The Azure OAuth2 scope to request the access token for
+  (for example, `https://graph.microsoft.com/.default`).
+
+* `max_retries` - (Optional) Maximum number of retries when waiting for the Azure AD
+  credential to propagate. Defaults to `4`. Must be `0` or greater.
+
+* `retry_delay` - (Optional) Number of seconds to wait between propagation retries.
+  Defaults to `4`. Must be `0` or greater.
 
 * `mount_id` - (Optional) If set, defers provisioning of the ephemeral resource until
   `terraform apply`. For more details, refer to the official documentation around
@@ -73,9 +80,10 @@ In addition to the arguments above, the following attributes are exported:
 
 * `token_type` - The token type returned by Azure (for example, `Bearer`).
 
-* `expires_in` - The token lifetime in seconds.
+* `expires_in` - The access token lifetime in seconds.
 
-* `ext_expires_in` - The extended token lifetime in seconds.
+* `ext_expires_in` - The extended access token lifetime in seconds, used by Azure for
+  resilience in outage scenarios.
 
 ## Required Vault Capabilities
 

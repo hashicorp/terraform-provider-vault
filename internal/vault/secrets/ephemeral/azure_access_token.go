@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -48,9 +50,11 @@ type AzureAccessTokenModel struct {
 	base.BaseModelEphemeral
 
 	// Inputs
-	Mount types.String `tfsdk:"mount"`
-	Scope types.String `tfsdk:"scope"`
-	Role  types.String `tfsdk:"role"`
+	Mount      types.String `tfsdk:"mount"`
+	Scope      types.String `tfsdk:"scope"`
+	Role       types.String `tfsdk:"role"`
+	MaxRetries types.Int64  `tfsdk:"max_retries"`
+	RetryDelay types.Int64  `tfsdk:"retry_delay"`
 
 	// Outputs
 	AccessToken  types.String `tfsdk:"access_token"`
@@ -82,6 +86,20 @@ func (r *AzureAccessTokenEphemeralResource) Schema(_ context.Context, _ ephemera
 			consts.FieldScope: schema.StringAttribute{
 				MarkdownDescription: "The Azure OAuth2 scope to request the access token for (e.g. \"https://graph.microsoft.com/.default\").",
 				Required:            true,
+			},
+			consts.FieldMaxRetries: schema.Int64Attribute{
+				MarkdownDescription: fmt.Sprintf("Maximum number of retries when waiting for the Azure AD credential to propagate. Defaults to %d.", credPropagationRetries),
+				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.AtLeast(0),
+				},
+			},
+			consts.FieldRetryDelay: schema.Int64Attribute{
+				MarkdownDescription: fmt.Sprintf("Number of seconds to wait between propagation retries. Defaults to %d.", int(credPropagationDelay.Seconds())),
+				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.AtLeast(0),
+				},
 			},
 			fieldAccessToken: schema.StringAttribute{
 				MarkdownDescription: "The Azure access token.",
@@ -135,8 +153,19 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 		return
 	}
 
+	// Apply user-supplied overrides for propagation retry behaviour, falling
+	// back to the package-level defaults if not set.
+	maxRetries := credPropagationRetries
+	if !data.MaxRetries.IsNull() && !data.MaxRetries.IsUnknown() {
+		maxRetries = int(data.MaxRetries.ValueInt64())
+	}
+	retryDelay := credPropagationDelay
+	if !data.RetryDelay.IsNull() && !data.RetryDelay.IsUnknown() {
+		retryDelay = time.Duration(data.RetryDelay.ValueInt64()) * time.Second
+	}
+
 	// Request the Azure access token from Vault
-	tokenResp, err := requestAzureAccessToken(ctx, cli, data.Mount.ValueString(), data.Role.ValueString(), data.Scope.ValueString())
+	tokenResp, err := requestAzureAccessToken(ctx, cli, data.Mount.ValueString(), data.Role.ValueString(), data.Scope.ValueString(), maxRetries, retryDelay)
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to get Azure access token", err.Error())
 		return
@@ -157,16 +186,16 @@ const credPropagationRetries = 4
 // credPropagationDelay is the wait between retries.
 const credPropagationDelay = 4 * time.Second
 
-func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string) (*AzureAccessTokenAPIModel, error) {
+func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string, maxRetries int, retryDelay time.Duration) (*AzureAccessTokenAPIModel, error) {
 	path := fmt.Sprintf("%s/token/%s", mount, role)
 	initialized := false
 
-	for attempt := 0; attempt <= credPropagationRetries; attempt++ {
+	for attempt := 0; attempt <= maxRetries; attempt++ {
 		if attempt > 0 {
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
-			case <-time.After(credPropagationDelay):
+			case <-time.After(retryDelay):
 			}
 		}
 
@@ -181,7 +210,7 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 				tflog.Warn(ctx, fmt.Sprintf(
 					"Azure AD has not yet accepted the client secret (AADSTS7000215); "+
 						"retrying in %s (attempt %d/%d)",
-					credPropagationDelay, attempt+1, credPropagationRetries,
+					retryDelay, attempt+1, maxRetries,
 				))
 				continue
 			}
@@ -225,5 +254,5 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 	}
 
 	return nil, fmt.Errorf("azure credential not yet accepted after %d attempts; "+
-		"the client secret may still be propagating across Azure AD", credPropagationRetries)
+		"the client secret may still be propagating across Azure AD", maxRetries)
 }

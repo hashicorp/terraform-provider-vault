@@ -105,6 +105,41 @@ func TestAccAzureAccessToken_invalidMount(t *testing.T) {
 	})
 }
 
+// TestAccAzureAccessToken_customRetry verifies that the ephemeral resource
+// succeeds when max_retries and retry_delay are explicitly set, confirming
+// the override path through Open() is exercised and the schema validator
+// accepts the values.
+func TestAccAzureAccessToken_customRetry(t *testing.T) {
+	conf := testutil.GetTestAzureConfExistingSP(t)
+	conf.Scope = testutil.SkipTestEnvUnset(t, "AZURE_ROLE_SCOPE")[0]
+
+	backend := acctest.RandomWithPrefix("tf-test-azure")
+	role := acctest.RandomWithPrefix("tf-role")
+	nonEmpty := regexp.MustCompile(`^.+$`)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureAccessTokenCustomRetryConfig(backend, role, conf),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("access_token"), knownvalue.StringRegexp(nonEmpty)),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("token_type"), knownvalue.StringExact("Bearer")),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("expires_in"), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.azure_token", tfjsonpath.New("data").AtMapKey("ext_expires_in"), knownvalue.NotNull()),
+				},
+			},
+		},
+	})
+}
+
 // TestAccAzureAccessToken_namespace verifies that the ephemeral resource works
 // correctly when scoped to a Vault namespace (Enterprise only).
 func TestAccAzureAccessToken_namespace(t *testing.T) {
@@ -137,6 +172,46 @@ func TestAccAzureAccessToken_namespace(t *testing.T) {
 			},
 		},
 	})
+}
+
+func testAccAzureAccessTokenCustomRetryConfig(backend, role string, conf *testutil.AzureTestConf) string {
+	return fmt.Sprintf(`
+resource "terraform_data" "azure_mount" {
+  input = "%[1]s"
+
+  provisioner "local-exec" {
+    command = "vault secrets enable -path=%[1]s vault-plugin-secrets-azure && vault write %[1]s/config subscription_id='%[2]s' tenant_id='%[3]s' client_id='%[4]s' client_secret='%[5]s'"
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "vault secrets disable ${self.output}"
+  }
+}
+
+resource "vault_azure_secret_backend_static_role" "role" {
+  depends_on            = [terraform_data.azure_mount]
+  backend               = terraform_data.azure_mount.output
+  role                  = "%[6]s"
+  application_object_id = "%[7]s"
+  ttl                   = 31536000
+}
+
+ephemeral "vault_azure_access_token" "token" {
+  mount_id    = vault_azure_secret_backend_static_role.role.id
+  mount       = terraform_data.azure_mount.output
+  role        = vault_azure_secret_backend_static_role.role.role
+  scope       = "%[8]s"
+  max_retries = 2
+  retry_delay = 5
+}
+
+provider "echo" {
+  data = ephemeral.vault_azure_access_token.token
+}
+
+resource "echo" "azure_token" {}
+`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, role, conf.AppObjectID, conf.Scope)
 }
 
 // TODO: replace terraform_data workaround with vault_azure_secret_backend once
