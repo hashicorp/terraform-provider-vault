@@ -29,6 +29,26 @@ resource "vault_cert_auth_backend_role" "cert" {
 }
 ```
 
+## Example Usage with Write-Only Certificate
+
+```hcl
+resource "vault_auth_backend" "cert" {
+    path = "cert"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "cert" {
+    name                    = "foo"
+    certificate_wo          = var.ca_certificate
+    certificate_wo_version  = 1
+    backend                 = vault_auth_backend.cert.path
+    allowed_names           = ["foo.example.org", "baz.example.org"]
+    token_ttl               = 300
+    token_max_ttl           = 600
+    token_policies          = ["foo"]
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -42,7 +62,9 @@ The following arguments are supported:
 
 * `name` - (Required string) Name of the role
 
-* `certificate` - (Required string) CA certificate used to validate client certificates
+* `certificate` - (Optional string) CA certificate used to validate client certificates. Conflicts with `certificate_wo`
+
+* `certificate_wo_version` - (Optional int) The version of `certificate_wo` to use during write operations. Required with `certificate_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 * `allowed_names` - (Optional string) DEPRECATED: Please use the individual `allowed_X_sans` parameters instead. Allowed subject names for authenticated client certificates
 
@@ -135,6 +157,12 @@ These arguments are common across several Authentication Token resources since V
   This should be a list or map containing the metadata in key value pairs.
 
 For more details on the usage of each argument consult the [Vault Cert API documentation](https://www.vaultproject.io/api-docs/auth/cert).
+
+## Ephemeral Attributes Reference
+
+The following write-only attributes are supported:
+
+* `certificate_wo` - (Optional string) Write-only CA certificate used to validate client certificates. Use this instead of `certificate` to prevent the certificate from being stored in Terraform state. Conflicts with `certificate`. **Note**: This property is write-only and will not be read from the API.
 
 ## Attribute Reference
 
