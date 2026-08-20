@@ -69,9 +69,6 @@ func TestAccAzureAccessToken_invalidRole(t *testing.T) {
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAzureAccessTokenInvalidRoleConfig(backend, conf),
@@ -256,12 +253,6 @@ ephemeral "vault_azure_access_token" "token" {
   role     = "nonexistent-role"
   scope    = "%[1]s"
 }
-
-provider "echo" {
-  data = ephemeral.vault_azure_access_token.token
-}
-
-resource "echo" "azure_token" {}
 `, conf.Scope)
 }
 
