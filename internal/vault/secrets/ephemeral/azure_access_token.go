@@ -40,7 +40,7 @@ const (
 // that exists in Vault but has not yet propagated. This is a retryable condition.
 func isAzureCredPropagationError(err error) bool {
 	var respErr *api.ResponseError
-	if errors.As(err, &respErr) && respErr != nil {
+	if errors.As(err, &respErr) {
 		if respErr.StatusCode == http.StatusBadRequest {
 			return len(respErr.Errors) == 1 &&
 				strings.Contains(respErr.Errors[0], azureADClientSecretNotPropagated)
@@ -53,7 +53,7 @@ func isAzureCredPropagationError(err error) bool {
 // has not yet been provisioned and needs to be initialized via static-creds/.
 func isAzureCredNotInitializedError(err error) bool {
 	var respErr *api.ResponseError
-	if errors.As(err, &respErr) && respErr != nil {
+	if errors.As(err, &respErr) {
 		if respErr.StatusCode == http.StatusBadRequest {
 			return len(respErr.Errors) == 1 &&
 				strings.Contains(respErr.Errors[0], "rotate the role once before token generation")
@@ -212,7 +212,7 @@ func (r *AzureAccessTokenEphemeralResource) Open(ctx context.Context, req epheme
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 }
 
-// credPropagationRetries is the number of times to retry
+// credPropagationRetries is the number of times to retry.
 const credPropagationRetries = 4
 
 // credPropagationDelay is the wait between retries.

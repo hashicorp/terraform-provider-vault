@@ -93,9 +93,6 @@ func TestAccAzureAccessToken_invalidMount(t *testing.T) {
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
-			"echo": echoprovider.NewProviderServer(),
-		},
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccAzureAccessTokenInvalidMountConfig(conf),
@@ -174,76 +171,46 @@ func TestAccAzureAccessToken_namespace(t *testing.T) {
 	})
 }
 
-func testAccAzureAccessTokenCustomRetryConfig(backend, role string, conf *testutil.AzureTestConf) string {
+// azurePluginMountHCL returns the HCL blocks that enable the vault-plugin-secrets-azure
+// mount and write the backend config. vault_azure_secret_backend always enables the
+// built-in "azure" mount type and cannot be used for the plugin variant.
+func azurePluginMountHCL(mountRef, backend string, conf *testutil.AzureTestConf) string {
 	return fmt.Sprintf(`
-resource "terraform_data" "azure_mount" {
-  input = "%[1]s"
-
-  provisioner "local-exec" {
-    command = "vault secrets enable -path=%[1]s vault-plugin-secrets-azure && vault write %[1]s/config subscription_id='%[2]s' tenant_id='%[3]s' client_id='%[4]s' client_secret='%[5]s'"
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = "vault secrets disable ${self.output}"
-  }
+resource "vault_mount" "%[1]s" {
+  path = "%[2]s"
+  type = "vault-plugin-secrets-azure"
 }
 
-resource "vault_azure_secret_backend_static_role" "role" {
-  depends_on            = [terraform_data.azure_mount]
-  backend               = terraform_data.azure_mount.output
-  role                  = "%[6]s"
-  application_object_id = "%[7]s"
-  ttl                   = 31536000
+resource "vault_generic_endpoint" "%[1]s_config" {
+  depends_on           = [vault_mount.%[1]s]
+  path                 = "%[2]s/config"
+  ignore_absent_fields = true
+
+  data_json = jsonencode({
+    subscription_id = "%[3]s"
+    tenant_id       = "%[4]s"
+    client_id       = "%[5]s"
+    client_secret   = "%[6]s"
+  })
+}
+`, mountRef, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret)
 }
 
-ephemeral "vault_azure_access_token" "token" {
-  mount_id    = vault_azure_secret_backend_static_role.role.id
-  mount       = terraform_data.azure_mount.output
-  role        = vault_azure_secret_backend_static_role.role.role
-  scope       = "%[8]s"
-  max_retries = 2
-  retry_delay = 5
-}
-
-provider "echo" {
-  data = ephemeral.vault_azure_access_token.token
-}
-
-resource "echo" "azure_token" {}
-`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, role, conf.AppObjectID, conf.Scope)
-}
-
-// TODO: replace terraform_data workaround with vault_azure_secret_backend once
-// the token/ endpoint ships in an official Vault release.
 func testAccAzureAccessTokenConfig(backend, role string, conf *testutil.AzureTestConf) string {
-	return fmt.Sprintf(`
-resource "terraform_data" "azure_mount" {
-  input = "%[1]s"
-
-  provisioner "local-exec" {
-    command = "vault secrets enable -path=%[1]s vault-plugin-secrets-azure && vault write %[1]s/config subscription_id='%[2]s' tenant_id='%[3]s' client_id='%[4]s' client_secret='%[5]s'"
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = "vault secrets disable ${self.output}"
-  }
-}
-
+	return azurePluginMountHCL("azure", backend, conf) + fmt.Sprintf(`
 resource "vault_azure_secret_backend_static_role" "role" {
-  depends_on            = [terraform_data.azure_mount]
-  backend               = terraform_data.azure_mount.output
-  role                  = "%[6]s"
-  application_object_id = "%[7]s"
+  depends_on            = [vault_generic_endpoint.azure_config]
+  backend               = vault_mount.azure.path
+  role                  = "%[1]s"
+  application_object_id = "%[2]s"
   ttl                   = 31536000
 }
 
 ephemeral "vault_azure_access_token" "token" {
   mount_id = vault_azure_secret_backend_static_role.role.id
-  mount    = terraform_data.azure_mount.output
+  mount    = vault_mount.azure.path
   role     = vault_azure_secret_backend_static_role.role.role
-  scope    = "%[8]s"
+  scope    = "%[3]s"
 }
 
 provider "echo" {
@@ -251,47 +218,43 @@ provider "echo" {
 }
 
 resource "echo" "azure_token" {}
-`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, role, conf.AppObjectID, conf.Scope)
+`, role, conf.AppObjectID, conf.Scope)
 }
 
-// TODO: replace terraform_data workaround with vault_azure_secret_backend once
-// the token/ endpoint ships in an official Vault release.
+func testAccAzureAccessTokenCustomRetryConfig(backend, role string, conf *testutil.AzureTestConf) string {
+	return azurePluginMountHCL("azure", backend, conf) + fmt.Sprintf(`
+resource "vault_azure_secret_backend_static_role" "role" {
+  depends_on            = [vault_generic_endpoint.azure_config]
+  backend               = vault_mount.azure.path
+  role                  = "%[1]s"
+  application_object_id = "%[2]s"
+  ttl                   = 31536000
+}
+
+ephemeral "vault_azure_access_token" "token" {
+  mount_id    = vault_azure_secret_backend_static_role.role.id
+  mount       = vault_mount.azure.path
+  role        = vault_azure_secret_backend_static_role.role.role
+  scope       = "%[3]s"
+  max_retries = 6
+  retry_delay = 10
+}
+
+provider "echo" {
+  data = ephemeral.vault_azure_access_token.token
+}
+
+resource "echo" "azure_token" {}
+`, role, conf.AppObjectID, conf.Scope)
+}
+
 func testAccAzureAccessTokenInvalidRoleConfig(backend string, conf *testutil.AzureTestConf) string {
-	return fmt.Sprintf(`
-resource "terraform_data" "azure_mount" {
-  input = "%[1]s"
-
-  provisioner "local-exec" {
-    command = "vault secrets enable -path=%[1]s vault-plugin-secrets-azure && vault write %[1]s/config subscription_id='%[2]s' tenant_id='%[3]s' client_id='%[4]s' client_secret='%[5]s'"
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = "vault secrets disable ${self.output}"
-  }
-}
-
+	return azurePluginMountHCL("azure", backend, conf) + fmt.Sprintf(`
 ephemeral "vault_azure_access_token" "token" {
-  mount_id = terraform_data.azure_mount.id
-  mount    = terraform_data.azure_mount.output
+  mount_id = vault_generic_endpoint.azure_config.id
+  mount    = vault_mount.azure.path
   role     = "nonexistent-role"
-  scope    = "%[6]s"
-}
-
-provider "echo" {
-  data = ephemeral.vault_azure_access_token.token
-}
-
-resource "echo" "azure_token" {}
-`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, conf.Scope)
-}
-
-func testAccAzureAccessTokenInvalidMountConfig(conf *testutil.AzureTestConf) string {
-	return fmt.Sprintf(`
-ephemeral "vault_azure_access_token" "token" {
-  mount = "nonexistent-mount"
-  role  = "my-role"
-  scope = "%[1]s"
+  scope    = "%[1]s"
 }
 
 provider "echo" {
@@ -302,32 +265,46 @@ resource "echo" "azure_token" {}
 `, conf.Scope)
 }
 
-// TODO: replace terraform_data workaround with vault_azure_secret_backend once
-// the token/ endpoint ships in an official Vault release.
+func testAccAzureAccessTokenInvalidMountConfig(conf *testutil.AzureTestConf) string {
+	return fmt.Sprintf(`
+ephemeral "vault_azure_access_token" "token" {
+  mount = "nonexistent-mount"
+  role  = "my-role"
+  scope = "%[1]s"
+}
+`, conf.Scope)
+}
+
 func testAccAzureAccessTokenNamespaceConfig(backend, role, namespace string, conf *testutil.AzureTestConf) string {
 	return fmt.Sprintf(`
 resource "vault_namespace" "test" {
   path = "%[1]s"
 }
 
-resource "terraform_data" "azure_mount" {
-  depends_on = [vault_namespace.test]
-  input      = "%[2]s"
+resource "vault_mount" "azure" {
+  namespace = vault_namespace.test.path
+  path      = "%[2]s"
+  type      = "vault-plugin-secrets-azure"
+}
 
-  provisioner "local-exec" {
-    command = "VAULT_NAMESPACE=%[1]s vault secrets enable -path=%[2]s vault-plugin-secrets-azure && VAULT_NAMESPACE=%[1]s vault write %[2]s/config subscription_id='%[3]s' tenant_id='%[4]s' client_id='%[5]s' client_secret='%[6]s'"
-  }
+resource "vault_generic_endpoint" "azure_config" {
+  depends_on           = [vault_mount.azure]
+  namespace            = vault_namespace.test.path
+  path                 = "%[2]s/config"
+  ignore_absent_fields = true
 
-  provisioner "local-exec" {
-    when    = destroy
-    command = "VAULT_NAMESPACE=%[1]s vault secrets disable ${self.output}"
-  }
+  data_json = jsonencode({
+    subscription_id = "%[3]s"
+    tenant_id       = "%[4]s"
+    client_id       = "%[5]s"
+    client_secret   = "%[6]s"
+  })
 }
 
 resource "vault_azure_secret_backend_static_role" "role" {
-  depends_on            = [terraform_data.azure_mount]
+  depends_on            = [vault_generic_endpoint.azure_config]
   namespace             = vault_namespace.test.path
-  backend               = terraform_data.azure_mount.output
+  backend               = vault_mount.azure.path
   role                  = "%[7]s"
   application_object_id = "%[8]s"
   ttl                   = 31536000
@@ -336,7 +313,7 @@ resource "vault_azure_secret_backend_static_role" "role" {
 ephemeral "vault_azure_access_token" "token" {
   namespace = vault_namespace.test.path
   mount_id  = vault_azure_secret_backend_static_role.role.id
-  mount     = terraform_data.azure_mount.output
+  mount     = vault_mount.azure.path
   role      = vault_azure_secret_backend_static_role.role.role
   scope     = "%[9]s"
 }

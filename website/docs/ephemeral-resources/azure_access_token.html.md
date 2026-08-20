@@ -12,6 +12,8 @@ description: |-
 Generates ephemeral Azure OAuth2 access tokens from the Vault Azure Secrets Engine using static role credentials.
 These tokens are not stored in Terraform state.
 
+Requires Vault Enterprise 2.2+
+
 For more information, refer to
 the [Vault Azure Secrets Engine documentation](https://developer.hashicorp.com/vault/docs/secrets/azure).
 
