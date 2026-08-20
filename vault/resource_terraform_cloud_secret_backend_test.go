@@ -5,10 +5,14 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
@@ -268,4 +272,203 @@ resource "vault_terraform_cloud_secret_backend" "test" {
   token_wo          = ""
   token_wo_version  = %d
 }`, path, version)
+}
+
+// testProviderMeta spins up an httptest server with the given handler, creates
+// a Vault API client pointed at it, and returns a *provider.ProviderMeta
+// wired to that client (skip_get_vault_version=true).
+func testProviderMeta(t *testing.T, handler http.HandlerFunc) interface{} {
+	t.Helper()
+
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	s := map[string]*schema.Schema{
+		consts.FieldAddress: {
+			Type:     schema.TypeString,
+			Required: true,
+		},
+		"token": {
+			Type:     schema.TypeString,
+			Required: true,
+		},
+		consts.FieldSkipGetVaultVersion: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Default:  true,
+		},
+	}
+
+	d := schema.TestResourceDataRaw(t, s, map[string]interface{}{
+		consts.FieldAddress:             srv.URL,
+		"token":                         "test-token",
+		consts.FieldSkipGetVaultVersion: true,
+	})
+
+	meta, err := provider.NewProviderMeta(d)
+	if err != nil {
+		t.Fatalf("NewProviderMeta: %v", err)
+	}
+
+	return meta
+}
+
+// testTokenLookupHandler returns a minimal http.HandlerFunc that satisfies the
+// token setup calls (lookup-self + create) made by setClient().
+func testTokenLookupHandler(next func(w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/v1/auth/token/lookup-self":
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]interface{}{
+					"id": "test-token", "policies": []string{"root"},
+				},
+			})
+		case "/v1/auth/token/create":
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"auth": map[string]interface{}{
+					"client_token": "child-test-token", "policies": []string{"root"},
+					"lease_duration": 3600, "renewable": true,
+				},
+			})
+		default:
+			next(w, r)
+		}
+	}
+}
+
+// TestTerraformCloudSecretBackendRead_configNotFound verifies that when
+// /config returns 404 with no data, ParseRawResponseAndCloseBody returns
+// (nil, nil) and the existing secret == nil check removes the resource from
+// state cleanly with no error diagnostics.
+func TestTerraformCloudSecretBackendRead_configNotFound(t *testing.T) {
+	const backend = "terraform"
+
+	meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/sys/mounts/" + backend:
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"type": "terraform", "description": "", "options": map[string]interface{}{},
+				"config": map[string]interface{}{"default_lease_ttl": 0, "max_lease_ttl": 0, "force_no_cache": false},
+			})
+		case "/v1/" + backend + "/config":
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"errors": []string{"No secret engine mount at " + backend + "/"},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"errors": []string{"not found"}})
+		}
+	}))
+
+	rsc := terraformCloudSecretBackendResource()
+	d := rsc.TestResourceData()
+	d.SetId(backend)
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		t.Fatal(err)
+	}
+
+	diags := terraformCloudSecretBackendRead(context.Background(), d, meta)
+	if diags.HasError() {
+		t.Fatalf("expected no error on 404 config read, got: %v", diags)
+	}
+	if d.Id() != "" {
+		t.Errorf("expected resource removed from state, got id=%q", d.Id())
+	}
+}
+
+// TestTerraformCloudSecretBackendRead_configNon404Error verifies that a
+// non-404 error on the /config read surfaces as a diagnostic error.
+func TestTerraformCloudSecretBackendRead_configNon404Error(t *testing.T) {
+	const backend = "terraform"
+
+	meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/sys/mounts/" + backend:
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"type": "terraform", "description": "", "options": map[string]interface{}{},
+				"config": map[string]interface{}{"default_lease_ttl": 0, "max_lease_ttl": 0, "force_no_cache": false},
+			})
+		case "/v1/" + backend + "/config":
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"errors": []string{"internal server error"},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"errors": []string{"not found"}})
+		}
+	}))
+
+	rsc := terraformCloudSecretBackendResource()
+	d := rsc.TestResourceData()
+	d.SetId(backend)
+	if err := d.Set(consts.FieldBackend, backend); err != nil {
+		t.Fatal(err)
+	}
+
+	diags := terraformCloudSecretBackendRead(context.Background(), d, meta)
+	if !diags.HasError() {
+		t.Fatal("expected a diagnostic error on 500 config read, got none")
+	}
+}
+
+// TestTerraformCloudSecretBackendDelete_mountIs404 verifies that a 404 on
+// unmount (mount already deleted out-of-band) removes the resource from state
+// cleanly with no error diagnostics.
+func TestTerraformCloudSecretBackendDelete_mountIs404(t *testing.T) {
+	const backend = "terraform"
+
+	meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/sys/mounts/"+backend && r.Method == http.MethodDelete {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"errors": []string{fmt.Sprintf("No secret engine mount at %s/", backend)},
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{"errors": []string{"not found"}})
+	}))
+
+	rsc := terraformCloudSecretBackendResource()
+	d := rsc.TestResourceData()
+	d.SetId(backend)
+
+	diags := terraformCloudSecretBackendDelete(context.Background(), d, meta)
+	if diags.HasError() {
+		t.Fatalf("expected no error on 404 unmount, got: %v", diags)
+	}
+	if d.Id() != "" {
+		t.Errorf("expected resource removed from state, got id=%q", d.Id())
+	}
+}
+
+// TestTerraformCloudSecretBackendDelete_mountNon404Error verifies that a
+// non-404 error on unmount surfaces as a diagnostic error.
+func TestTerraformCloudSecretBackendDelete_mountNon404Error(t *testing.T) {
+	const backend = "terraform"
+
+	meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/sys/mounts/"+backend && r.Method == http.MethodDelete {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"errors": []string{"internal server error"},
+			})
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{"errors": []string{"not found"}})
+	}))
+
+	rsc := terraformCloudSecretBackendResource()
+	d := rsc.TestResourceData()
+	d.SetId(backend)
+
+	diags := terraformCloudSecretBackendDelete(context.Background(), d, meta)
+	if !diags.HasError() {
+		t.Fatal("expected a diagnostic error on 500 unmount, got none")
+	}
 }
