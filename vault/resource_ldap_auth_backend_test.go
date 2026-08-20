@@ -208,6 +208,67 @@ func TestLDAPAuthBackend_automatedRotation(t *testing.T) {
 	})
 }
 
+func TestLDAPAuthBackend_schema(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-schema")
+
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			if !ldapAuthBackendSupportsSchema(testProvider.Meta()) {
+				t.Skipf("schema requires Vault 2.0.0+, or Vault Enterprise %s+", consts.VaultVersion11916)
+			}
+		},
+		CheckDestroy: testLDAPAuthBackendDestroy,
+
+		Steps: []resource.TestStep{
+			{
+				// schema is omitted, so Vault should compute the default
+				Config: testLDAPAuthBackendConfig_schema(path, ""),
+				Check: resource.ComposeTestCheckFunc(
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "openldap"),
+				),
+			},
+			{
+				// Vault itself accepts and stores any value here, so the error
+				// must come from the provider's own validation. Kept ahead of the
+				// remaining steps so that the post-test destroy runs against a
+				// config that still validates.
+				Config:      testLDAPAuthBackendConfig_schema(path, "invalid"),
+				ExpectError: regexp.MustCompile(`expected schema to be one of`),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_schema(path, "ad"),
+				Check: resource.ComposeTestCheckFunc(
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "ad"),
+				),
+			},
+			{
+				// Vault trims and lower cases the schema, the StateFunc on the
+				// field must do the same so that the step leaves an empty plan
+				Config: testLDAPAuthBackendConfig_schema(path, "AD"),
+				Check: resource.ComposeTestCheckFunc(
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "ad"),
+				),
+			},
+			{
+				Config: testLDAPAuthBackendConfig_schema(path, "openldap"),
+				Check: resource.ComposeTestCheckFunc(
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "openldap"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldBindPass, consts.FieldDisableRemount),
+		},
+	})
+}
+
 func TestLDAPAuthBackend_bindpassWO(t *testing.T) {
 	t.Parallel()
 	path := acctest.RandomWithPrefix("tf-test-ldap-bindpass-wo")
@@ -635,6 +696,10 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 			attrs["enable_samaccountname_login"] = "enable_samaccountname_login"
 		}
 
+		if ldapAuthBackendSupportsSchema(testProvider.Meta()) {
+			attrs["schema"] = "schema"
+		}
+
 		if provider.IsEnterpriseSupported(testProvider.Meta()) && provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
 			attrs["rotation_schedule"] = "rotation_schedule"
 			attrs["rotation_window"] = "rotation_window"
@@ -732,6 +797,31 @@ resource "vault_ldap_auth_backend" "test" {
 	# are intentionally omitted to test that Vault returns default/computed values
 }
 `, path)
+}
+
+// testLDAPAuthBackendConfig_schema renders a minimal config exercising the
+// `schema` field. An empty ldapSchema omits the field entirely so that the
+// computed Vault default can be asserted.
+func testLDAPAuthBackendConfig_schema(path, ldapSchema string) string {
+	schemaConfig := ""
+	if ldapSchema != "" {
+		schemaConfig = fmt.Sprintf(`schema = %q`, ldapSchema)
+	}
+
+	return fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+    path        = "%s"
+    url         = "ldaps://example.org"
+    binddn      = "cn=example.com"
+    bindpass    = "supersecurepassword"
+    userdn      = "ou=Users,dc=example,dc=com"
+    userattr    = "uid"
+    groupdn     = "ou=Groups,dc=example,dc=com"
+    groupattr   = "cn"
+    discoverdn  = false
+    %s
+}
+`, path, schemaConfig)
 }
 
 func testLDAPAuthBackendConfig_tls(path, use_token_groups string, local string) string {
