@@ -151,6 +151,10 @@ var (
 			Resource:      UpdateSchemaResource(kvSecretV2DataSource()),
 			PathInventory: []string{"/secret/data/{path}/?version={version}}"},
 		},
+		"vault_kv_secret_v2_metadata": {
+			Resource:      UpdateSchemaResource(kvSecretV2MetadataDataSource()),
+			PathInventory: []string{"/secret/data/{path}/?version={version}}"},
+		},
 		"vault_kv_secrets_list": {
 			Resource:      UpdateSchemaResource(kvSecretListDataSource()),
 			PathInventory: []string{"/secret/{path}/?list=true"},
