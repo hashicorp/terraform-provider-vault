@@ -2,7 +2,7 @@
 
 IMPROVEMENTS:
 
-* `vault_ldap_auth_backend`: emit a `diag.Warning` diagnostic when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
+* `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
 
 BUG FIXES:
 
