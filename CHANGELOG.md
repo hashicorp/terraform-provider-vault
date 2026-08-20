@@ -1,5 +1,9 @@
 ## 5.12.0 (Unreleased)
 
+FEATURES:
+
+* `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
+
 BUG FIXES:
 
 * `vault_terraform_cloud_secret_backend`: Fix logic gap in `Read` where execution would fall through to a stray `GET <backend>/config` call after `readMount` detected the mount was deleted out-of-band and cleared the resource ID. Add `util.Is404` guard to `Delete` so that `terraform destroy` succeeds cleanly when the mount has already been removed from Vault. ([#3006](https://github.com/hashicorp/terraform-provider-vault/pull/3006))
