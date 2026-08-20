@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
@@ -83,6 +84,17 @@ func azureAuthBackendConfigResource() *schema.Resource {
 				Required:    true,
 				Description: "The configured URL for the application registered in Azure Active Directory.",
 			},
+			consts.FieldAuthType: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The authentication method used by Vault to access Azure APIs. The following values are supported: root_creds, plugin_wif, msi, aks_wi. plugin_wif requires Vault Enterprise.",
+				ValidateFunc: validation.StringInSlice([]string{
+					consts.AuthTypeRootCreds,
+					consts.AuthTypePluginWIF,
+					consts.AuthTypeMSI,
+					consts.AuthTypeAKSWI,
+				}, false),
+			},
 			consts.FieldEnvironment: {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -148,6 +160,16 @@ func azureAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta int
 		consts.FieldClientID:    clientId,
 		consts.FieldResource:    resource,
 		consts.FieldEnvironment: environment,
+	}
+
+	if authType, ok := d.GetOk(consts.FieldAuthType); ok && (d.IsNewResource() || d.HasChange(consts.FieldAuthType)) {
+		if !provider.IsAPISupported(meta, provider.VaultVersion220) {
+			return diag.Errorf("%s is only supported in Vault 2.2.0 and later", consts.FieldAuthType)
+		}
+		if authType.(string) == consts.AuthTypePluginWIF && !provider.IsEnterpriseSupported(meta) {
+			return diag.Errorf("%s %q is only supported in Vault Enterprise", consts.FieldAuthType, consts.AuthTypePluginWIF)
+		}
+		data[consts.FieldAuthType] = authType
 	}
 
 	// Handle client_secret: legacy field or write-only field
@@ -254,6 +276,14 @@ func azureAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inte
 	for _, k := range fields {
 		if v, ok := secret.Data[k]; ok {
 			if err := d.Set(k, v); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		if val, ok := secret.Data[consts.FieldAuthType]; ok {
+			if err := d.Set(consts.FieldAuthType, val); err != nil {
 				return diag.FromErr(err)
 			}
 		}
