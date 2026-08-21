@@ -8,34 +8,15 @@ description: |-
 
 # vault\_oauth\_resource\_server\_config\_profile
 
-~>  **Preview feature:** This feature is currently available as a preview and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
-
-
 Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These profiles define how Vault validates JWT tokens from OAuth 2.0 resource servers, enabling JWT-based authentication for API requests.
 
-~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.1 or later.
+~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.0.1 or later.
 
 ### Relationship to Agent Registry 
 
 These two features work together. You may want to refer to [Agent Registry Terraform Resource](agent_registration.html.md).
 
 ## Example Usage
-
-### Enable the Feature
-
-```hcl
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
-resource "vault_oauth_resource_server_config_profile" "example" {
-  depends_on   = [vault_activation_flags.oauth]
-  profile_name = "example-profile"
-  issuer_id    = "https://example.com"
-  use_jwks     = true
-  jwks_uri     = "https://example.com/.well-known/jwks.json"
-}
-```
 
 ### JWKS-Based Profile
 
@@ -252,7 +233,7 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_reso
 
 * **Clock Skew**: Use `clock_skew_leeway` to handle clock differences between systems. A value of 30-60 seconds is typically sufficient for most environments.
 
-* **Enterprise Feature**: OAuth Resource Server Configuration is only available in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
+* **Enterprise Feature**: OAuth Resource Server Configuration is available only in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
 
 * **Version Requirement**: This resource requires Vault 2.0.1 or later.
 
