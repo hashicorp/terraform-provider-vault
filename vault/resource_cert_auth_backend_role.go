@@ -393,65 +393,55 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 	if resp.Data["allowed_names"] != nil {
 		d.Set("allowed_names",
 			schema.NewSet(
-				schema.HashString, resp.Data["allowed_names"].([]interface{}),
-			))
+				schema.HashString, resp.Data["allowed_names"].([]interface{})))
 	} else {
 		d.Set("allowed_names",
 			schema.NewSet(
-				schema.HashString, []interface{}{},
-			))
+				schema.HashString, []interface{}{}))
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
 	if resp.Data["allowed_dns_sans"] != nil {
 		d.Set("allowed_dns_sans",
 			schema.NewSet(
-				schema.HashString, resp.Data["allowed_dns_sans"].([]interface{}),
-			))
+				schema.HashString, resp.Data["allowed_dns_sans"].([]interface{})))
 	} else {
 		d.Set("allowed_dns_sans",
 			schema.NewSet(
-				schema.HashString, []interface{}{},
-			))
+				schema.HashString, []interface{}{}))
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
 	if resp.Data["allowed_email_sans"] != nil {
 		d.Set("allowed_email_sans",
 			schema.NewSet(
-				schema.HashString, resp.Data["allowed_email_sans"].([]interface{}),
-			))
+				schema.HashString, resp.Data["allowed_email_sans"].([]interface{})))
 	} else {
 		d.Set("allowed_email_sans",
 			schema.NewSet(
-				schema.HashString, []interface{}{},
-			))
+				schema.HashString, []interface{}{}))
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
 	if resp.Data["allowed_uri_sans"] != nil {
 		d.Set("allowed_uri_sans",
 			schema.NewSet(
-				schema.HashString, resp.Data["allowed_uri_sans"].([]interface{}),
-			))
+				schema.HashString, resp.Data["allowed_uri_sans"].([]interface{})))
 	} else {
 		d.Set("allowed_uri_sans",
 			schema.NewSet(
-				schema.HashString, []interface{}{},
-			))
+				schema.HashString, []interface{}{}))
 	}
 
 	// Vault sometimes returns these as null instead of an empty list.
 	if resp.Data["required_extensions"] != nil {
 		d.Set("required_extensions",
 			schema.NewSet(
-				schema.HashString, resp.Data["required_extensions"].([]interface{}),
-			))
+				schema.HashString, resp.Data["required_extensions"].([]interface{})))
 	} else {
 		d.Set("required_extensions",
 			schema.NewSet(
-				schema.HashString, []interface{}{},
-			))
+				schema.HashString, []interface{}{}))
 	}
 
 	if err := d.Set("allowed_organizational_units", resp.Data["allowed_organizational_units"]); err != nil {
