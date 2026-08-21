@@ -77,6 +77,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Sensitive:     true,
 			ConflictsWith: []string{consts.FieldCertificate},
 			AtLeastOneOf:  []string{consts.FieldCertificate, consts.FieldCertificateWO},
+			RequiredWith: []string{consts.FieldCertificateWOVersion},
 		},
 		consts.FieldCertificateWOVersion: {
 			Type:         schema.TypeInt,
