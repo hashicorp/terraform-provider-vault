@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -17,7 +18,6 @@ import (
 
 var (
 	certAuthStringFields = []string{
-		consts.FieldCertificate,
 		consts.FieldDisplayName,
 		consts.FieldOCSPCACertificates,
 	}
@@ -65,9 +65,24 @@ func certAuthBackendRoleResource() *schema.Resource {
 			ForceNew: true,
 		},
 		consts.FieldCertificate: {
-			Type:     schema.TypeString,
-			Required: true,
-			ForceNew: true,
+			Type:          schema.TypeString,
+			Optional:      true,
+			ConflictsWith: []string{consts.FieldCertificateWO},
+			AtLeastOneOf:  []string{consts.FieldCertificate, consts.FieldCertificateWO},
+		},
+		consts.FieldCertificateWO: {
+			Type:          schema.TypeString,
+			Optional:      true,
+			WriteOnly:     true,
+			Sensitive:     true,
+			ConflictsWith: []string{consts.FieldCertificate},
+			AtLeastOneOf:  []string{consts.FieldCertificate, consts.FieldCertificateWO},
+			RequiredWith:  []string{consts.FieldCertificateWOVersion},
+		},
+		consts.FieldCertificateWOVersion: {
+			Type:         schema.TypeInt,
+			Optional:     true,
+			RequiredWith: []string{consts.FieldCertificateWO},
 		},
 		consts.FieldAllowedNames: {
 			Type: schema.TypeSet,
@@ -224,6 +239,14 @@ func certAuthResourceWrite(ctx context.Context, d *schema.ResourceData, meta int
 	data := map[string]interface{}{}
 	updateTokenFields(d, data, true)
 
+	if v, ok := d.GetOk(consts.FieldCertificate); ok {
+		data[consts.FieldCertificate] = v.(string)
+	} else {
+		if tokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCertificateWO)); !tokenWo.IsNull() {
+			data[consts.FieldCertificate] = tokenWo.AsString()
+		}
+	}
+
 	for _, k := range certAuthStringFields {
 		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
 			continue
@@ -279,6 +302,14 @@ func certAuthResourceUpdate(ctx context.Context, d *schema.ResourceData, meta in
 
 	data := map[string]interface{}{}
 	updateTokenFields(d, data, false)
+
+	if v, ok := d.GetOk(consts.FieldCertificate); ok {
+		data[consts.FieldCertificate] = v.(string)
+	} else if d.HasChange(consts.FieldCertificateWOVersion) {
+		if tokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldCertificateWO)); !tokenWo.IsNull() {
+			data[consts.FieldCertificate] = tokenWo.AsString()
+		}
+	}
 
 	for _, k := range certAuthStringFields {
 		if certAuthVault113Fields[k] && !provider.IsAPISupported(meta, provider.VaultVersion113) {
@@ -354,7 +385,9 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 		return diag.FromErr(err)
 	}
 
-	d.Set("certificate", resp.Data["certificate"])
+	if _, usingWO := d.GetOk(consts.FieldCertificateWOVersion); !usingWO {
+		d.Set(consts.FieldCertificate, resp.Data[consts.FieldCertificate])
+	}
 	d.Set("display_name", resp.Data["display_name"])
 
 	// Vault sometimes returns these as null instead of an empty list.

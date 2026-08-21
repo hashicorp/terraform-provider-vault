@@ -178,7 +178,8 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 					// These fields are only available from Vault 1.16+
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					if meta.IsAPISupported(provider.VaultVersion116) {
-						checks = append(checks,
+						checks = append(
+							checks,
 							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPMaxRetries, "4"),
 							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPThisUpdateMaxAge, "0"),
 						)
@@ -205,7 +206,8 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 					// These fields are only available from Vault 1.16+
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					if meta.IsAPISupported(provider.VaultVersion116) {
-						checks = append(checks,
+						checks = append(
+							checks,
 							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPMaxRetries, "5"),
 							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPThisUpdateMaxAge, "7200"),
 						)
@@ -226,7 +228,8 @@ func TestCertAuthBackend_OCSP(t *testing.T) {
 					// These fields are only available from Vault 1.16+
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					if meta.IsAPISupported(provider.VaultVersion116) {
-						checks = append(checks,
+						checks = append(
+							checks,
 							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPMaxRetries, "10"),
 							resource.TestCheckResourceAttr(resourceName, consts.FieldOCSPThisUpdateMaxAge, "3600"),
 						)
@@ -260,6 +263,44 @@ func TestCertAuthBackend_OCSP_Negative(t *testing.T) {
 				// Negative ocsp_this_update_max_age should also be rejected by Vault API
 				Config:      testCertAuthBackendConfig_OCSP_negative_fields(backend, name, 5, -100),
 				ExpectError: regexp.MustCompile("cannot provide negative value"),
+			},
+		},
+	})
+}
+
+func TestAccCertAuthBackend_WriteOnly(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-cert-auth")
+	name := acctest.RandomWithPrefix("tf-test-cert-name")
+	resourceName := "vault_cert_auth_backend_role.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCertAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testCertAuthBackendConfig_writeOnly(backend, name, testCertificate, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificate),
+
+					// write-only field not be stored in state
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificateWO),
+
+					// version counter is stored in state
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCertificateWOVersion, "1"),
+				),
+			},
+			{
+				Config: testCertAuthBackendConfig_writeOnly(backend, name, testCertificate, 2),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificateWO),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCertificateWOVersion, "2"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificate),
+				),
 			},
 		},
 	})
@@ -381,7 +422,8 @@ EOF
 }
 
 func testCertAuthBackendConfig_unset(backend, name, certificate string, allowedNames []string) string {
-	config := fmt.Sprintf(`
+	config := fmt.Sprintf(
+		`
 
 resource "vault_auth_backend" "cert" {
     path = "%s"
@@ -400,6 +442,22 @@ __CERTIFICATE__
 	)
 
 	return config
+}
+
+func testCertAuthBackendConfig_writeOnly(backend, name, certificate string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "cert" {
+    path = "%s"
+    type = "cert"
+}
+
+resource "vault_cert_auth_backend_role" "test" {
+    name                   = "%s"
+	certificate_wo		   = %q
+	certificate_wo_version = %d
+    backend                = vault_auth_backend.cert.path
+}
+`, backend, name, certificate, version)
 }
 
 func testCertAuthBackendConfig_OCSP_default(backend, name string) string {

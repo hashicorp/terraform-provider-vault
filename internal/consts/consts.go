@@ -925,6 +925,8 @@ const (
 	FieldAddGroupAliases            = "add_group_aliases"
 	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
+	FieldCertificateWO              = "certificate_wo"
+	FieldCertificateWOVersion       = "certificate_wo_version"
 
 	/*
 		common environment variables
