@@ -1,0 +1,310 @@
+// Copyright IBM Corp. 2016, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package pki_external_ca
+
+import (
+	"context"
+	"fmt"
+	"regexp"
+
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+)
+
+const gcpAffix = "config/dns/google-cloud-dns"
+
+var gcpIDRe = regexp.MustCompile(`^([^/]+)/` + gcpAffix + `/([^/]+)$`)
+
+var _ resource.ResourceWithConfigure = &PKIExternalCADNSProviderGCPResource{}
+
+func NewPKIExternalCADNSProviderGCPResource() resource.Resource {
+	return &PKIExternalCADNSProviderGCPResource{}
+}
+
+type PKIExternalCADNSProviderGCPResource struct {
+	base.ResourceWithConfigure
+	base.WithImportByID
+}
+
+type PKIExternalCADNSProviderGCPModel struct {
+	base.BaseModel
+
+	Mount       types.String `tfsdk:"mount"`
+	Name        types.String `tfsdk:"name"`
+	Identifiers types.List   `tfsdk:"identifiers"`
+	TTL         types.String `tfsdk:"ttl"`
+
+	// Computed
+	CreationDate    types.String `tfsdk:"creation_date"`
+	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
+
+	// Provider-specific
+	Credentials               types.String `tfsdk:"credentials"`
+	Project                   types.String `tfsdk:"project"`
+	ZoneName                  types.String `tfsdk:"zone_name"`
+	ImpersonateServiceAccount types.String `tfsdk:"impersonate_service_account"`
+}
+
+type PKIExternalCADNSProviderGCPAPIModel struct {
+	Name                      string   `json:"name" mapstructure:"name"`
+	Identifiers               []string `json:"identifiers" mapstructure:"identifiers"`
+	TTL                       string   `json:"ttl" mapstructure:"ttl"`
+	CreationDate              string   `json:"creation_date" mapstructure:"creation_date"`
+	LastUpdatedDate           string   `json:"last_updated_date" mapstructure:"last_updated_date"`
+	Project                   string   `json:"project" mapstructure:"project"`
+	ZoneName                  string   `json:"zone_name" mapstructure:"zone_name"`
+	ImpersonateServiceAccount string   `json:"impersonate_service_account" mapstructure:"impersonate_service_account"`
+}
+
+func (r *PKIExternalCADNSProviderGCPResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_dns_provider_gcp"
+}
+
+func (r *PKIExternalCADNSProviderGCPResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a Google Cloud DNS provider configuration for PKI External CA DNS-01 ACME challenges.",
+		Attributes: map[string]schema.Attribute{
+			consts.FieldMount: schema.StringAttribute{
+				MarkdownDescription: "The path where the PKI External CA secret backend is mounted.",
+				Required:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
+			consts.FieldName: schema.StringAttribute{
+				MarkdownDescription: "Name of the DNS provider configuration.",
+				Required:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+			},
+			consts.FieldIdentifiers: schema.ListAttribute{
+				MarkdownDescription: "List of domain identifiers this provider handles. Supports wildcard patterns with leftmost `*` (e.g. `*.example.com`).",
+				ElementType:         types.StringType,
+				Required:            true,
+			},
+			consts.FieldTTL: schema.StringAttribute{
+				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.",
+				Optional:            true,
+				Computed:            true,
+			},
+			consts.FieldCreationDate: schema.StringAttribute{
+				MarkdownDescription: "The date and time the provider was created.",
+				Computed:            true,
+			},
+			consts.FieldLastUpdatedDate: schema.StringAttribute{
+				MarkdownDescription: "The date and time the provider was last updated.",
+				Computed:            true,
+			},
+			consts.FieldCredentials: schema.StringAttribute{
+				MarkdownDescription: "GCP service account credentials as JSON content. Write-only — not returned by Vault.",
+				Optional:            true,
+				Sensitive:           true,
+			},
+			consts.FieldProject: schema.StringAttribute{
+				MarkdownDescription: "GCP project name.",
+				Optional:            true,
+			},
+			consts.FieldZoneName: schema.StringAttribute{
+				MarkdownDescription: "GCP Cloud DNS zone name.",
+				Optional:            true,
+			},
+			consts.FieldImpersonateServiceAccount: schema.StringAttribute{
+				MarkdownDescription: "Service account email to impersonate.",
+				Optional:            true,
+			},
+		},
+	}
+	base.MustAddBaseSchema(&resp.Schema)
+}
+
+func (r *PKIExternalCADNSProviderGCPResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data PKIExternalCADNSProviderGCPModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := checkVaultVersion(r.Meta()); err != nil {
+		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	vaultPath := fmt.Sprintf("%s/%s/%s", data.Mount.ValueString(), gcpAffix, data.Name.ValueString())
+
+	vaultReq, diags := buildGCPRequest(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	createResp, err := cli.Logical().WriteWithContext(ctx, vaultPath, vaultReq)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+
+	resp.Diagnostics.Append(handleGCPResponse(ctx, &data, createResp)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *PKIExternalCADNSProviderGCPResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data PKIExternalCADNSProviderGCPModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	vaultPath := fmt.Sprintf("%s/%s/%s", data.Mount.ValueString(), gcpAffix, data.Name.ValueString())
+
+	readResp, err := cli.Logical().ReadWithContext(ctx, vaultPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+		return
+	}
+	if readResp == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	resp.Diagnostics.Append(handleGCPResponse(ctx, &data, readResp)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *PKIExternalCADNSProviderGCPResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data PKIExternalCADNSProviderGCPModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	vaultPath := fmt.Sprintf("%s/%s/%s", data.Mount.ValueString(), gcpAffix, data.Name.ValueString())
+
+	vaultReq, diags := buildGCPRequest(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	updateResp, err := cli.Logical().WriteWithContext(ctx, vaultPath, vaultReq)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
+		return
+	}
+
+	resp.Diagnostics.Append(handleGCPResponse(ctx, &data, updateResp)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *PKIExternalCADNSProviderGCPResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data PKIExternalCADNSProviderGCPModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	vaultPath := fmt.Sprintf("%s/%s/%s", data.Mount.ValueString(), gcpAffix, data.Name.ValueString())
+
+	if _, err := cli.Logical().DeleteWithContext(ctx, vaultPath); err != nil {
+		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
+		return
+	}
+}
+
+func (r *PKIExternalCADNSProviderGCPResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	matches := gcpIDRe.FindStringSubmatch(req.ID)
+	if len(matches) != 3 {
+		resp.Diagnostics.AddError(
+			"Invalid import ID",
+			fmt.Sprintf("Import ID must be in the format '<mount>/%s/<name>', got: %s", gcpAffix, req.ID),
+		)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+}
+
+func buildGCPRequest(ctx context.Context, data *PKIExternalCADNSProviderGCPModel) (map[string]any, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	req := map[string]any{}
+
+	if !data.TTL.IsNull() && !data.TTL.IsUnknown() {
+		req[consts.FieldTTL] = data.TTL.ValueString()
+	}
+
+	var ids []string
+	diags.Append(data.Identifiers.ElementsAs(ctx, &ids, false)...)
+	if !diags.HasError() {
+		req[consts.FieldIdentifiers] = ids
+	}
+
+	setIfNotEmpty(req, consts.FieldCredentials, data.Credentials.ValueString())
+	setIfNotEmpty(req, consts.FieldProject, data.Project.ValueString())
+	setIfNotEmpty(req, consts.FieldZoneName, data.ZoneName.ValueString())
+	setIfNotEmpty(req, consts.FieldImpersonateServiceAccount, data.ImpersonateServiceAccount.ValueString())
+
+	return req, diags
+}
+
+func handleGCPResponse(ctx context.Context, data *PKIExternalCADNSProviderGCPModel, readResp *api.Secret) (rd diag.Diagnostics) {
+	var apiModel PKIExternalCADNSProviderGCPAPIModel
+	if err := model.ToAPIModel(readResp.Data, &apiModel); err != nil {
+		rd.AddError("Unable to translate Vault response data", err.Error())
+		return
+	}
+
+	data.CreationDate = types.StringValue(apiModel.CreationDate)
+	data.LastUpdatedDate = types.StringValue(apiModel.LastUpdatedDate)
+
+	if apiModel.TTL != "" {
+		data.TTL = types.StringValue(apiModel.TTL)
+	}
+
+	if apiModel.Identifiers != nil {
+		ids, diags := types.ListValueFrom(ctx, types.StringType, apiModel.Identifiers)
+		rd.Append(diags...)
+		if !rd.HasError() {
+			data.Identifiers = ids
+		}
+	}
+
+	setStringIfNotEmpty(&data.Project, apiModel.Project)
+	setStringIfNotEmpty(&data.ZoneName, apiModel.ZoneName)
+	setStringIfNotEmpty(&data.ImpersonateServiceAccount, apiModel.ImpersonateServiceAccount)
+	// credentials intentionally not read back — write-only
+
+	return rd
+}

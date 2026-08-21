@@ -57,6 +57,8 @@ type PKIExternalCARoleModel struct {
 	Mount                   types.String `tfsdk:"mount"`
 	Name                    types.String `tfsdk:"name"`
 	AcmeAccountName         types.String `tfsdk:"acme_account_name"`
+	DnsProviderName         types.String `tfsdk:"dns_provider_name"`
+	DnsProviderType         types.String `tfsdk:"dns_provider_type"`
 	AllowedDomains          types.List   `tfsdk:"allowed_domains"`
 	AllowedDomainOptions    types.List   `tfsdk:"allowed_domain_options"`
 	AllowedChallengeTypes   types.List   `tfsdk:"allowed_challenge_types"`
@@ -71,6 +73,8 @@ type PKIExternalCARoleModel struct {
 type PKIExternalCARoleAPIModel struct {
 	Name                    string   `json:"name" mapstructure:"name"`
 	AcmeAccountName         string   `json:"acme_account_name" mapstructure:"acme_account_name"`
+	DnsProviderName         string   `json:"dns_provider_name" mapstructure:"dns_provider_name"`
+	DnsProviderType         string   `json:"dns_provider_type" mapstructure:"dns_provider_type"`
 	AllowedDomains          []string `json:"allowed_domains" mapstructure:"allowed_domains"`
 	AllowedDomainOptions    []string `json:"allowed_domain_options" mapstructure:"allowed_domain_options"`
 	AllowedChallengeTypes   []string `json:"allowed_challenge_types" mapstructure:"allowed_challenge_types"`
@@ -100,6 +104,21 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 			"acme_account_name": schema.StringAttribute{
 				MarkdownDescription: "The ACME account to use when validating certificates.",
 				Required:            true,
+			},
+			"dns_provider_name": schema.StringAttribute{
+				MarkdownDescription: "The name of the DNS provider configuration to use for DNS-01 challenges.",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString(""),
+			},
+			"dns_provider_type": schema.StringAttribute{
+				MarkdownDescription: "The type of the DNS provider. Valid values are: `aws_route53`, `rfc2136`, `gcp`, `azure`.",
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString(""),
+				Validators: []validator.String{
+					stringvalidator.OneOf("", "aws_route53", "rfc2136", "gcp", "azure"),
+				},
 			},
 			"allowed_domains": schema.ListAttribute{
 				MarkdownDescription: "A list of domains the role will accept certificates for. May contain templates, as with ACL Path Templating.",
@@ -283,6 +302,8 @@ func handleRoleResponseData(ctx context.Context, data *PKIExternalCARoleModel, r
 
 	// Map values back to Terraform model
 	data.AcmeAccountName = types.StringValue(apiModel.AcmeAccountName)
+	data.DnsProviderName = types.StringValue(apiModel.DnsProviderName)
+	data.DnsProviderType = types.StringValue(apiModel.DnsProviderType)
 	data.CsrGenerateKeyType = types.StringValue(apiModel.CsrGenerateKeyType)
 	data.CsrIdentifierPopulation = types.StringValue(apiModel.CsrIdentifierPopulation)
 	data.CreationDate = types.StringValue(apiModel.CreationDate)
@@ -326,6 +347,8 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 		"acme_account_name":         data.AcmeAccountName.ValueString(),
 		"csr_generate_key_type":     data.CsrGenerateKeyType.ValueString(),
 		"csr_identifier_population": data.CsrIdentifierPopulation.ValueString(),
+		"dns_provider_name":         data.DnsProviderName.ValueString(),
+		"dns_provider_type":         data.DnsProviderType.ValueString(),
 	}
 
 	// Convert allowed_domains list to string slice
