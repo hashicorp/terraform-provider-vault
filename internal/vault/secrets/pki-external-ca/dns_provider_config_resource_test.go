@@ -120,8 +120,15 @@ func TestAccPKIExternalCADNSProviderConfig_awsRoute53(t *testing.T) {
 }
 
 // testAccPKIDNSProviderImportStateIdFunc builds the import ID in the form
-// <mount>/config/dns-provider/<name>, matching the dnsProviderAffix constant
-// in dns_provider_config_resource.go.
+// <mount>/config/dns/<subpath>/<name>, matching the real Vault path structure.
+// The subpath is derived from the type attribute stored in state.
+var dnsProviderTypeToSubpath = map[string]string{
+	"aws_route53": "aws-route53",
+	"rfc2136":     "rfc2136",
+	"gcp":         "google-cloud-dns",
+	"azure":       "azure-dns",
+}
+
 func testAccPKIDNSProviderImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -129,9 +136,16 @@ func testAccPKIDNSProviderImportStateIdFunc(resourceName string) resource.Import
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
 
+		providerType := rs.Primary.Attributes["type"]
+		subpath, ok := dnsProviderTypeToSubpath[providerType]
+		if !ok {
+			return "", fmt.Errorf("unknown dns provider type %q", providerType)
+		}
+
 		return fmt.Sprintf(
-			"%s/config/dns-provider/%s",
+			"%s/config/dns/%s/%s",
 			rs.Primary.Attributes[consts.FieldMount],
+			subpath,
 			rs.Primary.Attributes[consts.FieldName],
 		), nil
 	}

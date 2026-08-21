@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -27,9 +26,37 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 )
 
-const dnsProviderAffix = "config/dns-provider"
+// dnsProviderSubpath maps the user-facing type value to the Vault URL subpath.
+// Verified against: vault path-help <mount>/ on Vault Enterprise v2.2.0-beta1+ent
+var dnsProviderSubpath = map[string]string{
+	"aws_route53": "aws-route53",
+	"rfc2136":     "rfc2136",
+	"gcp":         "google-cloud-dns",
+	"azure":       "azure-dns",
+}
 
-var dnsProviderIDRe = regexp.MustCompile(`^([^/]+)/` + dnsProviderAffix + `/([^/]+)$`)
+// dnsProviderPath builds the Vault API path for the given mount, provider type,
+// and provider name. e.g. "mymount/config/dns/aws-route53/myprovider"
+func dnsProviderPath(mount, providerType, name string) string {
+	return fmt.Sprintf("%s/config/dns/%s/%s", mount, dnsProviderSubpath[providerType], name)
+}
+
+// dnsProviderIDRe parses an import ID of the form:
+//
+//	<mount>/config/dns/<subpath>/<name>
+//
+// Capture groups: 1=mount, 2=subpath (e.g. "aws-route53"), 3=name
+var dnsProviderIDRe = regexp.MustCompile(`^([^/]+)/config/dns/([^/]+)/([^/]+)$`)
+
+// subpathToType is the reverse of dnsProviderSubpath — used during import to
+// restore the user-facing type value from the URL subpath.
+var subpathToType = func() map[string]string {
+	m := make(map[string]string, len(dnsProviderSubpath))
+	for k, v := range dnsProviderSubpath {
+		m[v] = k
+	}
+	return m
+}()
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
 var _ resource.ResourceWithConfigure = &PKIExternalCADNSProviderConfigResource{}
@@ -49,22 +76,23 @@ type PKIExternalCADNSProviderConfigResource struct {
 type PKIExternalCADNSProviderConfigModel struct {
 	base.BaseModel
 
-	Mount      types.String `tfsdk:"mount"`
-	Name       types.String `tfsdk:"name"`
-	Type       types.String `tfsdk:"type"`
-	Identifiers types.List  `tfsdk:"identifiers"`
-	TTL        types.String `tfsdk:"ttl"`
+	Mount       types.String `tfsdk:"mount"`
+	Name        types.String `tfsdk:"name"`
+	Type        types.String `tfsdk:"type"`
+	Identifiers types.List   `tfsdk:"identifiers"`
+	TTL         types.String `tfsdk:"ttl"`
 
 	// Computed
 	CreationDate    types.String `tfsdk:"creation_date"`
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// AWS Route53 fields
-	AccessKeyId   types.String `tfsdk:"access_key_id"`
-	Region        types.String `tfsdk:"region"`
-	HostedZoneId  types.String `tfsdk:"hosted_zone_id"`
-	ExternalId    types.String `tfsdk:"external_id"`
-	AssumeRoleArn types.String `tfsdk:"assume_role_arn"`
+	AccessKeyId     types.String `tfsdk:"access_key_id"`
+	SecretAccessKey types.String `tfsdk:"secret_access_key"`
+	Region          types.String `tfsdk:"region"`
+	HostedZoneId    types.String `tfsdk:"hosted_zone_id"`
+	ExternalId      types.String `tfsdk:"external_id"`
+	AssumeRoleArn   types.String `tfsdk:"assume_role_arn"`
 
 	// RFC2136 fields
 	Nameserver    types.String `tfsdk:"nameserver"`
@@ -87,7 +115,7 @@ type PKIExternalCADNSProviderConfigModel struct {
 	Environment       types.String `tfsdk:"environment"`
 }
 
-// PKIExternalCADNSProviderConfigAPIModel is the Vault API data model.
+// PKIExternalCADNSProviderConfigAPIModel is the Vault API response data model.
 type PKIExternalCADNSProviderConfigAPIModel struct {
 	Name            string   `json:"name" mapstructure:"name"`
 	Type            string   `json:"type" mapstructure:"type"`
@@ -148,63 +176,67 @@ func (r *PKIExternalCADNSProviderConfigResource) Schema(_ context.Context, _ res
 				},
 			},
 			"identifiers": schema.ListAttribute{
-				MarkdownDescription: "List of domain identifiers this provider handles.",
+				MarkdownDescription: "List of domain identifiers this provider handles. Required. Supports wildcard patterns with leftmost `*` (e.g. `*.example.com`).",
 				ElementType:         types.StringType,
-				Optional:            true,
-				PlanModifiers:       []planmodifier.List{listplanmodifier.RequiresReplace()},
+				Required:            true,
 			},
 			"ttl": schema.StringAttribute{
-				MarkdownDescription: "TTL for DNS records created by this provider (e.g. `60s`, `5m`).",
+				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges (e.g. `60s`, `5m`). Defaults to `1m0s`.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"creation_date": schema.StringAttribute{
-				MarkdownDescription: "The date and time the provider was created in RFC3339 format.",
+				MarkdownDescription: "The date and time the provider was created.",
 				Computed:            true,
 			},
 			"last_updated_date": schema.StringAttribute{
-				MarkdownDescription: "The date and time the provider was last updated in RFC3339 format.",
+				MarkdownDescription: "The date and time the provider was last updated.",
 				Computed:            true,
 			},
 
 			// AWS Route53
 			"access_key_id": schema.StringAttribute{
-				MarkdownDescription: "(AWS Route53) The AWS access key ID.",
+				MarkdownDescription: "(AWS Route53) AWS access key ID.",
 				Optional:            true,
 			},
+			"secret_access_key": schema.StringAttribute{
+				MarkdownDescription: "(AWS Route53) AWS secret access key. Write-only — not returned by Vault.",
+				Optional:            true,
+				Sensitive:           true,
+			},
 			"region": schema.StringAttribute{
-				MarkdownDescription: "(AWS Route53) The AWS region.",
+				MarkdownDescription: "(AWS Route53) AWS region. Defaults to `us-east-1`.",
 				Optional:            true,
 			},
 			"hosted_zone_id": schema.StringAttribute{
-				MarkdownDescription: "(AWS Route53) The Route53 hosted zone ID.",
+				MarkdownDescription: "(AWS Route53) Route53 hosted zone ID.",
 				Optional:            true,
 			},
 			"external_id": schema.StringAttribute{
-				MarkdownDescription: "(AWS Route53) External ID for assume role.",
+				MarkdownDescription: "(AWS Route53) External ID for STS AssumeRole.",
 				Optional:            true,
 			},
 			"assume_role_arn": schema.StringAttribute{
-				MarkdownDescription: "(AWS Route53) ARN of the IAM role to assume.",
+				MarkdownDescription: "(AWS Route53) IAM role ARN to assume for Route53 operations.",
 				Optional:            true,
 			},
 
 			// RFC2136
 			"nameserver": schema.StringAttribute{
-				MarkdownDescription: "(RFC2136) The nameserver address (host:port).",
+				MarkdownDescription: "(RFC2136) DNS server address in `IP:port` format (e.g. `192.168.1.1:53`).",
 				Optional:            true,
 			},
 			"tsig_key_name": schema.StringAttribute{
-				MarkdownDescription: "(RFC2136) TSIG key name.",
+				MarkdownDescription: "(RFC2136) TSIG key name for authenticated DNS updates.",
 				Optional:            true,
 			},
 			"tsig_secret": schema.StringAttribute{
-				MarkdownDescription: "(RFC2136) TSIG secret. Write-only — not returned by Vault.",
+				MarkdownDescription: "(RFC2136) TSIG secret (base64 encoded). Write-only — not returned by Vault.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 			"tsig_algorithm": schema.StringAttribute{
-				MarkdownDescription: "(RFC2136) TSIG algorithm.",
+				MarkdownDescription: "(RFC2136) TSIG algorithm (e.g. `hmac-sha256`, `hmac-sha512`). Defaults to `hmac-sha256`.",
 				Optional:            true,
 			},
 
@@ -215,7 +247,7 @@ func (r *PKIExternalCADNSProviderConfigResource) Schema(_ context.Context, _ res
 				Sensitive:           true,
 			},
 			"project": schema.StringAttribute{
-				MarkdownDescription: "(GCP) GCP project ID.",
+				MarkdownDescription: "(GCP) GCP project name.",
 				Optional:            true,
 			},
 			"zone_name": schema.StringAttribute{
@@ -223,17 +255,17 @@ func (r *PKIExternalCADNSProviderConfigResource) Schema(_ context.Context, _ res
 				Optional:            true,
 			},
 			"impersonate_service_account": schema.StringAttribute{
-				MarkdownDescription: "(GCP) Service account to impersonate.",
+				MarkdownDescription: "(GCP) Service account email to impersonate.",
 				Optional:            true,
 			},
 
 			// Azure
 			"client_id": schema.StringAttribute{
-				MarkdownDescription: "(Azure) Azure client (application) ID.",
+				MarkdownDescription: "(Azure) Azure service principal client ID.",
 				Optional:            true,
 			},
 			"client_secret": schema.StringAttribute{
-				MarkdownDescription: "(Azure) Azure client secret. Write-only — not returned by Vault.",
+				MarkdownDescription: "(Azure) Azure service principal client secret. Write-only — not returned by Vault.",
 				Optional:            true,
 				Sensitive:           true,
 			},
@@ -246,11 +278,11 @@ func (r *PKIExternalCADNSProviderConfigResource) Schema(_ context.Context, _ res
 				Optional:            true,
 			},
 			"resource_group_name": schema.StringAttribute{
-				MarkdownDescription: "(Azure) Azure resource group name containing the DNS zone.",
+				MarkdownDescription: "(Azure) Resource group containing the DNS zone.",
 				Optional:            true,
 			},
 			"environment": schema.StringAttribute{
-				MarkdownDescription: "(Azure) Azure environment. Valid values: `AzurePublic`, `AzureChina`, `AzureGovernment`.",
+				MarkdownDescription: "(Azure) Azure cloud environment. Valid values: `AzurePublic`, `AzureChina`, `AzureGovernment`. Defaults to `AzurePublic`.",
 				Optional:            true,
 			},
 		},
@@ -276,9 +308,7 @@ func (r *PKIExternalCADNSProviderConfigResource) Create(ctx context.Context, req
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", mount, dnsProviderAffix, name)
+	vaultPath := dnsProviderPath(data.Mount.ValueString(), data.Type.ValueString(), data.Name.ValueString())
 
 	vaultRequest, diags := buildDNSProviderVaultRequest(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -286,7 +316,7 @@ func (r *PKIExternalCADNSProviderConfigResource) Create(ctx context.Context, req
 		return
 	}
 
-	createResp, err := cli.Logical().WriteWithContext(ctx, path, vaultRequest)
+	createResp, err := cli.Logical().WriteWithContext(ctx, vaultPath, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
@@ -309,11 +339,9 @@ func (r *PKIExternalCADNSProviderConfigResource) Read(ctx context.Context, req r
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", mount, dnsProviderAffix, name)
+	vaultPath := dnsProviderPath(data.Mount.ValueString(), data.Type.ValueString(), data.Name.ValueString())
 
-	readResp, err := cli.Logical().ReadWithContext(ctx, path)
+	readResp, err := cli.Logical().ReadWithContext(ctx, vaultPath)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
@@ -340,9 +368,7 @@ func (r *PKIExternalCADNSProviderConfigResource) Update(ctx context.Context, req
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", mount, dnsProviderAffix, name)
+	vaultPath := dnsProviderPath(data.Mount.ValueString(), data.Type.ValueString(), data.Name.ValueString())
 
 	vaultRequest, diags := buildDNSProviderVaultRequest(ctx, &data)
 	resp.Diagnostics.Append(diags...)
@@ -350,7 +376,7 @@ func (r *PKIExternalCADNSProviderConfigResource) Update(ctx context.Context, req
 		return
 	}
 
-	updateResp, err := cli.Logical().WriteWithContext(ctx, path, vaultRequest)
+	updateResp, err := cli.Logical().WriteWithContext(ctx, vaultPath, vaultRequest)
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
@@ -373,42 +399,59 @@ func (r *PKIExternalCADNSProviderConfigResource) Delete(ctx context.Context, req
 		return
 	}
 
-	mount := data.Mount.ValueString()
-	name := data.Name.ValueString()
-	path := fmt.Sprintf("%s/%s/%s", mount, dnsProviderAffix, name)
+	vaultPath := dnsProviderPath(data.Mount.ValueString(), data.Type.ValueString(), data.Name.ValueString())
 
-	if _, err := cli.Logical().DeleteWithContext(ctx, path); err != nil {
+	if _, err := cli.Logical().DeleteWithContext(ctx, vaultPath); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 		return
 	}
 }
 
+// ImportState parses an import ID of the form <mount>/config/dns/<subpath>/<name>,
+// e.g. "mymount/config/dns/aws-route53/myprovider".
+// It restores mount, name, and type into state so that subsequent Read calls can
+// reconstruct the correct Vault path.
 func (r *PKIExternalCADNSProviderConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	matches := dnsProviderIDRe.FindStringSubmatch(req.ID)
-	if len(matches) != 3 {
+	if len(matches) != 4 {
 		resp.Diagnostics.AddError(
 			"Invalid import ID",
-			fmt.Sprintf("Import ID must be in the format '<mount>/%s/<name>', got: %s", dnsProviderAffix, req.ID),
+			fmt.Sprintf(
+				"Import ID must be in the format '<mount>/config/dns/<provider-subpath>/<name>' (e.g. 'mymount/config/dns/aws-route53/myprovider'), got: %s",
+				req.ID,
+			),
 		)
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+	mount, subpath, name := matches[1], matches[2], matches[3]
+
+	providerType, ok := subpathToType[subpath]
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unknown provider subpath",
+			fmt.Sprintf("Unrecognised DNS provider subpath %q in import ID. Valid subpaths: aws-route53, rfc2136, google-cloud-dns, azure-dns", subpath),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("type"), providerType)...)
 }
 
-// buildDNSProviderVaultRequest constructs the map to send to Vault from the Terraform model.
+// buildDNSProviderVaultRequest constructs the request body to send to Vault.
+// The provider type is encoded in the URL, not the body.
 func buildDNSProviderVaultRequest(ctx context.Context, data *PKIExternalCADNSProviderConfigModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	req := map[string]any{
-		"type": data.Type.ValueString(),
-	}
+	req := map[string]any{}
 
 	if !data.TTL.IsNull() && !data.TTL.IsUnknown() {
 		req["ttl"] = data.TTL.ValueString()
 	}
 
+	// identifiers is Required so it will always be set, but guard for safety.
 	if !data.Identifiers.IsNull() && !data.Identifiers.IsUnknown() {
 		var ids []string
 		diags.Append(data.Identifiers.ElementsAs(ctx, &ids, false)...)
@@ -421,6 +464,7 @@ func buildDNSProviderVaultRequest(ctx context.Context, data *PKIExternalCADNSPro
 	switch data.Type.ValueString() {
 	case "aws_route53":
 		setIfNotEmpty(req, "access_key_id", data.AccessKeyId.ValueString())
+		setIfNotEmpty(req, "secret_access_key", data.SecretAccessKey.ValueString())
 		setIfNotEmpty(req, "region", data.Region.ValueString())
 		setIfNotEmpty(req, "hosted_zone_id", data.HostedZoneId.ValueString())
 		setIfNotEmpty(req, "external_id", data.ExternalId.ValueString())
@@ -449,8 +493,8 @@ func buildDNSProviderVaultRequest(ctx context.Context, data *PKIExternalCADNSPro
 }
 
 // handleDNSProviderResponse maps the Vault API response back into the Terraform model.
-// Write-only fields (tsig_secret, credentials, client_secret) are intentionally skipped
-// as Vault does not return them.
+// Write-only fields (secret_access_key, tsig_secret, credentials, client_secret) are
+// intentionally skipped — Vault does not return them.
 func handleDNSProviderResponse(ctx context.Context, data *PKIExternalCADNSProviderConfigModel, readResp *api.Secret) (rd diag.Diagnostics) {
 	var apiModel PKIExternalCADNSProviderConfigAPIModel
 	if err := model.ToAPIModel(readResp.Data, &apiModel); err != nil {
@@ -458,7 +502,6 @@ func handleDNSProviderResponse(ctx context.Context, data *PKIExternalCADNSProvid
 		return
 	}
 
-	data.Type = types.StringValue(apiModel.Type)
 	data.CreationDate = types.StringValue(apiModel.CreationDate)
 	data.LastUpdatedDate = types.StringValue(apiModel.LastUpdatedDate)
 
@@ -466,7 +509,7 @@ func handleDNSProviderResponse(ctx context.Context, data *PKIExternalCADNSProvid
 		data.TTL = types.StringValue(apiModel.TTL)
 	}
 
-	// Identifiers — only set when Vault returns a non-nil list.
+	// Identifiers — always returned by Vault so always set.
 	if apiModel.Identifiers != nil {
 		ids, diags := types.ListValueFrom(ctx, types.StringType, apiModel.Identifiers)
 		rd.Append(diags...)
@@ -475,8 +518,8 @@ func handleDNSProviderResponse(ctx context.Context, data *PKIExternalCADNSProvid
 		}
 	}
 
-	// Provider-specific fields: only set fields that the API returned a value for,
-	// so that fields belonging to other provider types don't overwrite config with "".
+	// Provider-specific fields: only overwrite state when Vault returned a
+	// non-empty value, so fields from other provider types stay null/unknown.
 	setStringIfNotEmpty := func(target *types.String, val string) {
 		if val != "" {
 			*target = types.StringValue(val)
@@ -489,6 +532,7 @@ func handleDNSProviderResponse(ctx context.Context, data *PKIExternalCADNSProvid
 	setStringIfNotEmpty(&data.HostedZoneId, apiModel.HostedZoneId)
 	setStringIfNotEmpty(&data.ExternalId, apiModel.ExternalId)
 	setStringIfNotEmpty(&data.AssumeRoleArn, apiModel.AssumeRoleArn)
+	// secret_access_key intentionally not read back — write-only
 
 	// RFC2136
 	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)
