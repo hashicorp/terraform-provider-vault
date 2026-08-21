@@ -687,14 +687,6 @@ var (
 			Resource:      UpdateSchemaResource(pkiSecretBackendAcmeEabResource()),
 			PathInventory: []string{"/pki/acme/new-eab"},
 		},
-		"vault_pki_external_ca_secret_backend_acme_account": {
-			Resource:      UpdateSchemaResource(pkiExternalCASecretBackendAcmeAccountResource()),
-			PathInventory: []string{"/pki-external-ca/config/acme-account/{name}"},
-		},
-		"vault_pki_external_ca_secret_backend_role": {
-			Resource:      UpdateSchemaResource(pkiExternalCASecretBackendRoleResource()),
-			PathInventory: []string{"/pki-external-ca/role/{name}"},
-		},
 		"vault_quota_lease_count": {
 			Resource:      UpdateSchemaResource(quotaLeaseCountResource()),
 			PathInventory: []string{"/sys/quotas/lease-count/{name}"},
