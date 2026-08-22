@@ -3,7 +3,8 @@
 BUG FIXES:
 
 * `vault_terraform_cloud_secret_backend`: Fix logic gap in `Read` where execution would fall through to a stray `GET <backend>/config` call after `readMount` detected the mount was deleted out-of-band and cleared the resource ID. Add `util.Is404` guard to `Delete` so that `terraform destroy` succeeds cleanly when the mount has already been removed from Vault. ([#3006](https://github.com/hashicorp/terraform-provider-vault/pull/3006))
-
+* `vault_kv_secret_v2`: allow modifying secret's metadata without having to create a new version of the secret ([#2986](https://github.com/hashicorp/terraform-provider-vault/pull/2986))
+* `vault_kv_secret_v2`: move cas in the 'options' entry of the generated write requests ([#2986](https://github.com/hashicorp/terraform-provider-vault/pull/2986))
 
 ## 5.11.0 (August 14, 2026)
 
