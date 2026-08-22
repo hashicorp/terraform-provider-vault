@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -111,6 +112,15 @@ func rabbitMQSecretBackendRoleResource() *schema.Resource {
 					},
 				},
 			},
+			consts.FieldMetadata: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.0.0+.",
+			},
 		},
 	}
 }
@@ -139,6 +149,17 @@ func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 		"vhosts":       vhostsJSON,
 		"vhost_topics": vhostTopicsJSON,
 	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
 	log.Printf("[DEBUG] Creating role %q on Rabbitmq backend %q", name, backend)
 	_, err = client.Logical().Write(backend+"/roles/"+name, data)
 	if err != nil {
@@ -187,6 +208,12 @@ func rabbitMQSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) err
 	if vhostTopics, ok := secret.Data["vhost_topics"]; ok && vhostTopics != nil {
 		if err := d.Set("vhost_topic", flattenRabbitMQSecretBackendRoleVhostTopics(vhostTopics.(map[string]interface{}))); err != nil {
 			return fmt.Errorf("error setting vhosts topics in state: %w", err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, secret.Data[consts.FieldMetadata]); err != nil {
+			return fmt.Errorf("error setting %s in state: %w", consts.FieldMetadata, err)
 		}
 	}
 
