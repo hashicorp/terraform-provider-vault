@@ -624,36 +624,6 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 				),
 			},
 			{
-				// Regression coverage for https://github.com/hashicorp/terraform-provider-vault/issues/3018.
-				// Simulate an out-of-band write (e.g. via the Vault CLI), which stores
-				// disable_escaping as the string "true" rather than a JSON boolean. The
-				// refresh that runs before this step's apply must parse it tolerantly
-				// instead of panicking on an unchecked type assertion.
-				PreConfig: func() {
-					password, _ := parsedURL.User.Password()
-					path := fmt.Sprintf("%s/config/%s", backend, name)
-					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-
-					_, err := client.Logical().Write(path, map[string]interface{}{
-						"plugin_name":              pluginName,
-						"connection_url":           parsedURL.String(),
-						"allowed_roles":            "dev,prod",
-						"root_rotation_statements": "FOOBAR",
-						"password_policy":          "mssql-policy",
-						"username":                 username,
-						"password":                 password,
-						"disable_escaping":         "true", // stored as a string, reproduces the panic
-						"verify_connection":        false,
-					})
-					if err != nil {
-						t.Fatal(err)
-					}
-				},
-				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false, false),
-				Check: resource.TestCheckResourceAttr(
-					testDefaultDatabaseSecretBackendResource, "mssql.0.disable_escaping", "true"),
-			},
-			{
 				ResourceName:            testDefaultDatabaseSecretBackendResource,
 				ImportState:             true,
 				ImportStateVerify:       true,
@@ -3935,4 +3905,67 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connURL)
+}
+
+// Test_getConnectionDetailsFromResponseWithDisableEscaping verifies that the
+// disable_escaping field is parsed tolerantly regardless of whether Vault
+// returns it as a JSON boolean or as a string. The string form occurs when the
+// connection config is written out-of-band (e.g. via the Vault CLI, which sends
+// every argument as a string). Previously an unchecked type assertion panicked
+// when the field was a string. See issue #3018.
+func Test_getConnectionDetailsFromResponseWithDisableEscaping(t *testing.T) {
+	const prefix = "mssql.0."
+
+	tests := []struct {
+		name    string
+		value   interface{}
+		want    bool
+		present bool
+		wantErr bool
+	}{
+		{name: "bool-true", value: true, want: true, present: true},
+		{name: "bool-false", value: false, want: false, present: true},
+		{name: "string-true", value: "true", want: true, present: true},
+		{name: "string-false", value: "false", want: false, present: true},
+		{name: "invalid-string", value: "notabool", wantErr: true},
+		{name: "absent"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := schema.TestResourceDataRaw(t,
+				databaseSecretBackendConnectionResource().Schema,
+				map[string]interface{}{})
+
+			connectionDetails := map[string]interface{}{}
+			if tt.name != "absent" {
+				connectionDetails["disable_escaping"] = tt.value
+			}
+
+			resp := &api.Secret{
+				Data: map[string]interface{}{
+					"connection_details": connectionDetails,
+				},
+			}
+
+			result, err := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error for value %#v, got none", tt.value)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			got, ok := result["disable_escaping"]
+			if tt.present != ok {
+				t.Fatalf("disable_escaping present=%t, want %t", ok, tt.present)
+			}
+			if tt.present && got.(bool) != tt.want {
+				t.Fatalf("disable_escaping = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
