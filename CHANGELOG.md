@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
+* Update supported Vault version for `pkcs12_bundle` and `jks_bundle` PKI formats to require Vault 2.1+ (not 2.0.5+) per latest Vault versioning strategy ([#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
 
 BUG FIXES:
 
@@ -23,7 +24,7 @@ FEATURES:
 * **Terraform Secret Engine Root Rotation Support**: Add support for automated root token rotation via the `rotation_period`, `rotation_schedule`, `rotation_window`, and `disable_automated_rotation` fields, and add `explicit_max_ttl` to bound the lifetime of the rotated root token. Requires Vault 2.2.0+. ([#2958](https://github.com/hashicorp/terraform-provider-vault/issues/2958))
 * Add support for Kerberos auth backend: `vault_kerberos_auth_backend_config`, `vault_kerberos_auth_backend_ldap_config`, and `vault_kerberos_auth_backend_group` resources, and `vault_kerberos_auth_backend_login` ephemeral resource for Kerberos authentication. ([#2819](https://github.com/hashicorp/terraform-provider-vault/pull/2819))
 * **Secrets Sync customer controlled encryption**: `vault_secrets_sync_aws_destination` and `vault_secrets_sync_gcp_destination` now support Vault 2.2.0+ fields `kms_key_id` and `replica_regions`; and deprecated GCP legacy fields `global_kms_key`, `locational_kms_keys`, and `replication_locations` in favor of `kms_key_id` and `replica_regions`. ([#2965](https://github.com/hashicorp/terraform-provider-vault/pull/2965))
-* Add support for `pkcs12_bundle` and `jks_bundle` formats (without setting default values) in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2946](https://github.com/hashicorp/terraform-provider-vault/pull/2946)). Requires Vault 2.0.5+.
+* Add support for `pkcs12_bundle` and `jks_bundle` formats (without setting default values) in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950)). Requires Vault 2.1+.
 
 IMPROVEMENTS:
 
