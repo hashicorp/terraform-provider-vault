@@ -81,7 +81,7 @@ func TestAccLDAPSecretBackendDynamicRole_PasswordPolicy(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
 		Steps: []resource.TestStep{
