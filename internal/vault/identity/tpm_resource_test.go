@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -23,6 +24,27 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
+// TestAccIdentityTPM_versionGate verifies that TPM identity creation fails
+// with an appropriate error on Vault versions < 2.2.0.
+func TestAccIdentityTPM_versionGate(t *testing.T) {
+	name := acctest.RandomWithPrefix("tpm")
+	publicKey := testTPMPublicKey(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionGTE(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccIdentityTPMConfig(name, publicKey, false),
+				ExpectError: regexp.MustCompile(`TPM identity requires Vault version 2.2.0 or later`),
+			},
+		},
+	})
+}
+
 func TestAccIdentityTPM(t *testing.T) {
 	name := acctest.RandomWithPrefix("tpm")
 	renamedName := acctest.RandomWithPrefix("tpm")
@@ -33,7 +55,7 @@ func TestAccIdentityTPM(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
