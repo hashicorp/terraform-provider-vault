@@ -1025,7 +1025,6 @@ const (
 	VaultVersion200  = "2.0.0"
 	VaultVersion201  = "2.0.1"
 	VaultVersion203  = "2.0.3"
-	VaultVersion205  = "2.0.5"
 	VaultVersion210  = "2.1.0"
 	VaultVersion220  = "2.2.0"
 
