@@ -189,28 +189,30 @@ func MountResource() *schema.Resource {
 	// suppress that one-way alias only — never suppress kv-v2→kv (would hide a downgrade)
 	if tyField, ok := rSchema[consts.FieldType]; ok {
 		tyField.DiffSuppressFunc = func(key, stateTy, cfgTy string, d *schema.ResourceData) bool {
-			if stateTy == "kv" && cfgTy == "kv-v2" {
-				opt, ok := d.GetOk(consts.FieldOptions)
-				if !ok {
-					return false
-				}
-				optMap, ok := opt.(map[string]interface{})
-				if !ok {
-					return false
-				}
-				return optMap["version"] == "2"
+			if stateTy != "kv" || cfgTy != "kv-v2" {
+				return false
 			}
-			return false
+			opt, ok := d.GetOk(consts.FieldOptions)
+			if !ok {
+				return false
+			}
+			optMap, ok := opt.(map[string]interface{})
+			if !ok {
+				return false
+			}
+			return optMap["version"] == "2"
 		}
 	}
 
 	if optField, ok := rSchema[consts.FieldOptions]; ok {
 		optField.DiffSuppressFunc = func(key, stateVal, cfgVal string, d *schema.ResourceData) bool {
 			cfgTy := d.Get(consts.FieldType).(string)
-			isKVMount := cfgTy == "kv" || cfgTy == "kv-v2"
+			if cfgTy != "kv" && cfgTy != "kv-v2" {
+				return false
+			}
 
 			if key == consts.FieldOptions+".%" {
-				if isKVMount && stateVal == "1" && cfgVal == "0" {
+				if stateVal == "1" && cfgVal == "0" {
 					opt := d.Get(consts.FieldOptions)
 					if optMap, ok := opt.(map[string]interface{}); ok {
 						return optMap["version"] == "2"
@@ -220,7 +222,7 @@ func MountResource() *schema.Resource {
 			}
 
 			if key == consts.FieldOptions+".version" {
-				return isKVMount && stateVal == "2" && cfgVal == ""
+				return stateVal == "2" && cfgVal == ""
 			}
 
 			return false
