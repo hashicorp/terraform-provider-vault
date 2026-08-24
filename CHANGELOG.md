@@ -8,6 +8,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * `vault_terraform_cloud_secret_backend`: Fix logic gap in `Read` where execution would fall through to a stray `GET <backend>/config` call after `readMount` detected the mount was deleted out-of-band and cleared the resource ID. Add `util.Is404` guard to `Delete` so that `terraform destroy` succeeds cleanly when the mount has already been removed from Vault. ([#3006](https://github.com/hashicorp/terraform-provider-vault/pull/3006))
+* `vault_database_secret_backend_connection`: Fix a provider panic (`interface conversion: interface {} is string, not bool`) when reading a `mssql`, `postgresql`, `hana`, or `redshift` connection whose `disable_escaping` field was stored as a string (e.g. written out-of-band via the Vault CLI). The field is now parsed tolerantly with `parseutil.ParseBool`, matching the existing handling of `contained_db`. ([#3018](https://github.com/hashicorp/terraform-provider-vault/issues/3018))
 
 
 ## 5.11.0 (August 14, 2026)

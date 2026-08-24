@@ -624,6 +624,36 @@ func TestAccDatabaseSecretBackendConnection_mssql(t *testing.T) {
 				),
 			},
 			{
+				// Regression coverage for https://github.com/hashicorp/terraform-provider-vault/issues/3018.
+				// Simulate an out-of-band write (e.g. via the Vault CLI), which stores
+				// disable_escaping as the string "true" rather than a JSON boolean. The
+				// refresh that runs before this step's apply must parse it tolerantly
+				// instead of panicking on an unchecked type assertion.
+				PreConfig: func() {
+					password, _ := parsedURL.User.Password()
+					path := fmt.Sprintf("%s/config/%s", backend, name)
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+					_, err := client.Logical().Write(path, map[string]interface{}{
+						"plugin_name":              pluginName,
+						"connection_url":           parsedURL.String(),
+						"allowed_roles":            "dev,prod",
+						"root_rotation_statements": "FOOBAR",
+						"password_policy":          "mssql-policy",
+						"username":                 username,
+						"password":                 password,
+						"disable_escaping":         "true", // stored as a string, reproduces the panic
+						"verify_connection":        false,
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testAccDatabaseSecretBackendConnectionConfig_mssql(name, backend, pluginName, parsedURL, false, false),
+				Check: resource.TestCheckResourceAttr(
+					testDefaultDatabaseSecretBackendResource, "mssql.0.disable_escaping", "true"),
+			},
+			{
 				ResourceName:            testDefaultDatabaseSecretBackendResource,
 				ImportState:             true,
 				ImportStateVerify:       true,
