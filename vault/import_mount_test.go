@@ -16,7 +16,7 @@ import (
 
 const resourceName = "vault_mount.test"
 
-// Case 1: kv v1 import baseline.
+// kv v1 import baseline — no suppressor should fire.
 func TestAccMount_importBasic(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
 	cfg := testMountConfig{
@@ -37,7 +37,7 @@ func TestAccMount_importBasic(t *testing.T) {
 	})
 }
 
-// Case 2: non-kv mount (pki). Suppressor must not fire for unrelated types.
+// non-kv mount (pki) import — suppressor must not fire for unrelated types.
 func TestAccMount_importNonKV(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
 	cfg := fmt.Sprintf(`
@@ -57,8 +57,8 @@ resource "vault_mount" "test" {
 	})
 }
 
-// Case 3 (core bug): vault returns kv+version=2 on import, config says kv-v2.
-// Suppressors must fire — no ForceNew, no destroy.
+// vault returns kv+version=2 on import but config says kv-v2.
+// suppressors must fire — no ForceNew, no destroy.
 func TestAccMount_importKVV2(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
 	cfg := fmt.Sprintf(`
@@ -81,7 +81,7 @@ resource "vault_mount" "test" {
 	})
 }
 
-// Case 4: config says kv+version=2 (explicit raw form). State matches directly, no suppressor needed.
+// config uses kv+version=2 explicitly — state matches directly on import, no suppressor needed.
 func TestAccMount_importKVV2_explicitOptions(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
 	cfg := fmt.Sprintf(`
@@ -104,7 +104,7 @@ resource "vault_mount" "test" {
 	})
 }
 
-// Case 5: kv v1 mount. Suppressor must not fire — no options.version=2.
+// kv v1 mount import — suppressor must not fire, no options.version=2 present.
 func TestAccMount_importKVV1_noSuppress(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
 	cfg := fmt.Sprintf(`
@@ -127,7 +127,7 @@ resource "vault_mount" "test" {
 	})
 }
 
-// Case 6: v1 mount imported with kv-v2 config. Suppressor checks options.version=2 — absent on v1 — so real diff surfaces.
+// v1 mount imported with kv-v2 config — suppressor checks options.version=2, absent on v1, so real diff surfaces.
 func TestAccMount_importKVV1_misconfiguredAsKVV2(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
 
@@ -165,7 +165,7 @@ resource "vault_mount" "test" {
 	})
 }
 
-// Case 7: kv-v2 with redundant explicit options.version=2. Should behave the same as case 3.
+// kv-v2 with redundant explicit options.version=2 — import should be clean, same as kv-v2 without options.
 func TestAccMount_importKVV2_redundantOptions(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
 	cfg := fmt.Sprintf(`
@@ -188,7 +188,7 @@ resource "vault_mount" "test" {
 	})
 }
 
-// Case 8: state=kv-v2, config changes to kv+version=2. Suppressor is one-way only, so ForceNew surfaces.
+// state=kv-v2, config changes to kv+version=2 — suppressor is one-way only, so ForceNew surfaces.
 func TestAccMount_importKVV2_stateAsKVV2_configAsKV(t *testing.T) {
 	path := "test-" + acctest.RandString(10)
 
