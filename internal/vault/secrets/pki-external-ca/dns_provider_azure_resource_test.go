@@ -27,7 +27,7 @@ func TestAccPKIExternalCADNSProviderAzure_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
 		},
 		Steps: []resource.TestStep{
 			// create — client_secret is write-only so we use client_id + tenant_id

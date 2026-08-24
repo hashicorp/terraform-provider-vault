@@ -27,7 +27,7 @@ func TestAccPKIExternalCADNSProviderGCP_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
 		},
 		Steps: []resource.TestStep{
 			// create — credentials is write-only so we omit it; Vault will use
