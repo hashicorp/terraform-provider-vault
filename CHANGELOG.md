@@ -1,6 +1,8 @@
 ## 5.12.0 (Unreleased)
 
 BUG FIXES:
+* `vault_database_secret_backend_connection`: Updated default value of `max_open_connections` from `2` to `4` to match documentation and Vault's own default for the same feature. ([#3016](https://github.com/hashicorp/terraform-provider-vault/pull/3016))
+
 
 * `vault_terraform_cloud_secret_backend`: Fix logic gap in `Read` where execution would fall through to a stray `GET <backend>/config` call after `readMount` detected the mount was deleted out-of-band and cleared the resource ID. Add `util.Is404` guard to `Delete` so that `terraform destroy` succeeds cleanly when the mount has already been removed from Vault. ([#3006](https://github.com/hashicorp/terraform-provider-vault/pull/3006))
 
