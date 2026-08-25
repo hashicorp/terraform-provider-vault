@@ -137,7 +137,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				Optional:            true,
 			},
 			consts.FieldNameserver: schema.StringAttribute{
-				MarkdownDescription: "DNS server address in `IP:port` format (e.g. `192.168.1.1:53`). Overrides the default nameserver set on the ACME account.",
+				MarkdownDescription: "Address of a DNS nameserver (`host` or `host:port`) to use when verifying DNS-01 challenge propagation instead of the domain's primary nameserver.",
 				Optional:            true,
 			},
 		},

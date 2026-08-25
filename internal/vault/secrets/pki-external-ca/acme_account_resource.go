@@ -140,7 +140,7 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Optional:            true,
 			},
 			consts.FieldDefaultNameserver: schema.StringAttribute{
-				MarkdownDescription: "Address of a DNS nameserver (`host` or `host:port`) to use when verifying DNS-01 challenge propagation for providers that do not specify a nameserver.",
+				MarkdownDescription: "Address of a DNS nameserver (`host` or `host:port`) to use when verifying DNS-01 challenge propagation for providers that do not specify a nameserver, in addition to the domain's primary nameserver.",
 				Optional:            true,
 			},
 			"active_key_version": schema.Int64Attribute{
