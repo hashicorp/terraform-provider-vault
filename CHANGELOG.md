@@ -1,5 +1,9 @@
 ## 5.12.0 (Unreleased)
 
+FEATURES:
+
+* `resource/vault_identity_mfa_totp`: Add support for the `enable_self_enrollment` field, allowing users to control whether end users can self-enroll in the TOTP MFA method. Requires Vault Enterpise. ([#2919](https://github.com/hashicorp/terraform-provider-vault/pull/2920))
+
 IMPROVEMENTS:
 
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
