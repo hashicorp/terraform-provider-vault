@@ -1,0 +1,85 @@
+---
+layout: "vault"
+page_title: "Vault: vault_pki_external_ca_secret_backend_dns_provider_azure resource"
+sidebar_current: "docs-vault-resource-pki-external-ca-secret-backend-dns-provider-azure"
+description: |-
+  Manages an Azure DNS provider configuration for PKI External CA DNS-01 ACME challenges.
+---
+
+# vault\_pki\_external\_ca\_secret\_backend\_dns\_provider\_azure
+
+Manages an Azure DNS provider configuration for PKI External CA DNS-01 ACME challenges.
+DNS providers are referenced by a [`vault_pki_external_ca_secret_backend_role`](pki_external_ca_secret_backend_role.html)
+to perform DNS-01 challenge validation when ordering certificates.
+
+## Example Usage
+
+```hcl
+resource "vault_mount" "pki-external-ca" {
+  path = "pki-external-ca"
+  type = "pki-external-ca"
+}
+
+resource "vault_pki_external_ca_secret_backend_dns_provider_azure" "example" {
+  mount               = vault_mount.pki-external-ca.path
+  name                = "my-azure-provider"
+  identifiers         = ["example.com", "*.example.com"]
+  client_id           = "00000000-0000-0000-0000-000000000001"
+  tenant_id           = "00000000-0000-0000-0000-000000000002"
+  subscription_id     = "00000000-0000-0000-0000-000000000003"
+  resource_group_name = "my-dns-rg"
+  zone_name           = "example.com"
+  client_secret       = var.azure_client_secret
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+   *Available only for Vault Enterprise*.
+
+* `mount` - (Required) The path where the PKI External CA secret backend is mounted.
+
+* `name` - (Required) Name of the DNS provider configuration. Must be unique within the backend.
+
+* `identifiers` - (Required) List of domain identifiers this provider handles. Supports wildcard patterns with a leftmost `*` (e.g. `*.example.com`).
+
+* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.
+
+* `client_id` - (Optional) Azure service principal client ID.
+
+* `client_secret` - (Optional) Azure service principal client secret. Write-only — not returned by Vault on read.
+
+* `tenant_id` - (Optional) Azure tenant ID.
+
+* `subscription_id` - (Optional) Azure subscription ID.
+
+* `resource_group_name` - (Optional) Resource group containing the Azure DNS zone.
+
+* `zone_name` - (Optional) Azure DNS zone name.
+
+* `environment` - (Optional) Azure cloud environment. Valid values: `AzurePublic`, `AzureChina`, `AzureGovernment`. Defaults to `AzurePublic`.
+
+* `nameserver` - (Optional) DNS server address in `IP:port` format (e.g. `1.1.1.1:53`) used to verify TXT record propagation. Overrides the `default_nameserver` set on the ACME account.
+
+## Attributes Reference
+
+In addition to the fields above, the following attributes are exported:
+
+* `id` - The ID of the resource in the format `<mount>/config/dns/azure-dns/<name>`.
+
+* `creation_date` - The date and time the provider was created.
+
+* `last_updated_date` - The date and time the provider was last updated.
+
+## Import
+
+Azure DNS provider configurations can be imported using the format `<mount>/config/dns/azure-dns/<name>`, e.g.
+
+```
+$ terraform import vault_pki_external_ca_secret_backend_dns_provider_azure.example pki-external-ca/config/dns/azure-dns/my-azure-provider
+```

@@ -92,6 +92,8 @@ The following arguments are supported:
 
 * `trusted_ca` - (Optional) PEM-encoded trusted CA certificates for the ACME server. Use this when connecting to an ACME server with a custom or self-signed certificate.
 
+* `default_nameserver` - (Optional) Address of a DNS nameserver (`host` or `host:port`) to use when verifying DNS-01 challenge propagation for DNS providers that do not specify their own nameserver. Requires Vault 2.1.0 or later.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:

@@ -1,0 +1,80 @@
+---
+layout: "vault"
+page_title: "Vault: vault_pki_external_ca_secret_backend_dns_provider_aws_route53 resource"
+sidebar_current: "docs-vault-resource-pki-external-ca-secret-backend-dns-provider-aws-route53"
+description: |-
+  Manages an AWS Route53 DNS provider configuration for PKI External CA DNS-01 ACME challenges.
+---
+
+# vault\_pki\_external\_ca\_secret\_backend\_dns\_provider\_aws\_route53
+
+Manages an AWS Route53 DNS provider configuration for PKI External CA DNS-01 ACME challenges.
+DNS providers are referenced by a [`vault_pki_external_ca_secret_backend_role`](pki_external_ca_secret_backend_role.html)
+to perform DNS-01 challenge validation when ordering certificates.
+
+## Example Usage
+
+```hcl
+resource "vault_mount" "pki-external-ca" {
+  path = "pki-external-ca"
+  type = "pki-external-ca"
+}
+
+resource "vault_pki_external_ca_secret_backend_dns_provider_aws_route53" "example" {
+  mount           = vault_mount.pki-external-ca.path
+  name            = "my-route53-provider"
+  identifiers     = ["example.com", "*.example.com"]
+  region          = "us-east-1"
+  hosted_zone_id  = "Z1234567890ABC"
+  assume_role_arn = "arn:aws:iam::123456789012:role/vault-dns-role"
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+   *Available only for Vault Enterprise*.
+
+* `mount` - (Required) The path where the PKI External CA secret backend is mounted.
+
+* `name` - (Required) Name of the DNS provider configuration. Must be unique within the backend.
+
+* `identifiers` - (Required) List of domain identifiers this provider handles. Supports wildcard patterns with a leftmost `*` (e.g. `*.example.com`).
+
+* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.
+
+* `region` - (Optional) AWS region for Route53 operations. Defaults to `us-east-1`.
+
+* `access_key_id` - (Optional) AWS access key ID for Route53 API access.
+
+* `secret_access_key` - (Optional) AWS secret access key for Route53 API access. Write-only — not returned by Vault on read.
+
+* `hosted_zone_id` - (Optional) AWS Route53 hosted zone ID.
+
+* `assume_role_arn` - (Optional) AWS IAM role ARN to assume for Route53 operations.
+
+* `external_id` - (Optional) External ID to pass when assuming the IAM role via AWS STS AssumeRole.
+
+* `nameserver` - (Optional) DNS server address in `IP:port` format (e.g. `8.8.8.8:53`) used to verify TXT record propagation. Overrides the `default_nameserver` set on the ACME account.
+
+## Attributes Reference
+
+In addition to the fields above, the following attributes are exported:
+
+* `id` - The ID of the resource in the format `<mount>/config/dns/aws-route53/<name>`.
+
+* `creation_date` - The date and time the provider was created.
+
+* `last_updated_date` - The date and time the provider was last updated.
+
+## Import
+
+AWS Route53 DNS provider configurations can be imported using the format `<mount>/config/dns/aws-route53/<name>`, e.g.
+
+```
+$ terraform import vault_pki_external_ca_secret_backend_dns_provider_aws_route53.example pki-external-ca/config/dns/aws-route53/my-route53-provider
+```

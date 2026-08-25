@@ -86,6 +86,10 @@ The following arguments are supported:
 
 * `acme_account_name` - (Required) The ACME account to use when validating certificates.
 
+* `dns_provider_name` - (Optional) The name of the DNS provider configuration to use for DNS-01 challenges. Must match the `name` of a `vault_pki_external_ca_secret_backend_dns_provider_*` resource. Requires Vault 2.1.0 or later.
+
+* `dns_provider_type` - (Optional) The type of the DNS provider. Required when `dns_provider_name` is set. Valid values are `aws_route53`, `rfc2136`, `gcp`, `azure`. Requires Vault 2.1.0 or later.
+
 * `allowed_domains` - (Optional) A list of domains the role will accept certificates for. May contain templates, as with ACL Path Templating (e.g., `{{identity.entity.aliases.<mount accessor>.name}}`).
 
 * `allowed_domain_options` - (Optional) A list of keyword options that influence how values within `allowed_domains` are interpreted against the requested set of identifiers from the client. Valid values are:

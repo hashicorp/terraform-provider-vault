@@ -1,0 +1,75 @@
+---
+layout: "vault"
+page_title: "Vault: vault_pki_external_ca_secret_backend_dns_provider_gcp resource"
+sidebar_current: "docs-vault-resource-pki-external-ca-secret-backend-dns-provider-gcp"
+description: |-
+  Manages a Google Cloud DNS provider configuration for PKI External CA DNS-01 ACME challenges.
+---
+
+# vault\_pki\_external\_ca\_secret\_backend\_dns\_provider\_gcp
+
+Manages a Google Cloud DNS provider configuration for PKI External CA DNS-01 ACME challenges.
+DNS providers are referenced by a [`vault_pki_external_ca_secret_backend_role`](pki_external_ca_secret_backend_role.html)
+to perform DNS-01 challenge validation when ordering certificates.
+
+## Example Usage
+
+```hcl
+resource "vault_mount" "pki-external-ca" {
+  path = "pki-external-ca"
+  type = "pki-external-ca"
+}
+
+resource "vault_pki_external_ca_secret_backend_dns_provider_gcp" "example" {
+  mount       = vault_mount.pki-external-ca.path
+  name        = "my-gcp-provider"
+  identifiers = ["example.com", "*.example.com"]
+  project     = "my-gcp-project"
+  zone_name   = "example-com"
+}
+```
+
+## Argument Reference
+
+The following arguments are supported:
+
+* `namespace` - (Optional) The namespace to provision the resource in.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+   *Available only for Vault Enterprise*.
+
+* `mount` - (Required) The path where the PKI External CA secret backend is mounted.
+
+* `name` - (Required) Name of the DNS provider configuration. Must be unique within the backend.
+
+* `identifiers` - (Required) List of domain identifiers this provider handles. Supports wildcard patterns with a leftmost `*` (e.g. `*.example.com`).
+
+* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.
+
+* `project` - (Optional) GCP project name containing the Cloud DNS zone.
+
+* `zone_name` - (Optional) GCP Cloud DNS zone name (the resource name, not the DNS name — e.g. `example-com` rather than `example.com`).
+
+* `credentials` - (Optional) GCP service account credentials as JSON content. Write-only — not returned by Vault on read. If omitted, Vault uses Application Default Credentials at challenge time.
+
+* `impersonate_service_account` - (Optional) Service account email to impersonate when calling the Cloud DNS API.
+
+* `nameserver` - (Optional) DNS server address in `IP:port` format (e.g. `8.8.4.4:53`) used to verify TXT record propagation. Overrides the `default_nameserver` set on the ACME account.
+
+## Attributes Reference
+
+In addition to the fields above, the following attributes are exported:
+
+* `id` - The ID of the resource in the format `<mount>/config/dns/google-cloud-dns/<name>`.
+
+* `creation_date` - The date and time the provider was created.
+
+* `last_updated_date` - The date and time the provider was last updated.
+
+## Import
+
+GCP DNS provider configurations can be imported using the format `<mount>/config/dns/google-cloud-dns/<name>`, e.g.
+
+```
+$ terraform import vault_pki_external_ca_secret_backend_dns_provider_gcp.example pki-external-ca/config/dns/google-cloud-dns/my-gcp-provider
+```
