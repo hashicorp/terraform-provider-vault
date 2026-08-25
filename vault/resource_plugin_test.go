@@ -125,6 +125,40 @@ func TestPlugin_ent(t *testing.T) {
 	})
 }
 
+func TestPlugin_entDownload(t *testing.T) {
+	resourceName := "vault_plugin.test"
+
+	// VAULT_PLUGIN_ENT_TYPE, VAULT_PLUGIN_ENT_NAME, VAULT_PLUGIN_ENT_VERSION
+	// identify an official enterprise plugin published on
+	// releases.hashicorp.com. The Vault server must be able to reach
+	// releases.hashicorp.com and must not already have the artifact in its
+	// plugin_directory for this test to be meaningful.
+	typ := os.Getenv(envPluginEntType)
+	name := os.Getenv(envPluginEntName)
+	version := os.Getenv(envPluginEntVersion)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.SkipTestEnvUnset(t, envPluginEntName, envPluginEntVersion, envPluginEntType)
+			// Automatic plugin downloads were added in Vault Enterprise 1.20
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testPluginConfig_entDownload(typ, name, version),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
+					resource.TestCheckResourceAttr(resourceName, fieldDownload, "true"),
+				),
+			},
+		},
+	})
+}
+
 func testPluginConfig(pluginType, name, version, sha256, command, args, env string) string {
 	return fmt.Sprintf(`
 resource "vault_plugin" "test" {
@@ -149,6 +183,17 @@ resource "vault_plugin" "test" {
   env       = %s
 }
 `, pluginType, name, version, args, env)
+}
+
+func testPluginConfig_entDownload(pluginType, name, version string) string {
+	return fmt.Sprintf(`
+resource "vault_plugin" "test" {
+  type     = "%s"
+  name     = "%s"
+  version  = "%s"
+  download = true
+}
+`, pluginType, name, version)
 }
 
 func testValidateList(resourceName, attr string, expected []string) resource.TestCheckFunc {
