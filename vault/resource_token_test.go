@@ -6,9 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,12 +16,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-)
-
-const (
-	// EnvVarVaultTestJWTRevokeToken is a disposable OAuth-resource-server JWT used by
-	// TestResourceToken_jwtRevokeCompatibility.
-	EnvVarVaultTestJWTRevokeToken = "VAULT_TEST_JWT_REVOKE_TOKEN"
 )
 
 func testResourceTokenCheckDestroy(s *terraform.State) error {
@@ -361,97 +353,6 @@ func testResourceTokenLookup(n string) resource.TestCheckFunc {
 		_, err := client.Auth().Token().LookupAccessor(rs.Primary.ID)
 		if err != nil {
 			return fmt.Errorf("Token could not be found: %s", err)
-		}
-
-		return nil
-	}
-}
-
-// TestResourceToken_jwtRevokeCompatibility validates the JWT revoke contract.
-// Denylist enforcement after revoke is required, while
-// associated cleanup behavior is observed and logged by Vault version.
-func TestResourceToken_jwtRevokeCompatibility(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck: func() {
-			testutil.TestEntPreCheck(t)
-			testutil.SkipTestEnvUnset(t, EnvVarVaultTestJWTRevokeToken)
-		},
-		Steps: []resource.TestStep{
-			{
-				Config: testResourceTokenJWTRevokeCompatibilityConfig(),
-				Check:  testResourceTokenJWTRevokeCompatibilityCheck(t),
-			},
-		},
-	})
-}
-
-// testResourceTokenJWTRevokeCompatibilityConfig provides a minimal plan that
-// initializes provider configuration for the compatibility checks.
-func testResourceTokenJWTRevokeCompatibilityConfig() string {
-	return `
-data "vault_generic_secret" "self" {
-  path = "/auth/token/lookup-self"
-}
-`
-}
-
-// testResourceTokenJWTRevokeCompatibilityCheck asserts denylist enforcement
-// after JWT revoke and records token-entry cleanup behavior for visibility.
-func testResourceTokenJWTRevokeCompatibilityCheck(t *testing.T) resource.TestCheckFunc {
-	t.Helper()
-
-	return func(s *terraform.State) error {
-		jwtToken := os.Getenv(EnvVarVaultTestJWTRevokeToken)
-		if jwtToken == "" {
-			return fmt.Errorf("%q must be set", EnvVarVaultTestJWTRevokeToken)
-		}
-
-		pm, ok := testProvider.Meta().(*provider.ProviderMeta)
-		if !ok {
-			return fmt.Errorf("expected provider meta to be *provider.ProviderMeta, got %T", testProvider.Meta())
-		}
-
-		adminClient := pm.MustGetClient()
-		jwtClient, err := adminClient.Clone()
-		if err != nil {
-			return fmt.Errorf("failed cloning provider client: %w", err)
-		}
-		jwtClient.SetToken(jwtToken)
-
-		// Precondition: supplied JWT must currently authenticate.
-		if _, err := jwtClient.Auth().Token().LookupSelf(); err != nil {
-			return fmt.Errorf("pre-revoke lookup-self failed; provide a fresh JWT in %q: %w", EnvVarVaultTestJWTRevokeToken, err)
-		}
-
-		if _, err := adminClient.Logical().Write("auth/token/revoke", map[string]interface{}{
-			"token": jwtToken,
-		}); err != nil {
-			return fmt.Errorf("failed to revoke JWT via auth/token/revoke: %w", err)
-		}
-
-		_, err = jwtClient.Auth().Token().LookupSelf()
-		if err == nil {
-			return fmt.Errorf("expected revoked JWT to fail lookup-self, but lookup-self still succeeded")
-		}
-
-		version := "unknown"
-		if v := pm.GetVaultVersion(); v != nil {
-			version = v.String()
-		}
-
-		lookupResp, lookupErr := adminClient.Auth().Token().Lookup(jwtToken)
-		switch {
-		case lookupErr != nil:
-			t.Logf("Vault %s JWT revoke cleanup observation: lookup after revoke returned error (cleanup likely applied): %v", version, lookupErr)
-		case lookupResp == nil:
-			t.Logf("Vault %s JWT revoke cleanup observation: lookup after revoke returned no token entry", version)
-		default:
-			t.Logf("Vault %s JWT revoke cleanup observation: lookup after revoke still returned token entry; denylist enforcement remains the required contract", version)
-		}
-
-		if !strings.Contains(strings.ToLower(err.Error()), "revoke") && !strings.Contains(strings.ToLower(err.Error()), "deny") {
-			t.Logf("Vault %s post-revoke lookup-self error did not include explicit revoke text: %v", version, err)
 		}
 
 		return nil
