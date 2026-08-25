@@ -168,46 +168,28 @@ func TestAccAzureAccessToken_namespace(t *testing.T) {
 	})
 }
 
-// azurePluginMountHCL returns the HCL blocks that enable the vault-plugin-secrets-azure
-// mount and write the backend config. vault_azure_secret_backend always enables the
-// built-in "azure" mount type and cannot be used for the plugin variant.
-func azurePluginMountHCL(mountRef, backend string, conf *testutil.AzureTestConf) string {
-	return fmt.Sprintf(`
-resource "vault_mount" "%[1]s" {
-  path = "%[2]s"
-  type = "vault-plugin-secrets-azure"
-}
-
-resource "vault_generic_endpoint" "%[1]s_config" {
-  depends_on           = [vault_mount.%[1]s]
-  path                 = "%[2]s/config"
-  ignore_absent_fields = true
-
-  data_json = jsonencode({
-    subscription_id = "%[3]s"
-    tenant_id       = "%[4]s"
-    client_id       = "%[5]s"
-    client_secret   = "%[6]s"
-  })
-}
-`, mountRef, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret)
-}
-
 func testAccAzureAccessTokenConfig(backend, role string, conf *testutil.AzureTestConf) string {
-	return azurePluginMountHCL("azure", backend, conf) + fmt.Sprintf(`
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "azure" {
+  path            = "%[1]s"
+  subscription_id = "%[2]s"
+  tenant_id       = "%[3]s"
+  client_id       = "%[4]s"
+  client_secret   = "%[5]s"
+}
+
 resource "vault_azure_secret_backend_static_role" "role" {
-  depends_on            = [vault_generic_endpoint.azure_config]
-  backend               = vault_mount.azure.path
-  role                  = "%[1]s"
-  application_object_id = "%[2]s"
+  backend               = vault_azure_secret_backend.azure.path
+  role                  = "%[6]s"
+  application_object_id = "%[7]s"
   ttl                   = 31536000
 }
 
 ephemeral "vault_azure_access_token" "token" {
   mount_id = vault_azure_secret_backend_static_role.role.id
-  mount    = vault_mount.azure.path
+  mount    = vault_azure_secret_backend.azure.path
   role     = vault_azure_secret_backend_static_role.role.role
-  scope    = "%[3]s"
+  scope    = "%[8]s"
 }
 
 provider "echo" {
@@ -215,24 +197,31 @@ provider "echo" {
 }
 
 resource "echo" "azure_token" {}
-`, role, conf.AppObjectID, conf.Scope)
+`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, role, conf.AppObjectID, conf.Scope)
 }
 
 func testAccAzureAccessTokenCustomRetryConfig(backend, role string, conf *testutil.AzureTestConf) string {
-	return azurePluginMountHCL("azure", backend, conf) + fmt.Sprintf(`
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "azure" {
+  path            = "%[1]s"
+  subscription_id = "%[2]s"
+  tenant_id       = "%[3]s"
+  client_id       = "%[4]s"
+  client_secret   = "%[5]s"
+}
+
 resource "vault_azure_secret_backend_static_role" "role" {
-  depends_on            = [vault_generic_endpoint.azure_config]
-  backend               = vault_mount.azure.path
-  role                  = "%[1]s"
-  application_object_id = "%[2]s"
+  backend               = vault_azure_secret_backend.azure.path
+  role                  = "%[6]s"
+  application_object_id = "%[7]s"
   ttl                   = 31536000
 }
 
 ephemeral "vault_azure_access_token" "token" {
   mount_id    = vault_azure_secret_backend_static_role.role.id
-  mount       = vault_mount.azure.path
+  mount       = vault_azure_secret_backend.azure.path
   role        = vault_azure_secret_backend_static_role.role.role
-  scope       = "%[3]s"
+  scope       = "%[8]s"
   max_retries = 6
   retry_delay = 10
 }
@@ -242,18 +231,26 @@ provider "echo" {
 }
 
 resource "echo" "azure_token" {}
-`, role, conf.AppObjectID, conf.Scope)
+`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, role, conf.AppObjectID, conf.Scope)
 }
 
 func testAccAzureAccessTokenInvalidRoleConfig(backend string, conf *testutil.AzureTestConf) string {
-	return azurePluginMountHCL("azure", backend, conf) + fmt.Sprintf(`
-ephemeral "vault_azure_access_token" "token" {
-  mount_id = vault_generic_endpoint.azure_config.id
-  mount    = vault_mount.azure.path
-  role     = "nonexistent-role"
-  scope    = "%[1]s"
+	return fmt.Sprintf(`
+resource "vault_azure_secret_backend" "azure" {
+  path            = "%[1]s"
+  subscription_id = "%[2]s"
+  tenant_id       = "%[3]s"
+  client_id       = "%[4]s"
+  client_secret   = "%[5]s"
 }
-`, conf.Scope)
+
+ephemeral "vault_azure_access_token" "token" {
+  mount_id = vault_azure_secret_backend.azure.id
+  mount    = vault_azure_secret_backend.azure.path
+  role     = "nonexistent-role"
+  scope    = "%[6]s"
+}
+`, backend, conf.SubscriptionID, conf.TenantID, conf.ClientID, conf.ClientSecret, conf.Scope)
 }
 
 func testAccAzureAccessTokenInvalidMountConfig(conf *testutil.AzureTestConf) string {
@@ -272,30 +269,18 @@ resource "vault_namespace" "test" {
   path = "%[1]s"
 }
 
-resource "vault_mount" "azure" {
-  namespace = vault_namespace.test.path
-  path      = "%[2]s"
-  type      = "vault-plugin-secrets-azure"
-}
-
-resource "vault_generic_endpoint" "azure_config" {
-  depends_on           = [vault_mount.azure]
-  namespace            = vault_namespace.test.path
-  path                 = "%[2]s/config"
-  ignore_absent_fields = true
-
-  data_json = jsonencode({
-    subscription_id = "%[3]s"
-    tenant_id       = "%[4]s"
-    client_id       = "%[5]s"
-    client_secret   = "%[6]s"
-  })
+resource "vault_azure_secret_backend" "azure" {
+  namespace       = vault_namespace.test.path
+  path            = "%[2]s"
+  subscription_id = "%[3]s"
+  tenant_id       = "%[4]s"
+  client_id       = "%[5]s"
+  client_secret   = "%[6]s"
 }
 
 resource "vault_azure_secret_backend_static_role" "role" {
-  depends_on            = [vault_generic_endpoint.azure_config]
   namespace             = vault_namespace.test.path
-  backend               = vault_mount.azure.path
+  backend               = vault_azure_secret_backend.azure.path
   role                  = "%[7]s"
   application_object_id = "%[8]s"
   ttl                   = 31536000
@@ -304,7 +289,7 @@ resource "vault_azure_secret_backend_static_role" "role" {
 ephemeral "vault_azure_access_token" "token" {
   namespace = vault_namespace.test.path
   mount_id  = vault_azure_secret_backend_static_role.role.id
-  mount     = vault_mount.azure.path
+  mount     = vault_azure_secret_backend.azure.path
   role      = vault_azure_secret_backend_static_role.role.role
   scope     = "%[9]s"
 }
