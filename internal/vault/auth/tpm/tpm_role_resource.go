@@ -94,12 +94,12 @@ func (r *TPMAuthRoleResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:    true,
 				Description: "Certificate TTL for the TPM role.",
 			},
-			"tpm_ids": schema.SetAttribute{
+			consts.FieldTPMIDs: schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 				Description: "Set of TPM record IDs authorized to authenticate with this role.",
 			},
-			"tpmgroup_ids": schema.SetAttribute{
+			consts.FieldTPMGroupIDs: schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 				Description: "Set of TPM group IDs authorized to authenticate with this role.",

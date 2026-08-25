@@ -28,8 +28,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const fieldMemberTPMIDs = "member_tpm_ids"
-
 var _ resource.ResourceWithImportState = &IdentityTPMGroupResource{}
 
 func NewIdentityTPMGroupResource() resource.Resource {
@@ -67,7 +65,7 @@ func (r *IdentityTPMGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 				Required:    true,
 				Description: "Name of the TPM group.",
 			},
-			fieldMemberTPMIDs: schema.SetAttribute{
+			consts.FieldMemberTPMIDs: schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 				Description: "Set of TPM IDs that are members of this TPM group.",
@@ -78,7 +76,7 @@ func (r *IdentityTPMGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:    true,
 				Description: "Metadata to associate with the TPM group.",
 			},
-			"tpm_group_id": schema.StringAttribute{
+			consts.FieldTPMGroupID: schema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -300,7 +298,7 @@ func (r *IdentityTPMGroupResource) getAPIModel(ctx context.Context, data *Identi
 	}
 
 	if len(memberTPMIDs) == 0 {
-		delete(requestBody, fieldMemberTPMIDs)
+		delete(requestBody, consts.FieldMemberTPMIDs)
 	}
 	if data.Metadata.IsNull() || data.Metadata.IsUnknown() {
 		delete(requestBody, consts.FieldMetadata)

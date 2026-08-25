@@ -28,8 +28,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
-const fieldTPMEKPublicKey = "tpm_ek_public_key"
-
 var _ resource.ResourceWithImportState = &IdentityTPMResource{}
 
 func NewIdentityTPMResource() resource.Resource {
@@ -69,14 +67,14 @@ func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Required:    true,
 				Description: "Name of the TPM record.",
 			},
-			fieldTPMEKPublicKey: schema.StringAttribute{
+			consts.FieldTPMEKPublicKey: schema.StringAttribute{
 				Required: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Description: "PEM-encoded TPM Endorsement Key (EK) public key.",
 			},
-			"disabled": schema.BoolAttribute{
+			consts.FieldDisabled: schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "Whether the TPM is disabled.",
@@ -87,7 +85,7 @@ func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:    true,
 				Description: "Metadata to associate with the TPM record.",
 			},
-			"tpm_id": schema.StringAttribute{
+			consts.FieldTPMID: schema.StringAttribute{
 				Computed: true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
