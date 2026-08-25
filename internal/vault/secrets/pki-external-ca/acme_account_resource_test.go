@@ -68,9 +68,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 				),
 			},
 			{
-				// Because we change email contacts and key type this will be a re-creation;
-				// default_nameserver is update-safe (no RequiresReplace) so it is also
-				// exercised here without forcing another destroy/create cycle.
+				// Changing email_contacts and key_type forces re-creation.
 				Config: testPKIACMEAccount_updateConfig(backend, accountName, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
@@ -82,7 +80,6 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_type", "rsa-2048"),
 					resource.TestCheckResourceAttr(resourceName, "trusted_ca", ca+"\n"),
 					resource.TestCheckResourceAttr(resourceName, "active_key_version", "0"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultNameserver, "8.8.8.8"),
 				),
 			},
 		},
@@ -119,17 +116,76 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
-  mount              = vault_mount.test.path
-  name               = "%s"
-  directory_url      = "%s"
-  email_contacts     = ["test@example.com", "admin@example.com"]
-  key_type           = "rsa-2048"
-  default_nameserver = "8.8.8.8"
-  trusted_ca         = <<EOT
+  mount          = vault_mount.test.path
+  name           = "%s"
+  directory_url  = "%s"
+  email_contacts = ["test@example.com", "admin@example.com"]
+  key_type       = "rsa-2048"
+  trusted_ca     = <<EOT
 %s
 EOT
 }
 `, backend, accountName, directoryURL, trustedCA)
+}
+
+func TestAccPKIACMEAccount_defaultNameserver(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-pki")
+	accountName := acctest.RandomWithPrefix("tf-acme-account")
+	resourceType := "vault_pki_external_ca_secret_backend_acme_account"
+	resourceName := resourceType + ".test"
+
+	// Initialise the provider and gate on version before touching Docker/Pebble.
+	acctestutil.TestEntPreCheck(t)
+	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
+
+	ca, directoryUrl := setupVaultAndPebble(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testPKIACMEAccount_defaultNameserverConfig(backend, accountName, directoryUrl, ca, "8.8.8.8"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, accountName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultNameserver, "8.8.8.8"),
+				),
+			},
+			{
+				// Update default_nameserver in-place (no RequiresReplace).
+				Config: testPKIACMEAccount_defaultNameserverConfig(backend, accountName, directoryUrl, ca, "1.1.1.1"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultNameserver, "1.1.1.1"),
+				),
+			},
+		},
+	})
+}
+
+func testPKIACMEAccount_defaultNameserverConfig(backend, accountName, directoryURL, trustedCA, nameserver string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path        = "%s"
+  type        = "pki-external-ca"
+  description = "PKI External CA secret engine mount"
+}
+
+resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
+  mount              = vault_mount.test.path
+  name               = "%s"
+  directory_url      = "%s"
+  email_contacts     = ["test@example.com"]
+  key_type           = "ec-256"
+  default_nameserver = "%s"
+  trusted_ca         = <<EOT
+%s
+EOT
+}
+`, backend, accountName, directoryURL, nameserver, trustedCA)
 }
 
 // TODO not sure how I should test eab_kid/eab_key
