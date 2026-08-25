@@ -196,9 +196,9 @@ func TestAccJWTAuthBackendProviderConfigOkta(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			// Skip if Vault < 2.1.0 (Okta provider with groups_cap requires 2.1.0+)
-			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion210) {
-				t.Skip("Okta provider with groups_cap requires Vault 2.1.0+")
+			// Skip if Vault < 2.2.0 (Okta provider with groups_cap requires 2.2.0+)
+			if !provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion220) {
+				t.Skip("Okta provider with groups_cap requires Vault 2.2.0+")
 			}
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -670,6 +670,46 @@ func TestAccJWTAuthBackendProviderConfigConversionInt(t *testing.T) {
 				t.Fatalf("exepcted %s, got %s", tc.want, actual[tc.name])
 			}
 		}
+	}
+}
+
+func TestJWTAuthBackendProviderConfigToStrings(t *testing.T) {
+	t.Parallel()
+	type test struct {
+		name  string
+		input interface{}
+		want  string
+	}
+
+	tests := []test{
+		{name: "fetch_groups true", input: true, want: "true"},
+		{name: "fetch_groups false", input: false, want: "false"},
+		{name: "fetch_user_info true", input: true, want: "true"},
+		{name: "fetch_user_info false", input: false, want: "false"},
+
+		{name: "groups_recurse_max_depth", input: float64(5), want: "5"},
+		{name: "groups_recurse_max_depth negative", input: float64(-1), want: "-1"},
+		{name: "groups_cap", input: float64(200), want: "200"},
+
+		{name: "some_float", input: float64(1.5), want: "1.5"},
+
+		{name: "int value", input: int(10), want: "10"},
+		{name: "int64 value", input: int64(20), want: "20"},
+
+		{name: "provider", input: "gsuite", want: "gsuite"},
+		{name: "gsuite_service_account", input: "/vault/userconfig/sa.json", want: "/vault/userconfig/sa.json"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := convertProviderConfigValuesToStrings(map[string]interface{}{
+				"key": tc.input,
+			})
+			if actual["key"] != tc.want {
+				t.Fatalf("convertProviderConfigValuesToStrings(%T(%v)) = %q, want %q",
+					tc.input, tc.input, actual["key"], tc.want)
+			}
+		})
 	}
 }
 
