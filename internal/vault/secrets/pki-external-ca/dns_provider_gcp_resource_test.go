@@ -53,12 +53,13 @@ func TestAccPKIExternalCADNSProviderGCP_basic(t *testing.T) {
 				// credentials is write-only — not returned by Vault
 				ImportStateVerifyIgnore: []string{consts.FieldCredentials},
 			},
-			// update
+			// update — also exercises nameserver field
 			{
 				Config: testAccPKIDNSProviderGCPConfigUpdated(backend, providerName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProject, "my-gcp-project-v2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldZoneName, "example-com-v2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "8.8.4.4:53"),
 				),
 			},
 		},
@@ -110,6 +111,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_gcp" "test" {
   identifiers = ["example.com"]
   project     = "my-gcp-project-v2"
   zone_name   = "example-com-v2"
+  nameserver  = "8.8.4.4:53"
 }
 `, backend, providerName)
 }

@@ -56,12 +56,13 @@ func TestAccPKIExternalCADNSProviderAzure_basic(t *testing.T) {
 				// client_secret is write-only — not returned by Vault
 				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
 			},
-			// update
+			// update — also exercises nameserver field
 			{
 				Config: testAccPKIDNSProviderAzureConfigUpdated(backend, providerName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldResourceGroupName, "my-dns-rg-v2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldZoneName, "updated.example.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "1.1.1.1:53"),
 				),
 			},
 		},
@@ -119,6 +120,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_azure" "test" {
   subscription_id     = "00000000-0000-0000-0000-000000000003"
   resource_group_name = "my-dns-rg-v2"
   zone_name           = "updated.example.com"
+  nameserver          = "1.1.1.1:53"
 }
 `, backend, providerName)
 }

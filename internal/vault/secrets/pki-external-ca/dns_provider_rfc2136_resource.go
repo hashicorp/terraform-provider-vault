@@ -134,7 +134,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Create(ctx context.Context, re
 		return
 	}
 
-	if err := checkVaultVersion(r.Meta()); err != nil {
+	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
 		return
 	}

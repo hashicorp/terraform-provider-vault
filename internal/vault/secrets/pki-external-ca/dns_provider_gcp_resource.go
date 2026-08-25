@@ -56,6 +56,7 @@ type PKIExternalCADNSProviderGCPModel struct {
 	Project                   types.String `tfsdk:"project"`
 	ZoneName                  types.String `tfsdk:"zone_name"`
 	ImpersonateServiceAccount types.String `tfsdk:"impersonate_service_account"`
+	Nameserver                types.String `tfsdk:"nameserver"`
 }
 
 type PKIExternalCADNSProviderGCPAPIModel struct {
@@ -67,6 +68,7 @@ type PKIExternalCADNSProviderGCPAPIModel struct {
 	Project                   string   `json:"project" mapstructure:"project"`
 	ZoneName                  string   `json:"zone_name" mapstructure:"zone_name"`
 	ImpersonateServiceAccount string   `json:"impersonate_service_account" mapstructure:"impersonate_service_account"`
+	Nameserver                string   `json:"nameserver" mapstructure:"nameserver"`
 }
 
 func (r *PKIExternalCADNSProviderGCPResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -122,6 +124,10 @@ func (r *PKIExternalCADNSProviderGCPResource) Schema(_ context.Context, _ resour
 				MarkdownDescription: "Service account email to impersonate.",
 				Optional:            true,
 			},
+			consts.FieldNameserver: schema.StringAttribute{
+				MarkdownDescription: "DNS server address in `IP:port` format (e.g. `192.168.1.1:53`). Overrides the default nameserver set on the ACME account.",
+				Optional:            true,
+			},
 		},
 	}
 	base.MustAddBaseSchema(&resp.Schema)
@@ -134,7 +140,7 @@ func (r *PKIExternalCADNSProviderGCPResource) Create(ctx context.Context, req re
 		return
 	}
 
-	if err := checkVaultVersion(r.Meta()); err != nil {
+	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
 		return
 	}
@@ -275,6 +281,7 @@ func buildGCPRequest(ctx context.Context, data *PKIExternalCADNSProviderGCPModel
 	setIfNotEmpty(req, consts.FieldProject, data.Project.ValueString())
 	setIfNotEmpty(req, consts.FieldZoneName, data.ZoneName.ValueString())
 	setIfNotEmpty(req, consts.FieldImpersonateServiceAccount, data.ImpersonateServiceAccount.ValueString())
+	setIfNotEmpty(req, consts.FieldNameserver, data.Nameserver.ValueString())
 
 	return req, diags
 }
@@ -304,6 +311,7 @@ func handleGCPResponse(ctx context.Context, data *PKIExternalCADNSProviderGCPMod
 	setStringIfNotEmpty(&data.Project, apiModel.Project)
 	setStringIfNotEmpty(&data.ZoneName, apiModel.ZoneName)
 	setStringIfNotEmpty(&data.ImpersonateServiceAccount, apiModel.ImpersonateServiceAccount)
+	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)
 	// credentials intentionally not read back — write-only
 
 	return rd

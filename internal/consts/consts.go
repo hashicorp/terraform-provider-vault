@@ -705,6 +705,7 @@ const (
 	FieldSecretAccessKey                    = "secret_access_key"
 	FieldZoneName                           = "zone_name"
 	FieldImpersonateServiceAccount          = "impersonate_service_account"
+	FieldDefaultNameserver                  = "default_nameserver"
 
 	FieldInput                       = "input"
 	FieldKeyVersion                  = "key_version"

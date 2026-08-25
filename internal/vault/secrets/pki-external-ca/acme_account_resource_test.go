@@ -68,7 +68,9 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 				),
 			},
 			{
-				// Because we change email contacts and key type this will be a re-creation
+				// Because we change email contacts and key type this will be a re-creation;
+				// default_nameserver is update-safe (no RequiresReplace) so it is also
+				// exercised here without forcing another destroy/create cycle.
 				Config: testPKIACMEAccount_updateConfig(backend, accountName, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
@@ -80,6 +82,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "key_type", "rsa-2048"),
 					resource.TestCheckResourceAttr(resourceName, "trusted_ca", ca+"\n"),
 					resource.TestCheckResourceAttr(resourceName, "active_key_version", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDefaultNameserver, "8.8.8.8"),
 				),
 			},
 		},
@@ -116,12 +119,13 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
-  mount           = vault_mount.test.path
-  name            = "%s"
-  directory_url   = "%s"
-  email_contacts  = ["test@example.com", "admin@example.com"]
-  key_type        = "rsa-2048"
-  trusted_ca      = <<EOT
+  mount              = vault_mount.test.path
+  name               = "%s"
+  directory_url      = "%s"
+  email_contacts     = ["test@example.com", "admin@example.com"]
+  key_type           = "rsa-2048"
+  default_nameserver = "8.8.8.8"
+  trusted_ca         = <<EOT
 %s
 EOT
 }

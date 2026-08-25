@@ -51,13 +51,14 @@ func TestAccPKIExternalCADNSProviderAWSRoute53_basic(t *testing.T) {
 				// secret_access_key is write-only — not returned by Vault
 				ImportStateVerifyIgnore: []string{consts.FieldSecretAccessKey},
 			},
-			// update
+			// update — also exercises nameserver field
 			{
 				Config: testAccPKIDNSProviderAWSRoute53ConfigUpdated(backend, providerName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "eu-west-1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHostedZoneId, "ZXYZ9876543210"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAssumeRoleArn, "arn:aws:iam::123456789012:role/vault-dns-role-v2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "8.8.8.8:53"),
 				),
 			},
 		},
@@ -111,6 +112,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_aws_route53" "test" 
   region          = "eu-west-1"
   hosted_zone_id  = "ZXYZ9876543210"
   assume_role_arn = "arn:aws:iam::123456789012:role/vault-dns-role-v2"
+  nameserver      = "8.8.8.8:53"
 }
 `, backend, providerName)
 }

@@ -59,6 +59,7 @@ type PKIExternalCADNSProviderAzureModel struct {
 	SubscriptionId    types.String `tfsdk:"subscription_id"`
 	ResourceGroupName types.String `tfsdk:"resource_group_name"`
 	Environment       types.String `tfsdk:"environment"`
+	Nameserver        types.String `tfsdk:"nameserver"`
 }
 
 type PKIExternalCADNSProviderAzureAPIModel struct {
@@ -73,6 +74,7 @@ type PKIExternalCADNSProviderAzureAPIModel struct {
 	SubscriptionId    string   `json:"subscription_id" mapstructure:"subscription_id"`
 	ResourceGroupName string   `json:"resource_group_name" mapstructure:"resource_group_name"`
 	Environment       string   `json:"environment" mapstructure:"environment"`
+	Nameserver        string   `json:"nameserver" mapstructure:"nameserver"`
 }
 
 func (r *PKIExternalCADNSProviderAzureResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -140,6 +142,10 @@ func (r *PKIExternalCADNSProviderAzureResource) Schema(_ context.Context, _ reso
 				MarkdownDescription: "Azure cloud environment. Valid values: `AzurePublic`, `AzureChina`, `AzureGovernment`. Defaults to `AzurePublic`.",
 				Optional:            true,
 			},
+			consts.FieldNameserver: schema.StringAttribute{
+				MarkdownDescription: "DNS server address in `IP:port` format (e.g. `192.168.1.1:53`). Overrides the default nameserver set on the ACME account.",
+				Optional:            true,
+			},
 		},
 	}
 	base.MustAddBaseSchema(&resp.Schema)
@@ -152,7 +158,7 @@ func (r *PKIExternalCADNSProviderAzureResource) Create(ctx context.Context, req 
 		return
 	}
 
-	if err := checkVaultVersion(r.Meta()); err != nil {
+	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
 		return
 	}
@@ -296,6 +302,7 @@ func buildAzureRequest(ctx context.Context, data *PKIExternalCADNSProviderAzureM
 	setIfNotEmpty(req, consts.FieldSubscriptionID, data.SubscriptionId.ValueString())
 	setIfNotEmpty(req, consts.FieldResourceGroupName, data.ResourceGroupName.ValueString())
 	setIfNotEmpty(req, consts.FieldEnvironment, data.Environment.ValueString())
+	setIfNotEmpty(req, consts.FieldNameserver, data.Nameserver.ValueString())
 
 	return req, diags
 }
@@ -328,6 +335,7 @@ func handleAzureResponse(ctx context.Context, data *PKIExternalCADNSProviderAzur
 	setStringIfNotEmpty(&data.SubscriptionId, apiModel.SubscriptionId)
 	setStringIfNotEmpty(&data.ResourceGroupName, apiModel.ResourceGroupName)
 	setStringIfNotEmpty(&data.Environment, apiModel.Environment)
+	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)
 	// client_secret intentionally not read back — write-only
 
 	return rd

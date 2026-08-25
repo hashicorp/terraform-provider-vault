@@ -58,6 +58,7 @@ type PKIExternalCADNSProviderAWSRoute53Model struct {
 	HostedZoneId    types.String `tfsdk:"hosted_zone_id"`
 	ExternalId      types.String `tfsdk:"external_id"`
 	AssumeRoleArn   types.String `tfsdk:"assume_role_arn"`
+	Nameserver      types.String `tfsdk:"nameserver"`
 }
 
 type PKIExternalCADNSProviderAWSRoute53APIModel struct {
@@ -71,6 +72,7 @@ type PKIExternalCADNSProviderAWSRoute53APIModel struct {
 	HostedZoneId    string   `json:"hosted_zone_id" mapstructure:"hosted_zone_id"`
 	ExternalId      string   `json:"external_id" mapstructure:"external_id"`
 	AssumeRoleArn   string   `json:"assume_role_arn" mapstructure:"assume_role_arn"`
+	Nameserver      string   `json:"nameserver" mapstructure:"nameserver"`
 }
 
 func (r *PKIExternalCADNSProviderAWSRoute53Resource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -134,6 +136,10 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				MarkdownDescription: "AWS IAM role ARN to assume for Route53 operations.",
 				Optional:            true,
 			},
+			consts.FieldNameserver: schema.StringAttribute{
+				MarkdownDescription: "DNS server address in `IP:port` format (e.g. `192.168.1.1:53`). Overrides the default nameserver set on the ACME account.",
+				Optional:            true,
+			},
 		},
 	}
 	base.MustAddBaseSchema(&resp.Schema)
@@ -146,7 +152,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Create(ctx context.Context,
 		return
 	}
 
-	if err := checkVaultVersion(r.Meta()); err != nil {
+	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
 		return
 	}
@@ -289,6 +295,7 @@ func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderA
 	setIfNotEmpty(req, consts.FieldHostedZoneId, data.HostedZoneId.ValueString())
 	setIfNotEmpty(req, consts.FieldExternalID, data.ExternalId.ValueString())
 	setIfNotEmpty(req, consts.FieldAssumeRoleArn, data.AssumeRoleArn.ValueString())
+	setIfNotEmpty(req, consts.FieldNameserver, data.Nameserver.ValueString())
 
 	return req, diags
 }
@@ -320,6 +327,7 @@ func handleAWSRoute53Response(ctx context.Context, data *PKIExternalCADNSProvide
 	setStringIfNotEmpty(&data.HostedZoneId, apiModel.HostedZoneId)
 	setStringIfNotEmpty(&data.ExternalId, apiModel.ExternalId)
 	setStringIfNotEmpty(&data.AssumeRoleArn, apiModel.AssumeRoleArn)
+	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)
 	// secret_access_key intentionally not read back — write-only
 
 	return rd
