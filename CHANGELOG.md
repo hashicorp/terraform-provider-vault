@@ -2,7 +2,7 @@
 
 IMPROVEMENTS:
 
-* `vault_plugin`: Add `download` field to let Vault Enterprise (1.20+) automatically download official enterprise plugin artifacts from releases.hashicorp.com during registration, instead of requiring the artifact to be pre-staged in the server's `plugin_directory`.
+* `vault_plugin`: Add `download` field to let Vault Enterprise (1.20+) automatically download official enterprise plugin artifacts from releases.hashicorp.com during registration, instead of requiring the artifact to be pre-staged in the server's `plugin_directory`. ([#3022](https://github.com/hashicorp/terraform-provider-vault/pull/3022))
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
 * Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
 
