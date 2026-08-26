@@ -11,7 +11,7 @@ description: |-
 Creates an Identity TPM record for Vault. TPM records represent individual machines with
 TPM 2.0 hardware and are identified by their TPM Endorsement Key (EK) public key.
 
-~> **Important** This resource requires Vault 2.2.0 or later.
+~> **Important** This resource requires Vault Enterprise 2.2.0 or later.
 
 ## Example Usage
 
@@ -41,9 +41,8 @@ The following arguments are supported:
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
-   *Available only for Vault Enterprise*.
 
-* `name` - (Required) Name of the TPM record.
+* `name` - (Optional) Name of the TPM record. Vault generates a name if one is not specified.
 
 * `tpm_ek_public_key` - (Required) PEM-encoded TPM Endorsement Key (EK) public key.
   This uniquely identifies the TPM hardware. **Note:** This field cannot be changed after

@@ -12,7 +12,7 @@ Manages the configuration for a TPM (Trusted Platform Module) auth backend in Va
 The TPM auth method allows machines with TPM 2.0 hardware to authenticate to Vault
 using their TPM Endorsement Key (EK).
 
-~> **Important** This resource requires Vault 2.2.0 or later.
+~> **Important** This resource requires Vault Enterprise 2.2.0 or later.
 
 ## Example Usage
 
@@ -37,7 +37,6 @@ The following arguments are supported:
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
-   *Available only for Vault Enterprise*.
 
 * `mount` - (Required) Path of the enabled TPM auth backend mount to configure.
 

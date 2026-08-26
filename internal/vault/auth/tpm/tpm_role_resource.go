@@ -117,7 +117,7 @@ func (r *TPMAuthRoleResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	// Check if Vault version supports TMP auth (requires 2.2.0+)
+	// Check if Vault version supports TPM auth (requires 2.2.0+)
 	if !r.Meta().IsAPISupported(provider.VaultVersion220) {
 		resp.Diagnostics.AddError(
 			"Feature Not Supported",

@@ -62,8 +62,9 @@ func (r *IdentityTPMGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldName: schema.StringAttribute{
-				Required:    true,
-				Description: "Name of the TPM group.",
+				Optional:    true,
+				Computed:    true,
+				Description: "Name of the TPM group. Vault generates a name if one is not specified.",
 			},
 			consts.FieldMemberTPMIDs: schema.SetAttribute{
 				ElementType: types.StringType,
@@ -96,7 +97,7 @@ func (r *IdentityTPMGroupResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	// Check if Vault version supports TMP auth (requires 2.2.0+)
+	// Check if Vault version supports TPM auth (requires 2.2.0+)
 	if !r.Meta().IsAPISupported(provider.VaultVersion220) {
 		resp.Diagnostics.AddError(
 			"Feature Not Supported",

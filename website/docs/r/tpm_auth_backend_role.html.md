@@ -11,7 +11,7 @@ description: |-
 Manages a role in a TPM (Trusted Platform Module) auth backend. Roles define the mapping
 from TPM identities and TPM groups to Vault policies and token parameters.
 
-~> **Important** This resource requires Vault 2.2.0 or later.
+~> **Important** This resource requires Vault Enterprise 2.2.0 or later.
 
 ## Example Usage
 
@@ -46,12 +46,13 @@ resource "vault_tpm_auth_backend_role" "example" {
 
 ## Argument Reference
 
+**Note:** At least one of `tpm_ids` or `tpmgroup_ids` must be specified. Both may be set.
+
 The following arguments are supported:
 
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
-   *Available only for Vault Enterprise*.
 
 * `mount` - (Required) TPM auth backend mount path.
 
@@ -105,6 +106,9 @@ These arguments are common across several Authentication Token resources since V
   `service` tokens). For token store roles, there are two additional possibilities:
   `default-service` and `default-batch` which specify the type to return unless the client
   requests a different type at generation time.
+
+* `alias_metadata` - (Optional) The metadata to be tied to generated entity alias.
+  This should be a list or map containing the metadata in key value pairs.
 
 ## Attributes Reference
 

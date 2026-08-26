@@ -11,7 +11,7 @@ description: |-
 Creates an Identity TPM Group for Vault. TPM groups allow you to organize multiple TPM records
 (machines with TPM 2.0 hardware) into logical groups for easier policy management and authorization.
 
-~> **Important** This resource requires Vault 2.2.0 or later.
+~> **Important** This resource requires Vault Enterprise 2.2.0 or later.
 
 ## Example Usage
 
@@ -48,9 +48,8 @@ The following arguments are supported:
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
-   *Available only for Vault Enterprise*.
 
-* `name` - (Required) Name of the TPM group.
+* `name` - (Optional) Name of the TPM group. Vault generates a name if one is not specified.
 
 * `member_tpm_ids` - (Optional) Set of TPM IDs that are members of this TPM group.
   These are the unique IDs assigned by Vault to TPM records (SHA256 of the EK public key).
