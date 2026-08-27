@@ -23,7 +23,7 @@ resource "vault_mount" "example" {
 resource "vault_transform_transformation_tokenization" "example" {
   path             = vault_mount.example.path
   name             = "tkn-example"
-  max_ttl          = "86400"
+  max_ttl          = 86400
   deletion_allowed = true
   mapping_mode     = "default"
   allowed_roles    = ["payments"]
@@ -48,7 +48,7 @@ The following arguments are supported:
 * `convergent` - (Optional) Specifies whether to use convergent tokenization, where tokenization of
   the same plaintext more than once results in the same token. Default is `false`.
   **Note:** This field is immutable and cannot be changed after creation. Changing this value will force recreation of the resource.
-* `max_ttl` - (Optional) The maximum TTL of a token. If `"0"` or unspecified, tokens may have no expiration. Default is `"0"`.
+* `max_ttl` - (Optional) The maximum TTL of a token. If `0` or unspecified, tokens may have no expiration. Default is `0`.
 * `allowed_roles` - (Optional) Specifies a list of allowed roles that this transformation can be assigned to.
   A role using this transformation must exist in this list in order for encode and decode operations to properly function. Default is `[]`.
 * `stores` - (Optional) The list of tokenization stores to use for tokenization state. Default is `["builtin/internal"]`.
