@@ -50,7 +50,7 @@ func transformTransformationTokenizationResource() *schema.Resource {
 				"This property cannot be changed after the transform is created.",
 		},
 		consts.FieldMaxTTL: {
-			Type:        schema.TypeString,
+			Type:        schema.TypeInt,
 			Description: "The maximum TTL of a token. If 0 or unspecified, tokens may have no expiration.",
 			Optional:    true,
 			Computed:    true,
@@ -77,7 +77,7 @@ func transformTransformationTokenizationResource() *schema.Resource {
 		},
 		consts.FieldDeletionAllowed: {
 			Type: schema.TypeBool,
-			Description: " If true, this transform can be deleted. " + "Otherwise deletion is blocked while this value remains false. " +
+			Description: "If true, this transform can be deleted. " + "Otherwise deletion is blocked while this value remains false. " +
 				"Note that deleting the transform deletes the underlying key making decoding of tokenized values impossible without restoring from a backup.",
 			Optional: true,
 		},
