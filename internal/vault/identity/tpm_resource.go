@@ -127,22 +127,12 @@ func (r *IdentityTPMResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	resourcePath := r.path(&data)
-	if _, err := vaultClient.Logical().WriteWithContext(ctx, resourcePath, requestBody); err != nil {
+	resourcePath := "identity/tpm"
+	secret, err := vaultClient.Logical().WriteWithContext(ctx, resourcePath, requestBody)
+	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
-
-	secret, err := vaultClient.Logical().ReadWithContext(ctx, resourcePath)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if secret == nil {
-		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
-		return
-	}
-
 	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, secret)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -166,7 +156,10 @@ func (r *IdentityTPMResource) Read(ctx context.Context, req resource.ReadRequest
 
 	secret, err := vaultClient.Logical().ReadWithContext(ctx, r.path(&data))
 	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+		resp.Diagnostics.AddError(errutil.VaultReadErr(fmt.Errorf("bad request using data=%#v: %w", data, err)))
+		return
+	}
+	if resp.Diagnostics.HasError() {
 		return
 	}
 	if secret == nil {

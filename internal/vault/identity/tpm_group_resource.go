@@ -119,12 +119,15 @@ func (r *IdentityTPMGroupResource) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Create uses the collection path with name in the body; read/update/delete use /name/{name}.
-	if _, err := vaultClient.Logical().WriteWithContext(ctx, "identity/tpmgroup", requestBody); err != nil {
+	secret, err := vaultClient.Logical().WriteWithContext(ctx, "identity/tpmgroup", requestBody)
+	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
 
-	secret, err := vaultClient.Logical().ReadWithContext(ctx, r.path(&data))
+	data.TPMGroupID = types.StringValue(secret.Data["id"].(string))
+
+	secret, err = vaultClient.Logical().ReadWithContext(ctx, r.path(&data))
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
