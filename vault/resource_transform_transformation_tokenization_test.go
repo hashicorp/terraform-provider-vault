@@ -20,7 +20,7 @@ func TestAccTransformTransformationTokenization(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resourceName := "vault_transform_transformation_tokenization.default_transform"
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.PreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             transformTransformationTokenizationDestroy,
 		Steps: []resource.TestStep{
@@ -44,7 +44,7 @@ func TestAccTransformTransformationTokenization_WithFields(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resourceName := "vault_transform_transformation_tokenization.test"
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.PreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             transformTransformationTokenizationDestroy,
 		Steps: []resource.TestStep{
@@ -88,7 +88,7 @@ func TestAccTransformTransformationTokenization_Convergent(t *testing.T) {
 	path := acctest.RandomWithPrefix("transform")
 	resourceName := "vault_transform_transformation_tokenization.test"
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.PreCheck(t) },
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             transformTransformationTokenizationDestroy,
 		Steps: []resource.TestStep{
