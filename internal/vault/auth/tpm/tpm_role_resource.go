@@ -5,6 +5,7 @@ package tpm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -49,7 +50,7 @@ type TPMAuthRoleModel struct {
 	Mount       types.String `tfsdk:"mount"`
 	Name        types.String `tfsdk:"name"`
 	DisplayName types.String `tfsdk:"display_name"`
-	CertTTL     types.String `tfsdk:"cert_ttl"`
+	CertTTL     types.Int64  `tfsdk:"cert_ttl"`
 	TPMIDs      types.Set    `tfsdk:"tpm_ids"`
 	TPMGroupIDs types.Set    `tfsdk:"tpmgroup_ids"`
 }
@@ -57,10 +58,10 @@ type TPMAuthRoleModel struct {
 type tpmRoleAPIModel struct {
 	token.TokenAPIModel `mapstructure:",squash"`
 
-	DisplayName string   `json:"display_name" mapstructure:"display_name"`
-	CertTTL     string   `json:"cert_ttl" mapstructure:"cert_ttl"`
-	TPMIDs      []string `json:"tpm_ids" mapstructure:"tpm_ids"`
-	TPMGroupIDs []string `json:"tpmgroup_ids" mapstructure:"tpmgroup_ids"`
+	DisplayName string      `json:"display_name" mapstructure:"display_name"`
+	CertTTL     json.Number `json:"cert_ttl" mapstructure:"cert_ttl"`
+	TPMIDs      []string    `json:"tpm_ids" mapstructure:"tpm_ids"`
+	TPMGroupIDs []string    `json:"tpmgroup_ids" mapstructure:"tpmgroup_ids"`
 }
 
 func (r *TPMAuthRoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -89,10 +90,10 @@ func (r *TPMAuthRoleResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:    true,
 				Description: "Display name for the role. Defaults to the role name.",
 			},
-			consts.FieldCertTTL: schema.StringAttribute{
+			consts.FieldCertTTL: schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Certificate TTL for the TPM role.",
+				Description: "Certificate TTL for the TPM role in seconds.",
 			},
 			consts.FieldTPMIDs: schema.SetAttribute{
 				ElementType: types.StringType,
@@ -330,7 +331,7 @@ func (r *TPMAuthRoleResource) path(data *TPMAuthRoleModel) string {
 func (r *TPMAuthRoleResource) getAPIModel(ctx context.Context, data *TPMAuthRoleModel) (map[string]any, diag.Diagnostics) {
 	apiModel := tpmRoleAPIModel{
 		DisplayName: data.DisplayName.ValueString(),
-		CertTTL:     data.CertTTL.ValueString(),
+		CertTTL:     json.Number(fmt.Sprintf("%d", data.CertTTL.ValueInt64())),
 	}
 
 	if diags := data.TPMIDs.ElementsAs(ctx, &apiModel.TPMIDs, false); diags.HasError() {
@@ -370,12 +371,10 @@ func (r *TPMAuthRoleResource) populateDataModelFromAPI(ctx context.Context, data
 	}
 
 	data.DisplayName = types.StringValue(readResp.DisplayName)
-	if readResp.CertTTL == "" {
-		if data.CertTTL.IsNull() || data.CertTTL.IsUnknown() {
-			data.CertTTL = types.StringNull()
-		}
+	if v, err := readResp.CertTTL.Int64(); err == nil && v != 0 {
+		data.CertTTL = types.Int64Value(v)
 	} else {
-		data.CertTTL = types.StringValue(readResp.CertTTL)
+		data.CertTTL = types.Int64Null()
 	}
 
 	if len(readResp.TPMIDs) == 0 {
