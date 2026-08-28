@@ -29,7 +29,7 @@ import (
 func TestAccIdentityTPM_versionGate(t *testing.T) {
 	publicKey := testTPMPublicKey(t)
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionGTE(t, provider.VaultVersion220)
@@ -57,7 +57,7 @@ func TestAccIdentityTPM(t *testing.T) {
 	publicKey := testTPMPublicKey(t)
 	var originalTPMID string
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
@@ -175,7 +175,7 @@ func TestAccIdentityTPM_metadata(t *testing.T) {
 	publicKey := testTPMPublicKey(t)
 	var tpmId string
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
@@ -349,7 +349,6 @@ func testTPMPublicKey(t *testing.T) string {
 
 	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes})
 	return string(pemBytes)
-	// return strings.TrimSuffix(string(pemBytes), "\n")
 }
 
 // tpmIDFromPublicKey computes the TPM record ID (SHA256 of canonical PEM) the

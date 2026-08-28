@@ -124,7 +124,12 @@ func (r *IdentityTPMGroupResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	data.TPMGroupID = types.StringValue(secret.Data["id"].(string))
+	id, ok := secret.Data["id"].(string)
+	if !ok || id == "" {
+		resp.Diagnostics.AddError("Unexpected API response", "Expected string 'id' field in create response.")
+		return
+	}
+	data.TPMGroupID = types.StringValue(id)
 
 	secret, err = vaultClient.Logical().ReadWithContext(ctx, r.path(&data))
 	if err != nil {

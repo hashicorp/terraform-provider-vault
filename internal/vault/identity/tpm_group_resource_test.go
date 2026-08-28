@@ -29,7 +29,7 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 	tpmTwoPublicKey := testTPMPublicKey(t)
 	var originalTPMGroupID string
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
@@ -136,7 +136,7 @@ func TestAccIdentityTPMGroup_metadata(t *testing.T) {
 	tpmTwoPublicKey := testTPMPublicKey(t)
 	var tpmGroupID string
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
@@ -274,7 +274,7 @@ func TestAccIdentityTPMGroup_memberTPMIds(t *testing.T) {
 	tpmTwoPublicKey := testTPMPublicKey(t)
 	var tpmGroupID string
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
