@@ -24,7 +24,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 	tpmName := acctest.RandomWithPrefix("tpm")
 	resourceName := "vault_tpm_auth_backend_role.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
@@ -114,7 +114,7 @@ func TestAccTPMAuthRoleNamespace(t *testing.T) {
 	tpmName := acctest.RandomWithPrefix("tpm")
 	resourceName := "vault_tpm_auth_backend_role.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.TestEntPreCheck(t)

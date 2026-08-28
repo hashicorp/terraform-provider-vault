@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
@@ -19,7 +20,7 @@ func TestAccTPMAuthBackendConfig(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tpm-mount")
 	resourceName := "vault_tpm_auth_backend_config.test"
 
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
@@ -54,8 +55,32 @@ func TestAccTPMAuthBackendConfig(t *testing.T) {
 					},
 				},
 			},
+			// Step 3: Import state.
+			// ca_lifetime, ca_soft_expiry, and default_cert_ttl are ignored because
+			// Vault normalizes duration strings on read (e.g. "3000h" → "10800000s").
+			// resolveDurationFieldState preserves the user-supplied format when prior
+			// state exists, but import starts with null state so the raw API value is
+			// stored instead. The values are functionally equivalent.
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccTPMAuthBackendConfigImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "mount",
+				ImportStateVerifyIgnore:              []string{"ca_lifetime", "ca_soft_expiry", "default_cert_ttl"},
+			},
 		},
-	})
+		})
+}
+
+func testAccTPMAuthBackendConfigImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
+	return func(s *terraform.State) (string, error) {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return "", fmt.Errorf("not found: %s", resourceName)
+		}
+		return fmt.Sprintf("auth/%s/config", rs.Primary.Attributes["mount"]), nil
+	}
 }
 
 func testAccTPMAuthBackendConfigConfig(mount, caLifetime, caSoftExpiry, defaultCertTTL string) string {
