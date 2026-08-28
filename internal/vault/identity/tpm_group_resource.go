@@ -74,7 +74,6 @@ func (r *IdentityTPMGroupResource) Schema(_ context.Context, _ resource.SchemaRe
 			consts.FieldMetadata: schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
 				Description: "Metadata to associate with the TPM group.",
 			},
 			consts.FieldTPMGroupID: schema.StringAttribute{
@@ -281,17 +280,12 @@ func (r *IdentityTPMGroupResource) getAPIModel(ctx context.Context, data *Identi
 		Name: data.Name.ValueString(),
 	}
 
-	var memberTPMIDs []string
-	if diags := data.MemberTPMIDs.ElementsAs(ctx, &memberTPMIDs, false); diags.HasError() {
+	if diags := data.MemberTPMIDs.ElementsAs(ctx, &apiModel.MemberTPMIDs, false); diags.HasError() {
 		return nil, diags
 	}
-	apiModel.MemberTPMIDs = memberTPMIDs
-	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
-		var metadata map[string]string
-		if diags := data.Metadata.ElementsAs(ctx, &metadata, false); diags.HasError() {
-			return nil, diags
-		}
-		apiModel.Metadata = metadata
+
+	if diags := data.Metadata.ElementsAs(ctx, &apiModel.Metadata, false); diags.HasError() {
+		return nil, diags
 	}
 
 	var requestBody map[string]any
@@ -299,13 +293,6 @@ func (r *IdentityTPMGroupResource) getAPIModel(ctx context.Context, data *Identi
 		return nil, diag.Diagnostics{
 			diag.NewErrorDiagnostic("Failed to decode TPM group API model to map", err.Error()),
 		}
-	}
-
-	if len(memberTPMIDs) == 0 {
-		delete(requestBody, consts.FieldMemberTPMIDs)
-	}
-	if data.Metadata.IsNull() || data.Metadata.IsUnknown() {
-		delete(requestBody, consts.FieldMetadata)
 	}
 
 	return requestBody, nil
@@ -325,27 +312,25 @@ func (r *IdentityTPMGroupResource) populateDataModelFromAPI(ctx context.Context,
 		}
 	}
 
+	// Update data model with values from Vault
 	data.Name = types.StringValue(readResp.Name)
 	data.TPMGroupID = types.StringValue(readResp.TPMGroupID)
 
 	if len(readResp.MemberTPMIDs) == 0 {
 		data.MemberTPMIDs = types.SetNull(types.StringType)
 	} else {
-		memberTPMIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.MemberTPMIDs)
-		if diags.HasError() {
-			return diags
+		memberTPMIDs, memberDiags := types.SetValueFrom(ctx, types.StringType, readResp.MemberTPMIDs)
+		if memberDiags.HasError() {
+			return memberDiags
 		}
 		data.MemberTPMIDs = memberTPMIDs
 	}
-	if len(readResp.Metadata) == 0 {
-		data.Metadata = types.MapNull(types.StringType)
-	} else {
-		metadata, diags := types.MapValueFrom(ctx, types.StringType, readResp.Metadata)
-		if diags.HasError() {
-			return diags
-		}
-		data.Metadata = metadata
+
+	metadata, metaDiags := types.MapValueFrom(ctx, types.StringType, readResp.Metadata)
+	if metaDiags.HasError() {
+		return metaDiags
 	}
+	data.Metadata = metadata
 
 	return nil
 }
