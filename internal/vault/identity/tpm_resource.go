@@ -83,7 +83,6 @@ func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest
 			consts.FieldMetadata: schema.MapAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Computed:    true,
 				Description: "Metadata to associate with the TPM record.",
 			},
 			consts.FieldTPMID: schema.StringAttribute{
@@ -289,23 +288,17 @@ func (r *IdentityTPMResource) populateDataModelFromAPI(ctx context.Context, data
 		}
 	}
 
-	data.Name = types.StringValue(readResp.Name)
-	if readResp.TPMEKPublicKey == "" {
-		data.TPMEKPublicKey = types.StringNull()
-	} else if data.TPMEKPublicKey.IsNull() || data.TPMEKPublicKey.IsUnknown() {
-		data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
-	}
-	data.Disabled = types.BoolValue(readResp.Disabled)
-	if len(readResp.Metadata) == 0 {
-		data.Metadata = types.MapNull(types.StringType)
-	} else {
-		metadata, diags := types.MapValueFrom(ctx, types.StringType, readResp.Metadata)
-		if diags.HasError() {
-			return diags
-		}
-		data.Metadata = metadata
-	}
+	// Update data model with values from Vault
 	data.TPMID = types.StringValue(readResp.TPMID)
+	data.Name = types.StringValue(readResp.Name)
+	data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
+	data.Disabled = types.BoolValue(readResp.Disabled)
+
+	metadata, diags := types.MapValueFrom(ctx, types.StringType, readResp.Metadata)
+	if diags.HasError() {
+		return diags
+	}
+	data.Metadata = metadata
 
 	return nil
 }
@@ -319,12 +312,9 @@ func (r *IdentityTPMResource) getAPIModel(ctx context.Context, data *IdentityTPM
 	if !data.Disabled.IsNull() && !data.Disabled.IsUnknown() {
 		apiModel.Disabled = data.Disabled.ValueBool()
 	}
-	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
-		var metadata map[string]string
-		if diags := data.Metadata.ElementsAs(ctx, &metadata, false); diags.HasError() {
-			return nil, diags
-		}
-		apiModel.Metadata = metadata
+
+	if diags := data.Metadata.ElementsAs(ctx, &apiModel.Metadata, false); diags.HasError() {
+		return nil, diags
 	}
 
 	var requestBody map[string]any
@@ -336,9 +326,6 @@ func (r *IdentityTPMResource) getAPIModel(ctx context.Context, data *IdentityTPM
 
 	if data.Disabled.IsNull() || data.Disabled.IsUnknown() {
 		delete(requestBody, "disabled")
-	}
-	if data.Metadata.IsNull() || data.Metadata.IsUnknown() {
-		delete(requestBody, consts.FieldMetadata)
 	}
 
 	return requestBody, nil
