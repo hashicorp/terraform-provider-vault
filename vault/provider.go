@@ -787,6 +787,10 @@ var (
 			Resource:      UpdateSchemaResource(transformTransformationTokenizationResource()),
 			PathInventory: []string{"/transform/transformations/tokenization/{name}"},
 		},
+		"vault_transform_transformation_tokenization_store": {
+			Resource:      UpdateSchemaResource(transformTransformationTokenizationStoreResource()),
+			PathInventory: []string{"/transform/stores/{name}"},
+		},
 		"vault_transform_template": {
 			Resource:      UpdateSchemaResource(transformTemplateResource()),
 			PathInventory: []string{"/transform/template/{name}"},
