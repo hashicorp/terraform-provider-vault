@@ -1,5 +1,9 @@
 ## 5.12.0 (Unreleased)
 
+FEATURES:
+
+* **New Resources**: Add support for PKI External CA DNS-01 challenge providers with `vault_pki_external_ca_secret_backend_dns_provider_aws_route53`, `vault_pki_external_ca_secret_backend_dns_provider_azure`, `vault_pki_external_ca_secret_backend_dns_provider_gcp`, and `vault_pki_external_ca_secret_backend_dns_provider_rfc2136` resources. Also adds `default_nameserver` to `vault_pki_external_ca_secret_backend_acme_account` and `dns_provider_name`/`dns_provider_type` to `vault_pki_external_ca_secret_backend_role`. Requires Vault 2.1.0 or later. ([#3014](https://github.com/hashicorp/terraform-provider-vault/pull/3014))
+
 IMPROVEMENTS:
 
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))

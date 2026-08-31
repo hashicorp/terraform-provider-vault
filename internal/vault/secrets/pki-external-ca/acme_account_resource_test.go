@@ -153,6 +153,15 @@ func TestAccPKIACMEAccount_defaultNameserver(t *testing.T) {
 				),
 			},
 			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccPKIACMEAccountImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				// eab_kid and eab_key are write-only — not returned by Vault
+				ImportStateVerifyIgnore: []string{"eab_kid", "eab_key"},
+			},
+			{
 				// Update default_nameserver in-place (no RequiresReplace).
 				Config: testPKIACMEAccount_defaultNameserverConfig(backend, accountName, directoryUrl, ca, "1.1.1.1"),
 				Check: resource.ComposeTestCheckFunc(

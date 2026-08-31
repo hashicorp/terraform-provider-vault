@@ -63,7 +63,7 @@ The following arguments are supported:
 
 * `tsig_secret` - (Optional) TSIG secret as a base64-encoded string. Write-only — not returned by Vault on read.
 
-* `tsig_algorithm` - (Optional) TSIG algorithm to use. Valid values are `hmac-sha1`, `hmac-sha224`, `hmac-sha256`, `hmac-sha384`, `hmac-sha512`. Defaults to `hmac-sha1`.
+* `tsig_algorithm` - (Optional) TSIG algorithm to use. Valid values are `hmac-sha1`, `hmac-sha224`, `hmac-sha256`, `hmac-sha384`, `hmac-sha512`. Defaults to `hmac-sha256`.
 
 ## Attributes Reference
 

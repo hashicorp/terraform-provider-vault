@@ -151,6 +151,11 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Create(ctx context.Context,
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// Write-only fields are nullified in the plan by the framework; read from config.
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKey), &data.SecretAccessKey)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
@@ -213,6 +218,11 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Read(ctx context.Context, r
 func (r *PKIExternalCADNSProviderAWSRoute53Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data PKIExternalCADNSProviderAWSRoute53Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// Write-only fields are nullified in the plan by the framework; read from config.
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKey), &data.SecretAccessKey)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -139,6 +139,11 @@ func (r *PKIExternalCADNSProviderGCPResource) Create(ctx context.Context, req re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// Write-only fields are nullified in the plan by the framework; read from config.
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCredentials), &data.Credentials)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
@@ -201,6 +206,11 @@ func (r *PKIExternalCADNSProviderGCPResource) Read(ctx context.Context, req reso
 func (r *PKIExternalCADNSProviderGCPResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data PKIExternalCADNSProviderGCPModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// Write-only fields are nullified in the plan by the framework; read from config.
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCredentials), &data.Credentials)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

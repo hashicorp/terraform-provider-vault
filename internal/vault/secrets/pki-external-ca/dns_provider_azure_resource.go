@@ -157,6 +157,11 @@ func (r *PKIExternalCADNSProviderAzureResource) Create(ctx context.Context, req 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// Write-only fields are nullified in the plan by the framework; read from config.
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecret), &data.ClientSecret)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
@@ -219,6 +224,11 @@ func (r *PKIExternalCADNSProviderAzureResource) Read(ctx context.Context, req re
 func (r *PKIExternalCADNSProviderAzureResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data PKIExternalCADNSProviderAzureModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// Write-only fields are nullified in the plan by the framework; read from config.
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecret), &data.ClientSecret)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
