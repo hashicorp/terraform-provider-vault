@@ -133,6 +133,11 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Create(ctx context.Context, re
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	// Write-only fields are not included in the plan; read them from config.
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecret), &data.TsigSecret)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
@@ -195,6 +200,11 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Read(ctx context.Context, req 
 func (r *PKIExternalCADNSProviderRFC2136Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data PKIExternalCADNSProviderRFC2136Model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// Write-only fields are not included in the plan; read them from config.
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecret), &data.TsigSecret)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

@@ -39,7 +39,7 @@ func TestAccPKIExternalCADNSProviderRFC2136_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "ns1.example.com:53"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTsigKeyName, "vault-tsig-key"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTsigAlgorithm, "hmac-sha256"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldTsigSecret, "supersecret"),
+					// tsig_secret is write-only — not stored in state, cannot be checked
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCreationDate),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLastUpdatedDate),
 				),

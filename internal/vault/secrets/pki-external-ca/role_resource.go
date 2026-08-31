@@ -101,17 +101,17 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"acme_account_name": schema.StringAttribute{
+			consts.FieldAcmeAccountName: schema.StringAttribute{
 				MarkdownDescription: "The ACME account to use when validating certificates.",
 				Required:            true,
 			},
-			"dns_provider_name": schema.StringAttribute{
+			consts.FieldDnsProviderName: schema.StringAttribute{
 				MarkdownDescription: "The name of the DNS provider configuration to use for DNS-01 challenges.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(""),
 			},
-			"dns_provider_type": schema.StringAttribute{
+			consts.FieldDnsProviderType: schema.StringAttribute{
 				MarkdownDescription: "The type of the DNS provider. Valid values are: `aws_route53`, `rfc2136`, `gcp`, `azure`.",
 				Optional:            true,
 				Computed:            true,
@@ -120,19 +120,19 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 					stringvalidator.OneOf("", "aws_route53", "rfc2136", "gcp", "azure"),
 				},
 			},
-			"allowed_domains": schema.ListAttribute{
+			consts.FieldAllowedDomains: schema.ListAttribute{
 				MarkdownDescription: "A list of domains the role will accept certificates for. May contain templates, as with ACL Path Templating.",
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
-			"allowed_domain_options": schema.ListAttribute{
+			consts.FieldAllowedDomainOptions: schema.ListAttribute{
 				MarkdownDescription: "A list of keyword options that influence how values within allowed_domains are interpreted against the requested set of identifiers from the client. Valid values are: `bare_domains`, `subdomains`, `wildcards`, `globs`.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 			},
-			"allowed_challenge_types": schema.ListAttribute{
+			consts.FieldAllowedChallengeTypes: schema.ListAttribute{
 				MarkdownDescription: "The list of challenge types that are allowed to be used. Valid values are: `http-01`, `dns-01`, `tls-alpn-01`. Defaults to all challenge types.",
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -143,7 +143,7 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 					types.StringValue("tls-alpn-01"),
 				})),
 			},
-			"csr_generate_key_type": schema.StringAttribute{
+			consts.FieldCsrGenerateKeyType: schema.StringAttribute{
 				MarkdownDescription: "The key type and size/parameters to use when generating a new key if running in the identifier workflow. Valid values are: `ec-256`, `ec-384`, `ec-521`, `rsa-2048`, `rsa-4096`.",
 				Optional:            true,
 				Computed:            true,
@@ -152,7 +152,7 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 					stringvalidator.OneOf("ec-256", "ec-384", "ec-521", "rsa-2048", "rsa-4096"),
 				},
 			},
-			"csr_identifier_population": schema.StringAttribute{
+			consts.FieldCsrIdentifierPopulation: schema.StringAttribute{
 				MarkdownDescription: "The technique used to populate a CSR from the provided identifiers in the identifier workflow. Valid values are: `cn_first`, `sans_only`.",
 				Optional:            true,
 				Computed:            true,
@@ -161,17 +161,17 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 					stringvalidator.OneOf("cn_first", "sans_only"),
 				},
 			},
-			"force": schema.BoolAttribute{
+			consts.FieldForce: schema.BoolAttribute{
 				MarkdownDescription: "Force deletion even when active orders exist.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
-			"creation_date": schema.StringAttribute{
+			consts.FieldCreationDate: schema.StringAttribute{
 				MarkdownDescription: "The date and time the role was created in RFC3339 format.",
 				Computed:            true,
 			},
-			"last_update_date": schema.StringAttribute{
+			consts.FieldLastUpdateDate: schema.StringAttribute{
 				MarkdownDescription: "The date and time the role was last updated in RFC3339 format.",
 				Computed:            true,
 			},
@@ -344,11 +344,11 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 	var diags diag.Diagnostics
 
 	vaultRequest := map[string]any{
-		"acme_account_name":         data.AcmeAccountName.ValueString(),
-		"csr_generate_key_type":     data.CsrGenerateKeyType.ValueString(),
-		"csr_identifier_population": data.CsrIdentifierPopulation.ValueString(),
-		"dns_provider_name":         data.DnsProviderName.ValueString(),
-		"dns_provider_type":         data.DnsProviderType.ValueString(),
+		consts.FieldAcmeAccountName:         data.AcmeAccountName.ValueString(),
+		consts.FieldCsrGenerateKeyType:      data.CsrGenerateKeyType.ValueString(),
+		consts.FieldCsrIdentifierPopulation: data.CsrIdentifierPopulation.ValueString(),
+		consts.FieldDnsProviderName:         data.DnsProviderName.ValueString(),
+		consts.FieldDnsProviderType:         data.DnsProviderType.ValueString(),
 	}
 
 	// Convert allowed_domains list to string slice
@@ -358,7 +358,7 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 			diags.Append(allowedDomainsDiags...)
 			return nil, diags
 		}
-		vaultRequest["allowed_domains"] = allowedDomains
+		vaultRequest[consts.FieldAllowedDomains] = allowedDomains
 	}
 
 	// Convert allowed_domain_options list to string slice
@@ -368,7 +368,7 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 			diags.Append(optionsDiags...)
 			return nil, diags
 		}
-		vaultRequest["allowed_domain_options"] = allowedDomainOptions
+		vaultRequest[consts.FieldAllowedDomainOptions] = allowedDomainOptions
 	}
 
 	// Convert allowed_challenge_types list to string slice
@@ -378,7 +378,7 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 			diags.Append(challengeDiags...)
 			return nil, diags
 		}
-		vaultRequest["allowed_challenge_types"] = allowedChallengeTypes
+		vaultRequest[consts.FieldAllowedChallengeTypes] = allowedChallengeTypes
 	}
 
 	return vaultRequest, diags
