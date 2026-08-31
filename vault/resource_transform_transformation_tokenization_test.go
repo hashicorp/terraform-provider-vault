@@ -32,9 +32,10 @@ func TestAccTransformTransformationTokenization(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldConvergent},
 			},
 		},
 	})
@@ -76,9 +77,10 @@ func TestAccTransformTransformationTokenization_WithFields(t *testing.T) {
 				},
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldConvergent},
 			},
 		},
 	})

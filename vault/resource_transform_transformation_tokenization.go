@@ -176,21 +176,20 @@ func readTransformTransformationTokenizationResource(ctx context.Context, d *sch
 			return diag.Errorf("error setting state %q, %q: %s", paramName, paramVal, err)
 		}
 	}
-	fields := []string{
-		consts.FieldMappingMode,
-		consts.FieldConvergent,
-		consts.FieldMaxTTL,
-		consts.FieldAllowedRoles,
-		consts.FieldStores,
-		consts.FieldDeletionAllowed,
-	}
-	for _, field := range fields {
+	// These fields are returned by Vault, read them normally.
+	for _, field := range []string{consts.FieldMappingMode, consts.FieldMaxTTL, consts.FieldAllowedRoles, consts.FieldStores, consts.FieldDeletionAllowed} {
 		if val, ok := resp.Data[field]; ok {
 			if err := d.Set(field, val); err != nil {
 				return diag.Errorf("error setting state key %q: %s", field, err)
 			}
 		}
 	}
+
+	// convergent is not returned by Vault, preserve existing state value.
+	if err := d.Set(consts.FieldConvergent, d.Get(consts.FieldConvergent)); err != nil {
+		return diag.Errorf("error setting state key %q: %s", consts.FieldConvergent, err)
+	}
+
 	return nil
 }
 
