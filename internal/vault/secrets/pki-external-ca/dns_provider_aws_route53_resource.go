@@ -56,7 +56,7 @@ type PKIExternalCADNSProviderAWSRoute53Model struct {
 	SecretAccessKey types.String `tfsdk:"secret_access_key"`
 	Region          types.String `tfsdk:"region"`
 	HostedZoneId    types.String `tfsdk:"hosted_zone_id"`
-	ExternalId      types.String `tfsdk:"external_id"`
+	ExternalID      types.String `tfsdk:"external_id"`
 	AssumeRoleArn   types.String `tfsdk:"assume_role_arn"`
 	Nameserver      types.String `tfsdk:"nameserver"`
 }
@@ -70,7 +70,7 @@ type PKIExternalCADNSProviderAWSRoute53APIModel struct {
 	AccessKeyId     string   `json:"access_key_id" mapstructure:"access_key_id"`
 	Region          string   `json:"region" mapstructure:"region"`
 	HostedZoneId    string   `json:"hosted_zone_id" mapstructure:"hosted_zone_id"`
-	ExternalId      string   `json:"external_id" mapstructure:"external_id"`
+	ExternalID      string   `json:"external_id" mapstructure:"external_id"`
 	AssumeRoleArn   string   `json:"assume_role_arn" mapstructure:"assume_role_arn"`
 	Nameserver      string   `json:"nameserver" mapstructure:"nameserver"`
 }
@@ -111,20 +111,20 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				MarkdownDescription: "The date and time the provider was last updated.",
 				Computed:            true,
 			},
-			consts.FieldAccessKeyId: schema.StringAttribute{
+			consts.FieldAccessKeyID: schema.StringAttribute{
 				MarkdownDescription: "AWS access key ID for Route53 API access.",
 				Optional:            true,
 			},
 			consts.FieldSecretAccessKey: schema.StringAttribute{
 				MarkdownDescription: "AWS secret access key for Route53 API access. Write-only — not returned by Vault.",
 				Optional:            true,
-				Sensitive:           true,
+				WriteOnly:           true,
 			},
 			consts.FieldRegion: schema.StringAttribute{
 				MarkdownDescription: "AWS region for Route53 operations. Defaults to `us-east-1`.",
 				Optional:            true,
 			},
-			consts.FieldHostedZoneId: schema.StringAttribute{
+			consts.FieldHostedZoneID: schema.StringAttribute{
 				MarkdownDescription: "AWS Route53 hosted zone ID.",
 				Optional:            true,
 			},
@@ -289,11 +289,11 @@ func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderA
 		req[consts.FieldIdentifiers] = ids
 	}
 
-	setIfNotEmpty(req, consts.FieldAccessKeyId, data.AccessKeyId.ValueString())
+	setIfNotEmpty(req, consts.FieldAccessKeyID, data.AccessKeyId.ValueString())
 	setIfNotEmpty(req, consts.FieldSecretAccessKey, data.SecretAccessKey.ValueString())
 	setIfNotEmpty(req, consts.FieldRegion, data.Region.ValueString())
-	setIfNotEmpty(req, consts.FieldHostedZoneId, data.HostedZoneId.ValueString())
-	setIfNotEmpty(req, consts.FieldExternalID, data.ExternalId.ValueString())
+	setIfNotEmpty(req, consts.FieldHostedZoneID, data.HostedZoneId.ValueString())
+	setIfNotEmpty(req, consts.FieldExternalID, data.ExternalID.ValueString())
 	setIfNotEmpty(req, consts.FieldAssumeRoleArn, data.AssumeRoleArn.ValueString())
 	setIfNotEmpty(req, consts.FieldNameserver, data.Nameserver.ValueString())
 
@@ -325,7 +325,7 @@ func handleAWSRoute53Response(ctx context.Context, data *PKIExternalCADNSProvide
 	setStringIfNotEmpty(&data.AccessKeyId, apiModel.AccessKeyId)
 	setStringIfNotEmpty(&data.Region, apiModel.Region)
 	setStringIfNotEmpty(&data.HostedZoneId, apiModel.HostedZoneId)
-	setStringIfNotEmpty(&data.ExternalId, apiModel.ExternalId)
+	setStringIfNotEmpty(&data.ExternalID, apiModel.ExternalID)
 	setStringIfNotEmpty(&data.AssumeRoleArn, apiModel.AssumeRoleArn)
 	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)
 	// secret_access_key intentionally not read back — write-only

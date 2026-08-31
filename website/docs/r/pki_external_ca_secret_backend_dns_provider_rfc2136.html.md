@@ -55,7 +55,7 @@ The following arguments are supported:
 
 * `identifiers` - (Required) List of domain identifiers this provider handles. Supports wildcard patterns with a leftmost `*` (e.g. `*.example.com`).
 
-* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `60s`.
+* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.
 
 * `nameserver` - (Optional) Address of the authoritative nameserver to send RFC2136 dynamic update requests to, in `IP:port` format (e.g. `192.168.1.1:53`). Also used as the verification nameserver for this provider.
 

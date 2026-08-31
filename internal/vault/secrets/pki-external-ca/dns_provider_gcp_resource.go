@@ -110,7 +110,7 @@ func (r *PKIExternalCADNSProviderGCPResource) Schema(_ context.Context, _ resour
 			consts.FieldCredentials: schema.StringAttribute{
 				MarkdownDescription: "GCP service account credentials as JSON content. Write-only — not returned by Vault.",
 				Optional:            true,
-				Sensitive:           true,
+				WriteOnly:           true,
 			},
 			consts.FieldProject: schema.StringAttribute{
 				MarkdownDescription: "GCP project name.",

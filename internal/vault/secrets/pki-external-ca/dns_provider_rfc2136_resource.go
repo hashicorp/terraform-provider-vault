@@ -116,7 +116,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 			consts.FieldTsigSecret: schema.StringAttribute{
 				MarkdownDescription: "TSIG secret (base64 encoded). Write-only — not returned by Vault.",
 				Optional:            true,
-				Sensitive:           true,
+				WriteOnly:           true,
 			},
 			consts.FieldTsigAlgorithm: schema.StringAttribute{
 				MarkdownDescription: "TSIG algorithm (e.g. `hmac-sha256`, `hmac-sha512`). Defaults to `hmac-sha256`.",

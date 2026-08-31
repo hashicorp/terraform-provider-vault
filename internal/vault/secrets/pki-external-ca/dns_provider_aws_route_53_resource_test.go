@@ -36,7 +36,7 @@ func TestAccPKIExternalCADNSProviderAWSRoute53_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, providerName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldHostedZoneId, "Z1234567890ABC"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHostedZoneID, "Z1234567890ABC"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAssumeRoleArn, "arn:aws:iam::123456789012:role/vault-dns-role"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCreationDate),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLastUpdatedDate),
@@ -56,7 +56,7 @@ func TestAccPKIExternalCADNSProviderAWSRoute53_basic(t *testing.T) {
 				Config: testAccPKIDNSProviderAWSRoute53ConfigUpdated(backend, providerName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "eu-west-1"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldHostedZoneId, "ZXYZ9876543210"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldHostedZoneID, "ZXYZ9876543210"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAssumeRoleArn, "arn:aws:iam::123456789012:role/vault-dns-role-v2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "8.8.8.8:53"),
 				),

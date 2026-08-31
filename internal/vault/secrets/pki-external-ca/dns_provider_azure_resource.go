@@ -53,10 +53,10 @@ type PKIExternalCADNSProviderAzureModel struct {
 
 	// Provider-specific
 	ZoneName          types.String `tfsdk:"zone_name"`
-	ClientId          types.String `tfsdk:"client_id"`
+	ClientID          types.String `tfsdk:"client_id"`
 	ClientSecret      types.String `tfsdk:"client_secret"`
-	TenantId          types.String `tfsdk:"tenant_id"`
-	SubscriptionId    types.String `tfsdk:"subscription_id"`
+	TenantID          types.String `tfsdk:"tenant_id"`
+	SubscriptionID    types.String `tfsdk:"subscription_id"`
 	ResourceGroupName types.String `tfsdk:"resource_group_name"`
 	Environment       types.String `tfsdk:"environment"`
 	Nameserver        types.String `tfsdk:"nameserver"`
@@ -69,9 +69,9 @@ type PKIExternalCADNSProviderAzureAPIModel struct {
 	CreationDate      string   `json:"creation_date" mapstructure:"creation_date"`
 	LastUpdatedDate   string   `json:"last_updated_date" mapstructure:"last_updated_date"`
 	ZoneName          string   `json:"zone_name" mapstructure:"zone_name"`
-	ClientId          string   `json:"client_id" mapstructure:"client_id"`
-	TenantId          string   `json:"tenant_id" mapstructure:"tenant_id"`
-	SubscriptionId    string   `json:"subscription_id" mapstructure:"subscription_id"`
+	ClientID          string   `json:"client_id" mapstructure:"client_id"`
+	TenantID          string   `json:"tenant_id" mapstructure:"tenant_id"`
+	SubscriptionID    string   `json:"subscription_id" mapstructure:"subscription_id"`
 	ResourceGroupName string   `json:"resource_group_name" mapstructure:"resource_group_name"`
 	Environment       string   `json:"environment" mapstructure:"environment"`
 	Nameserver        string   `json:"nameserver" mapstructure:"nameserver"`
@@ -124,7 +124,7 @@ func (r *PKIExternalCADNSProviderAzureResource) Schema(_ context.Context, _ reso
 			consts.FieldClientSecret: schema.StringAttribute{
 				MarkdownDescription: "Azure service principal client secret. Write-only — not returned by Vault.",
 				Optional:            true,
-				Sensitive:           true,
+				WriteOnly:           true,
 			},
 			consts.FieldTenantID: schema.StringAttribute{
 				MarkdownDescription: "Azure tenant ID.",
@@ -296,10 +296,10 @@ func buildAzureRequest(ctx context.Context, data *PKIExternalCADNSProviderAzureM
 	}
 
 	setIfNotEmpty(req, consts.FieldZoneName, data.ZoneName.ValueString())
-	setIfNotEmpty(req, consts.FieldClientID, data.ClientId.ValueString())
+	setIfNotEmpty(req, consts.FieldClientID, data.ClientID.ValueString())
 	setIfNotEmpty(req, consts.FieldClientSecret, data.ClientSecret.ValueString())
-	setIfNotEmpty(req, consts.FieldTenantID, data.TenantId.ValueString())
-	setIfNotEmpty(req, consts.FieldSubscriptionID, data.SubscriptionId.ValueString())
+	setIfNotEmpty(req, consts.FieldTenantID, data.TenantID.ValueString())
+	setIfNotEmpty(req, consts.FieldSubscriptionID, data.SubscriptionID.ValueString())
 	setIfNotEmpty(req, consts.FieldResourceGroupName, data.ResourceGroupName.ValueString())
 	setIfNotEmpty(req, consts.FieldEnvironment, data.Environment.ValueString())
 	setIfNotEmpty(req, consts.FieldNameserver, data.Nameserver.ValueString())
@@ -330,9 +330,9 @@ func handleAzureResponse(ctx context.Context, data *PKIExternalCADNSProviderAzur
 	}
 
 	setStringIfNotEmpty(&data.ZoneName, apiModel.ZoneName)
-	setStringIfNotEmpty(&data.ClientId, apiModel.ClientId)
-	setStringIfNotEmpty(&data.TenantId, apiModel.TenantId)
-	setStringIfNotEmpty(&data.SubscriptionId, apiModel.SubscriptionId)
+	setStringIfNotEmpty(&data.ClientID, apiModel.ClientID)
+	setStringIfNotEmpty(&data.TenantID, apiModel.TenantID)
+	setStringIfNotEmpty(&data.SubscriptionID, apiModel.SubscriptionID)
 	setStringIfNotEmpty(&data.ResourceGroupName, apiModel.ResourceGroupName)
 	setStringIfNotEmpty(&data.Environment, apiModel.Environment)
 	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)

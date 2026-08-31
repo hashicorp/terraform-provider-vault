@@ -51,7 +51,7 @@ The following arguments are supported:
 
 * `identifiers` - (Required) List of domain identifiers this provider handles. Supports wildcard patterns with a leftmost `*` (e.g. `*.example.com`).
 
-* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `10s`.
+* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.
 
 * `project` - (Optional) GCP project name containing the Cloud DNS zone.
 

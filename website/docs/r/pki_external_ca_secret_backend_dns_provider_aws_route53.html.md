@@ -52,7 +52,7 @@ The following arguments are supported:
 
 * `identifiers` - (Required) List of domain identifiers this provider handles. Supports wildcard patterns with a leftmost `*` (e.g. `*.example.com`).
 
-* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `60s`.
+* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.
 
 * `region` - (Optional) AWS region for Route53 operations. Defaults to `us-east-1`.
 

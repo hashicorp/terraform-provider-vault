@@ -134,10 +134,6 @@ func TestAccPKIACMEAccount_defaultNameserver(t *testing.T) {
 	resourceType := "vault_pki_external_ca_secret_backend_acme_account"
 	resourceName := resourceType + ".test"
 
-	// Initialise the provider and gate on version before touching Docker/Pebble.
-	acctestutil.TestEntPreCheck(t)
-	acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
-
 	ca, directoryUrl := setupVaultAndPebble(t)
 
 	resource.Test(t, resource.TestCase{
