@@ -63,3 +63,13 @@ The following arguments are supported:
 * `max_idle_connections` - (Optional) The maximum number of idle connections to the database at any given time. Default is `4`.
 * `max_connection_lifetime` - (Optional) The maximum amount of time a connection can be open before closing it. 0 means no limit. Default is `0`.
 
+## Import
+
+Transform tokenization stores can be imported using `path/name`, e.g.
+
+```
+$ terraform import vault_transform_transformation_tokenization_store.example transform/stores/my-store
+```
+
+Note that the following fields cannot be recovered from Vault on import and will be empty after import:
+`type`, `username`, `password`, `schema`, `max_open_connections`, `max_idle_connections`, `max_connection_lifetime`.

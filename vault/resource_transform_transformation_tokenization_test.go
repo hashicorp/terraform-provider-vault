@@ -50,7 +50,7 @@ func TestAccTransformTransformationTokenization_WithFields(t *testing.T) {
 		CheckDestroy:             transformTransformationTokenizationDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: transformTokenizationWithFieldsConfig(path, "tkn_transform", "default", "payments", 86400),
+				Config: transformTokenizationWithFieldsConfig(path, "tkn_transform", "default", "payments", 86400, "builtin/internal"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, "tkn_transform"),
@@ -59,17 +59,18 @@ func TestAccTransformTransformationTokenization_WithFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedRoles+".0", "payments"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "86400"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionAllowed, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldStores+".0", "builtin/internal"),
 				),
 			},
 			{
-				Config: transformTokenizationWithFieldsConfig(path, "tkn_transform", "default", "payments-updated", 172800),
+				Config: transformTokenizationWithFieldsConfig(path, "tkn_transform", "default", "payments-updated", 172800, "builtin/internal"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedRoles+".0", "payments-updated"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTTL, "172800"),
 				),
 			},
 			{
-				Config: transformTokenizationWithFieldsConfig(path, "tkn_transform", "default", "payments-updated", 172800),
+				Config: transformTokenizationWithFieldsConfig(path, "tkn_transform", "default", "payments-updated", 172800, "builtin/internal"),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -149,7 +150,7 @@ resource "vault_transform_transformation_tokenization" "default_transform" {
 }`, path, name)
 }
 
-func transformTokenizationWithFieldsConfig(path, name, mappingMode, allowedRole string, maxTTL int) string {
+func transformTokenizationWithFieldsConfig(path, name, mappingMode, allowedRole string, maxTTL int, store string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "mount_transform" {
   path = "%s"
@@ -162,8 +163,9 @@ resource "vault_transform_transformation_tokenization" "test" {
   mapping_mode     = "%s"
   allowed_roles    = ["%s"]
   max_ttl          = %d
+  stores = ["%s"]
   deletion_allowed = true
-}`, path, name, mappingMode, allowedRole, maxTTL)
+}`, path, name, mappingMode, allowedRole, maxTTL, store)
 }
 
 func transformTokenizationConvergentConfig(path, name string, convergent bool) string {

@@ -84,7 +84,7 @@ func transformTransformationTokenizationResource() *schema.Resource {
 	}
 	return &schema.Resource{
 		CreateContext: createTransformTransformationTokenizationResource,
-		ReadContext:   readTransformTransformationTokenizationResource,
+		ReadContext:   provider.ReadContextWrapper(readTransformTransformationTokenizationResource),
 		DeleteContext: deleteTransformTransformationTokenizationResource,
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -103,12 +103,12 @@ func createTransformTransformationTokenizationResource(ctx context.Context, d *s
 	vaultPath := util.ParsePath(path, transformTransformationTokenizationEndpoint, d)
 	log.Printf("[DEBUG] Creating %q", vaultPath)
 	data := map[string]interface{}{}
-	for _, v := range []string{consts.FieldMappingMode, consts.FieldMaxTTL, consts.FieldAllowedRoles, consts.FieldStores} {
+	for _, v := range []string{consts.FieldMappingMode, consts.FieldStores} {
 		if val, ok := d.GetOk(v); ok {
 			data[v] = val
 		}
 	}
-	for _, v := range []string{consts.FieldConvergent, consts.FieldDeletionAllowed} {
+	for _, v := range []string{consts.FieldAllowedRoles, consts.FieldMaxTTL, consts.FieldConvergent, consts.FieldDeletionAllowed} {
 		if raw, _ := d.GetRawConfigAt(cty.GetAttrPath(v)); !raw.IsNull() {
 			data[v] = d.Get(v)
 		}
@@ -132,8 +132,8 @@ func updateTransformTransformationTokenizationResource(ctx context.Context, d *s
 	log.Printf("[DEBUG] Updating %q", vaultPath)
 	data := map[string]interface{}{}
 	for _, v := range []string{consts.FieldMaxTTL, consts.FieldAllowedRoles} {
-		if val, ok := d.GetOk(v); ok {
-			data[v] = val
+		if raw, _ := d.GetRawConfigAt(cty.GetAttrPath(v)); !raw.IsNull() {
+			data[v] = d.Get(v)
 		}
 	}
 	if raw, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldDeletionAllowed)); !raw.IsNull() {
