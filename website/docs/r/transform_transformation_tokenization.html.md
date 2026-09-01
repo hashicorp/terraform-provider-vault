@@ -54,3 +54,13 @@ The following arguments are supported:
 * `stores` - (Optional) The list of tokenization stores to use for tokenization state. Default is `["builtin/internal"]`.
   **Note:** This field is immutable and cannot be changed after creation. Changing this value will force recreation of the resource.
 * `deletion_allowed` - (Optional) If true, this transform can be deleted. Otherwise deletion is blocked while this value remains false. Note that deleting the transform deletes the underlying key, making decoding of tokenized values impossible without restoring from a backup. Default is `false`.
+
+## Import
+
+Transform tokenization transformations can be imported using `path/name`, e.g.
+
+```
+$ terraform import vault_transform_transformation_tokenization.example transform/transformations/tokenization/tkn-example
+```
+
+Note that the `convergent` field cannot be recovered from Vault on import and will be empty after import.
