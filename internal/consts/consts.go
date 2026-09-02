@@ -1068,7 +1068,7 @@ const (
 	AuthTypeRootCreds = "root_creds"
 	AuthTypePluginWIF = "plugin_wif"
 	AuthTypeMSI       = "msi"
-	AuthTypeAKSWI     = "aks_wi"
+	AuthTypeAKSWIF    = "aks_wif"
 
 	/*
 		misc. path related constants
