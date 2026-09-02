@@ -9,7 +9,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -44,15 +43,15 @@ type TPMAuthBackendConfigModel struct {
 	base.BaseModel
 
 	Mount          types.String `tfsdk:"mount"`
-	CALifetime     types.String `tfsdk:"ca_lifetime"`
-	CASoftExpiry   types.String `tfsdk:"ca_soft_expiry"`
-	DefaultCertTTL types.String `tfsdk:"default_cert_ttl"`
+	CALifetime     types.Int64  `tfsdk:"ca_lifetime"`
+	CASoftExpiry   types.Int64  `tfsdk:"ca_soft_expiry"`
+	DefaultCertTTL types.Int64  `tfsdk:"default_cert_ttl"`
 }
 
 type tpmAuthBackendConfigAPIModel struct {
-	CALifetime     string `json:"ca_lifetime" mapstructure:"ca_lifetime"`
-	CASoftExpiry   string `json:"ca_soft_expiry" mapstructure:"ca_soft_expiry"`
-	DefaultCertTTL string `json:"default_cert_ttl" mapstructure:"default_cert_ttl"`
+	CALifetime     int64 `json:"ca_lifetime" mapstructure:"ca_lifetime,omitempty"`
+	CASoftExpiry   int64 `json:"ca_soft_expiry" mapstructure:"ca_soft_expiry,omitempty"`
+	DefaultCertTTL int64 `json:"default_cert_ttl" mapstructure:"default_cert_ttl"`
 }
 
 func (r *TPMAuthBackendConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -66,20 +65,21 @@ func (r *TPMAuthBackendConfigResource) Schema(_ context.Context, _ resource.Sche
 				Required:    true,
 				Description: "Path of the enabled TPM auth backend mount to configure.",
 			},
-			consts.FieldCALifetime: schema.StringAttribute{
+			consts.FieldCALifetime: schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "How long each CA is valid once it becomes active.",
+				Description: "How long each CA is valid once it becomes active, in seconds.",
 			},
-			consts.FieldCASoftExpiry: schema.StringAttribute{
+			consts.FieldCASoftExpiry: schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "How long before hard expiry the active CA stops signing new certificates.",
+				Description: "How long before hard expiry the active CA stops signing new certificates, in seconds.",
 			},
-			consts.FieldDefaultCertTTL: schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "Default lifetime for issued client certificates.",
+			consts.FieldDefaultCertTTL: schema.Int64Attribute{
+				Optional: true,
+				Computed: true,
+				Description: "Default lifetime for issued client certificates when the role does not specify `cert_ttl`, in seconds. " +
+					"When unset or `0`, the effective TTL falls back to CA soft expiry. Vault always caps the actual certificate lifetime by the remaining validity of the signing CA.",
 			},
 		},
 	}
@@ -247,30 +247,22 @@ func (r *TPMAuthBackendConfigResource) path(data *TPMAuthBackendConfigModel) str
 
 func (r *TPMAuthBackendConfigResource) getAPIModel(data *TPMAuthBackendConfigModel) (map[string]any, diag.Diagnostics) {
 	apiModel := tpmAuthBackendConfigAPIModel{
-		CALifetime:     data.CALifetime.ValueString(),
-		CASoftExpiry:   data.CASoftExpiry.ValueString(),
-		DefaultCertTTL: data.DefaultCertTTL.ValueString(),
+		CALifetime:     data.CALifetime.ValueInt64(),
+		CASoftExpiry:   data.CASoftExpiry.ValueInt64(),
+		DefaultCertTTL: data.DefaultCertTTL.ValueInt64(),
 	}
 
 	var requestBody map[string]any
 	if err := mapstructure.Decode(apiModel, &requestBody); err != nil {
-		return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Failed to decode TPM auth backend config API model to map", err.Error())}
-	}
-
-	if data.CALifetime.IsNull() || data.CALifetime.IsUnknown() || data.CALifetime.ValueString() == "" {
-		delete(requestBody, consts.FieldCALifetime)
-	}
-	if data.CASoftExpiry.IsNull() || data.CASoftExpiry.IsUnknown() || data.CASoftExpiry.ValueString() == "" {
-		delete(requestBody, consts.FieldCASoftExpiry)
-	}
-	if data.DefaultCertTTL.IsNull() || data.DefaultCertTTL.IsUnknown() || data.DefaultCertTTL.ValueString() == "" {
-		delete(requestBody, consts.FieldDefaultCertTTL)
+		return nil, diag.Diagnostics{
+			diag.NewErrorDiagnostic("Failed to decode TPM auth backend config to request body", err.Error()),
+		}
 	}
 
 	return requestBody, nil
 }
 
-func (r *TPMAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Context, data *TPMAuthBackendConfigModel, resp *api.Secret) diag.Diagnostics {
+func (r *TPMAuthBackendConfigResource) populateDataModelFromAPI(_ context.Context, data *TPMAuthBackendConfigModel, resp *api.Secret) diag.Diagnostics {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil.")}
 	}
@@ -280,42 +272,12 @@ func (r *TPMAuthBackendConfigResource) populateDataModelFromAPI(ctx context.Cont
 		return diag.Diagnostics{diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error())}
 	}
 
-	data.CALifetime = resolveDurationFieldState(data.CALifetime, readResp.CALifetime)
-	data.CASoftExpiry = resolveDurationFieldState(data.CASoftExpiry, readResp.CASoftExpiry)
-	data.DefaultCertTTL = resolveDurationFieldState(data.DefaultCertTTL, readResp.DefaultCertTTL)
+	// Vault returns TypeDurationSecond fields as integer seconds. Always store
+	// whatever Vault returns because all three fields are Optional+Computed and
+	// a value is always returned for each.
+	data.CALifetime = types.Int64Value(readResp.CALifetime)
+	data.CASoftExpiry = types.Int64Value(readResp.CASoftExpiry)
+	data.DefaultCertTTL = types.Int64Value(readResp.DefaultCertTTL) // 0 is valid for default_cert_ttl
 
 	return nil
-}
-
-func resolveDurationFieldState(current types.String, fromAPI string) types.String {
-	if fromAPI == "" {
-		if current.IsNull() || current.IsUnknown() {
-			return types.StringNull()
-		}
-		return current
-	}
-
-	if !current.IsNull() && !current.IsUnknown() && equivalentDurationString(current.ValueString(), fromAPI) {
-		return current
-	}
-
-	return types.StringValue(fromAPI)
-}
-
-func equivalentDurationString(a, b string) bool {
-	if a == b {
-		return true
-	}
-
-	da, err := time.ParseDuration(a)
-	if err != nil {
-		return false
-	}
-
-	db, err := time.ParseDuration(b)
-	if err != nil {
-		return false
-	}
-
-	return da == db
 }
