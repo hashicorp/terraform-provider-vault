@@ -204,8 +204,17 @@ func (r *TPMAuthBackendConfigResource) Update(ctx context.Context, req resource.
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *TPMAuthBackendConfigResource) Delete(context.Context, resource.DeleteRequest, *resource.DeleteResponse) {
-	// API does not support delete, so just remove from state.
+func (r *TPMAuthBackendConfigResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data TPMAuthBackendConfigModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.AddWarning(
+		"TPM auth backend configuration remains in Vault",
+		fmt.Sprintf("Removing this resource from Terraform state does not disable the TPM auth mount or clear the config at '%s'. Manage the mount lifecycle separately with vault_auth_backend if needed.", r.path(&data)),
+	)
 }
 
 func (r *TPMAuthBackendConfigResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
