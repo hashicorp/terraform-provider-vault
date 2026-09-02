@@ -5,7 +5,6 @@ package tpm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
@@ -58,10 +57,10 @@ type TPMAuthRoleModel struct {
 type tpmRoleAPIModel struct {
 	token.TokenAPIModel `mapstructure:",squash"`
 
-	DisplayName string      `json:"display_name" mapstructure:"display_name"`
-	CertTTL     json.Number `json:"cert_ttl" mapstructure:"cert_ttl"`
-	TPMIDs      []string    `json:"tpm_ids" mapstructure:"tpm_ids"`
-	TPMGroupIDs []string    `json:"tpmgroup_ids" mapstructure:"tpmgroup_ids"`
+	DisplayName string   `json:"display_name" mapstructure:"display_name"`
+	CertTTL     int64    `json:"cert_ttl" mapstructure:"cert_ttl"`
+	TPMIDs      []string `json:"tpm_ids" mapstructure:"tpm_ids"`
+	TPMGroupIDs []string `json:"tpmgroup_ids" mapstructure:"tpmgroup_ids"`
 }
 
 func (r *TPMAuthRoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -93,7 +92,7 @@ func (r *TPMAuthRoleResource) Schema(_ context.Context, _ resource.SchemaRequest
 			consts.FieldCertTTL: schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Certificate TTL for the TPM role in seconds.",
+				Description: "Certificate TTL for the TPM role, in seconds. Zero means inherit the global `default_cert_ttl` from the backend config.",
 			},
 			consts.FieldTPMIDs: schema.SetAttribute{
 				ElementType: types.StringType,
@@ -331,7 +330,7 @@ func (r *TPMAuthRoleResource) path(data *TPMAuthRoleModel) string {
 func (r *TPMAuthRoleResource) getAPIModel(ctx context.Context, data *TPMAuthRoleModel) (map[string]any, diag.Diagnostics) {
 	apiModel := tpmRoleAPIModel{
 		DisplayName: data.DisplayName.ValueString(),
-		CertTTL:     json.Number(fmt.Sprintf("%d", data.CertTTL.ValueInt64())),
+		CertTTL:     data.CertTTL.ValueInt64(),
 	}
 
 	if diags := data.TPMIDs.ElementsAs(ctx, &apiModel.TPMIDs, false); diags.HasError() {
@@ -371,11 +370,10 @@ func (r *TPMAuthRoleResource) populateDataModelFromAPI(ctx context.Context, data
 	}
 
 	data.DisplayName = types.StringValue(readResp.DisplayName)
-	if v, err := readResp.CertTTL.Int64(); err == nil && v != 0 {
-		data.CertTTL = types.Int64Value(v)
-	} else {
-		data.CertTTL = types.Int64Null()
-	}
+
+	// Vault always returns an integer for cert_ttl (0 when unset). Store whatever Vault
+	// returns — 0 is valid and means "inherit default_cert_ttl from the backend config".
+	data.CertTTL = types.Int64Value(readResp.CertTTL)
 
 	if len(readResp.TPMIDs) == 0 {
 		data.TPMIDs = types.SetNull(types.StringType)
