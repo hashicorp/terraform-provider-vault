@@ -1,5 +1,10 @@
 ## 5.12.0 (Unreleased)
 
+IMPROVEMENTS:
+
+* `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to allow ephemeral resource values, to supply the CA certificate. The `certificate` field is now `Computed` and `ForceNew` has been removed enabling in-place updates when the certificate changes instead of resource replacement.
+
+
 BUG FIXES:
 
 * `vault_terraform_cloud_secret_backend`: Fix logic gap in `Read` where execution would fall through to a stray `GET <backend>/config` call after `readMount` detected the mount was deleted out-of-band and cleared the resource ID. Add `util.Is404` guard to `Delete` so that `terraform destroy` succeeds cleanly when the mount has already been removed from Vault. ([#3006](https://github.com/hashicorp/terraform-provider-vault/pull/3006))
@@ -23,7 +28,6 @@ FEATURES:
 
 IMPROVEMENTS:
 
-* `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to support ephemeral resource values, preventing CA certificate data from being stored in Terraform state.
 * Migrated AWS provider dependency from `aws-sdk-go` (v1) to `aws-sdk-go-v2` for improved performance and maintainability. ([#2882](https://github.com/hashicorp/terraform-provider-vault/pull/2882))
 * `vault_identity_entity_alias`: Add support for `external_id` and `issuer` fields. Available only for Vault Enterprise. ([#2994](https://github.com/hashicorp/terraform-provider-vault/pull/2994))
 * `vault_aws_auth_backend_config_identity`: Add support for `canonical_arn` as a valid value for the `iam_alias` parameter. Requires Vault 1.16+. ([#2982](https://github.com/hashicorp/terraform-provider-vault/pull/2982))

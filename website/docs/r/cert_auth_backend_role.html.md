@@ -62,7 +62,7 @@ The following arguments are supported:
 
 * `name` - (Required string) Name of the role
 
-* `certificate` - (Optional string) CA certificate used to validate client certificates. Exactly one of `certificate` or `certificate_wo` must be specified. Conflicts with `certificate_wo`
+* `certificate` - (Optional string) CA certificate used to validate client certificates. Exactly one of `certificate` or `certificate_wo` must be specified. Conflicts with `certificate_wo`. Changing this value updates the certificate in-place rather than recreating the resource. When `certificate_wo` is used, this field is populated from the vault API response after apply.
 
 * `certificate_wo_version` - (Optional int) The version of `certificate_wo` to use during write operations. Required with `certificate_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
@@ -162,7 +162,7 @@ For more details on the usage of each argument consult the [Vault Cert API docum
 
 The following write-only attributes are supported:
 
-* `certificate_wo` - (Optional string) Write-only CA certificate used to validate client certificates. Use `certificate_wo` to prevent the certificate from being stored in Terraform state. Exactly one of `certificate_wo` or  `certificate` must be specified. This attribute conflicts with `certificate`. **Note**: This property is write-only and will not be read from the API.
+* `certificate_wo` - (Optional string) Write-only CA certificate used to validate client certificates. Use `certificate_wo` to supply the certificate from an ephemeral resource. Exactly one of `certificate_wo` or  `certificate` must be specified. This attribute conflicts with `certificate`. **Note**: This property is write-only and will not be read from the API.
 
 ## Attribute Reference
 

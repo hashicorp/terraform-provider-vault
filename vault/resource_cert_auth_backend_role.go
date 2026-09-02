@@ -67,6 +67,7 @@ func certAuthBackendRoleResource() *schema.Resource {
 		consts.FieldCertificate: {
 			Type:          schema.TypeString,
 			Optional:      true,
+			Computed:      true,
 			ConflictsWith: []string{consts.FieldCertificateWO},
 			AtLeastOneOf:  []string{consts.FieldCertificate, consts.FieldCertificateWO},
 		},
@@ -74,7 +75,6 @@ func certAuthBackendRoleResource() *schema.Resource {
 			Type:          schema.TypeString,
 			Optional:      true,
 			WriteOnly:     true,
-			Sensitive:     true,
 			ConflictsWith: []string{consts.FieldCertificate},
 			AtLeastOneOf:  []string{consts.FieldCertificate, consts.FieldCertificateWO},
 			RequiredWith:  []string{consts.FieldCertificateWOVersion},
@@ -385,9 +385,7 @@ func certAuthResourceRead(_ context.Context, d *schema.ResourceData, meta interf
 		return diag.FromErr(err)
 	}
 
-	if _, usingWO := d.GetOk(consts.FieldCertificateWOVersion); !usingWO {
-		d.Set(consts.FieldCertificate, resp.Data[consts.FieldCertificate])
-	}
+	d.Set(consts.FieldCertificate, resp.Data[consts.FieldCertificate])
 	d.Set("display_name", resp.Data["display_name"])
 
 	// Vault sometimes returns these as null instead of an empty list.

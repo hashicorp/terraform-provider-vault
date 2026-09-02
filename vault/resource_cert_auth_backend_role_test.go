@@ -283,7 +283,7 @@ func TestAccCertAuthBackend_WriteOnly(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
-					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCertificate, testCertificate),
 
 					// write-only field not be stored in state
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificateWO),
@@ -299,7 +299,7 @@ func TestAccCertAuthBackend_WriteOnly(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificateWO),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCertificateWOVersion, "2"),
-					resource.TestCheckNoResourceAttr(resourceName, consts.FieldCertificate),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCertificate, testCertificate),
 				),
 			},
 		},
