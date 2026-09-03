@@ -1028,6 +1028,7 @@ const (
 	VaultVersion201  = "2.0.1"
 	VaultVersion203  = "2.0.3"
 	VaultVersion210  = "2.1.0"
+	VaultVersion211  = "2.1.1"
 	VaultVersion220  = "2.2.0"
 
 	/*
