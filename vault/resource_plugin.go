@@ -27,6 +27,7 @@ const (
 	fieldEnv      = "env"
 	fieldOCIImage = "oci_image"
 	fieldRuntime  = "runtime"
+	fieldDownload = "download"
 )
 
 var (
@@ -126,6 +127,12 @@ func pluginResource() *schema.Resource {
 				Description: "Vault plugin runtime to use if oci_image is specified.",
 				Optional:    true,
 			},
+			fieldDownload: {
+				Type:        schema.TypeBool,
+				Description: "Whether Vault should download the plugin artifact from releases.hashicorp.com when registering it. Vault Enterprise 1.20+ only, and only for official enterprise plugins (version ending in +ent).",
+				Optional:    true,
+				Default:     false,
+			},
 		},
 	}
 }
@@ -154,6 +161,11 @@ func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 		return diagErr
 	}
 
+	download := d.Get(fieldDownload).(bool)
+	if diagErr := pluginDownloadSupported(meta, download); diagErr != nil {
+		return diagErr
+	}
+
 	log.Printf("[DEBUG] Writing plugin %q", id)
 	err = client.Sys().RegisterPluginWithContext(ctx, &api.RegisterPluginInput{
 		Type:     pluginType,
@@ -165,6 +177,7 @@ func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 		Env:      util.ToStringArray(d.Get(fieldEnv).([]interface{})),
 		OCIImage: ociImage,
 		Runtime:  runtime,
+		Download: download,
 	})
 	if err != nil {
 		return diag.Errorf("error updating plugin %q: %s", id, err)
@@ -215,6 +228,9 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		resp.SHA256 = ""
 		resp.Command = ""
 	}
+
+	// download is not returned by the plugin catalog read API, so the
+	// configured value is kept in state as-is.
 
 	result := map[string]any{
 		consts.FieldType:    typ,
@@ -280,6 +296,14 @@ func containerizedPluginsSupported(meta interface{}, ociImage, runtime string) d
 	return nil
 }
 
+func pluginDownloadSupported(meta interface{}, download bool) diag.Diagnostics {
+	if download && !provider.IsAPISupported(meta, provider.VaultVersion120) {
+		return diag.Errorf("download specified but automatic plugin downloads are only supported in Vault Enterprise 1.20 and later")
+	}
+
+	return nil
+}
+
 // diffSuppressEqualSemver is an implementation of schema.SchemaDiffSuppressFunc.
 // Vault normalizes plugin versions to have a leading v, so if users specify a
 // version without a leading v we use this to suppress the diff.
@@ -300,6 +324,9 @@ func diffSuppressEqualSemver(_, oldValue, newValue string, _ *schema.ResourceDat
 
 func pluginCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
 	curVersion := d.Get(consts.FieldVersion).(string)
+	if d.Get(fieldDownload).(bool) && !strings.HasSuffix(curVersion, "+ent") {
+		return fmt.Errorf("field %s can only be set for enterprise plugins (version ending in +ent)", fieldDownload)
+	}
 	if strings.HasSuffix(curVersion, "+ent") {
 		if d.Get(fieldSHA256).(string) != "" {
 			return fmt.Errorf("field %s needs to be empty for enterprise plugin", fieldSHA256)
