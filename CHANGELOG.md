@@ -3,6 +3,8 @@
 FEATURES:
 
 * **New Ephemeral Resource**: `vault_azure_access_token` for fetching Azure OAuth2 access tokens from Vault's Azure secrets engine static role credentials. Requires Vault 2.2.0 or later. ([#2974](https://github.com/hashicorp/terraform-provider-vault/pull/2974))
+* **New Resource for tokenization transforms**: Add new resources `vault_transform_transformation_tokenization` and `vault_transform_transformation_tokenization_store` for tokenization transformations in transform secrets engine and tokenization stores. Uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-tokenization-transformation) to support creating and updating of tokenization transformations and [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-tokenization-store) for tokenization stores. Supported parameters include `name`, `mapping_mode`, `max_ttl`, `allowed_roles`, `stores`, `convergent`, `deletion_allowed` for `vault_transform_transformation_tokenization` and `name`, `type`, `driver`, `connection_string`, `username`, `password`, `supported_transformations`, `schema`, `max_open_connections`, `max_idle_connections`, `max_connection_lifetime` for `vault_transform_transformation_tokenization_store`.
+
 IMPROVEMENTS:
 
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
