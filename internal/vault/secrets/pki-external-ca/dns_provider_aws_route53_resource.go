@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -26,7 +27,7 @@ import (
 
 const awsRoute53Affix = "config/dns/aws-route53"
 
-var awsRoute53IDRe = regexp.MustCompile(`^([^/]+)/` + awsRoute53Affix + `/([^/]+)$`)
+var awsRoute53IDRe = regexp.MustCompile(`^(.+)/` + awsRoute53Affix + `/([^/]+)$`)
 
 var _ resource.ResourceWithConfigure = &PKIExternalCADNSProviderAWSRoute53Resource{}
 
@@ -45,7 +46,7 @@ type PKIExternalCADNSProviderAWSRoute53Model struct {
 	Mount       types.String `tfsdk:"mount"`
 	Name        types.String `tfsdk:"name"`
 	Identifiers types.List   `tfsdk:"identifiers"`
-	TTL         types.String `tfsdk:"ttl"`
+	TTL         types.Int64  `tfsdk:"ttl"`
 
 	// Computed
 	CreationDate    types.String `tfsdk:"creation_date"`
@@ -98,7 +99,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				ElementType:         types.StringType,
 				Required:            true,
 			},
-			consts.FieldTTL: schema.StringAttribute{
+			consts.FieldTTL: schema.Int64Attribute{
 				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.",
 				Optional:            true,
 				Computed:            true,
@@ -182,7 +183,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Create(ctx context.Context,
 		return
 	}
 
-	resp.Diagnostics.Append(handleAWSRoute53Response(ctx, &data, createResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, createResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -211,7 +212,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Read(ctx context.Context, r
 		return
 	}
 
-	resp.Diagnostics.Append(handleAWSRoute53Response(ctx, &data, readResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, readResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -224,6 +225,11 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Update(ctx context.Context,
 	// Write-only fields are nullified in the plan by the framework; read from config.
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKey), &data.SecretAccessKey)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := checkVaultVersionDNS(r.Meta()); err != nil {
+		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
 		return
 	}
 
@@ -247,7 +253,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Update(ctx context.Context,
 		return
 	}
 
-	resp.Diagnostics.Append(handleAWSRoute53Response(ctx, &data, updateResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, updateResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -290,7 +296,7 @@ func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderA
 	req := map[string]any{}
 
 	if !data.TTL.IsNull() && !data.TTL.IsUnknown() {
-		req[consts.FieldTTL] = data.TTL.ValueString()
+		req[consts.FieldTTL] = data.TTL.ValueInt64()
 	}
 
 	var ids []string
@@ -310,35 +316,50 @@ func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderA
 	return req, diags
 }
 
-func handleAWSRoute53Response(ctx context.Context, data *PKIExternalCADNSProviderAWSRoute53Model, readResp *api.Secret) (rd diag.Diagnostics) {
-	var apiModel PKIExternalCADNSProviderAWSRoute53APIModel
-	if err := model.ToAPIModel(readResp.Data, &apiModel); err != nil {
-		rd.AddError("Unable to translate Vault response data", err.Error())
-		return
+// This resource deviates from the common pattern followed in vault because the input to Vault can either be a string or an integer,
+// however vault always returns a duration string. This function normalizes and converts the string back to an integer before storing
+// in state.
+func (r *PKIExternalCADNSProviderAWSRoute53Resource) populateDataModelFromAPI(ctx context.Context, data *PKIExternalCADNSProviderAWSRoute53Model, resp *api.Secret) (rd diag.Diagnostics) {
+	if resp == nil || resp.Data == nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
+		}
 	}
 
-	data.CreationDate = types.StringValue(apiModel.CreationDate)
-	data.LastUpdatedDate = types.StringValue(apiModel.LastUpdatedDate)
-
-	if apiModel.TTL != "" {
-		data.TTL = types.StringValue(apiModel.TTL)
+	var readResp PKIExternalCADNSProviderAWSRoute53APIModel
+	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
+		}
 	}
 
-	if apiModel.Identifiers != nil {
-		ids, diags := types.ListValueFrom(ctx, types.StringType, apiModel.Identifiers)
+	data.CreationDate = types.StringValue(readResp.CreationDate)
+	data.LastUpdatedDate = types.StringValue(readResp.LastUpdatedDate)
+
+	// We want to normalize the duration string coming in from Vault prior to saving it in the terraform state
+	if readResp.TTL != "" {
+		d, err := time.ParseDuration(readResp.TTL)
+		if err != nil {
+			rd.AddError("Unable to parse TTL from Vault response", fmt.Sprintf("Cannot parse TTL %q as a duration: %s", readResp.TTL, err))
+			return
+		}
+		data.TTL = types.Int64Value(int64(d.Seconds()))
+	}
+
+	if readResp.Identifiers != nil {
+		ids, diags := types.ListValueFrom(ctx, types.StringType, readResp.Identifiers)
 		rd.Append(diags...)
 		if !rd.HasError() {
 			data.Identifiers = ids
 		}
 	}
 
-	setStringIfNotEmpty(&data.AccessKeyId, apiModel.AccessKeyId)
-	setStringIfNotEmpty(&data.Region, apiModel.Region)
-	setStringIfNotEmpty(&data.HostedZoneId, apiModel.HostedZoneId)
-	setStringIfNotEmpty(&data.ExternalID, apiModel.ExternalID)
-	setStringIfNotEmpty(&data.AssumeRoleArn, apiModel.AssumeRoleArn)
-	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)
-	// secret_access_key intentionally not read back — write-only
+	setStringIfNotEmpty(&data.AccessKeyId, readResp.AccessKeyId)
+	setStringIfNotEmpty(&data.Region, readResp.Region)
+	setStringIfNotEmpty(&data.HostedZoneId, readResp.HostedZoneId)
+	setStringIfNotEmpty(&data.ExternalID, readResp.ExternalID)
+	setStringIfNotEmpty(&data.AssumeRoleArn, readResp.AssumeRoleArn)
+	setStringIfNotEmpty(&data.Nameserver, readResp.Nameserver)
 
 	return rd
 }

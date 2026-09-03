@@ -39,6 +39,7 @@ func TestAccPKIExternalCADNSProviderRFC2136_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "ns1.example.com:53"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTsigKeyName, "vault-tsig-key"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTsigAlgorithm, "hmac-sha256"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
 					// tsig_secret is write-only — not stored in state, cannot be checked
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCreationDate),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLastUpdatedDate),
@@ -61,6 +62,7 @@ func TestAccPKIExternalCADNSProviderRFC2136_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "ns2.example.com:53"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTsigKeyName, "vault-tsig-key-v2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldTsigAlgorithm, "hmac-sha512"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "300"),
 				),
 			},
 		},
@@ -92,6 +94,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_rfc2136" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   identifiers    = ["example.com"]
+  ttl            = 120
   nameserver     = "ns1.example.com:53"
   tsig_key_name  = "vault-tsig-key"
   tsig_secret    = "supersecret"
@@ -112,6 +115,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_rfc2136" "test" {
   mount          = vault_mount.test.path
   name           = "%s"
   identifiers    = ["example.com"]
+  ttl            = 300
   nameserver     = "ns2.example.com:53"
   tsig_key_name  = "vault-tsig-key-v2"
   tsig_secret    = "newsecret"

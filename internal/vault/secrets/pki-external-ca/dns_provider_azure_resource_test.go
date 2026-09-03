@@ -42,6 +42,7 @@ func TestAccPKIExternalCADNSProviderAzure_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSubscriptionID, "00000000-0000-0000-0000-000000000003"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldResourceGroupName, "my-dns-rg"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldZoneName, "example.com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCreationDate),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLastUpdatedDate),
 				),
@@ -63,6 +64,7 @@ func TestAccPKIExternalCADNSProviderAzure_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldResourceGroupName, "my-dns-rg-v2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldZoneName, "updated.example.com"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "1.1.1.1:53"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "300"),
 				),
 			},
 		},
@@ -94,6 +96,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_azure" "test" {
   mount               = vault_mount.test.path
   name                = "%s"
   identifiers         = ["example.com"]
+  ttl                 = 120
   client_id           = "00000000-0000-0000-0000-000000000001"
   tenant_id           = "00000000-0000-0000-0000-000000000002"
   subscription_id     = "00000000-0000-0000-0000-000000000003"
@@ -115,6 +118,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_azure" "test" {
   mount               = vault_mount.test.path
   name                = "%s"
   identifiers         = ["example.com"]
+  ttl                 = 300
   client_id           = "00000000-0000-0000-0000-000000000001"
   tenant_id           = "00000000-0000-0000-0000-000000000002"
   subscription_id     = "00000000-0000-0000-0000-000000000003"

@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -26,7 +27,7 @@ import (
 
 const azureAffix = "config/dns/azure-dns"
 
-var azureIDRe = regexp.MustCompile(`^([^/]+)/` + azureAffix + `/([^/]+)$`)
+var azureIDRe = regexp.MustCompile(`^(.+)/` + azureAffix + `/([^/]+)$`)
 
 var _ resource.ResourceWithConfigure = &PKIExternalCADNSProviderAzureResource{}
 
@@ -45,7 +46,7 @@ type PKIExternalCADNSProviderAzureModel struct {
 	Mount       types.String `tfsdk:"mount"`
 	Name        types.String `tfsdk:"name"`
 	Identifiers types.List   `tfsdk:"identifiers"`
-	TTL         types.String `tfsdk:"ttl"`
+	TTL         types.Int64  `tfsdk:"ttl"`
 
 	// Computed
 	CreationDate    types.String `tfsdk:"creation_date"`
@@ -100,8 +101,8 @@ func (r *PKIExternalCADNSProviderAzureResource) Schema(_ context.Context, _ reso
 				ElementType:         types.StringType,
 				Required:            true,
 			},
-			consts.FieldTTL: schema.StringAttribute{
-				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.",
+			consts.FieldTTL: schema.Int64Attribute{
+				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges in seconds. Defaults to `60`.",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -188,7 +189,7 @@ func (r *PKIExternalCADNSProviderAzureResource) Create(ctx context.Context, req 
 		return
 	}
 
-	resp.Diagnostics.Append(handleAzureResponse(ctx, &data, createResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, createResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -217,7 +218,7 @@ func (r *PKIExternalCADNSProviderAzureResource) Read(ctx context.Context, req re
 		return
 	}
 
-	resp.Diagnostics.Append(handleAzureResponse(ctx, &data, readResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, readResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -230,6 +231,11 @@ func (r *PKIExternalCADNSProviderAzureResource) Update(ctx context.Context, req 
 	// Write-only fields are nullified in the plan by the framework; read from config.
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecret), &data.ClientSecret)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := checkVaultVersionDNS(r.Meta()); err != nil {
+		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
 		return
 	}
 
@@ -253,7 +259,7 @@ func (r *PKIExternalCADNSProviderAzureResource) Update(ctx context.Context, req 
 		return
 	}
 
-	resp.Diagnostics.Append(handleAzureResponse(ctx, &data, updateResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, updateResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -296,7 +302,7 @@ func buildAzureRequest(ctx context.Context, data *PKIExternalCADNSProviderAzureM
 	req := map[string]any{}
 
 	if !data.TTL.IsNull() && !data.TTL.IsUnknown() {
-		req[consts.FieldTTL] = data.TTL.ValueString()
+		req[consts.FieldTTL] = data.TTL.ValueInt64()
 	}
 
 	var ids []string
@@ -317,35 +323,47 @@ func buildAzureRequest(ctx context.Context, data *PKIExternalCADNSProviderAzureM
 	return req, diags
 }
 
-func handleAzureResponse(ctx context.Context, data *PKIExternalCADNSProviderAzureModel, readResp *api.Secret) (rd diag.Diagnostics) {
-	var apiModel PKIExternalCADNSProviderAzureAPIModel
-	if err := model.ToAPIModel(readResp.Data, &apiModel); err != nil {
-		rd.AddError("Unable to translate Vault response data", err.Error())
-		return
+func (r *PKIExternalCADNSProviderAzureResource) populateDataModelFromAPI(ctx context.Context, data *PKIExternalCADNSProviderAzureModel, resp *api.Secret) (rd diag.Diagnostics) {
+	if resp == nil || resp.Data == nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
+		}
 	}
 
-	data.CreationDate = types.StringValue(apiModel.CreationDate)
-	data.LastUpdatedDate = types.StringValue(apiModel.LastUpdatedDate)
-
-	if apiModel.TTL != "" {
-		data.TTL = types.StringValue(apiModel.TTL)
+	var readResp PKIExternalCADNSProviderAzureAPIModel
+	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
+		}
 	}
 
-	if apiModel.Identifiers != nil {
-		ids, diags := types.ListValueFrom(ctx, types.StringType, apiModel.Identifiers)
+	data.CreationDate = types.StringValue(readResp.CreationDate)
+	data.LastUpdatedDate = types.StringValue(readResp.LastUpdatedDate)
+
+	if readResp.TTL != "" {
+		d, err := time.ParseDuration(readResp.TTL)
+		if err != nil {
+			rd.AddError("Unable to parse TTL from Vault response", fmt.Sprintf("Cannot parse TTL %q as a duration: %s", readResp.TTL, err))
+			return
+		}
+		data.TTL = types.Int64Value(int64(d.Seconds()))
+	}
+
+	if readResp.Identifiers != nil {
+		ids, diags := types.ListValueFrom(ctx, types.StringType, readResp.Identifiers)
 		rd.Append(diags...)
 		if !rd.HasError() {
 			data.Identifiers = ids
 		}
 	}
 
-	setStringIfNotEmpty(&data.ZoneName, apiModel.ZoneName)
-	setStringIfNotEmpty(&data.ClientID, apiModel.ClientID)
-	setStringIfNotEmpty(&data.TenantID, apiModel.TenantID)
-	setStringIfNotEmpty(&data.SubscriptionID, apiModel.SubscriptionID)
-	setStringIfNotEmpty(&data.ResourceGroupName, apiModel.ResourceGroupName)
-	setStringIfNotEmpty(&data.Environment, apiModel.Environment)
-	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)
+	setStringIfNotEmpty(&data.ZoneName, readResp.ZoneName)
+	setStringIfNotEmpty(&data.ClientID, readResp.ClientID)
+	setStringIfNotEmpty(&data.TenantID, readResp.TenantID)
+	setStringIfNotEmpty(&data.SubscriptionID, readResp.SubscriptionID)
+	setStringIfNotEmpty(&data.ResourceGroupName, readResp.ResourceGroupName)
+	setStringIfNotEmpty(&data.Environment, readResp.Environment)
+	setStringIfNotEmpty(&data.Nameserver, readResp.Nameserver)
 	// client_secret intentionally not read back — write-only
 
 	return rd

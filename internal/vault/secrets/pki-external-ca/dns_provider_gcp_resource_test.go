@@ -39,6 +39,7 @@ func TestAccPKIExternalCADNSProviderGCP_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, providerName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProject, "my-gcp-project"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldZoneName, "example-com"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCreationDate),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLastUpdatedDate),
 				),
@@ -60,6 +61,7 @@ func TestAccPKIExternalCADNSProviderGCP_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProject, "my-gcp-project-v2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldZoneName, "example-com-v2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "8.8.4.4:53"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "300"),
 				),
 			},
 		},
@@ -91,6 +93,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_gcp" "test" {
   mount       = vault_mount.test.path
   name        = "%s"
   identifiers = ["example.com"]
+  ttl         = 120
   project     = "my-gcp-project"
   zone_name   = "example-com"
 }
@@ -109,6 +112,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_gcp" "test" {
   mount       = vault_mount.test.path
   name        = "%s"
   identifiers = ["example.com"]
+  ttl         = 300
   project     = "my-gcp-project-v2"
   zone_name   = "example-com-v2"
   nameserver  = "8.8.4.4:53"

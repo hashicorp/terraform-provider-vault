@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -26,7 +27,7 @@ import (
 
 const rfc2136Affix = "config/dns/rfc2136"
 
-var rfc2136IDRe = regexp.MustCompile(`^([^/]+)/` + rfc2136Affix + `/([^/]+)$`)
+var rfc2136IDRe = regexp.MustCompile(`^(.+)/` + rfc2136Affix + `/([^/]+)$`)
 
 var _ resource.ResourceWithConfigure = &PKIExternalCADNSProviderRFC2136Resource{}
 
@@ -45,7 +46,7 @@ type PKIExternalCADNSProviderRFC2136Model struct {
 	Mount       types.String `tfsdk:"mount"`
 	Name        types.String `tfsdk:"name"`
 	Identifiers types.List   `tfsdk:"identifiers"`
-	TTL         types.String `tfsdk:"ttl"`
+	TTL         types.Int64  `tfsdk:"ttl"`
 
 	// Computed
 	CreationDate    types.String `tfsdk:"creation_date"`
@@ -92,8 +93,8 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 				ElementType:         types.StringType,
 				Required:            true,
 			},
-			consts.FieldTTL: schema.StringAttribute{
-				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.",
+			consts.FieldTTL: schema.Int64Attribute{
+				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges in seconds. Defaults to `60`.",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -107,15 +108,12 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 			},
 			consts.FieldNameserver: schema.StringAttribute{
 				MarkdownDescription: "DNS server address in `IP:port` format (e.g. `192.168.1.1:53`).",
-				Optional:            true,
 			},
 			consts.FieldTsigKeyName: schema.StringAttribute{
 				MarkdownDescription: "TSIG key name for authenticated DNS updates.",
-				Optional:            true,
 			},
 			consts.FieldTsigSecret: schema.StringAttribute{
 				MarkdownDescription: "TSIG secret (base64 encoded). Write-only — not returned by Vault.",
-				Optional:            true,
 				WriteOnly:           true,
 			},
 			consts.FieldTsigAlgorithm: schema.StringAttribute{
@@ -164,7 +162,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Create(ctx context.Context, re
 		return
 	}
 
-	resp.Diagnostics.Append(handleRFC2136Response(ctx, &data, createResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, createResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -193,7 +191,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Read(ctx context.Context, req 
 		return
 	}
 
-	resp.Diagnostics.Append(handleRFC2136Response(ctx, &data, readResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, readResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -206,6 +204,11 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Update(ctx context.Context, re
 	// Write-only fields are not included in the plan; read them from config.
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecret), &data.TsigSecret)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if err := checkVaultVersionDNS(r.Meta()); err != nil {
+		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
 		return
 	}
 
@@ -229,7 +232,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Update(ctx context.Context, re
 		return
 	}
 
-	resp.Diagnostics.Append(handleRFC2136Response(ctx, &data, updateResp)...)
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, updateResp)...)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -272,7 +275,7 @@ func buildRFC2136Request(ctx context.Context, data *PKIExternalCADNSProviderRFC2
 	req := map[string]any{}
 
 	if !data.TTL.IsNull() && !data.TTL.IsUnknown() {
-		req[consts.FieldTTL] = data.TTL.ValueString()
+		req[consts.FieldTTL] = data.TTL.ValueInt64()
 	}
 
 	var ids []string
@@ -289,31 +292,43 @@ func buildRFC2136Request(ctx context.Context, data *PKIExternalCADNSProviderRFC2
 	return req, diags
 }
 
-func handleRFC2136Response(ctx context.Context, data *PKIExternalCADNSProviderRFC2136Model, readResp *api.Secret) (rd diag.Diagnostics) {
-	var apiModel PKIExternalCADNSProviderRFC2136APIModel
-	if err := model.ToAPIModel(readResp.Data, &apiModel); err != nil {
-		rd.AddError("Unable to translate Vault response data", err.Error())
-		return
+func (r *PKIExternalCADNSProviderRFC2136Resource) populateDataModelFromAPI(ctx context.Context, data *PKIExternalCADNSProviderRFC2136Model, resp *api.Secret) (rd diag.Diagnostics) {
+	if resp == nil || resp.Data == nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
+		}
 	}
 
-	data.CreationDate = types.StringValue(apiModel.CreationDate)
-	data.LastUpdatedDate = types.StringValue(apiModel.LastUpdatedDate)
-
-	if apiModel.TTL != "" {
-		data.TTL = types.StringValue(apiModel.TTL)
+	var readResp PKIExternalCADNSProviderRFC2136APIModel
+	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
+		}
 	}
 
-	if apiModel.Identifiers != nil {
-		ids, diags := types.ListValueFrom(ctx, types.StringType, apiModel.Identifiers)
+	data.CreationDate = types.StringValue(readResp.CreationDate)
+	data.LastUpdatedDate = types.StringValue(readResp.LastUpdatedDate)
+
+	if readResp.TTL != "" {
+		d, err := time.ParseDuration(readResp.TTL)
+		if err != nil {
+			rd.AddError("Unable to parse TTL from Vault response", fmt.Sprintf("Cannot parse TTL %q as a duration: %s", readResp.TTL, err))
+			return
+		}
+		data.TTL = types.Int64Value(int64(d.Seconds()))
+	}
+
+	if readResp.Identifiers != nil {
+		ids, diags := types.ListValueFrom(ctx, types.StringType, readResp.Identifiers)
 		rd.Append(diags...)
 		if !rd.HasError() {
 			data.Identifiers = ids
 		}
 	}
 
-	setStringIfNotEmpty(&data.Nameserver, apiModel.Nameserver)
-	setStringIfNotEmpty(&data.TsigKeyName, apiModel.TsigKeyName)
-	setStringIfNotEmpty(&data.TsigAlgorithm, apiModel.TsigAlgorithm)
+	setStringIfNotEmpty(&data.Nameserver, readResp.Nameserver)
+	setStringIfNotEmpty(&data.TsigKeyName, readResp.TsigKeyName)
+	setStringIfNotEmpty(&data.TsigAlgorithm, readResp.TsigAlgorithm)
 	// tsig_secret intentionally not read back — write-only
 
 	return rd

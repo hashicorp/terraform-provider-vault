@@ -57,11 +57,11 @@ The following arguments are supported:
 
 * `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.
 
-* `nameserver` - (Optional) Address of the authoritative nameserver to send RFC2136 dynamic update requests to, in `IP:port` format (e.g. `192.168.1.1:53`). Also used as the verification nameserver for this provider.
+* `nameserver` - Address of the authoritative nameserver to send RFC2136 dynamic update requests to, in `IP:port` format (e.g. `192.168.1.1:53`). Also used as the verification nameserver for this provider.
 
-* `tsig_key_name` - (Optional) TSIG key name for authenticated DNS updates (e.g. `vault-key.`).
+* `tsig_key_name` - TSIG key name for authenticated DNS updates (e.g. `vault-key.`).
 
-* `tsig_secret` - (Optional) TSIG secret as a base64-encoded string. Write-only — not returned by Vault on read.
+* `tsig_secret` - TSIG secret as a base64-encoded string. Write-only — not returned by Vault on read.
 
 * `tsig_algorithm` - (Optional) TSIG algorithm to use. Valid values are `hmac-sha1`, `hmac-sha224`, `hmac-sha256`, `hmac-sha384`, `hmac-sha512`. Defaults to `hmac-sha256`.
 

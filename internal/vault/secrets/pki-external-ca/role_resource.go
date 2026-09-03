@@ -112,12 +112,12 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				Default:             stringdefault.StaticString(""),
 			},
 			consts.FieldDnsProviderType: schema.StringAttribute{
-				MarkdownDescription: "The type of the DNS provider. Valid values are: `aws_route53`, `rfc2136`, `gcp`, `azure`.",
+				MarkdownDescription: "The type of the DNS provider. Valid values are: `aws-route53`, `rfc2136`, `google-cloud-dns`, `azure-dns`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(""),
 				Validators: []validator.String{
-					stringvalidator.OneOf("", "aws_route53", "rfc2136", "gcp", "azure"),
+					stringvalidator.OneOf("", "aws-route53", "rfc2136", "google-cloud-dns", "azure-dns"),
 				},
 			},
 			consts.FieldAllowedDomains: schema.ListAttribute{

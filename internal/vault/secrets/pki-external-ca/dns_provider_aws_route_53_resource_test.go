@@ -38,6 +38,7 @@ func TestAccPKIExternalCADNSProviderAWSRoute53_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRegion, "us-east-1"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHostedZoneID, "Z1234567890ABC"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAssumeRoleArn, "arn:aws:iam::123456789012:role/vault-dns-role"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "120"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCreationDate),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldLastUpdatedDate),
 				),
@@ -51,7 +52,7 @@ func TestAccPKIExternalCADNSProviderAWSRoute53_basic(t *testing.T) {
 				// secret_access_key is write-only — not returned by Vault
 				ImportStateVerifyIgnore: []string{consts.FieldSecretAccessKey},
 			},
-			// update — also exercises nameserver field
+			// update — change TTL, also exercises nameserver field
 			{
 				Config: testAccPKIDNSProviderAWSRoute53ConfigUpdated(backend, providerName),
 				Check: resource.ComposeTestCheckFunc(
@@ -59,6 +60,7 @@ func TestAccPKIExternalCADNSProviderAWSRoute53_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldHostedZoneID, "ZXYZ9876543210"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAssumeRoleArn, "arn:aws:iam::123456789012:role/vault-dns-role-v2"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldNameserver, "8.8.8.8:53"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTTL, "300"),
 				),
 			},
 		},
@@ -90,6 +92,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_aws_route53" "test" 
   mount           = vault_mount.test.path
   name            = "%s"
   identifiers     = ["example.com"]
+  ttl             = 120
   region          = "us-east-1"
   hosted_zone_id  = "Z1234567890ABC"
   assume_role_arn = "arn:aws:iam::123456789012:role/vault-dns-role"
@@ -109,6 +112,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_aws_route53" "test" 
   mount           = vault_mount.test.path
   name            = "%s"
   identifiers     = ["example.com"]
+  ttl             = 300
   region          = "eu-west-1"
   hosted_zone_id  = "ZXYZ9876543210"
   assume_role_arn = "arn:aws:iam::123456789012:role/vault-dns-role-v2"
