@@ -24,9 +24,9 @@ resource "vault_auth_backend" "tpm" {
 
 resource "vault_tpm_auth_backend_config" "tpm_config" {
   mount            = vault_auth_backend.tpm.path
-  ca_lifetime      = "87600h"  # 10 years
-  ca_soft_expiry   = "8760h"   # 1 year before hard expiry
-  default_cert_ttl = "720h"    # 30 days
+  ca_lifetime      = 315360000  # 10 years
+  ca_soft_expiry   = 31536000   # 1 year before hard expiry
+  default_cert_ttl = 2592000    # 30 days
 }
 ```
 
@@ -40,14 +40,11 @@ The following arguments are supported:
 
 * `mount` - (Required) Path of the enabled TPM auth backend mount to configure.
 
-* `ca_lifetime` - (Optional) How long each CA is valid once it becomes active.
-  Accepts duration format strings (e.g., "87600h", "10y"). If not specified, uses Vault's default.
+* `ca_lifetime` - (Optional) How long each CA is valid once it becomes active, in seconds. If not specified, uses Vault's default.
 
-* `ca_soft_expiry` - (Optional) How long before hard expiry the active CA stops signing new certificates.
-  Accepts duration format strings (e.g., "8760h", "1y"). If not specified, uses Vault's default.
+* `ca_soft_expiry` - (Optional) How long before hard expiry the active CA stops signing new certificates, in seconds. If not specified, uses Vault's default.
 
-* `default_cert_ttl` - (Optional) Default lifetime for issued client certificates.
-  Accepts duration format strings (e.g., "720h", "30d"). If not specified, uses Vault's default.
+* `default_cert_ttl` - (Optional) Default lifetime for issued client certificates, in seconds. If not specified, uses Vault's default.
 
 ## Attributes Reference
 

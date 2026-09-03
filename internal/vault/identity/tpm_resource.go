@@ -155,12 +155,10 @@ func (r *IdentityTPMResource) Read(ctx context.Context, req resource.ReadRequest
 
 	secret, err := vaultClient.Logical().ReadWithContext(ctx, r.path(&data))
 	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(fmt.Errorf("bad request using data=%#v: %w", data, err)))
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
-	if resp.Diagnostics.HasError() {
-		return
-	}
+
 	if secret == nil {
 		tflog.Warn(ctx, "TPM record not found, removing from state")
 		resp.State.RemoveResource(ctx)

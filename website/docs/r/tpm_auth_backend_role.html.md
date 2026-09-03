@@ -25,18 +25,18 @@ resource "vault_tpm_auth_backend_role" "example" {
   mount        = vault_auth_backend.tpm.path
   name         = "example-role"
   display_name = "Example TPM Role"
-  cert_ttl     = "720h"
-  
+  cert_ttl     = 2592000
+
   tpm_ids = [
     "abc123...",
     "def456..."
   ]
-  
+
   tpmgroup_ids = [
     "group-1",
     "group-2"
   ]
-  
+
   token_ttl         = 3600
   token_max_ttl     = 7200
   token_policies    = ["default", "tpm-policy"]
@@ -60,8 +60,7 @@ The following arguments are supported:
 
 * `display_name` - (Optional) Display name for the role. Defaults to the role name.
 
-* `cert_ttl` - (Optional) Certificate TTL for the TPM role. Accepts duration format strings
-  (e.g., "720h", "30d"). If not specified, uses the backend's default.
+* `cert_ttl` - (Optional) Certificate TTL for the TPM role, in seconds. If not specified, uses the backend's default.
 
 * `tpm_ids` - (Optional) Set of TPM record IDs authorized to authenticate with this role.
   These are the unique IDs assigned by Vault to TPM records (SHA256 of the EK public key).
