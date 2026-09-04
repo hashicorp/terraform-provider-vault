@@ -254,13 +254,13 @@ func (r *IdentityTPMGroupResource) Delete(ctx context.Context, req resource.Dele
 }
 
 func (r *IdentityTPMGroupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	name := req.ID
-	if name == "" {
+	tpmGroupID := req.ID
+	if tpmGroupID == "" {
 		resp.Diagnostics.AddError("Invalid import identifier", "import identifier cannot be empty")
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldTPMGroupID), tpmGroupID)...)
 
 	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
 	if ns != "" {

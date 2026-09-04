@@ -60,8 +60,8 @@ In addition to the arguments above, the following attributes are exported:
 
 ## Import
 
-Identity TPM records can be imported using the `name`, e.g.
+Identity TPM records can be imported using the `tpm_id`, e.g.
 
 ```
-$ terraform import vault_identity_tpm.machine1 production-server-01
+$ terraform import vault_identity_tpm.machine1 sha256-<hex>
 ```

@@ -143,8 +143,8 @@ func TestAccIdentityTPM(t *testing.T) {
 				},
 			},
 			// Import test validates an existing TPM resource in Vault can be imported into Terraform state.
-			// 1. Uses the resource name as the identifier
-			// 2. Calls ImportState (sets name in state) then Read (populates all other fields from Vault API)
+			// 1. Uses tpm_id as the import identifier
+			// 2. Calls ImportState (sets tpm_id in state) then Read (populates all other fields from Vault API)
 			// 3. Verifies the imported state matches the state from previous steps
 			// This ensures populateDataModelFromAPI correctly reconstructs complete state from Vault.
 			{
@@ -152,7 +152,7 @@ func TestAccIdentityTPM(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccIdentityTPMImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: "name",
+				ImportStateVerifyIdentifierAttribute: "tpm_id",
 			},
 			{
 				Config: testAccIdentityTPMConfigDestroyOnly(),
@@ -287,7 +287,7 @@ func TestAccIdentityTPM_metadata(t *testing.T) {
 				ImportState:                          true,
 				ImportStateIdFunc:                    testAccIdentityTPMImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: "name",
+				ImportStateVerifyIdentifierAttribute: "tpm_id",
 			},
 			{
 				// Step 3: Omitting metadata clears it in Vault
@@ -413,7 +413,7 @@ func testAccIdentityTPMImportStateIdFunc(resourceName string) resource.ImportSta
 		if !ok {
 			return "", fmt.Errorf("not found: %s", resourceName)
 		}
-		return rs.Primary.Attributes["name"], nil
+		return rs.Primary.Attributes["tpm_id"], nil
 	}
 }
 
