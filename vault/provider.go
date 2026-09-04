@@ -87,6 +87,10 @@ var (
 			Resource:      UpdateSchemaResource(nomadAccessCredentialsDataSource()),
 			PathInventory: []string{"/nomad/creds/{role}"},
 		},
+		"vault_tencentcloud_access_credentials": {
+			Resource:      UpdateSchemaResource(tencentCloudAccessCredentialsDataSource()),
+			PathInventory: []string{"/tencentcloud/creds/{role}"},
+		},
 		"vault_aws_access_credentials": {
 			Resource:      UpdateSchemaResource(awsAccessCredentialsDataSource()),
 			PathInventory: []string{"/aws/creds"},
@@ -312,6 +316,22 @@ var (
 		"vault_aws_secret_backend": {
 			Resource:      UpdateSchemaResource(awsSecretBackendResource()),
 			PathInventory: []string{"/aws/config/root"},
+		},
+		"vault_tencentcloud_auth_backend_client": {
+			Resource:      UpdateSchemaResource(tencentCloudAuthBackendClientResource()),
+			PathInventory: []string{"/auth/tencentcloud/config/client"},
+		},
+		"vault_tencentcloud_auth_backend_role": {
+			Resource:      UpdateSchemaResource(tencentCloudAuthBackendRoleResource()),
+			PathInventory: []string{"/auth/tencentcloud/role/{role}"},
+		},
+		"vault_tencentcloud_secret_backend": {
+			Resource:      UpdateSchemaResource(tencentCloudSecretBackendResource()),
+			PathInventory: []string{"/tencentcloud/config"},
+		},
+		"vault_tencentcloud_secret_backend_role": {
+			Resource:      UpdateSchemaResource(tencentCloudSecretBackendRoleResource("vault_tencentcloud_secret_backend_role")),
+			PathInventory: []string{"/tencentcloud/role/{name}"},
 		},
 		"vault_aws_secret_backend_role": {
 			Resource:      UpdateSchemaResource(awsSecretBackendRoleResource("vault_aws_secret_backend_role")),
