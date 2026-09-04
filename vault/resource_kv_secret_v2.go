@@ -7,11 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/go-cty/cty"
 	"log"
 	"regexp"
 	"time"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
@@ -197,11 +197,7 @@ func getCustomMetadata(d *schema.ResourceData) map[string]interface{} {
 
 	fieldPrefix := fmt.Sprintf("%s.0", consts.FieldCustomMetadata)
 	for vaultKey, stateKey := range kvMetadataFields {
-		fieldKey := fmt.Sprintf("%s.%s", fieldPrefix, stateKey)
-
-		if val, ok := d.GetOk(fieldKey); ok {
-			data[vaultKey] = val
-		}
+		data[vaultKey] = d.Get(fmt.Sprintf("%s.%s", fieldPrefix, stateKey))
 	}
 	return data
 }
