@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
-	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
@@ -34,7 +34,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/rotate"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
@@ -314,7 +313,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		spiffesec.NewSpiffeSecretBackendMintJwtResource,
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralauth.NewTokenEphemeralResource,
-		ephemeralgeneric.NewGenericEndpointEphemeralResource,
+		generic.NewGenericEndpointEphemeralResource,
 		gcpkms.NewGCPKMSEncryptEphemeralResource,
 		gcpkms.NewGCPKMSDecryptEphemeralResource,
 		gcpkms.NewGCPKMSReencryptEphemeralResource,
@@ -345,6 +344,6 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 // the Metadata method. All actions must have unique names.
 func (p *fwprovider) Actions(_ context.Context) []func() action.Action {
 	return []func() action.Action{
-		rotate.NewRotateRootAction,
+		generic.NewGenericEndpointAction,
 	}
 }

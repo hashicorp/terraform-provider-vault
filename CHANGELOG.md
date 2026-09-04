@@ -2,7 +2,7 @@
 
 FEATURES:
 
-* **New Action**: `vault_secret_backend_rotate_root` - Rotates the root credentials for a secret backend connection. This is the first Terraform action in the provider, requiring Terraform 1.14.0+.
+* **New Action**: `vault_generic_endpoint` - Writes to an arbitrary Vault endpoint, such as `rotate-root`, for operations that hold no Terraform-managed state. This is the first Terraform action in the provider, requiring Terraform 1.14.0+.
 
 ## 5.11.0 (August 14, 2026)
 
