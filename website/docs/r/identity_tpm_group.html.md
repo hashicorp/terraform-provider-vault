@@ -64,8 +64,8 @@ In addition to the arguments above, the following attributes are exported:
 
 ## Import
 
-Identity TPM groups can be imported using the `name`, e.g.
+Identity TPM groups can be imported using the `tpm_group_id`, e.g.
 
 ```
-$ terraform import vault_identity_tpm_group.production_servers production-servers
+$ terraform import vault_identity_tpm_group.production_servers <tpm_group_id>
 ```
