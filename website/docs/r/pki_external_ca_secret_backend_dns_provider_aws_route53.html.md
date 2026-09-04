@@ -58,7 +58,9 @@ The following arguments are supported:
 
 * `access_key_id` - (Optional) AWS access key ID for Route53 API access. Optional when using IAM role assumption or instance profiles.
 
-* `secret_access_key` - (Optional) AWS secret access key for Route53 API access. Optional when using IAM role assumption or instance profiles. Write-only — not returned by Vault on read.
+* `secret_access_key_wo` - (Optional) AWS secret access key for Route53 API access. Optional when using IAM role assumption or instance profiles. Write-only — never stored in Terraform state.
+
+* `secret_access_key_wo_version` - (Optional) Version counter for `secret_access_key_wo`. Increment this to trigger an update to the secret access key in Vault without changing any other field.
 
 * `hosted_zone_id` - (Optional) AWS Route53 hosted zone ID.
 

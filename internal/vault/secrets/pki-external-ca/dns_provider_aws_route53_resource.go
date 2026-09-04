@@ -54,7 +54,7 @@ type PKIExternalCADNSProviderAWSRoute53Model struct {
 
 	// Provider-specific
 	AccessKeyId              types.String `tfsdk:"access_key_id"`
-	SecretAccessKey          types.String `tfsdk:"secret_access_key"`
+	SecretAccessKeyWO        types.String `tfsdk:"secret_access_key_wo"`
 	SecretAccessKeyWOVersion types.Int64  `tfsdk:"secret_access_key_wo_version"`
 	Region                   types.String `tfsdk:"region"`
 	HostedZoneId             types.String `tfsdk:"hosted_zone_id"`
@@ -117,7 +117,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				MarkdownDescription: "AWS access key ID for Route53 API access.",
 				Optional:            true,
 			},
-			consts.FieldSecretAccessKey: schema.StringAttribute{
+			consts.FieldSecretAccessKeyWO: schema.StringAttribute{
 				MarkdownDescription: "AWS secret access key for Route53 API access. Write-only — not returned by Vault.",
 				Optional:            true,
 				WriteOnly:           true,
@@ -158,7 +158,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Create(ctx context.Context,
 		return
 	}
 	// Write-only fields are nullified in the plan by the framework; read from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKey), &data.SecretAccessKey)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKeyWO), &data.SecretAccessKeyWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -228,7 +228,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Update(ctx context.Context,
 		return
 	}
 	// Write-only fields are nullified in the plan by the framework; read from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKey), &data.SecretAccessKey)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKeyWO), &data.SecretAccessKeyWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -311,7 +311,7 @@ func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderA
 	}
 
 	setIfNotEmpty(req, consts.FieldAccessKeyID, data.AccessKeyId.ValueString())
-	setIfNotEmpty(req, consts.FieldSecretAccessKey, data.SecretAccessKey.ValueString())
+	setIfNotEmpty(req, consts.FieldSecretAccessKey, data.SecretAccessKeyWO.ValueString())
 	setIfNotEmpty(req, consts.FieldRegion, data.Region.ValueString())
 	setIfNotEmpty(req, consts.FieldHostedZoneID, data.HostedZoneId.ValueString())
 	setIfNotEmpty(req, consts.FieldExternalID, data.ExternalID.ValueString())

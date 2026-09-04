@@ -35,7 +35,8 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_rfc2136" "example" {
   identifiers    = ["example.com", "*.example.com"]
   nameserver     = "192.168.1.1:53"
   tsig_key_name  = "vault-key."
-  tsig_secret    = var.tsig_secret
+  tsig_secret_wo         = var.tsig_secret
+  tsig_secret_wo_version = 1
   tsig_algorithm = "hmac-sha256"
 }
 ```
@@ -61,7 +62,9 @@ The following arguments are supported:
 
 * `tsig_key_name` - TSIG key name for authenticated DNS updates (e.g. `vault-key.`).
 
-* `tsig_secret` - TSIG secret as a base64-encoded string. Write-only — not returned by Vault on read.
+* `tsig_secret_wo` - (Required) TSIG secret as a base64-encoded string. Write-only — never stored in Terraform state.
+
+* `tsig_secret_wo_version` - (Optional) Version counter for `tsig_secret_wo`. Increment this to trigger an update to the TSIG secret in Vault without changing any other field.
 
 * `tsig_algorithm` - (Optional) TSIG algorithm to use. Valid values are `hmac-sha1`, `hmac-sha224`, `hmac-sha256`, `hmac-sha384`, `hmac-sha512`. Defaults to `hmac-sha256`.
 

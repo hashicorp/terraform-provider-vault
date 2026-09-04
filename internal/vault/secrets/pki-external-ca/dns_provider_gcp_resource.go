@@ -53,7 +53,7 @@ type PKIExternalCADNSProviderGCPModel struct {
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// Provider-specific
-	Credentials               types.String `tfsdk:"credentials"`
+	CredentialsWO             types.String `tfsdk:"credentials_wo"`
 	CredentialsWOVersion      types.Int64  `tfsdk:"credentials_wo_version"`
 	Project                   types.String `tfsdk:"project"`
 	ZoneName                  types.String `tfsdk:"zone_name"`
@@ -109,11 +109,11 @@ func (r *PKIExternalCADNSProviderGCPResource) Schema(_ context.Context, _ resour
 				MarkdownDescription: "The date and time the provider was last updated.",
 				Computed:            true,
 			},
-			consts.FieldCredentials: schema.StringAttribute{
-				MarkdownDescription: "GCP service account credentials as JSON content. Write-only — not returned by Vault.",
-				Optional:            true,
-				WriteOnly:           true,
-			},
+			consts.FieldCredentialsWO: schema.StringAttribute{
+					MarkdownDescription: "GCP service account credentials as JSON content. Write-only — not returned by Vault.",
+					Optional:            true,
+					WriteOnly:           true,
+				},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `credentials` field. Increment this value to trigger an update to the credentials in Vault.",
 				Optional:            true,
@@ -146,7 +146,7 @@ func (r *PKIExternalCADNSProviderGCPResource) Create(ctx context.Context, req re
 		return
 	}
 	// Write-only fields are nullified in the plan by the framework; read from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCredentials), &data.Credentials)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCredentialsWO), &data.CredentialsWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -216,7 +216,7 @@ func (r *PKIExternalCADNSProviderGCPResource) Update(ctx context.Context, req re
 		return
 	}
 	// Write-only fields are nullified in the plan by the framework; read from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCredentials), &data.Credentials)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldCredentialsWO), &data.CredentialsWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -298,7 +298,7 @@ func buildGCPRequest(ctx context.Context, data *PKIExternalCADNSProviderGCPModel
 		req[consts.FieldIdentifiers] = ids
 	}
 
-	setIfNotEmpty(req, consts.FieldCredentials, data.Credentials.ValueString())
+	setIfNotEmpty(req, consts.FieldCredentials, data.CredentialsWO.ValueString())
 	setIfNotEmpty(req, consts.FieldProject, data.Project.ValueString())
 	setIfNotEmpty(req, consts.FieldZoneName, data.ZoneName.ValueString())
 	setIfNotEmpty(req, consts.FieldImpersonateServiceAccount, data.ImpersonateServiceAccount.ValueString())
@@ -345,7 +345,7 @@ func (r *PKIExternalCADNSProviderGCPResource) populateDataModelFromAPI(ctx conte
 	setStringIfNotEmpty(&data.ZoneName, readResp.ZoneName)
 	setStringIfNotEmpty(&data.ImpersonateServiceAccount, readResp.ImpersonateServiceAccount)
 	setStringIfNotEmpty(&data.Nameserver, readResp.Nameserver)
-	// credentials intentionally not read back — write-only
+	// credentials_wo intentionally not read back — write-only
 
 	return rd
 }

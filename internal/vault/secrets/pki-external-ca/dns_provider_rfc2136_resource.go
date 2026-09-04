@@ -55,7 +55,7 @@ type PKIExternalCADNSProviderRFC2136Model struct {
 	// Provider-specific
 	Nameserver          types.String `tfsdk:"nameserver"`
 	TsigKeyName         types.String `tfsdk:"tsig_key_name"`
-	TsigSecret          types.String `tfsdk:"tsig_secret"`
+	TsigSecretWO        types.String `tfsdk:"tsig_secret_wo"`
 	TsigSecretWOVersion types.Int64  `tfsdk:"tsig_secret_wo_version"`
 	TsigAlgorithm       types.String `tfsdk:"tsig_algorithm"`
 }
@@ -115,11 +115,11 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 				MarkdownDescription: "TSIG key name for authenticated DNS updates.",
 				Required:            true,
 			},
-			consts.FieldTsigSecret: schema.StringAttribute{
-				MarkdownDescription: "TSIG secret (base64 encoded). Write-only — not returned by Vault.",
-				Required:            true,
-				WriteOnly:           true,
-			},
+			consts.FieldTsigSecretWO: schema.StringAttribute{
+					MarkdownDescription: "TSIG secret (base64 encoded). Write-only — not returned by Vault.",
+					Required:            true,
+					WriteOnly:           true,
+				},
 			consts.FieldTsigSecretWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `tsig_secret` field. Increment this value to trigger an update to the TSIG secret in Vault.",
 				Optional:            true,
@@ -140,7 +140,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Create(ctx context.Context, re
 		return
 	}
 	// Write-only fields are not included in the plan; read them from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecret), &data.TsigSecret)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecretWO), &data.TsigSecretWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -210,7 +210,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Update(ctx context.Context, re
 		return
 	}
 	// Write-only fields are not included in the plan; read them from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecret), &data.TsigSecret)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecretWO), &data.TsigSecretWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -294,7 +294,7 @@ func buildRFC2136Request(ctx context.Context, data *PKIExternalCADNSProviderRFC2
 
 	setIfNotEmpty(req, consts.FieldNameserver, data.Nameserver.ValueString())
 	setIfNotEmpty(req, consts.FieldTsigKeyName, data.TsigKeyName.ValueString())
-	setIfNotEmpty(req, consts.FieldTsigSecret, data.TsigSecret.ValueString())
+	setIfNotEmpty(req, consts.FieldTsigSecret, data.TsigSecretWO.ValueString())
 	setIfNotEmpty(req, consts.FieldTsigAlgorithm, data.TsigAlgorithm.ValueString())
 
 	return req, diags
@@ -337,7 +337,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) populateDataModelFromAPI(ctx c
 	setStringIfNotEmpty(&data.Nameserver, readResp.Nameserver)
 	setStringIfNotEmpty(&data.TsigKeyName, readResp.TsigKeyName)
 	setStringIfNotEmpty(&data.TsigAlgorithm, readResp.TsigAlgorithm)
-	// tsig_secret intentionally not read back — write-only
+	// tsig_secret_wo intentionally not read back — write-only
 
 	return rd
 }

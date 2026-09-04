@@ -52,8 +52,8 @@ func TestAccPKIExternalCADNSProviderRFC2136_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIDNSProviderRFC2136ImportIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				// tsig_secret is write-only — not returned by Vault
-				ImportStateVerifyIgnore: []string{consts.FieldTsigSecret},
+				// tsig_secret_wo is write-only — not returned by Vault
+				ImportStateVerifyIgnore: []string{consts.FieldTsigSecretWO},
 			},
 			// update
 			{
@@ -97,7 +97,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_rfc2136" "test" {
   ttl            = 120
   nameserver     = "ns1.example.com:53"
   tsig_key_name  = "vault-tsig-key"
-  tsig_secret    = "supersecret"
+  tsig_secret_wo = "supersecret"
   tsig_algorithm = "hmac-sha256"
 }
 `, backend, providerName)
@@ -118,7 +118,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_rfc2136" "test" {
   ttl            = 300
   nameserver     = "ns2.example.com:53"
   tsig_key_name  = "vault-tsig-key-v2"
-  tsig_secret    = "newsecret"
+  tsig_secret_wo = "newsecret"
   tsig_algorithm = "hmac-sha512"
 }
 `, backend, providerName)

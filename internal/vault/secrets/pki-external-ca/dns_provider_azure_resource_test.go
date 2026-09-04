@@ -54,8 +54,8 @@ func TestAccPKIExternalCADNSProviderAzure_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIDNSProviderAzureImportIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				// client_secret is write-only — not returned by Vault
-				ImportStateVerifyIgnore: []string{consts.FieldClientSecret},
+				// client_secret_wo is write-only — not returned by Vault
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecretWO},
 			},
 			// update — also exercises nameserver field
 			{

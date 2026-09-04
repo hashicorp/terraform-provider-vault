@@ -36,7 +36,8 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_azure" "example" {
   subscription_id     = "00000000-0000-0000-0000-000000000003"
   resource_group_name = "my-dns-rg"
   zone_name           = "example.com"
-  client_secret       = var.azure_client_secret
+  client_secret_wo         = var.azure_client_secret
+  client_secret_wo_version = 1
 }
 ```
 
@@ -59,7 +60,9 @@ The following arguments are supported:
 
 * `client_id` - (Optional) Azure service principal client ID. Optional when using managed identities.
 
-* `client_secret` - (Optional) Azure service principal client secret. Optional when using managed identities. Write-only — not returned by Vault on read.
+* `client_secret_wo` - (Optional) Azure service principal client secret. Optional when using managed identities. Write-only — never stored in Terraform state.
+
+* `client_secret_wo_version` - (Optional) Version counter for `client_secret_wo`. Increment this to trigger an update to the client secret in Vault without changing any other field.
 
 * `tenant_id` - (Optional) Azure tenant ID. Optional when using managed identities.
 

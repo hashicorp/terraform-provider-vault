@@ -51,8 +51,8 @@ func TestAccPKIExternalCADNSProviderGCP_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIDNSProviderGCPImportIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				// credentials is write-only — not returned by Vault
-				ImportStateVerifyIgnore: []string{consts.FieldCredentials},
+				// credentials_wo is write-only — not returned by Vault
+				ImportStateVerifyIgnore: []string{consts.FieldCredentialsWO},
 			},
 			// update — also exercises nameserver field
 			{

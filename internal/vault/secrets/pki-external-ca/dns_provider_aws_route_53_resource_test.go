@@ -49,8 +49,8 @@ func TestAccPKIExternalCADNSProviderAWSRoute53_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIDNSProviderAWSRoute53ImportIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				// secret_access_key is write-only — not returned by Vault
-				ImportStateVerifyIgnore: []string{consts.FieldSecretAccessKey},
+				// secret_access_key_wo is write-only — not returned by Vault
+				ImportStateVerifyIgnore: []string{consts.FieldSecretAccessKeyWO},
 			},
 			// update — change TTL, also exercises nameserver field
 			{

@@ -51,13 +51,15 @@ The following arguments are supported:
 
 * `identifiers` - (Required) List of domain identifiers this provider handles. Supports wildcard patterns with a leftmost `*` (e.g. `*.example.com`).
 
-* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.
+* `ttl` - (Optional) TTL for DNS TXT records used in DNS-01 challenges. Defaults to `10s`.
 
 * `project` - (Optional) GCP project name containing the Cloud DNS zone.
 
 * `zone_name` - (Optional) GCP Cloud DNS zone name (the resource name, not the DNS name — e.g. `example-com` rather than `example.com`).
 
-* `credentials` - (Optional) GCP service account credentials as JSON content. Write-only — not returned by Vault on read. If omitted, Vault uses Application Default Credentials at challenge time.
+* `credentials_wo` - (Optional) GCP service account credentials as JSON content. Write-only — never stored in Terraform state. If omitted, Vault uses Application Default Credentials at challenge time.
+
+* `credentials_wo_version` - (Optional) Version counter for `credentials_wo`. Increment this to trigger an update to the credentials in Vault without changing any other field.
 
 * `impersonate_service_account` - (Optional) Service account email to impersonate when calling the Cloud DNS API.
 

@@ -55,7 +55,7 @@ type PKIExternalCADNSProviderAzureModel struct {
 	// Provider-specific
 	ZoneName              types.String `tfsdk:"zone_name"`
 	ClientID              types.String `tfsdk:"client_id"`
-	ClientSecret          types.String `tfsdk:"client_secret"`
+	ClientSecretWO        types.String `tfsdk:"client_secret_wo"`
 	ClientSecretWOVersion types.Int64  `tfsdk:"client_secret_wo_version"`
 	TenantID              types.String `tfsdk:"tenant_id"`
 	SubscriptionID        types.String `tfsdk:"subscription_id"`
@@ -123,11 +123,11 @@ func (r *PKIExternalCADNSProviderAzureResource) Schema(_ context.Context, _ reso
 				MarkdownDescription: "Azure service principal client ID.",
 				Optional:            true,
 			},
-			consts.FieldClientSecret: schema.StringAttribute{
-				MarkdownDescription: "Azure service principal client secret. Write-only — not returned by Vault.",
-				Optional:            true,
-				WriteOnly:           true,
-			},
+			consts.FieldClientSecretWO: schema.StringAttribute{
+					MarkdownDescription: "Azure service principal client secret. Write-only — not returned by Vault.",
+					Optional:            true,
+					WriteOnly:           true,
+				},
 			consts.FieldClientSecretWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `client_secret` field. Increment this value to trigger an update to the client secret in Vault.",
 				Optional:            true,
@@ -164,7 +164,7 @@ func (r *PKIExternalCADNSProviderAzureResource) Create(ctx context.Context, req 
 		return
 	}
 	// Write-only fields are nullified in the plan by the framework; read from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecret), &data.ClientSecret)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecretWO), &data.ClientSecretWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -234,7 +234,7 @@ func (r *PKIExternalCADNSProviderAzureResource) Update(ctx context.Context, req 
 		return
 	}
 	// Write-only fields are nullified in the plan by the framework; read from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecret), &data.ClientSecret)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecretWO), &data.ClientSecretWO)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -318,7 +318,7 @@ func buildAzureRequest(ctx context.Context, data *PKIExternalCADNSProviderAzureM
 
 	setIfNotEmpty(req, consts.FieldZoneName, data.ZoneName.ValueString())
 	setIfNotEmpty(req, consts.FieldClientID, data.ClientID.ValueString())
-	setIfNotEmpty(req, consts.FieldClientSecret, data.ClientSecret.ValueString())
+	setIfNotEmpty(req, consts.FieldClientSecret, data.ClientSecretWO.ValueString())
 	setIfNotEmpty(req, consts.FieldTenantID, data.TenantID.ValueString())
 	setIfNotEmpty(req, consts.FieldSubscriptionID, data.SubscriptionID.ValueString())
 	setIfNotEmpty(req, consts.FieldResourceGroupName, data.ResourceGroupName.ValueString())
@@ -369,7 +369,7 @@ func (r *PKIExternalCADNSProviderAzureResource) populateDataModelFromAPI(ctx con
 	setStringIfNotEmpty(&data.ResourceGroupName, readResp.ResourceGroupName)
 	setStringIfNotEmpty(&data.Environment, readResp.Environment)
 	setStringIfNotEmpty(&data.Nameserver, readResp.Nameserver)
-	// client_secret intentionally not read back — write-only
+	// client_secret_wo intentionally not read back — write-only
 
 	return rd
 }
