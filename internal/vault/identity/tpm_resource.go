@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -29,6 +30,15 @@ import (
 )
 
 var _ resource.ResourceWithImportState = &IdentityTPMResource{}
+
+// normalizePEM trims surrounding whitespace and adds a single trailing newline,
+// matching the canonical form produced by Go's pem.EncodeToMemory (which Vault
+// uses internally). It is used by RequiresReplaceIf so that whitespace-only
+// config changes (e.g. a missing trailing newline) do not trigger resource
+// replacement.
+func normalizePEM(s string) string {
+	return strings.TrimSpace(s) + "\n"
+}
 
 func NewIdentityTPMResource() resource.Resource {
 	return &IdentityTPMResource{}
@@ -71,7 +81,13 @@ func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest
 			consts.FieldTPMEKPublicKey: schema.StringAttribute{
 				Required: true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIf(
+						func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+							resp.RequiresReplace = normalizePEM(req.PlanValue.ValueString()) != normalizePEM(req.StateValue.ValueString())
+						},
+						"If the value of this attribute changes, Terraform will destroy and recreate the resource.",
+						"If the value of this attribute changes, Terraform will destroy and recreate the resource.",
+					),
 				},
 				Description: "PEM-encoded TPM Endorsement Key (EK) public key.",
 			},
@@ -289,7 +305,11 @@ func (r *IdentityTPMResource) populateDataModelFromAPI(ctx context.Context, data
 	// Update data model with values from Vault
 	data.TPMID = types.StringValue(readResp.TPMID)
 	data.Name = types.StringValue(readResp.Name)
-	data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
+	// TPMEKPublicKey is empty on Import (no plan value) so set it from the Vault value.
+	// Otherwise preserve whatever the config defines.
+	if data.TPMEKPublicKey.ValueString() == "" {
+		data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
+	}
 	data.Disabled = types.BoolValue(readResp.Disabled)
 
 	metadata, diags := types.MapValueFrom(ctx, types.StringType, readResp.Metadata)
@@ -303,8 +323,10 @@ func (r *IdentityTPMResource) populateDataModelFromAPI(ctx context.Context, data
 
 func (r *IdentityTPMResource) getAPIModel(ctx context.Context, data *IdentityTPMModel) (map[string]any, diag.Diagnostics) {
 	apiModel := identityTPMAPIModel{
-		Name:           data.Name.ValueString(),
-		TPMEKPublicKey: data.TPMEKPublicKey.ValueString(),
+		Name: data.Name.ValueString(),
+		// Normalize the public key before sending to Vault to match the canonical form Go's
+		// pem.EncodeToMemory produces (trimmed whitespace with one trailing newline).
+		TPMEKPublicKey: normalizePEM(data.TPMEKPublicKey.ValueString()),
 	}
 
 	if !data.Disabled.IsNull() && !data.Disabled.IsUnknown() {

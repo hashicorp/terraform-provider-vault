@@ -37,7 +37,7 @@ func TestAccIdentityTPM_versionGate(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccIdentityTPMConfig(tpmConfigFields{pk: publicKey}),
+				Config:      testAccIdentityTPMConfig(tpmConfigFields{pkHeredoc: publicKey}),
 				ExpectError: regexp.MustCompile(`TPM identity requires Vault version 2.2.0 or later`),
 			},
 		},
@@ -54,7 +54,8 @@ func TestAccIdentityTPM_versionGate(t *testing.T) {
 func TestAccIdentityTPM(t *testing.T) {
 	renamedName := acctest.RandomWithPrefix("tpm")
 	resourceName := "vault_identity_tpm.test"
-	publicKey := testTPMPublicKey(t)
+	originalPk := testTPMPublicKey(t)
+	newPk := testTPMPublicKey(t)
 	var originalTPMID string
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -66,10 +67,10 @@ func TestAccIdentityTPM(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create minimal config with only required publicKey field to assert default behavior
 			{
-				Config: testAccIdentityTPMConfig(tpmConfigFields{pk: publicKey}),
+				Config: testAccIdentityTPMConfig(tpmConfigFields{pkHeredoc: originalPk}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "name"),
-					resource.TestCheckResourceAttr(resourceName, "tpm_ek_public_key", publicKey+"\n"),
+					resource.TestCheckResourceAttr(resourceName, "tpm_ek_public_key", originalPk),
 					resource.TestCheckResourceAttr(resourceName, "disabled", "false"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.%", "0"),
 					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
@@ -85,7 +86,7 @@ func TestAccIdentityTPM(t *testing.T) {
 			},
 			// Step 2: Update name
 			{
-				Config: testAccIdentityTPMConfig(tpmConfigFields{name: renamedName, pk: publicKey}),
+				Config: testAccIdentityTPMConfig(tpmConfigFields{name: renamedName, pkHeredoc: originalPk}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", renamedName),
 					resource.TestCheckResourceAttr(resourceName, "disabled", "false"),
@@ -107,7 +108,7 @@ func TestAccIdentityTPM(t *testing.T) {
 			},
 			// Step 3: Update disabled
 			{
-				Config: testAccIdentityTPMConfig(tpmConfigFields{name: renamedName, pk: publicKey, disabled: true, specifyDisabled: true}),
+				Config: testAccIdentityTPMConfig(tpmConfigFields{name: renamedName, pkHeredoc: originalPk, disabled: true, specifyDisabled: true}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", renamedName),
 					resource.TestCheckResourceAttr(resourceName, "disabled", "true"),
@@ -121,9 +122,10 @@ func TestAccIdentityTPM(t *testing.T) {
 			// Step 4: Update public key while keeping every other config field the same as above
 			// to assert resource is recreated and not updated
 			{
-				Config: testAccIdentityTPMConfig(tpmConfigFields{name: renamedName, pk: testTPMPublicKey(t), disabled: true, specifyDisabled: true}),
+				Config: testAccIdentityTPMConfig(tpmConfigFields{name: renamedName, pkHeredoc: newPk, disabled: true, specifyDisabled: true}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", renamedName),
+					resource.TestCheckResourceAttr(resourceName, "tpm_ek_public_key", newPk),
 					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
 						if value == originalTPMID {
 							return fmt.Errorf("expected tpm_id to change after public key change, but got same ID: %q", value)
@@ -165,6 +167,81 @@ func TestAccIdentityTPM(t *testing.T) {
 	})
 }
 
+// TestAccIdentityTPM_pemNormalization verifies PEM formatting changes, such as
+// with/without a trailing line, do not replace the entire TPM resource.
+func TestAccIdentityTPM_pemNormalization(t *testing.T) {
+	resourceName := "vault_identity_tpm.test"
+	pkWithNewline := testTPMPublicKey(t)
+	pkTrimmed := strings.TrimRight(pkWithNewline, "\n")
+	var originalTPMID string
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityTPMConfig(tpmConfigFields{pkString: pkTrimmed}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
+						originalTPMID = value
+						return nil
+					}),
+					resource.TestCheckResourceAttr(resourceName, "tpm_ek_public_key", pkTrimmed),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Adding a trailing newline is a whitespace-only change. Terraform plans an
+			// in-place update because the raw config value differs from the normalized form
+			// stored in state, but RequiresReplaceIf sees them as equal after normalization
+			// so no replacement occurs. The plan stabilizes after one apply.
+			{
+				Config: testAccIdentityTPMConfig(tpmConfigFields{pkHeredoc: pkWithNewline}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
+						if value != originalTPMID {
+							return fmt.Errorf("expected tpm_id %q after key format change, got %q", originalTPMID, value)
+						}
+						return nil
+					})),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Removing the trailing newline produces the same one-time update — no replace.
+			{
+				Config: testAccIdentityTPMConfig(tpmConfigFields{pkString: pkTrimmed}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
+						if value != originalTPMID {
+							return fmt.Errorf("expected tpm_id %q after key format change, got %q", originalTPMID, value)
+						}
+						return nil
+					})),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
 // TestAccIdentityTPM_metadata verifies metadata field behavior:
 // - Creating with metadata and verifying it's correctly imported from Vault
 // - Omitting metadata clears it in Vault (config is the source of truth)
@@ -184,7 +261,7 @@ func TestAccIdentityTPM_metadata(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				// Step 1: Create with metadata
-				Config: testAccIdentityTPMConfig(tpmConfigFields{pk: publicKey, metadata: `{
+				Config: testAccIdentityTPMConfig(tpmConfigFields{pkHeredoc: publicKey, metadata: `{
 					environment = "test"
 					owner  = "platform-team"
 				}`},
@@ -214,7 +291,7 @@ func TestAccIdentityTPM_metadata(t *testing.T) {
 			},
 			{
 				// Step 3: Omitting metadata clears it in Vault
-				Config: testAccIdentityTPMConfig(tpmConfigFields{pk: publicKey}),
+				Config: testAccIdentityTPMConfig(tpmConfigFields{pkHeredoc: publicKey}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
 						if value != tpmId {
@@ -235,7 +312,7 @@ func TestAccIdentityTPM_metadata(t *testing.T) {
 			},
 			{
 				// Step 4: Add metadata back to test clear below
-				Config: testAccIdentityTPMConfig(tpmConfigFields{pk: publicKey, metadata: `{
+				Config: testAccIdentityTPMConfig(tpmConfigFields{pkHeredoc: publicKey, metadata: `{
 					environment = "dev"
 					owner  = "engineering"
 				}`},
@@ -257,7 +334,7 @@ func TestAccIdentityTPM_metadata(t *testing.T) {
 			},
 			{
 				// Step 5: Setting metadata = {} explicitly clears it in Vault
-				Config: testAccIdentityTPMConfig(tpmConfigFields{pk: publicKey, metadata: `{}`}),
+				Config: testAccIdentityTPMConfig(tpmConfigFields{pkHeredoc: publicKey, metadata: `{}`}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrWith(resourceName, "tpm_id", func(value string) error {
 						if value != tpmId {
@@ -282,20 +359,26 @@ func TestAccIdentityTPM_metadata(t *testing.T) {
 
 type tpmConfigFields struct {
 	name            string
-	pk              string
+	pkHeredoc       string
+	pkString        string
 	disabled        bool
 	specifyDisabled bool
 	metadata        string
 }
 
 func testAccIdentityTPMConfig(config tpmConfigFields) string {
-	resource := fmt.Sprintf(`
+	resource := `
 resource "vault_identity_tpm" "test" {
-  tpm_ek_public_key = <<EOT
-%s
-EOT
+`
+	if config.pkHeredoc != "" {
+		resource += fmt.Sprintf(`  tpm_ek_public_key = <<EOT
+%sEOT
 
-`, config.pk)
+`, config.pkHeredoc)
+	} else {
+		resource += fmt.Sprintf(`  tpm_ek_public_key = %q
+`, config.pkString)
+	}
 
 	if config.name != "" {
 		resource += fmt.Sprintf(`name             = "%s"
