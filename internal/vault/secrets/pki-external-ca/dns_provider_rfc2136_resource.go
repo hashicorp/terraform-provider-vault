@@ -53,10 +53,11 @@ type PKIExternalCADNSProviderRFC2136Model struct {
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// Provider-specific
-	Nameserver    types.String `tfsdk:"nameserver"`
-	TsigKeyName   types.String `tfsdk:"tsig_key_name"`
-	TsigSecret    types.String `tfsdk:"tsig_secret"`
-	TsigAlgorithm types.String `tfsdk:"tsig_algorithm"`
+	Nameserver           types.String `tfsdk:"nameserver"`
+	TsigKeyName          types.String `tfsdk:"tsig_key_name"`
+	TsigSecret           types.String `tfsdk:"tsig_secret"`
+	TsigSecretWOVersion  types.Int64  `tfsdk:"tsig_secret_wo_version"`
+	TsigAlgorithm        types.String `tfsdk:"tsig_algorithm"`
 }
 
 type PKIExternalCADNSProviderRFC2136APIModel struct {
@@ -115,6 +116,10 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 			consts.FieldTsigSecret: schema.StringAttribute{
 				MarkdownDescription: "TSIG secret (base64 encoded). Write-only — not returned by Vault.",
 				WriteOnly:           true,
+			},
+			consts.FieldTsigSecretWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version counter for the write-only `tsig_secret` field. Increment this value to trigger an update to the TSIG secret in Vault.",
+				Optional:            true,
 			},
 			consts.FieldTsigAlgorithm: schema.StringAttribute{
 				MarkdownDescription: "TSIG algorithm (e.g. `hmac-sha256`, `hmac-sha512`). Defaults to `hmac-sha256`.",

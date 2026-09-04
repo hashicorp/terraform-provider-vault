@@ -53,8 +53,9 @@ type PKIExternalCADNSProviderGCPModel struct {
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// Provider-specific
-	Credentials               types.String `tfsdk:"credentials"`
-	Project                   types.String `tfsdk:"project"`
+	Credentials          types.String `tfsdk:"credentials"`
+	CredentialsWOVersion types.Int64  `tfsdk:"credentials_wo_version"`
+	Project              types.String `tfsdk:"project"`
 	ZoneName                  types.String `tfsdk:"zone_name"`
 	ImpersonateServiceAccount types.String `tfsdk:"impersonate_service_account"`
 	Nameserver                types.String `tfsdk:"nameserver"`
@@ -112,6 +113,10 @@ func (r *PKIExternalCADNSProviderGCPResource) Schema(_ context.Context, _ resour
 				MarkdownDescription: "GCP service account credentials as JSON content. Write-only — not returned by Vault.",
 				Optional:            true,
 				WriteOnly:           true,
+			},
+			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version counter for the write-only `credentials` field. Increment this value to trigger an update to the credentials in Vault.",
+				Optional:            true,
 			},
 			consts.FieldProject: schema.StringAttribute{
 				MarkdownDescription: "GCP project name.",

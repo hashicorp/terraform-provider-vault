@@ -53,10 +53,11 @@ type PKIExternalCADNSProviderAzureModel struct {
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// Provider-specific
-	ZoneName          types.String `tfsdk:"zone_name"`
-	ClientID          types.String `tfsdk:"client_id"`
-	ClientSecret      types.String `tfsdk:"client_secret"`
-	TenantID          types.String `tfsdk:"tenant_id"`
+	ZoneName               types.String `tfsdk:"zone_name"`
+	ClientID               types.String `tfsdk:"client_id"`
+	ClientSecret           types.String `tfsdk:"client_secret"`
+	ClientSecretWOVersion  types.Int64  `tfsdk:"client_secret_wo_version"`
+	TenantID               types.String `tfsdk:"tenant_id"`
 	SubscriptionID    types.String `tfsdk:"subscription_id"`
 	ResourceGroupName types.String `tfsdk:"resource_group_name"`
 	Environment       types.String `tfsdk:"environment"`
@@ -126,6 +127,10 @@ func (r *PKIExternalCADNSProviderAzureResource) Schema(_ context.Context, _ reso
 				MarkdownDescription: "Azure service principal client secret. Write-only — not returned by Vault.",
 				Optional:            true,
 				WriteOnly:           true,
+			},
+			consts.FieldClientSecretWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version counter for the write-only `client_secret` field. Increment this value to trigger an update to the client secret in Vault.",
+				Optional:            true,
 			},
 			consts.FieldTenantID: schema.StringAttribute{
 				MarkdownDescription: "Azure tenant ID.",

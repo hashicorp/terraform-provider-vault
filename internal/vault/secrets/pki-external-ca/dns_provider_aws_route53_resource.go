@@ -53,9 +53,10 @@ type PKIExternalCADNSProviderAWSRoute53Model struct {
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// Provider-specific
-	AccessKeyId     types.String `tfsdk:"access_key_id"`
-	SecretAccessKey types.String `tfsdk:"secret_access_key"`
-	Region          types.String `tfsdk:"region"`
+	AccessKeyId              types.String `tfsdk:"access_key_id"`
+	SecretAccessKey          types.String `tfsdk:"secret_access_key"`
+	SecretAccessKeyWOVersion types.Int64  `tfsdk:"secret_access_key_wo_version"`
+	Region                   types.String `tfsdk:"region"`
 	HostedZoneId    types.String `tfsdk:"hosted_zone_id"`
 	ExternalID      types.String `tfsdk:"external_id"`
 	AssumeRoleArn   types.String `tfsdk:"assume_role_arn"`
@@ -120,6 +121,10 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				MarkdownDescription: "AWS secret access key for Route53 API access. Write-only — not returned by Vault.",
 				Optional:            true,
 				WriteOnly:           true,
+			},
+			consts.FieldSecretAccessKeyWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version counter for the write-only `secret_access_key` field. Increment this value to trigger an update to the secret access key in Vault.",
+				Optional:            true,
 			},
 			consts.FieldRegion: schema.StringAttribute{
 				MarkdownDescription: "AWS region for Route53 operations. Defaults to `us-east-1`.",
