@@ -45,6 +45,8 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 						"acs_urls.0", "https://my.vault.primary/v1/auth/saml/callback"),
 					resource.TestCheckResourceAttr(resourceName,
 						consts.FieldDefaultRole, "admin"),
+					resource.TestCheckResourceAttrSet(resourceName,
+						fieldAccessor),
 				),
 			},
 			{
@@ -64,6 +66,8 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 						"acs_urls.1", "https://my.vault.secondary/v1/auth/saml/callback"),
 					resource.TestCheckResourceAttr(resourceName,
 						consts.FieldDefaultRole, "project-aqua-developers"),
+					resource.TestCheckResourceAttrSet(resourceName,
+						fieldAccessor),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
