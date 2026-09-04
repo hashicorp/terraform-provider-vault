@@ -127,10 +127,10 @@ func transformTransformationTokenizationDestroy(s *terraform.State) error {
 		}
 		secret, err := client.Logical().Read(rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("error checking for role %q: %s", rs.Primary.ID, err)
+			return fmt.Errorf("error checking for transformation %q: %s", rs.Primary.ID, err)
 		}
 		if secret != nil {
-			return fmt.Errorf("role %q still exists", rs.Primary.ID)
+			return fmt.Errorf("transformation %q still exists", rs.Primary.ID)
 		}
 	}
 	return nil
