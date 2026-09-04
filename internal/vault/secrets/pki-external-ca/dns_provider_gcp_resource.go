@@ -53,9 +53,9 @@ type PKIExternalCADNSProviderGCPModel struct {
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// Provider-specific
-	Credentials          types.String `tfsdk:"credentials"`
-	CredentialsWOVersion types.Int64  `tfsdk:"credentials_wo_version"`
-	Project              types.String `tfsdk:"project"`
+	Credentials               types.String `tfsdk:"credentials"`
+	CredentialsWOVersion      types.Int64  `tfsdk:"credentials_wo_version"`
+	Project                   types.String `tfsdk:"project"`
 	ZoneName                  types.String `tfsdk:"zone_name"`
 	ImpersonateServiceAccount types.String `tfsdk:"impersonate_service_account"`
 	Nameserver                types.String `tfsdk:"nameserver"`

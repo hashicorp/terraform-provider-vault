@@ -57,10 +57,10 @@ type PKIExternalCADNSProviderAWSRoute53Model struct {
 	SecretAccessKey          types.String `tfsdk:"secret_access_key"`
 	SecretAccessKeyWOVersion types.Int64  `tfsdk:"secret_access_key_wo_version"`
 	Region                   types.String `tfsdk:"region"`
-	HostedZoneId    types.String `tfsdk:"hosted_zone_id"`
-	ExternalID      types.String `tfsdk:"external_id"`
-	AssumeRoleArn   types.String `tfsdk:"assume_role_arn"`
-	Nameserver      types.String `tfsdk:"nameserver"`
+	HostedZoneId             types.String `tfsdk:"hosted_zone_id"`
+	ExternalID               types.String `tfsdk:"external_id"`
+	AssumeRoleArn            types.String `tfsdk:"assume_role_arn"`
+	Nameserver               types.String `tfsdk:"nameserver"`
 }
 
 type PKIExternalCADNSProviderAWSRoute53APIModel struct {

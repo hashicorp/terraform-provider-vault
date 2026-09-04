@@ -53,15 +53,15 @@ type PKIExternalCADNSProviderAzureModel struct {
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// Provider-specific
-	ZoneName               types.String `tfsdk:"zone_name"`
-	ClientID               types.String `tfsdk:"client_id"`
-	ClientSecret           types.String `tfsdk:"client_secret"`
-	ClientSecretWOVersion  types.Int64  `tfsdk:"client_secret_wo_version"`
-	TenantID               types.String `tfsdk:"tenant_id"`
-	SubscriptionID    types.String `tfsdk:"subscription_id"`
-	ResourceGroupName types.String `tfsdk:"resource_group_name"`
-	Environment       types.String `tfsdk:"environment"`
-	Nameserver        types.String `tfsdk:"nameserver"`
+	ZoneName              types.String `tfsdk:"zone_name"`
+	ClientID              types.String `tfsdk:"client_id"`
+	ClientSecret          types.String `tfsdk:"client_secret"`
+	ClientSecretWOVersion types.Int64  `tfsdk:"client_secret_wo_version"`
+	TenantID              types.String `tfsdk:"tenant_id"`
+	SubscriptionID        types.String `tfsdk:"subscription_id"`
+	ResourceGroupName     types.String `tfsdk:"resource_group_name"`
+	Environment           types.String `tfsdk:"environment"`
+	Nameserver            types.String `tfsdk:"nameserver"`
 }
 
 type PKIExternalCADNSProviderAzureAPIModel struct {

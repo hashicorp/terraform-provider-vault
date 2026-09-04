@@ -53,11 +53,11 @@ type PKIExternalCADNSProviderRFC2136Model struct {
 	LastUpdatedDate types.String `tfsdk:"last_updated_date"`
 
 	// Provider-specific
-	Nameserver           types.String `tfsdk:"nameserver"`
-	TsigKeyName          types.String `tfsdk:"tsig_key_name"`
-	TsigSecret           types.String `tfsdk:"tsig_secret"`
-	TsigSecretWOVersion  types.Int64  `tfsdk:"tsig_secret_wo_version"`
-	TsigAlgorithm        types.String `tfsdk:"tsig_algorithm"`
+	Nameserver          types.String `tfsdk:"nameserver"`
+	TsigKeyName         types.String `tfsdk:"tsig_key_name"`
+	TsigSecret          types.String `tfsdk:"tsig_secret"`
+	TsigSecretWOVersion types.Int64  `tfsdk:"tsig_secret_wo_version"`
+	TsigAlgorithm       types.String `tfsdk:"tsig_algorithm"`
 }
 
 type PKIExternalCADNSProviderRFC2136APIModel struct {
