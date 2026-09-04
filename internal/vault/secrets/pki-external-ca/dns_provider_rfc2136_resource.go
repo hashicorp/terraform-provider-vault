@@ -109,12 +109,15 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 			},
 			consts.FieldNameserver: schema.StringAttribute{
 				MarkdownDescription: "DNS server address in `IP:port` format (e.g. `192.168.1.1:53`).",
+				Required:            true,
 			},
 			consts.FieldTsigKeyName: schema.StringAttribute{
 				MarkdownDescription: "TSIG key name for authenticated DNS updates.",
+				Required:            true,
 			},
 			consts.FieldTsigSecret: schema.StringAttribute{
 				MarkdownDescription: "TSIG secret (base64 encoded). Write-only — not returned by Vault.",
+				Required:            true,
 				WriteOnly:           true,
 			},
 			consts.FieldTsigSecretWOVersion: schema.Int64Attribute{
