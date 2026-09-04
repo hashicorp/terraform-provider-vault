@@ -167,3 +167,13 @@ The following write-only attributes are supported:
 ## Attribute Reference
 
 No additional attributes are exposed by this resource.
+
+## Import
+
+Certificate auth backend roles can be imported using the Vault API path,
+relative to the target namespace, in the format
+`auth/<backend>/certs/<name>`, e.g.
+
+```shell
+$ terraform import vault_cert_auth_backend_role.example auth/custom/cert/certs/service.example
+```
