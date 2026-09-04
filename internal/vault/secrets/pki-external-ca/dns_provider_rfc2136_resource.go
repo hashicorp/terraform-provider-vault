@@ -116,10 +116,10 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 				Required:            true,
 			},
 			consts.FieldTsigSecretWO: schema.StringAttribute{
-					MarkdownDescription: "TSIG secret (base64 encoded). Write-only — not returned by Vault.",
-					Required:            true,
-					WriteOnly:           true,
-				},
+				MarkdownDescription: "TSIG secret (base64 encoded). Write-only — not returned by Vault.",
+				Required:            true,
+				WriteOnly:           true,
+			},
 			consts.FieldTsigSecretWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `tsig_secret` field. Increment this value to trigger an update to the TSIG secret in Vault.",
 				Optional:            true,

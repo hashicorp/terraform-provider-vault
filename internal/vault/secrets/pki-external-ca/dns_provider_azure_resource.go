@@ -124,10 +124,10 @@ func (r *PKIExternalCADNSProviderAzureResource) Schema(_ context.Context, _ reso
 				Optional:            true,
 			},
 			consts.FieldClientSecretWO: schema.StringAttribute{
-					MarkdownDescription: "Azure service principal client secret. Write-only — not returned by Vault.",
-					Optional:            true,
-					WriteOnly:           true,
-				},
+				MarkdownDescription: "Azure service principal client secret. Write-only — not returned by Vault.",
+				Optional:            true,
+				WriteOnly:           true,
+			},
 			consts.FieldClientSecretWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `client_secret` field. Increment this value to trigger an update to the client secret in Vault.",
 				Optional:            true,

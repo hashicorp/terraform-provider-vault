@@ -110,10 +110,10 @@ func (r *PKIExternalCADNSProviderGCPResource) Schema(_ context.Context, _ resour
 				Computed:            true,
 			},
 			consts.FieldCredentialsWO: schema.StringAttribute{
-					MarkdownDescription: "GCP service account credentials as JSON content. Write-only — not returned by Vault.",
-					Optional:            true,
-					WriteOnly:           true,
-				},
+				MarkdownDescription: "GCP service account credentials as JSON content. Write-only — not returned by Vault.",
+				Optional:            true,
+				WriteOnly:           true,
+			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `credentials` field. Increment this value to trigger an update to the credentials in Vault.",
 				Optional:            true,
