@@ -1,0 +1,352 @@
+// Copyright IBM Corp. 2016, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package identity
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/vault/api"
+
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
+)
+
+var _ resource.ResourceWithImportState = &IdentityTPMResource{}
+
+// normalizePEM trims surrounding whitespace and adds a single trailing newline,
+// matching the canonical form produced by Go's pem.EncodeToMemory (which Vault
+// uses internally). It is used by RequiresReplaceIf so that whitespace-only
+// config changes (e.g. a missing trailing newline) do not trigger resource
+// replacement.
+func normalizePEM(s string) string {
+	return strings.TrimSpace(s) + "\n"
+}
+
+func NewIdentityTPMResource() resource.Resource {
+	return &IdentityTPMResource{}
+}
+
+type IdentityTPMResource struct {
+	base.ResourceWithConfigure
+}
+
+type IdentityTPMModel struct {
+	base.BaseModel
+
+	Name           types.String `tfsdk:"name"`
+	TPMEKPublicKey types.String `tfsdk:"tpm_ek_public_key"`
+	Disabled       types.Bool   `tfsdk:"disabled"`
+	Metadata       types.Map    `tfsdk:"metadata"`
+	TPMID          types.String `tfsdk:"tpm_id"`
+}
+
+type identityTPMAPIModel struct {
+	Name           string            `json:"name" mapstructure:"name"`
+	TPMEKPublicKey string            `json:"tpm_ek_public_key" mapstructure:"tpm_ek_public_key"`
+	Disabled       bool              `json:"disabled" mapstructure:"disabled"`
+	Metadata       map[string]string `json:"metadata" mapstructure:"metadata"`
+	TPMID          string            `json:"id" mapstructure:"id"`
+}
+
+func (r *IdentityTPMResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_identity_tpm"
+}
+
+func (r *IdentityTPMResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			consts.FieldName: schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Name of the TPM record. Vault generates a name if one is not specified.",
+			},
+			consts.FieldTPMEKPublicKey: schema.StringAttribute{
+				Required: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplaceIf(
+						func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+							resp.RequiresReplace = normalizePEM(req.PlanValue.ValueString()) != normalizePEM(req.StateValue.ValueString())
+						},
+						"If the value of this attribute changes, Terraform will destroy and recreate the resource.",
+						"If the value of this attribute changes, Terraform will destroy and recreate the resource.",
+					),
+				},
+				Description: "PEM-encoded TPM Endorsement Key (EK) public key.",
+			},
+			consts.FieldDisabled: schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Whether the TPM is disabled.",
+			},
+			consts.FieldMetadata: schema.MapAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Description: "Metadata to associate with the TPM record.",
+			},
+			consts.FieldTPMID: schema.StringAttribute{
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Description: "The unique ID Vault assigns to this TPM record (SHA256 of the EK public key).",
+			},
+		},
+	}
+
+	base.MustAddBaseSchema(&resp.Schema)
+}
+
+func (r *IdentityTPMResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data IdentityTPMModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if Vault version supports TPM auth (requires 2.2.0+)
+	if !r.Meta().IsAPISupported(provider.VaultVersion220) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			fmt.Sprintf("TPM identity requires Vault version %s or later. Current Vault version: %s", provider.VaultVersion220, r.Meta().GetVaultVersion().String()),
+		)
+		return
+	}
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	requestBody, diags := r.getAPIModel(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resourcePath := "identity/tpm"
+	secret, err := vaultClient.Logical().WriteWithContext(ctx, resourcePath, requestBody)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, secret)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *IdentityTPMResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data IdentityTPMModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	secret, err := vaultClient.Logical().ReadWithContext(ctx, r.path(&data))
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+		return
+	}
+
+	if secret == nil {
+		tflog.Warn(ctx, "TPM record not found, removing from state")
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, secret)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *IdentityTPMResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data IdentityTPMModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	var stateData IdentityTPMModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if data.TPMID.IsNull() || data.TPMID.IsUnknown() {
+		data.TPMID = stateData.TPMID
+	}
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	requestBody, diags := r.getAPIModel(ctx, &data)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resourcePath := r.path(&data)
+	if _, err := vaultClient.Logical().WriteWithContext(ctx, resourcePath, requestBody); err != nil {
+		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
+		return
+	}
+
+	secret, err := vaultClient.Logical().ReadWithContext(ctx, resourcePath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+		return
+	}
+	if secret == nil {
+		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
+		return
+	}
+
+	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, secret)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (r *IdentityTPMResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data IdentityTPMModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	if _, err := vaultClient.Logical().DeleteWithContext(ctx, r.path(&data)); err != nil {
+		if util.Is404(err) {
+			return
+		}
+		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
+	}
+}
+
+func (r *IdentityTPMResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	tpmID := req.ID
+	if tpmID == "" {
+		resp.Diagnostics.AddError("Invalid import identifier", "import identifier cannot be empty")
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldTPMID), tpmID)...)
+
+	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
+	if ns != "" {
+		tflog.Info(
+			ctx,
+			fmt.Sprintf("Environment variable %s set, attempting TF state import", consts.EnvVarVaultNamespaceImport),
+			map[string]any{consts.FieldNamespace: ns},
+		)
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
+}
+
+func (r *IdentityTPMResource) path(data *IdentityTPMModel) string {
+	if !data.TPMID.IsNull() && !data.TPMID.IsUnknown() && data.TPMID.ValueString() != "" {
+		return fmt.Sprintf("identity/tpm/id/%s", data.TPMID.ValueString())
+	}
+	return fmt.Sprintf("identity/tpm/name/%s", data.Name.ValueString())
+}
+
+func (r *IdentityTPMResource) populateDataModelFromAPI(ctx context.Context, data *IdentityTPMModel, resp *api.Secret) diag.Diagnostics {
+	if resp == nil || resp.Data == nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
+		}
+	}
+
+	var readResp identityTPMAPIModel
+	if err := model.ToAPIModel(resp.Data, &readResp); err != nil {
+		return diag.Diagnostics{
+			diag.NewErrorDiagnostic("Unable to translate Vault response data", err.Error()),
+		}
+	}
+
+	// Update data model with values from Vault
+	data.TPMID = types.StringValue(readResp.TPMID)
+	data.Name = types.StringValue(readResp.Name)
+	// TPMEKPublicKey is empty on Import (no plan value) so set it from the Vault value.
+	// Otherwise preserve whatever the config defines.
+	if data.TPMEKPublicKey.ValueString() == "" {
+		data.TPMEKPublicKey = types.StringValue(readResp.TPMEKPublicKey)
+	}
+	data.Disabled = types.BoolValue(readResp.Disabled)
+
+	metadata, diags := types.MapValueFrom(ctx, types.StringType, readResp.Metadata)
+	if diags.HasError() {
+		return diags
+	}
+	data.Metadata = metadata
+
+	return nil
+}
+
+func (r *IdentityTPMResource) getAPIModel(ctx context.Context, data *IdentityTPMModel) (map[string]any, diag.Diagnostics) {
+	apiModel := identityTPMAPIModel{
+		Name: data.Name.ValueString(),
+		// Normalize the public key before sending to Vault to match the canonical form Go's
+		// pem.EncodeToMemory produces (trimmed whitespace with one trailing newline).
+		TPMEKPublicKey: normalizePEM(data.TPMEKPublicKey.ValueString()),
+	}
+
+	if !data.Disabled.IsNull() && !data.Disabled.IsUnknown() {
+		apiModel.Disabled = data.Disabled.ValueBool()
+	}
+
+	if diags := data.Metadata.ElementsAs(ctx, &apiModel.Metadata, false); diags.HasError() {
+		return nil, diags
+	}
+
+	var requestBody map[string]any
+	if err := mapstructure.Decode(apiModel, &requestBody); err != nil {
+		return nil, diag.Diagnostics{
+			diag.NewErrorDiagnostic("Failed to decode TPM API model to map", err.Error()),
+		}
+	}
+
+	if data.Disabled.IsNull() || data.Disabled.IsUnknown() {
+		delete(requestBody, "disabled")
+	}
+
+	return requestBody, nil
+}

@@ -68,6 +68,7 @@ const (
 	FieldPathFQ                             = "path_fq"
 	FieldPathsFQ                            = "paths_fq"
 	FieldData                               = "data"
+	FieldDisabled                           = "disabled"
 	FieldDisableRead                        = "disable_read"
 	FieldWriteFields                        = "write_fields"
 	FieldWriteData                          = "write_data"
@@ -839,6 +840,18 @@ const (
 	FieldVerboseLogging             = "verbose_logging"
 	FieldValidateAssertionSignature = "validate_assertion_signature"
 	FieldValidateResponseSignature  = "validate_response_signature"
+
+	// TPM auth backend fields
+	FieldCertTTL        = "cert_ttl"
+	FieldCALifetime     = "ca_lifetime"
+	FieldCASoftExpiry   = "ca_soft_expiry"
+	FieldDefaultCertTTL = "default_cert_ttl"
+	FieldTPMEKPublicKey = "tpm_ek_public_key"
+	FieldTPMID          = "tpm_id"
+	FieldTPMGroupID     = "tpm_group_id"
+	FieldTPMIDs         = "tpm_ids"
+	FieldTPMGroupIDs    = "tpmgroup_ids"
+	FieldMemberTPMIDs   = "member_tpm_ids"
 
 	/*
 		agent registry fields
