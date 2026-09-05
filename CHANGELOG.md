@@ -73,6 +73,10 @@ IMPROVEMENTS:
   * Vault Enterprise test images: `1.19.19-ent` → `1.19.20-ent`, `1.20.13-ent` → `1.20.14-ent`, `1.21.8-ent` → `1.21.9-ent`, `2.0.3-ent` → `2.0.4-ent`
 
 
+IMPROVEMENTS:
+
+* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `elasticsearch` engine block, so the connection password can be configured without being persisted in Terraform state (parity with the connection-URL engines). ([#2961](https://github.com/hashicorp/terraform-provider-vault/pull/2961))
+
 BUG FIXES:
 
 * `vault_jwt_auth_backend`: Fixed a perpetual diff where Vault returned non-string values that were silently dropped by Terraform’s TypeMap(TypeString) schema. All values are now converted to strings when read, preventing keys such as `fetch_groups` and `groups_recurse_max_depth` from appearing missing on every plan.([#2993](https://github.com/hashicorp/terraform-provider-vault/pull/2993))
