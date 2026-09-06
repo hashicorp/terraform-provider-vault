@@ -19,7 +19,8 @@ binary {
 				// Upgrading to latest version of go-secure-stdlib is not possible at this time.
 				// The required functionality was inadvertently dropped from
 				// github.com/hashicorp/go-secure-stdlib/awsutil during the migration to aws-sdk-go-v2.
-				"GO-2022-0635"
+				"GO-2022-0635",
+				"GO-2026-5932"
 			]
 		}
 	}

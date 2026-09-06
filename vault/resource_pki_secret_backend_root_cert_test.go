@@ -86,6 +86,54 @@ func TestPkiSecretBackendRootCertificate_notAfter(t *testing.T) {
 	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, nil)
 }
 
+// TestPkiSecretBackendRootCertificate_pkcs12Bundle tests generating a root certificate
+// in PKCS#12 bundle format with custom password and encoder settings.
+func TestPkiSecretBackendRootCertificate_pkcs12Bundle(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+	config := testPkiSecretBackendRootCertificateConfig_basic(path, `
+  format            = "pkcs12_bundle"
+  pkcs12_password   = "123-secure-password"
+  pkcs12_encoder    = "modern2023"`)
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "pkcs12_bundle"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Password, "123-secure-password"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldPKCS12Encoder, "modern2023"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+	}
+
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
+		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+	})
+}
+
+// TestPkiSecretBackendRootCertificate_jksBundle tests generating a root certificate
+// in JKS (Java KeyStore) bundle format with custom password and alias settings.
+func TestPkiSecretBackendRootCertificate_jksBundle(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+	config := testPkiSecretBackendRootCertificateConfig_basic(path, `
+  format                 = "jks_bundle"
+  jks_password           = "super-secure-password"
+  jks_private_key_alias  = "myapp"`)
+
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldFormat, "jks_bundle"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPassword, "super-secure-password"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldJKSPrivateKeyAlias, "myapp"),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldSerialNumber),
+	}
+
+	testPkiSecretBackendRootCertificate(t, path, config, resourceName, checks, func(t *testing.T) {
+		SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+	})
+}
+
 // TestPkiSecretBackendRootCertificate_usePSS tests the use_pss field
 func TestPkiSecretBackendRootCertificate_usePSS(t *testing.T) {
 	path := "pki-" + strconv.Itoa(acctest.RandInt())

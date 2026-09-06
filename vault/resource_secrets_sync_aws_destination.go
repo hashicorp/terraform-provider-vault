@@ -188,34 +188,34 @@ var awsSync200ReadFields = []string{
 	consts.FieldIdentityTokenTTL,
 }
 
-var awsSync210ReadFields = []string{
+var awsSync220ReadFields = []string{
 	consts.FieldReplicaRegions,
 	consts.FieldKmsKeyID,
 }
 
-var awsSync210WriteFields = []string{
+var awsSync220WriteFields = []string{
 	consts.FieldReplicaRegions,
 	consts.FieldKmsKeyID,
 }
 
-func validateAWSSync210Fields(d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+func validateAWSSync220Fields(d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
 		return nil
 	}
 
 	if _, ok := d.GetOk(consts.FieldKmsKeyID); ok {
-		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.1.0 and later")
+		return diag.Errorf("kms_key_id is only supported in Vault Enterprise 2.2.0 and later")
 	}
 
 	if _, ok := d.GetOk(consts.FieldReplicaRegions); ok {
-		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.1.0 and later")
+		return diag.Errorf("replica_regions is only supported in Vault Enterprise 2.2.0 and later")
 	}
 
 	return nil
 }
 
 func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	if diags := validateAWSSync210Fields(d, meta); diags != nil {
+	if diags := validateAWSSync220Fields(d, meta); diags != nil {
 		return diags
 	}
 
@@ -235,10 +235,10 @@ func awsSecretsSyncDestinationCreateUpdate(ctx context.Context, d *schema.Resour
 		readFields = append(readFields, awsSync200ReadFields...)
 	}
 
-	// Add Vault 2.1.0+ fields if supported
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
-		writeFields = append(writeFields, awsSync210WriteFields...)
-		readFields = append(readFields, awsSync210ReadFields...)
+	// Add Vault 2.2.0+ fields if supported
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		writeFields = append(writeFields, awsSync220WriteFields...)
+		readFields = append(readFields, awsSync220ReadFields...)
 	}
 
 	// Fields that need TypeSet to List conversion for JSON serialization
@@ -266,9 +266,9 @@ func awsSecretsSyncDestinationRead(ctx context.Context, d *schema.ResourceData, 
 		readFields = append(readFields, awsSync200ReadFields...)
 	}
 
-	// Add Vault 2.1.0+ fields only if version is supported
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
-		readFields = append(readFields, awsSync210ReadFields...)
+	// Add Vault 2.2.0+ fields only if version is supported
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		readFields = append(readFields, awsSync220ReadFields...)
 	}
 
 	// since other fields come back as '******', we only set the non-sensitive region fields

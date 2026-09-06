@@ -154,13 +154,21 @@ func ldapSecretBackendResource() *schema.Resource {
 			Type:        schema.TypeBool,
 			Optional:    true,
 			Computed:    true,
-			Description: "If true, static role credentials are rotated on each read. Acts as a default for all static roles. Requires Vault Enterprise ≥ 2.1.0.",
+			Description: "If true, static role credentials are rotated on each read. Acts as a default for all static roles. Requires Vault Enterprise ≥ 2.2.0.",
 		},
 		consts.FieldRotateOnReadCooldown: {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			Computed:    true,
-			Description: "Minimum seconds between rotate-on-read rotations. Acts as a default cooldown for all static roles. Requires Vault Enterprise ≥ 2.1.0.",
+			Description: "Minimum seconds between rotate-on-read rotations. Acts as a default cooldown for all static roles. Requires Vault Enterprise ≥ 2.2.0.",
+		},
+		consts.FieldAutoUnlock: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+			Description: "If true, Vault automatically unlocks the admin managed LDAP account after a successful " +
+				"static-role rotation. Applies to all roles on this mount unless overridden per role. " +
+				"Active Directory schema only. Requires Vault 2.2.0+.",
 		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
@@ -271,7 +279,7 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	}
 
 	// get rotate-on-read fields
-	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta) {
 		if d.HasChange(consts.FieldRotateOnRead) {
 			data[consts.FieldRotateOnRead] = d.Get(consts.FieldRotateOnRead)
 		}
@@ -291,6 +299,11 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 			}
 			data[consts.FieldSelfManaged] = d.Get(consts.FieldSelfManaged)
 		}
+	}
+
+	// auto_unlock (mount-level), gated on Vault 2.2.0+ Enterprise
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta) {
+		data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
 	}
 
 	configPath := fmt.Sprintf("%s/config", path)
@@ -370,7 +383,7 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := resp.Data[consts.FieldRotateOnRead]; ok {
 			if err := d.Set(consts.FieldRotateOnRead, v); err != nil {
 				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnRead, err)
@@ -379,6 +392,14 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 		if v, ok := resp.Data[consts.FieldRotateOnReadCooldown]; ok {
 			if err := d.Set(consts.FieldRotateOnReadCooldown, v); err != nil {
 				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnReadCooldown, err)
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta) {
+		if val, ok := resp.Data[consts.FieldAutoUnlock]; ok {
+			if err := d.Set(consts.FieldAutoUnlock, val); err != nil {
+				return diag.FromErr(fmt.Errorf("error setting auto unlock field '%s': %s", consts.FieldAutoUnlock, err))
 			}
 		}
 	}

@@ -153,7 +153,7 @@ func TestAWSSecretsSyncDestinationWithCustomEncryption(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -191,7 +191,7 @@ func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -221,9 +221,9 @@ func TestAWSSecretsSyncDestinationWithReplication(t *testing.T) {
 }
 
 // TestAWSSecretsSyncDestination_UnsupportedVersionFields verifies that configuring the
-// Vault 2.1.0+ fields (kms_key_id, replica_regions) against a Vault server older than
-// 2.1.0 fails with the intended validation error, rather than silently ignoring them or
-// failing later. Guarded so it only runs on Vault < 2.1.0.
+// Vault 2.2.0+ fields (kms_key_id, replica_regions) against a Vault server older than
+// 2.2.0 fails with the intended validation error, rather than silently ignoring them or
+// failing later. Guarded so it only runs on Vault < 2.2.0.
 func TestAWSSecretsSyncDestination_UnsupportedVersionFields(t *testing.T) {
 	destName := acctest.RandomWithPrefix("tf-sync-dest-aws-ver")
 
@@ -231,16 +231,16 @@ func TestAWSSecretsSyncDestination_UnsupportedVersionFields(t *testing.T) {
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
-			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion210)
+			SkipIfAPIVersionGTE(t, testProvider.Meta(), provider.VaultVersion220)
 		},
 		Steps: []resource.TestStep{
 			{
 				Config:      testAWSSecretsSyncDestinationConfig_kmsKeyID(destName),
-				ExpectError: regexp.MustCompile(`kms_key_id is only supported in Vault Enterprise 2.1.0 and later`),
+				ExpectError: regexp.MustCompile(`kms_key_id is only supported in Vault Enterprise 2.2.0 and later`),
 			},
 			{
 				Config:      testAWSSecretsSyncDestinationConfig_replicaRegions(destName),
-				ExpectError: regexp.MustCompile(`replica_regions is only supported in Vault Enterprise 2.1.0 and later`),
+				ExpectError: regexp.MustCompile(`replica_regions is only supported in Vault Enterprise 2.2.0 and later`),
 			},
 		},
 	})

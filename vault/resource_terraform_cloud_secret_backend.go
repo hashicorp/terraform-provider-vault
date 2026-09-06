@@ -127,7 +127,7 @@ func terraformCloudSecretBackendCreate(ctx context.Context, d *schema.ResourceDa
 		return diag.FromErr(e)
 	}
 
-	useRotationFields := provider.IsAPISupported(meta, provider.VaultVersion210)
+	useRotationFields := provider.IsAPISupported(meta, provider.VaultVersion220)
 	isEnterprise := provider.IsEnterpriseSupported(meta)
 
 	backend := d.Get(consts.FieldBackend).(string)
@@ -205,6 +205,9 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 	if err := readMount(ctx, d, meta, true, true); err != nil {
 		return diag.FromErr(err)
 	}
+	if d.Id() == "" {
+		return nil
+	}
 
 	log.Printf("[DEBUG] Reading %s from Vault", configPath)
 	secret, err := client.Logical().ReadWithContext(ctx, configPath)
@@ -228,7 +231,7 @@ func terraformCloudSecretBackendRead(ctx context.Context, d *schema.ResourceData
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion210) {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
 		if v, ok := secret.Data[consts.FieldExplicitMaxTTL]; ok {
 			if err := d.Set(consts.FieldExplicitMaxTTL, v); err != nil {
 				return diag.FromErr(err)
@@ -264,7 +267,7 @@ func terraformCloudSecretBackendUpdate(ctx context.Context, d *schema.ResourceDa
 
 	configPath := terraformCloudSecretBackendConfigPath(backend)
 
-	useRotationFields := provider.IsAPISupported(meta, provider.VaultVersion210)
+	useRotationFields := provider.IsAPISupported(meta, provider.VaultVersion220)
 	isEnterprise := provider.IsEnterpriseSupported(meta)
 
 	rotationFieldsChanged := useRotationFields && isEnterprise &&
@@ -350,6 +353,11 @@ func terraformCloudSecretBackendDelete(ctx context.Context, d *schema.ResourceDa
 	log.Printf("[DEBUG] Unmounting Terraform Cloud backend %q", backend)
 	err := client.Sys().UnmountWithContext(ctx, backend)
 	if err != nil {
+		if util.Is404(err) {
+			log.Printf("[DEBUG] Terraform Cloud backend %q not found, removing from state", backend)
+			d.SetId("")
+			return nil
+		}
 		return diag.Errorf("Error unmounting Terraform Cloud backend from %q: %s", backend, err)
 	}
 	log.Printf("[DEBUG] Unmounted Terraform Cloud backend %q", backend)

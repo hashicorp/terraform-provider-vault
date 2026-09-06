@@ -75,20 +75,26 @@ The following arguments are supported:
 * `rotation_policy` - (Optional) The rotation policy to use for this credential. Requires Vault Enterprise 2.0+.
 
 * `password_policy` - (Optional) Name of the password policy to use to generate passwords for this role.
-  Requires Vault 2.1.0+.
+  Requires Vault 2.2.0+.
 
 * `rotate_on_read` - (Optional) If true, credentials are rotated on each read. When set, this overrides
   the engine-level `rotate_on_read` default. When unset, the role inherits the engine-level value.
   Removing this attribute after it has been set is not supported without recreating the role.
-  Requires Vault Enterprise 2.1.0+.
+  Requires Vault Enterprise 2.2.0+.
 
 * `rotate_on_read_cooldown` - (Optional) Minimum number of seconds between rotate-on-read rotations
   for this role. When set, this overrides the engine-level `rotate_on_read_cooldown` default.
   When unset, the role inherits the engine-level value.
   Removing this attribute after it has been set is not supported without recreating the role.
-  Requires Vault Enterprise 2.1.0+.
+  Requires Vault Enterprise 2.2.0+.
 
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the static credential until unset. Requires Vault Enterprise 2.0+.
+
+* `auto_unlock` - (Optional) Overrides the mount-level auto_unlock setting for this role.
+  When true, Vault unlocks the admin managed LDAP account automatically after a successful rotation.
+  When false, disables automatic unlock for this role even if the mount has `auto_unlock = true`.
+  When unset, the role inherits the mount-level setting. Active Directory schema only.
+  Requires Vault 2.2.0+.
 
 * `password_wo_version` - (Optional) The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
   Requires Vault Enterprise 2.0+.

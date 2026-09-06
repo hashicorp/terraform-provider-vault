@@ -71,12 +71,22 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 		consts.FieldRotateOnRead: {
 			Type:        schema.TypeBool,
 			Optional:    true,
-			Description: "If true, credentials are rotated on each read. Overrides the engine-level default when set. Requires Vault Enterprise ≥ 2.1.0.",
+			Description: "If true, credentials are rotated on each read. Overrides the engine-level default when set. Requires Vault Enterprise ≥ 2.2.0.",
 		},
 		consts.FieldRotateOnReadCooldown: {
 			Type:        schema.TypeInt,
 			Optional:    true,
-			Description: "Minimum seconds between rotate-on-read rotations for this role. Overrides the engine-level default when set. Requires Vault Enterprise ≥ 2.1.0.",
+			Description: "Minimum seconds between rotate-on-read rotations for this role. Overrides the engine-level default when set. Requires Vault Enterprise ≥ 2.2.0.",
+		},
+		consts.FieldAutoUnlock: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+			Description: "Overrides the mount-level auto_unlock setting for this role. " +
+				"When true, Vault unlocks the account automatically after a successful rotation. " +
+				"When false, disables automatic unlock even if the mount enables it. " +
+				"When unset, inherits the mount-level setting. " +
+				"Currently only the Active Directory schema is supported. Requires Vault 2.2.0+",
 		},
 	}
 	resource := &schema.Resource{
@@ -128,13 +138,13 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 
 	// Handle password_policy unsetting: if the field changed from set to unset,
 	// send an empty string to clear the role-level override and inherit mount-level policy.
-	// validate that password_policy is only used with Vault >= 2.1.0.
+	// validate that password_policy is only used with Vault >= 2.2.0.
 	if d.HasChange(consts.FieldPasswordPolicy) {
 		if _, ok := d.GetOk(consts.FieldPasswordPolicy); !ok {
 			// Field was removed from config, send empty string to clear it
 			data[consts.FieldPasswordPolicy] = ""
-		} else if !provider.IsAPISupported(meta, provider.VaultVersion210) {
-			return diag.Errorf("password_policy is only supported in Vault 2.1.0 and later")
+		} else if !provider.IsAPISupported(meta, provider.VaultVersion220) {
+			return diag.Errorf("password_policy is only supported in Vault 2.2.0 and later")
 		}
 	}
 
@@ -153,13 +163,21 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 	}
 
 	// get rotate-on-read role-level overrides
-	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta) {
 		if d.HasChange(consts.FieldRotateOnRead) {
 			data[consts.FieldRotateOnRead] = d.Get(consts.FieldRotateOnRead)
 		}
 		if d.HasChange(consts.FieldRotateOnReadCooldown) {
 			data[consts.FieldRotateOnReadCooldown] = d.Get(consts.FieldRotateOnReadCooldown)
 		}
+	}
+
+	// only send auto_unlock if explicitly set — avoids overwriting mount-level default with false
+	if d.HasChange(consts.FieldAutoUnlock) {
+		if !provider.IsAPISupported(meta, provider.VaultVersion220) || !provider.IsEnterpriseSupported(meta) {
+			return diag.Errorf("auto_unlock is only supported in Vault Enterprise 2.2.0 and later")
+		}
+		data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
 	}
 
 	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
@@ -208,7 +226,7 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion210) && provider.IsEnterpriseSupported(meta) {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := resp.Data[consts.FieldRotateOnRead]; ok {
 			if err := d.Set(consts.FieldRotateOnRead, v); err != nil {
 				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnRead, err)
@@ -217,6 +235,14 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		if v, ok := resp.Data[consts.FieldRotateOnReadCooldown]; ok {
 			if err := d.Set(consts.FieldRotateOnReadCooldown, v); err != nil {
 				return diag.Errorf("error setting %s: %s", consts.FieldRotateOnReadCooldown, err)
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta) {
+		if val, ok := resp.Data[consts.FieldAutoUnlock]; ok {
+			if err := d.Set(consts.FieldAutoUnlock, val); err != nil {
+				return diag.FromErr(fmt.Errorf("error setting auto unlock field '%s': %s", consts.FieldAutoUnlock, err))
 			}
 		}
 	}
