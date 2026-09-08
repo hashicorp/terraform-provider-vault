@@ -925,6 +925,8 @@ const (
 	FieldAddGroupAliases            = "add_group_aliases"
 	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
+	FieldCertificateWO              = "certificate_wo"
+	FieldCertificateWOVersion       = "certificate_wo_version"
 
 	/*
 		common environment variables
@@ -1026,6 +1028,7 @@ const (
 	VaultVersion201  = "2.0.1"
 	VaultVersion203  = "2.0.3"
 	VaultVersion210  = "2.1.0"
+	VaultVersion211  = "2.1.1"
 	VaultVersion220  = "2.2.0"
 
 	/*
