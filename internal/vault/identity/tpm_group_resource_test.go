@@ -107,9 +107,9 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 			{
 				ResourceName:                         resourceName,
 				ImportState:                          true,
-					ImportStateIdFunc:                    testAccIdentityTPMGroupImportStateIdFunc(resourceName),
-					ImportStateVerify:                    true,
-					ImportStateVerifyIdentifierAttribute: "tpm_group_id",
+				ImportStateIdFunc:                    testAccIdentityTPMGroupImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "tpm_group_id",
 			},
 			{
 				Config: testAccIdentityTPMGroupConfigDestroyOnly(tpmOnePublicKey, tpmTwoPublicKey),
@@ -173,9 +173,9 @@ func TestAccIdentityTPMGroup_metadata(t *testing.T) {
 				// Step 2: Import to verify metadata round-trips correctly from Vault
 				ResourceName:                         resourceName,
 				ImportState:                          true,
-					ImportStateIdFunc:                    testAccIdentityTPMGroupImportStateIdFunc(resourceName),
-					ImportStateVerify:                    true,
-					ImportStateVerifyIdentifierAttribute: "tpm_group_id",
+				ImportStateIdFunc:                    testAccIdentityTPMGroupImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "tpm_group_id",
 			},
 			{
 				// Step 3: Omitting metadata clears it in Vault
@@ -308,9 +308,9 @@ func TestAccIdentityTPMGroup_memberTPMIds(t *testing.T) {
 				// Step 2: Import to verify member_tpm_ids round-trips correctly from Vault
 				ResourceName:                         resourceName,
 				ImportState:                          true,
-					ImportStateIdFunc:                    testAccIdentityTPMGroupImportStateIdFunc(resourceName),
-					ImportStateVerify:                    true,
-					ImportStateVerifyIdentifierAttribute: "tpm_group_id",
+				ImportStateIdFunc:                    testAccIdentityTPMGroupImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "tpm_group_id",
 			},
 			{
 				// Step 3: Remove one member
