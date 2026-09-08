@@ -926,6 +926,10 @@ const (
 	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
 
+	// Azure seamless rotation
+	FieldSeamlessRotation    = "seamless_rotation"
+	FieldRotationGracePeriod = "rotation_grace_period"
+
 	/*
 		common environment variables
 	*/
