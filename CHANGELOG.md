@@ -3,6 +3,7 @@
 FEATURES:
 
 * **New Ephemeral Resource**: `vault_azure_access_token` for fetching Azure OAuth2 access tokens from Vault's Azure secrets engine static role credentials. Requires Vault 2.2.0 or later. ([#2974](https://github.com/hashicorp/terraform-provider-vault/pull/2974))
+* **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3035](https://github.com/hashicorp/terraform-provider-vault/pull/3035))
 
 IMPROVEMENTS:
 
@@ -81,7 +82,7 @@ BUG FIXES:
 
 ## 5.10.1 (June 26, 2026)
 
-BREAKING CHANGES: 
+BREAKING CHANGES:
 
 Reverted the 5.10.0 support for `pkcs12_bundle` and `jks_bundle` formats in formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` that forced resource recreation. Configurations using these formats or their related arguments are no longer supported. ([#2945](https://github.com/hashicorp/terraform-provider-vault/pull/2945))
 
@@ -324,7 +325,7 @@ IMPROVEMENTS:
 * `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_azure_destination` resource. Requires Vault 1.19+. ([#2702](https://github.com/hashicorp/terraform-provider-vault/pull/2702))
 * `vault_database_secret_backend_connection`: Add support for MongoDB `write_concern` parameter and TLS parameters (`tls_ca`, `tls_certificate_key`) ([#2678](https://github.com/hashicorp/terraform-provider-vault/pull/2678))
-* Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674)) 
+* Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674))
 * Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resources for HANADB connections: ([#2671](https://github.com/hashicorp/terraform-provider-vault/pull/2671))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_vercel_destination` resource. Requires Vault 1.19+. ([#2681](https://github.com/hashicorp/terraform-provider-vault/pull/2681))
 * Add support for configuration parameters (`allowed_ipv4_addresses`,`allowed_ipv6_addresses`,`allowed_ports`,`disable_strict_networking`,`secrets_location`,`environment_name`) in `vault_secrets_sync_gh_destination` resource. Requires Vault 1.18+ for `secrets_location`,`environment_name`.Requires Vault 1.19+ for `allowed_ipv4_addresses`,`allowed_ipv6_addresses`,`allowed_ports`,`disable_strict_networking`.([#2697](https://github.com/hashicorp/terraform-provider-vault/pull/2697)).
@@ -367,10 +368,10 @@ BUGS:
 
 ## 5.5.0 (Nov 19, 2025)
 
-BEHAVIOR CHANGES: With v5.5.0, the default value for `deny_null_bind` in the `vault_ldap_auth_backend` resource has changed from `false` to `true` 
-to match with the Vault API defaults. Configurations that do not explicitly set `deny_null_bind` will now have it set to `true` upon upgrade, and 
-customers should verify that this change aligns with their intended LDAP authentication behavior. Furthermore, Customers should also consider 
-upgrading to Vault Community Edition 1.21.1 and Vault Enterprise 1.21.1, 1.20.6, 1.19.12, and 1.16.28, which no longer allows Vault to perform 
+BEHAVIOR CHANGES: With v5.5.0, the default value for `deny_null_bind` in the `vault_ldap_auth_backend` resource has changed from `false` to `true`
+to match with the Vault API defaults. Configurations that do not explicitly set `deny_null_bind` will now have it set to `true` upon upgrade, and
+customers should verify that this change aligns with their intended LDAP authentication behavior. Furthermore, Customers should also consider
+upgrading to Vault Community Edition 1.21.1 and Vault Enterprise 1.21.1, 1.20.6, 1.19.12, and 1.16.28, which no longer allows Vault to perform
 unauthenticated or null binds against the LDAP server.
 
 SECURITY:
@@ -549,7 +550,7 @@ FEATURES:
 * Add support for signature_bits field to `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate` and `vault_pki_secret_backend_intermediate_cert_request` ([#2401])(https://github.com/hashicorp/terraform-provider-vault/pull/2401)
 * Add support for key_usage and serial_number to `vault_pki_secret_backend_intermediate_cert_request` ([#2404])(https://github.com/hashicorp/terraform-provider-vault/pull/2404)
 * Add support for `skip_import_rotation` in `vault_database_secret_backend_static_role`. Requires Vault Enterprise 1.18.5+ ([#2386](https://github.com/hashicorp/terraform-provider-vault/pull/2386)).
-* Add support for `not_after` in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2385](https://github.com/hashicorp/terraform-provider-vault/pull/2385)). 
+* Add support for `not_after` in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2385](https://github.com/hashicorp/terraform-provider-vault/pull/2385)).
 * Update `vault_pki_secret_backend_config_acme` to support the `max_ttl` field. [#2411](https://github.com/hashicorp/terraform-provider-vault/pull/2411)
 * Add new data source `vault_ssh_secret_backend_sign`. ([#2409](https://github.com/hashicorp/terraform-provider-vault/pull/2409))
 * Add support for `disabled_validations` in `vault_pki_secret_backend_config_cmpv2` [#2412](https://github.com/hashicorp/terraform-provider-vault/pull/2412)

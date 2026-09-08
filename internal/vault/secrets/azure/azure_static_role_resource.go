@@ -58,12 +58,18 @@ type AzureStaticRoleModel struct {
 	Expiration          types.String `tfsdk:"expiration"`
 	SkipImportRotation  types.Bool   `tfsdk:"skip_import_rotation"`
 	DeferInitialCreds   types.Bool   `tfsdk:"defer_initial_creds"`
+	RotationGracePeriod types.Int64  `tfsdk:"rotation_grace_period"`
+	RotationPeriod      types.Int64  `tfsdk:"rotation_period"`
+	SeamlessRotation    types.Bool   `tfsdk:"seamless_rotation"`
 }
 
 // AzureStaticRoleAPIModel describes the Vault API data model.
 type AzureStaticRoleAPIModel struct {
 	ApplicationObjectID string            `json:"application_object_id" mapstructure:"application_object_id"`
 	TTL                 any               `json:"ttl" mapstructure:"ttl"`
+	RotationPeriod      any               `json:"rotation_period,omitempty" mapstructure:"rotation_period,omitempty"`
+	RotationGracePeriod any               `json:"rotation_grace_period,omitempty" mapstructure:"rotation_grace_period,omitempty"`
+	SeamlessRotation    bool              `json:"seamless_rotation" mapstructure:"seamless_rotation"`
 	Metadata            map[string]string `json:"metadata" mapstructure:"metadata"`
 }
 
@@ -93,6 +99,8 @@ func (r *AzureSecretsStaticRoleResource) Schema(_ context.Context, _ resource.Sc
 				MarkdownDescription: "Timespan of 1 month or more during which the role credentials are valid.",
 				Optional:            true,
 				Computed:            true,
+				DeprecationMessage: "This field is deprecated and will be removed in a future version. " +
+					"The " + consts.FieldRotationPeriod + " field should be used, instead.",
 			},
 			consts.FieldMetadata: schema.MapAttribute{
 				MarkdownDescription: "A map of string key/value pairs that will be stored as metadata on the secret.",
@@ -124,6 +132,25 @@ func (r *AzureSecretsStaticRoleResource) Schema(_ context.Context, _ resource.Sc
 			consts.FieldDeferInitialCreds: schema.BoolAttribute{
 				MarkdownDescription: "If true, the initial creation of credentials will be deferred until first static-creds read.",
 				Optional:            true,
+			},
+			consts.FieldRotationPeriod: schema.Int64Attribute{
+				MarkdownDescription: "Timespan of 1 month or more during which the role credentials are valid.",
+				Optional:            true,
+				Computed:            true,
+			},
+			consts.FieldRotationGracePeriod: schema.Int64Attribute{
+				MarkdownDescription: "Amount of time (in seconds) that active and staged credentials " +
+					"are permitted to overlap when seamless rotation is enabled. Must not exceed " +
+					"(rotation_period - 1h) / 2. Set to -1 to disable overlap or 0 to use the " +
+					"default value of 5 minutes.",
+				Optional: true,
+			},
+			consts.FieldSeamlessRotation: schema.BoolAttribute{
+				MarkdownDescription: "Enable or disable seamless rotation for the role. When enabled, " +
+					"allows the plugin to pre-provision the next credential to avoid propagation " +
+					"delays.",
+				Optional: true,
+				Computed: true,
 			},
 		},
 		MarkdownDescription: "Manage Azure static roles.",
@@ -234,6 +261,28 @@ func (r *AzureSecretsStaticRoleResource) Read(ctx context.Context, req resource.
 	}
 	data.TTL = types.Int64Value(ttlSeconds)
 
+	data.SeamlessRotation = types.BoolValue(apiModel.SeamlessRotation)
+
+	if apiModel.RotationPeriod != nil {
+		gpSeconds, err := normalizeTTL(apiModel.RotationPeriod)
+		if err != nil {
+			resp.Diagnostics.AddError("Invalid RotationPeriod format from Vault", err.Error())
+			return
+		}
+
+		data.RotationPeriod = types.Int64Value(gpSeconds)
+	}
+
+	if apiModel.RotationGracePeriod != nil {
+		rgpSeconds, err := normalizeTTL(apiModel.RotationGracePeriod)
+		if err != nil {
+			resp.Diagnostics.AddError("Invalid RotationGracePeriod format from Vault", err.Error())
+			return
+		}
+
+		data.RotationGracePeriod = types.Int64Value(rgpSeconds)
+	}
+
 	resp.Diagnostics.Append(diags...)
 	data.Metadata = val
 	data.ID = types.StringValue(makeID(backend, role))
@@ -274,13 +323,41 @@ func (r *AzureSecretsStaticRoleResource) Update(ctx context.Context, req resourc
 
 func buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
+	var ttl int64
 
 	vaultRequest := map[string]any{
 		consts.FieldApplicationObjectID: data.ApplicationObjectID.ValueString(),
 	}
 
 	if !data.TTL.IsNull() {
-		vaultRequest[consts.FieldTTL] = data.TTL.ValueInt64()
+		ttl = data.TTL.ValueInt64()
+		vaultRequest[consts.FieldTTL] = ttl
+	}
+
+	if !data.RotationPeriod.IsNull() {
+		rp := data.RotationPeriod.ValueInt64()
+		vaultRequest[consts.FieldRotationPeriod] = rp
+
+		// If TTL was also set to a non-zero value, make sure that it matches
+		// rotation period (if it is also non-zero).
+		if ttl != 0 && rp != 0 && rp != ttl {
+			diags.AddError(
+				"Conflicting lifetime intervals",
+				fmt.Sprintf(
+					"Expected %[1]s and %[2]s to match when both are specified "+
+						"(got %[1]s=%[3]d, %[2]s=%[4]d)",
+					consts.FieldTTL, consts.FieldRotationPeriod, ttl, rp,
+				),
+			)
+		}
+	}
+
+	if !data.RotationGracePeriod.IsNull() {
+		vaultRequest[consts.FieldRotationPeriod] = data.RotationGracePeriod.ValueInt64()
+	}
+
+	if !data.SeamlessRotation.IsNull() {
+		vaultRequest[consts.FieldSeamlessRotation] = data.SeamlessRotation.ValueBool()
 	}
 
 	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
@@ -306,6 +383,7 @@ func buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel)
 
 func buildVaultRequestForImportCreate(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
+	var ttl int64
 
 	req := map[string]any{
 		consts.FieldApplicationObjectID: data.ApplicationObjectID.ValueString(),
@@ -317,7 +395,34 @@ func buildVaultRequestForImportCreate(ctx context.Context, data *AzureStaticRole
 	}
 
 	if !data.TTL.IsNull() {
-		req[consts.FieldTTL] = data.TTL.ValueInt64()
+		ttl = data.TTL.ValueInt64()
+		req[consts.FieldTTL] = ttl
+	}
+
+	if !data.RotationPeriod.IsNull() {
+		rp := data.RotationPeriod.ValueInt64()
+		req[consts.FieldRotationPeriod] = rp
+
+		// If TTL was also set to a non-zero value, make sure that it matches
+		// rotation period (if it is also non-zero).
+		if ttl != 0 && rp != 0 && rp != ttl {
+			diags.AddError(
+				"Conflicting lifetime intervals",
+				fmt.Sprintf(
+					"Expected %[1]s and %[2]s to match when both are specified "+
+						"(got %[1]s=%[3]d, %[2]s=%[4]d)",
+					consts.FieldTTL, consts.FieldRotationPeriod, ttl, rp,
+				),
+			)
+		}
+	}
+
+	if !data.RotationGracePeriod.IsNull() {
+		req[consts.FieldRotationPeriod] = data.RotationGracePeriod.ValueInt64()
+	}
+
+	if !data.SeamlessRotation.IsNull() {
+		req[consts.FieldSeamlessRotation] = data.SeamlessRotation.ValueBool()
 	}
 
 	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
