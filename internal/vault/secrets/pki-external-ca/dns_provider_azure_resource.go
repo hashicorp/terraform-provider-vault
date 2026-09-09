@@ -6,6 +6,7 @@ package pki_external_ca
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"time"
 
@@ -237,16 +238,22 @@ func (r *PKIExternalCADNSProviderAzureResource) Read(ctx context.Context, req re
 }
 
 func (r *PKIExternalCADNSProviderAzureResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data PKIExternalCADNSProviderAzureModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var plan, state PKIExternalCADNSProviderAzureModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// Write-only fields are nullified in the plan by the framework; read from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecretWO), &data.ClientSecretWO)...)
-	if resp.Diagnostics.HasError() {
-		return
+
+	// Only read the write-only secret from config when the version counter changed.
+	if !plan.ClientSecretWOVersion.Equal(state.ClientSecretWOVersion) {
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldClientSecretWO), &plan.ClientSecretWO)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
+
+	data := plan
 
 	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
@@ -309,6 +316,9 @@ func (r *PKIExternalCADNSProviderAzureResource) ImportState(ctx context.Context,
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 func buildAzureRequest(ctx context.Context, data *PKIExternalCADNSProviderAzureModel) (map[string]any, diag.Diagnostics) {

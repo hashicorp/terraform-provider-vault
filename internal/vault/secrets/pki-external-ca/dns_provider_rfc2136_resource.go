@@ -6,6 +6,7 @@ package pki_external_ca
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"time"
 
@@ -205,16 +206,22 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Read(ctx context.Context, req 
 }
 
 func (r *PKIExternalCADNSProviderRFC2136Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data PKIExternalCADNSProviderRFC2136Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var plan, state PKIExternalCADNSProviderRFC2136Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// Write-only fields are not included in the plan; read them from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecretWO), &data.TsigSecretWO)...)
-	if resp.Diagnostics.HasError() {
-		return
+
+	// Only read the write-only secret from config when the version counter changed.
+	if !plan.TsigSecretWOVersion.Equal(state.TsigSecretWOVersion) {
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldTsigSecretWO), &plan.TsigSecretWO)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
+
+	data := plan
 
 	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
@@ -277,6 +284,9 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) ImportState(ctx context.Contex
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 func buildRFC2136Request(ctx context.Context, data *PKIExternalCADNSProviderRFC2136Model) (map[string]any, diag.Diagnostics) {
@@ -295,7 +305,7 @@ func buildRFC2136Request(ctx context.Context, data *PKIExternalCADNSProviderRFC2
 
 	setIfNotEmpty(req, consts.FieldNameserver, data.Nameserver.ValueString())
 	setIfNotEmpty(req, consts.FieldTsigKeyName, data.TsigKeyName.ValueString())
-	setIfNotEmpty(req, consts.FieldTsigSecret, data.TsigSecretWO.ValueString())
+	setIfNotEmpty(req, consts.FieldTsigSecretWO, data.TsigSecretWO.ValueString())
 	setIfNotEmpty(req, consts.FieldTsigAlgorithm, data.TsigAlgorithm.ValueString())
 
 	return req, diags

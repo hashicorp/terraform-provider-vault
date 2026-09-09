@@ -6,6 +6,7 @@ package pki_external_ca
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -66,7 +67,7 @@ type PKIExternalCARoleModel struct {
 	CsrIdentifierPopulation types.String `tfsdk:"csr_identifier_population"`
 	Force                   types.Bool   `tfsdk:"force"`
 	CreationDate            types.String `tfsdk:"creation_date"`
-	LastUpdateDate          types.String `tfsdk:"last_update_date"`
+	LastUpdatedDate         types.String `tfsdk:"last_updated_date"`
 }
 
 // PKIExternalCARoleAPIModel describes the Vault API data model.
@@ -81,7 +82,7 @@ type PKIExternalCARoleAPIModel struct {
 	CsrGenerateKeyType      string   `json:"csr_generate_key_type" mapstructure:"csr_generate_key_type"`
 	CsrIdentifierPopulation string   `json:"csr_identifier_population" mapstructure:"csr_identifier_population"`
 	CreationDate            string   `json:"creation_date" mapstructure:"creation_date"`
-	LastUpdateDate          string   `json:"last_updated_date" mapstructure:"last_updated_date"`
+	LastUpdatedDate         string   `json:"last_updated_date" mapstructure:"last_updated_date"`
 }
 
 func (r *PKIExternalCARoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -175,7 +176,7 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The date and time the role was created in RFC3339 format.",
 				Computed:            true,
 			},
-			consts.FieldLastUpdateDate: schema.StringAttribute{
+			consts.FieldLastUpdatedDate: schema.StringAttribute{
 				MarkdownDescription: "The date and time the role was last updated in RFC3339 format.",
 				Computed:            true,
 			},
@@ -311,7 +312,7 @@ func handleRoleResponseData(ctx context.Context, data *PKIExternalCARoleModel, r
 	data.CsrGenerateKeyType = types.StringValue(apiModel.CsrGenerateKeyType)
 	data.CsrIdentifierPopulation = types.StringValue(apiModel.CsrIdentifierPopulation)
 	data.CreationDate = types.StringValue(apiModel.CreationDate)
-	data.LastUpdateDate = types.StringValue(apiModel.LastUpdateDate)
+	data.LastUpdatedDate = types.StringValue(apiModel.LastUpdatedDate)
 
 	// Convert allowed_domains list
 	if len(apiModel.AllowedDomains) > 0 {
@@ -429,10 +430,10 @@ func (r *PKIExternalCARoleResource) ImportState(ctx context.Context, req resourc
 		return
 	}
 
-	mount := matches[1]
-	name := matches[2]
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 

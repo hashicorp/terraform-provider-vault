@@ -46,7 +46,7 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "csr_generate_key_type", "ec-256"),
 					resource.TestCheckResourceAttr(resourceName, "csr_identifier_population", "cn_first"),
 					resource.TestCheckResourceAttrSet(resourceName, "creation_date"),
-					resource.TestCheckResourceAttrSet(resourceName, "last_update_date"),
+					resource.TestCheckResourceAttrSet(resourceName, "last_updated_date"),
 				),
 			},
 			{

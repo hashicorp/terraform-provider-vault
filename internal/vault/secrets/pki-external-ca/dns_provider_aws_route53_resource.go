@@ -6,6 +6,7 @@ package pki_external_ca
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"time"
 
@@ -104,7 +105,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				Required:            true,
 			},
 			consts.FieldTTL: schema.Int64Attribute{
-				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges. Defaults to `1m0s`.",
+				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges. Defaults to `60`.",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -231,16 +232,22 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Read(ctx context.Context, r
 }
 
 func (r *PKIExternalCADNSProviderAWSRoute53Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data PKIExternalCADNSProviderAWSRoute53Model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	var plan, state PKIExternalCADNSProviderAWSRoute53Model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// Write-only fields are nullified in the plan by the framework; read from config.
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKeyWO), &data.SecretAccessKeyWO)...)
-	if resp.Diagnostics.HasError() {
-		return
+
+	// Only read the write-only secret from config when the version counter changed.
+	if !plan.SecretAccessKeyWOVersion.Equal(state.SecretAccessKeyWOVersion) {
+		resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldSecretAccessKeyWO), &plan.SecretAccessKeyWO)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
+
+	data := plan
 
 	if err := checkVaultVersionDNS(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
@@ -303,6 +310,9 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) ImportState(ctx context.Con
 	}
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }
 
 func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderAWSRoute53Model) (map[string]any, diag.Diagnostics) {
@@ -320,7 +330,7 @@ func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderA
 	}
 
 	setIfNotEmpty(req, consts.FieldAccessKeyID, data.AccessKeyId.ValueString())
-	setIfNotEmpty(req, consts.FieldSecretAccessKey, data.SecretAccessKeyWO.ValueString())
+	setIfNotEmpty(req, consts.FieldSecretAccessKeyWO, data.SecretAccessKeyWO.ValueString())
 	setIfNotEmpty(req, consts.FieldRegion, data.Region.ValueString())
 	setIfNotEmpty(req, consts.FieldHostedZoneID, data.HostedZoneId.ValueString())
 	setIfNotEmpty(req, consts.FieldExternalID, data.ExternalID.ValueString())
