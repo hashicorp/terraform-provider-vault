@@ -87,12 +87,12 @@ func azureAuthBackendConfigResource() *schema.Resource {
 			consts.FieldAuthType: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "The authentication method used by Vault to access Azure APIs. The following values are supported: root_creds, plugin_wif, msi, aks_wi. plugin_wif requires Vault Enterprise.",
+				Description: "The authentication method used by Vault to access Azure APIs. The following values are supported: root_creds, plugin_wif, msi, aks_wif. plugin_wif requires Vault Enterprise.",
 				ValidateFunc: validation.StringInSlice([]string{
 					consts.AuthTypeRootCreds,
 					consts.AuthTypePluginWIF,
 					consts.AuthTypeMSI,
-					consts.AuthTypeAKSWI,
+					consts.AuthTypeAKSWIF,
 				}, false),
 			},
 			consts.FieldEnvironment: {

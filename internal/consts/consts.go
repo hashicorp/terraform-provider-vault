@@ -714,6 +714,12 @@ const (
 	FieldTokenBoundCIDRs             = "token_bound_cidrs"
 	FieldLocalSecretIDs              = "local_secret_ids"
 	FieldTokenNumUses                = "token_num_uses"
+	FieldDriver                      = "driver"
+	FieldConnectionString            = "connection_string"
+	FieldSupportedTransformations    = "supported_transformations"
+	FieldMaxOpenConnections          = "max_open_connections"
+	FieldMaxIdleConnections          = "max_idle_connections"
+	FieldMaxConnectionLifetime       = "max_connection_lifetime"
 	// OS Secrets Engine fields
 	FieldSSHHostKey                = "ssh_host_key"
 	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
@@ -938,6 +944,8 @@ const (
 	FieldAddGroupAliases            = "add_group_aliases"
 	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
+	FieldCertificateWO              = "certificate_wo"
+	FieldCertificateWOVersion       = "certificate_wo_version"
 
 	/*
 		common environment variables
@@ -1039,6 +1047,7 @@ const (
 	VaultVersion201  = "2.0.1"
 	VaultVersion203  = "2.0.3"
 	VaultVersion210  = "2.1.0"
+	VaultVersion211  = "2.1.1"
 	VaultVersion220  = "2.2.0"
 
 	/*
@@ -1081,7 +1090,7 @@ const (
 	AuthTypeRootCreds = "root_creds"
 	AuthTypePluginWIF = "plugin_wif"
 	AuthTypeMSI       = "msi"
-	AuthTypeAKSWI     = "aks_wi"
+	AuthTypeAKSWIF    = "aks_wif"
 
 	/*
 		misc. path related constants

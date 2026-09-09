@@ -91,5 +91,5 @@ In addition to the arguments above, the following attributes are exported:
 
 Use of this resource requires the following capabilities:
 
-* `<mount>/token/<role>` - `update` (required on every call)
+* `<mount>/static-creds/<role>/token` - `update` (required on every call)
 * `<mount>/static-creds/<role>` - `read` (required only on first use, to initialize the static credential)

@@ -3,12 +3,17 @@
 FEATURES:
 
 * **New Ephemeral Resource**: `vault_azure_access_token` for fetching Azure OAuth2 access tokens from Vault's Azure secrets engine static role credentials. Requires Vault 2.2.0 or later. ([#2974](https://github.com/hashicorp/terraform-provider-vault/pull/2974))
+* **New Resource for tokenization transforms**: Add new resources `vault_transform_transformation_tokenization` and `vault_transform_transformation_tokenization_store` for tokenization transformations in transform secrets engine and tokenization stores. Uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-tokenization-transformation) to support creating and updating of tokenization transformations and [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-tokenization-store) for tokenization stores. Supported parameters include `name`, `mapping_mode`, `max_ttl`, `allowed_roles`, `stores`, `convergent`, `deletion_allowed` for `vault_transform_transformation_tokenization` and `name`, `type`, `driver`, `connection_string`, `username`, `password`, `supported_transformations`, `schema`, `max_open_connections`, `max_idle_connections`, `max_connection_lifetime` for `vault_transform_transformation_tokenization_store`.
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
+
 
 IMPROVEMENTS:
 
+* `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to allow ephemeral resource values, to supply the CA certificate. The `certificate` field is now `Computed` and `ForceNew` has been removed enabling in-place updates when the certificate changes instead of resource replacement.
+
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
 * Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
+
 
 BUG FIXES:
 
@@ -20,7 +25,7 @@ BUG FIXES:
 
 FEATURES:
 
-* `vault_azure_auth_backend_config`: Add `auth_type` field to explicitly control how Vault authenticates to Azure APIs. Valid values are `root_creds`, `plugin_wif`, `msi`, and `aks_wi`. When omitted, Vault retains its existing credential-discovery behaviour for backward compatibility ([#2999](https://github.com/hashicorp/terraform-provider-vault/pull/2999)). Requires Vault 2.2.0+.
+* `vault_azure_auth_backend_config`: Add `auth_type` field to explicitly control how Vault authenticates to Azure APIs. Valid values are `root_creds`, `plugin_wif`, `msi`, and `aks_wif`. When omitted, Vault retains its existing credential-discovery behaviour for backward compatibility ([#2999](https://github.com/hashicorp/terraform-provider-vault/pull/2999)). Requires Vault 2.2.0+.
 
 * **New Resources**: Add support for GCP KMS secrets engine with `vault_gcpkms_secret_backend` and `vault_gcpkms_secret_backend_key` resources, `vault_gcpkms_verify` data source, and ephemeral resources `vault_gcpkms_encrypt`, `vault_gcpkms_decrypt`, `vault_gcpkms_reencrypt`, and `vault_gcpkms_sign` for cryptographic operations. Includes internal Plugin Framework `mount_helpers` for Vault mount operations to support incremental migration from SDKv2. ([#2763](https://github.com/hashicorp/terraform-provider-vault/pull/2763))
 * **New resource for transform key configurations**: `vault_transform_key_configuration` - Supports setting an `auto_rotate_period` and `min_decryption_version` to keys used in for tokenization transformations. This uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#update-tokenization-key-config) to modify the configuration and [this one](https://developer.hashicorp.com/vault/api-docs/secret/transform#read-tokenization-key-configuration) to read configurations. ([#2980](https://github.com/hashicorp/terraform-provider-vault/pull/2980))

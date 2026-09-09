@@ -257,6 +257,17 @@ This ephemeral resource automatically revokes tokens when they are no longer nee
 
 If revocation fails (e.g., due to network issues), a warning is logged, but the operation continues. The token will still expire based on its TTL.
 
+## JWT revoke compatibility contract
+
+Ephemeral `vault_token` cleanup revokes by accessor when available (`auth/token/revoke-accessor`). It does not implement a first-class JWT-by-value revoke workflow for OAuth-resource-server JWT bearer tokens.
+
+For JWT revoke operations, use explicit endpoint-driven calls to `auth/token/revoke` (for example with `vault_generic_endpoint`).
+
+For supported Vault versions, the provider contract is:
+
+* Denylist enforcement after JWT revoke is required (revoked JWTs must fail subsequent auth-time checks).
+* Cleanup behavior for associated token-entry/lease state can vary by Vault version and is not guaranteed by this ephemeral resource contract.
+
 ## Notes
 
 * Tokens created with this resource are ephemeral and will be automatically revoked when the Terraform run completes.

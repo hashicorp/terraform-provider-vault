@@ -218,10 +218,10 @@ const credPropagationRetries = 4
 // credPropagationDelay is the wait between retries.
 const credPropagationDelay = 4 * time.Second
 
-// requestAzureAccessToken fetches an Azure OAuth2 access token from Vault's token/ endpoint,
+// requestAzureAccessToken fetches an Azure OAuth2 access token from Vault's static-creds/<role>/token endpoint,
 // initializing the static credential on first use and retrying on Azure AD propagation errors.
 func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, scope string, maxRetries int, retryDelay time.Duration) (*AzureAccessTokenAPIModel, error) {
-	path := fmt.Sprintf("%s/token/%s", mount, role)
+	path := fmt.Sprintf("%s/static-creds/%s/token", mount, role)
 	initialized := false
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
@@ -247,10 +247,10 @@ func requestAzureAccessToken(ctx context.Context, cli *api.Client, mount, role, 
 				))
 				continue
 			}
-			// token/ returns a 400 when the static credential has not yet been
+			// static-creds/<role>/token returns a 400 when the static credential has not yet been
 			// provisioned. Reading static-creds/ initializes it on first access.
 			// This only happens once — on every subsequent Open() the credential
-			// already exists and token/ succeeds on the first attempt.
+			// already exists and static-creds/<role>/token succeeds on the first attempt.
 			if !initialized && isAzureCredNotInitializedError(err) {
 				tflog.Info(ctx, fmt.Sprintf(
 					"Static credential for role %q not yet provisioned; initializing via static-creds/",
