@@ -36,7 +36,6 @@ var roleIDRe = regexp.MustCompile(`^([^/]+)/` + roleAffix + `/([^/]+)$`)
 
 // Ensure the implementation satisfies the expected interfaces
 var _ resource.ResourceWithConfigure = &PKIExternalCARoleResource{}
-var _ resource.ResourceWithConfigValidators = &PKIExternalCARoleResource{}
 
 // NewPKIExternalCARoleResource returns the implementation for this resource to be
 // imported by the Terraform Plugin Framework provider
@@ -85,13 +84,6 @@ type PKIExternalCARoleAPIModel struct {
 	LastUpdateDate          string   `json:"last_updated_date" mapstructure:"last_updated_date"`
 }
 
-// ConfigValidators returns plan-time validators that enforce cross-attribute rules.
-func (r *PKIExternalCARoleResource) ConfigValidators(_ context.Context) []resource.ConfigValidator {
-	return []resource.ConfigValidator{
-		dnsProviderPairValidator{},
-	}
-}
-
 func (r *PKIExternalCARoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_role"
 }
@@ -118,6 +110,9 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString(""),
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldDnsProviderType)),
+				},
 			},
 			consts.FieldDnsProviderType: schema.StringAttribute{
 				MarkdownDescription: "The type of the DNS provider. Valid values are: `aws-route53`, `rfc2136`, `google-cloud-dns`, `azure-dns`.",
@@ -125,7 +120,8 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				Computed:            true,
 				Default:             stringdefault.StaticString(""),
 				Validators: []validator.String{
-					stringvalidator.OneOf("", "aws-route53", "rfc2136", "google-cloud-dns", "azure-dns"),
+					stringvalidator.OneOf("aws-route53", "rfc2136", "google-cloud-dns", "azure-dns"),
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldDnsProviderName)),
 				},
 			},
 			consts.FieldAllowedDomains: schema.ListAttribute{
@@ -440,43 +436,3 @@ func (r *PKIExternalCARoleResource) ImportState(ctx context.Context, req resourc
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
 }
 
-// dnsProviderPairValidator enforces that dns_provider_type is required when
-// dns_provider_name is set, and vice-versa. This is evaluated at plan time so
-// the user gets a clear error before Vault is contacted.
-type dnsProviderPairValidator struct{}
-
-func (v dnsProviderPairValidator) Description(_ context.Context) string {
-	return "dns_provider_type is required when dns_provider_name is set, and vice-versa"
-}
-
-func (v dnsProviderPairValidator) MarkdownDescription(ctx context.Context) string {
-	return v.Description(ctx)
-}
-
-func (v dnsProviderPairValidator) ValidateResource(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var providerName, providerType types.String
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldDnsProviderName), &providerName)...)
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldDnsProviderType), &providerType)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	nameSet := !providerName.IsNull() && !providerName.IsUnknown() && providerName.ValueString() != ""
-	typeSet := !providerType.IsNull() && !providerType.IsUnknown() && providerType.ValueString() != ""
-
-	if nameSet && !typeSet {
-		resp.Diagnostics.AddAttributeError(
-			path.Root(consts.FieldDnsProviderType),
-			"Missing required attribute",
-			"dns_provider_type is required when dns_provider_name is set.",
-		)
-	}
-
-	if typeSet && !nameSet {
-		resp.Diagnostics.AddAttributeError(
-			path.Root(consts.FieldDnsProviderName),
-			"Missing required attribute",
-			"dns_provider_name is required when dns_provider_type is set.",
-		)
-	}
-}

@@ -9,12 +9,15 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/vault/api"
 
@@ -121,10 +124,16 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				MarkdownDescription: "AWS secret access key for Route53 API access. Write-only — not returned by Vault.",
 				Optional:            true,
 				WriteOnly:           true,
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldSecretAccessKeyWOVersion)),
+				},
 			},
 			consts.FieldSecretAccessKeyWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `secret_access_key` field. Increment this value to trigger an update to the secret access key in Vault.",
 				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldSecretAccessKeyWO)),
+				},
 			},
 			consts.FieldRegion: schema.StringAttribute{
 				MarkdownDescription: "AWS region for Route53 operations. Defaults to `us-east-1`.",

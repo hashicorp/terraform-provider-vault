@@ -123,6 +123,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 			consts.FieldTsigSecretWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `tsig_secret` field. Increment this value to trigger an update to the TSIG secret in Vault.",
 				Optional:            true,
+				Required:            true,
 			},
 			consts.FieldTsigAlgorithm: schema.StringAttribute{
 				MarkdownDescription: "TSIG algorithm (e.g. `hmac-sha256`, `hmac-sha512`). Defaults to `hmac-sha256`.",

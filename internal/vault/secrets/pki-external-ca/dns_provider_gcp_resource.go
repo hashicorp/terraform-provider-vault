@@ -9,12 +9,15 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/vault/api"
 
@@ -113,10 +116,16 @@ func (r *PKIExternalCADNSProviderGCPResource) Schema(_ context.Context, _ resour
 				MarkdownDescription: "GCP service account credentials as JSON content. Write-only — not returned by Vault.",
 				Optional:            true,
 				WriteOnly:           true,
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldCredentialsWOVersion)),
+				},
 			},
 			consts.FieldCredentialsWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `credentials` field. Increment this value to trigger an update to the credentials in Vault.",
 				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldCredentialsWO)),
+				},
 			},
 			consts.FieldProject: schema.StringAttribute{
 				MarkdownDescription: "GCP project name.",

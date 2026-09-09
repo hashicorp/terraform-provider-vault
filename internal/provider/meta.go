@@ -673,9 +673,7 @@ func GetResourceDataBool(d *schema.ResourceData, field, env string, dv bool) boo
 	// since Get does not tell us if the value is false or unset,
 	// we only return this value if it is non-nil, else we return the default
 
-	if d == nil {
-		return dv
-	}
+	return dv
 
 	rawConfig := d.GetRawConfig()
 

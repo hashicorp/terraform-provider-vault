@@ -9,12 +9,15 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/vault/api"
 
@@ -127,10 +130,16 @@ func (r *PKIExternalCADNSProviderAzureResource) Schema(_ context.Context, _ reso
 				MarkdownDescription: "Azure service principal client secret. Write-only — not returned by Vault.",
 				Optional:            true,
 				WriteOnly:           true,
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientSecretWO)),
+				},
 			},
 			consts.FieldClientSecretWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `client_secret` field. Increment this value to trigger an update to the client secret in Vault.",
 				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldClientSecret)),
+				},
 			},
 			consts.FieldTenantID: schema.StringAttribute{
 				MarkdownDescription: "Azure tenant ID.",
