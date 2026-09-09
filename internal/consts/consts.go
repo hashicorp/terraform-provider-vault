@@ -713,6 +713,12 @@ const (
 	FieldTokenBoundCIDRs             = "token_bound_cidrs"
 	FieldLocalSecretIDs              = "local_secret_ids"
 	FieldTokenNumUses                = "token_num_uses"
+	FieldDriver                      = "driver"
+	FieldConnectionString            = "connection_string"
+	FieldSupportedTransformations    = "supported_transformations"
+	FieldMaxOpenConnections          = "max_open_connections"
+	FieldMaxIdleConnections          = "max_idle_connections"
+	FieldMaxConnectionLifetime       = "max_connection_lifetime"
 	// OS Secrets Engine fields
 	FieldSSHHostKey                = "ssh_host_key"
 	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
