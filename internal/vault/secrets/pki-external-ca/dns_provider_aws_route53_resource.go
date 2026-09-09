@@ -331,7 +331,7 @@ func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderA
 	}
 
 	setIfNotEmpty(req, consts.FieldAccessKeyID, data.AccessKeyId.ValueString())
-	setIfNotEmpty(req, consts.FieldSecretAccessKeyWO, data.SecretAccessKeyWO.ValueString())
+	setIfNotEmpty(req, consts.FieldSecretAccessKey, data.SecretAccessKeyWO.ValueString())
 	setIfNotEmpty(req, consts.FieldRegion, data.Region.ValueString())
 	setIfNotEmpty(req, consts.FieldHostedZoneID, data.HostedZoneId.ValueString())
 	setIfNotEmpty(req, consts.FieldExternalID, data.ExternalID.ValueString())

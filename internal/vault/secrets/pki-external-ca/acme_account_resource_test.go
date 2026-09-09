@@ -52,7 +52,9 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIACMEAccountImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"eab_kid", "eab_key"},
+				// eab_kid and eab_key are write-only; default_nameserver is not
+				// returned by Vault's read endpoint.
+				ImportStateVerifyIgnore: []string{"eab_kid", "eab_key", consts.FieldDefaultNameserver},
 			},
 			{
 				// Only trusted_ca can be updated without re-creation

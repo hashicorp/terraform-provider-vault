@@ -301,15 +301,13 @@ func handleAccountResponseData(ctx context.Context, data *PKIACMEAccountModel, r
 	}
 	data.EmailContacts = emailList
 
-	// Optional fields - only set if present in response
+	// Optional fields - only set if present in response; preserve state when absent.
 	if apiModel.TrustedCA != "" {
 		data.TrustedCA = types.StringValue(apiModel.TrustedCA)
 	}
 
 	if apiModel.DefaultNameserver != "" {
 		data.DefaultNameserver = types.StringValue(apiModel.DefaultNameserver)
-	} else {
-		data.DefaultNameserver = types.StringNull()
 	}
 
 	// Note: EAB credentials are write-only and won't be returned by the API
@@ -351,8 +349,6 @@ func buildVaultRequestFromModel(ctx context.Context, data *PKIACMEAccountModel) 
 
 	if !data.DefaultNameserver.IsNull() && !data.DefaultNameserver.IsUnknown() && data.DefaultNameserver.ValueString() != "" {
 		vaultRequest[consts.FieldDefaultNameserver] = data.DefaultNameserver.ValueString()
-	} else {
-		vaultRequest[consts.FieldDefaultNameserver] = types.StringNull()
 	}
 
 	return vaultRequest, diags

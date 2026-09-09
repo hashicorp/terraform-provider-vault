@@ -9,18 +9,15 @@ import "github.com/hashicorp/terraform-plugin-framework/types"
 func setIfNotEmpty(m map[string]any, key, value string) {
 	if value != "" {
 		m[key] = value
-	} else {
-		m[key] = types.StringNull()
 	}
 }
 
-// setStringIfNotEmpty sets the target types.String only when val is non-empty,
-// leaving it null otherwise. Used when reading Vault responses
-// where absent fields should not overwrite configured values.
+// setStringIfNotEmpty sets the target types.String only when val is non-empty.
+// When val is empty the target is left unchanged, preserving whatever value
+// was already in state. This is correct for Optional (non-Computed) fields
+// that Vault does not echo back in its response.
 func setStringIfNotEmpty(target *types.String, val string) {
 	if val != "" {
 		*target = types.StringValue(val)
-	} else {
-		*target = types.StringNull()
 	}
 }

@@ -132,6 +132,16 @@ resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
 EOT
 }
 
+resource "vault_pki_external_ca_secret_backend_dns_provider_aws_route53" "test" {
+  mount           = vault_mount.test.path
+  name            = "my-dns-provider"
+  identifiers     = ["example.com"]
+  ttl             = 120
+  region          = "us-east-1"
+  hosted_zone_id  = "Z1234567890ABC"
+  assume_role_arn = "arn:aws:iam::123456789012:role/vault-dns-role"
+}
+
 resource "vault_pki_external_ca_secret_backend_role" "test" {
   mount                       = vault_mount.test.path
   name                        = "%s"
@@ -141,7 +151,7 @@ resource "vault_pki_external_ca_secret_backend_role" "test" {
   allowed_challenge_types     = ["http-01", "dns-01", "tls-alpn-01"]
   csr_generate_key_type       = "ec-256"
   csr_identifier_population   = "cn_first"
-  dns_provider_name           = "my-dns-provider"
+  dns_provider_name           = vault_pki_external_ca_secret_backend_dns_provider_aws_route53.test.name
   dns_provider_type           = "aws-route53"
 }
 `, backend, accountName, directoryUrl, ca, roleName)
@@ -164,6 +174,16 @@ resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
   trusted_ca     = <<EOT
 %s
 EOT
+}
+
+resource "vault_pki_external_ca_secret_backend_dns_provider_aws_route53" "test" {
+  mount           = vault_mount.test.path
+  name            = "my-dns-provider"
+  identifiers     = ["example.com"]
+  ttl             = 120
+  region          = "us-east-1"
+  hosted_zone_id  = "Z1234567890ABC"
+  assume_role_arn = "arn:aws:iam::123456789012:role/vault-dns-role"
 }
 
 resource "vault_pki_external_ca_secret_backend_role" "test" {

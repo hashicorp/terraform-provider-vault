@@ -98,6 +98,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_rfc2136" "test" {
   nameserver     = "ns1.example.com:53"
   tsig_key_name  = "vault-tsig-key"
   tsig_secret_wo = "supersecret"
+  tsig_secret_wo_version = 1
   tsig_algorithm = "hmac-sha256"
 }
 `, backend, providerName)
@@ -119,6 +120,7 @@ resource "vault_pki_external_ca_secret_backend_dns_provider_rfc2136" "test" {
   nameserver     = "ns2.example.com:53"
   tsig_key_name  = "vault-tsig-key-v2"
   tsig_secret_wo = "newsecret"
+  tsig_secret_wo_version = 2
   tsig_algorithm = "hmac-sha512"
 }
 `, backend, providerName)

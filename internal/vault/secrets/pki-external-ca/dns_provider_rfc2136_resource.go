@@ -304,7 +304,7 @@ func buildRFC2136Request(ctx context.Context, data *PKIExternalCADNSProviderRFC2
 
 	setIfNotEmpty(req, consts.FieldNameserver, data.Nameserver.ValueString())
 	setIfNotEmpty(req, consts.FieldTsigKeyName, data.TsigKeyName.ValueString())
-	setIfNotEmpty(req, consts.FieldTsigSecretWO, data.TsigSecretWO.ValueString())
+	setIfNotEmpty(req, consts.FieldTsigSecret, data.TsigSecretWO.ValueString())
 	setIfNotEmpty(req, consts.FieldTsigAlgorithm, data.TsigAlgorithm.ValueString())
 
 	return req, diags

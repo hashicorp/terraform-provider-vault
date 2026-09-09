@@ -4,11 +4,8 @@
 package pki_external_ca_test
 
 import (
-	"archive/tar"
 	"crypto/x509/pkix"
 	"fmt"
-	"io"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -18,9 +15,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/docker"
-	containerclient "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -80,56 +76,8 @@ func testAccPKIExternalCAOrderImportStateIdFunc(resourceName string) resource.Im
 }
 
 func setupVaultAndPebble(t *testing.T) (string, string) {
-	if os.Getenv("VAULT_ADDR") == "" {
-		/*
-				// TODO uncomment this once there's a vault-enterprise image that contains pki-external-ca.
-			    // This is a convenience for devs to save them from having to start a vault instance
-			    // manually.
-
-				opts := docker.DefaultOptions(t)
-				opts.ImageRepo = "hashicorp/vault-enterprise"
-				opts.NumCores = 1
-				opts.Envs = []string{"VAULT_LICENSE=" + os.Getenv("VAULT_LICENSE")}
-				cluster := docker.NewTestDockerCluster(t, opts)
-				ca, _, address := testutil.SetupPebbleAcmeServerWithOption(t, testutil.NewPebbleOptions().SetNetworkName(
-					cluster.Nodes()[0].(*docker.DockerClusterNode).ContainerNetworkName))
-				directoryUrl := fmt.Sprintf("https://%s/dir", address)
-				client := cluster.Nodes()[0].APIClient()
-				os.Setenv(api.EnvVaultAddress, client.Address())
-				os.Setenv(api.EnvVaultToken, client.Token())
-				os.Setenv(api.EnvVaultCACertBytes, string(cluster.CACertPEM))
-
-				return ca, directoryUrl
-		*/
-	}
-
-	dockerAPI, err := docker.NewDockerAPI()
-	require.NoError(t, err)
-
-	f := containerclient.Filters{}
-	f.Add("ancestor", "ghcr.io/letsencrypt/pebble:2.8.0")
-
-	containers, err := dockerAPI.ContainerList(t.Context(), containerclient.ContainerListOptions{Filters: f})
-	require.NoError(t, err)
-
-	require.Len(t, containers.Items, 1)
-	id := containers.Items[0].ID
-
-	copyResult, err := dockerAPI.CopyFromContainer(t.Context(), id, containerclient.CopyFromContainerOptions{
-		SourcePath: "test/certs/pebble.minica.pem",
-	})
-	require.NoError(t, err)
-	rdr := copyResult.Content
-	defer rdr.Close()
-
-	tr := tar.NewReader(rdr)
-	_, err = tr.Next()
-	require.NoError(t, err)
-
-	pebbleCa, err := io.ReadAll(tr)
-	require.NoError(t, err)
-
-	return string(pebbleCa), "https://pebble:14000/dir"
+	ca, port := testutil.SetupPebbleAcmeServer(t)
+	return ca, fmt.Sprintf("https://localhost:%d/dir", port)
 }
 
 func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
