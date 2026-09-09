@@ -305,8 +305,8 @@ func handleRoleResponseData(ctx context.Context, data *PKIExternalCARoleModel, r
 
 	// Map values back to Terraform model
 	data.AcmeAccountName = types.StringValue(apiModel.AcmeAccountName)
-	data.DnsProviderName = types.StringValue(apiModel.DnsProviderName)
-	data.DnsProviderType = types.StringValue(apiModel.DnsProviderType)
+	setStringIfNotEmpty(&data.DnsProviderName, apiModel.DnsProviderName)
+	setStringIfNotEmpty(&data.DnsProviderType, apiModel.DnsProviderType)
 	data.CsrGenerateKeyType = types.StringValue(apiModel.CsrGenerateKeyType)
 	data.CsrIdentifierPopulation = types.StringValue(apiModel.CsrIdentifierPopulation)
 	data.CreationDate = types.StringValue(apiModel.CreationDate)
