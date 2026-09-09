@@ -277,36 +277,6 @@ func (r *TPMAuthRoleResource) ImportState(ctx context.Context, req resource.Impo
 		)
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
 	}
-
-	vaultClient, err := client.GetClient(ctx, r.Meta(), ns)
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	roleResp, err := vaultClient.Logical().ReadWithContext(ctx, fmt.Sprintf("auth/%s/role/%s", strings.Trim(mount, "/"), name))
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if roleResp == nil {
-		resp.Diagnostics.AddError(errutil.VaultReadResponseNil())
-		return
-	}
-
-	data := TPMAuthRoleModel{
-		Mount: types.StringValue(mount),
-		Name:  types.StringValue(name),
-	}
-	if ns != "" {
-		data.Namespace = types.StringValue(ns)
-	}
-	resp.Diagnostics.Append(r.populateDataModelFromAPI(ctx, &data, roleResp)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func extractTPMRoleIdentifiers(importID string) (mount, name string, err error) {
