@@ -120,6 +120,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 			consts.FieldAccessKeyID: schema.StringAttribute{
 				MarkdownDescription: "AWS access key ID for Route53 API access.",
 				Optional:            true,
+				Sensitive:           true,
 			},
 			consts.FieldSecretAccessKeyWO: schema.StringAttribute{
 				MarkdownDescription: "AWS secret access key for Route53 API access. Write-only — not returned by Vault.",
@@ -340,9 +341,7 @@ func buildAWSRoute53Request(ctx context.Context, data *PKIExternalCADNSProviderA
 	return req, diags
 }
 
-// This resource deviates from the common pattern followed in vault because the input to Vault can either be a string or an integer,
-// however vault always returns a duration string. This function normalizes and converts the string back to an integer before storing
-// in state.
+// This resource deviates from the common pattern followed in vault because this particular plugin does not return duration as integer seconds
 func (r *PKIExternalCADNSProviderAWSRoute53Resource) populateDataModelFromAPI(ctx context.Context, data *PKIExternalCADNSProviderAWSRoute53Model, resp *api.Secret) (rd diag.Diagnostics) {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
@@ -361,6 +360,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) populateDataModelFromAPI(ct
 	data.LastUpdatedDate = types.StringValue(readResp.LastUpdatedDate)
 
 	// We want to normalize the duration string coming in from Vault prior to saving it in the terraform state
+	// PKI-External-CA is deviant. Other provider resources shouldn't follow this pattern
 	if readResp.TTL != "" {
 		d, err := time.ParseDuration(readResp.TTL)
 		if err != nil {

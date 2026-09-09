@@ -347,6 +347,7 @@ func buildAzureRequest(ctx context.Context, data *PKIExternalCADNSProviderAzureM
 	return req, diags
 }
 
+// This resource deviates from the common pattern followed in vault because this particular plugin does not return duration as integer seconds
 func (r *PKIExternalCADNSProviderAzureResource) populateDataModelFromAPI(ctx context.Context, data *PKIExternalCADNSProviderAzureModel, resp *api.Secret) (rd diag.Diagnostics) {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
@@ -364,6 +365,7 @@ func (r *PKIExternalCADNSProviderAzureResource) populateDataModelFromAPI(ctx con
 	data.CreationDate = types.StringValue(readResp.CreationDate)
 	data.LastUpdatedDate = types.StringValue(readResp.LastUpdatedDate)
 
+	// PKI-External-CA is deviant. Other provider resources shouldn't follow this pattern
 	if readResp.TTL != "" {
 		d, err := time.ParseDuration(readResp.TTL)
 		if err != nil {

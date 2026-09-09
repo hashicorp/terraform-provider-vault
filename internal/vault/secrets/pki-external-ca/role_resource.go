@@ -110,7 +110,6 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The name of the DNS provider configuration to use for DNS-01 challenges.",
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString(""),
 				Validators: []validator.String{
 					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldDnsProviderType)),
 				},
@@ -119,7 +118,6 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				MarkdownDescription: "The type of the DNS provider. Valid values are: `aws-route53`, `rfc2136`, `google-cloud-dns`, `azure-dns`.",
 				Optional:            true,
 				Computed:            true,
-				Default:             stringdefault.StaticString(""),
 				Validators: []validator.String{
 					stringvalidator.OneOf("aws-route53", "rfc2136", "google-cloud-dns", "azure-dns"),
 					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldDnsProviderName)),
@@ -436,4 +434,3 @@ func (r *PKIExternalCARoleResource) ImportState(ctx context.Context, req resourc
 		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
 	}
 }
-

@@ -109,7 +109,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) Schema(_ context.Context, _ re
 				Computed:            true,
 			},
 			consts.FieldNameserver: schema.StringAttribute{
-				MarkdownDescription: "DNS server address in `IP:port` format (e.g. `192.168.1.1:53`).",
+				MarkdownDescription: "DNS server address in `IP:port` format (e.g. `192.168.1.1:53`). IPs can also be provided without ports.",
 				Required:            true,
 			},
 			consts.FieldTsigKeyName: schema.StringAttribute{
@@ -311,6 +311,7 @@ func buildRFC2136Request(ctx context.Context, data *PKIExternalCADNSProviderRFC2
 	return req, diags
 }
 
+// This resource deviates from the common pattern followed in vault because this particular plugin does not return duration as integer seconds
 func (r *PKIExternalCADNSProviderRFC2136Resource) populateDataModelFromAPI(ctx context.Context, data *PKIExternalCADNSProviderRFC2136Model, resp *api.Secret) (rd diag.Diagnostics) {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
@@ -328,6 +329,7 @@ func (r *PKIExternalCADNSProviderRFC2136Resource) populateDataModelFromAPI(ctx c
 	data.CreationDate = types.StringValue(readResp.CreationDate)
 	data.LastUpdatedDate = types.StringValue(readResp.LastUpdatedDate)
 
+	// PKI-External-CA is deviant. Other provider resources shouldn't follow this pattern
 	if readResp.TTL != "" {
 		d, err := time.ParseDuration(readResp.TTL)
 		if err != nil {

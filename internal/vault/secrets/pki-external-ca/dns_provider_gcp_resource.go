@@ -326,6 +326,7 @@ func buildGCPRequest(ctx context.Context, data *PKIExternalCADNSProviderGCPModel
 	return req, diags
 }
 
+// This resource deviates from the common pattern followed in vault because this particular plugin does not return duration as integer seconds
 func (r *PKIExternalCADNSProviderGCPResource) populateDataModelFromAPI(ctx context.Context, data *PKIExternalCADNSProviderGCPModel, resp *api.Secret) (rd diag.Diagnostics) {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
@@ -343,6 +344,7 @@ func (r *PKIExternalCADNSProviderGCPResource) populateDataModelFromAPI(ctx conte
 	data.CreationDate = types.StringValue(readResp.CreationDate)
 	data.LastUpdatedDate = types.StringValue(readResp.LastUpdatedDate)
 
+	// PKI-External-CA is deviant. Other provider resources shouldn't follow this pattern
 	if readResp.TTL != "" {
 		d, err := time.ParseDuration(readResp.TTL)
 		if err != nil {
