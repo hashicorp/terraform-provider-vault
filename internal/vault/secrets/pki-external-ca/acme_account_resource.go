@@ -120,18 +120,22 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_kid": schema.StringAttribute{
-				MarkdownDescription: "The external binding key ID to create the initial account.",
+				MarkdownDescription: "The external account binding key ID to create the initial account. If specified, `eab_key` must also be provided.",
 				Optional:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot("eab_key")),
+				},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_key": schema.StringAttribute{
-				MarkdownDescription: "An url base64 encoded external binding token to create the initial account.",
+				MarkdownDescription: "A URL base64-encoded external account binding HMAC key to create the initial account. If specified, `eab_kid` must also be provided.",
 				Optional:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot("eab_kid")),
+				},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"trusted_ca": schema.StringAttribute{
 				MarkdownDescription: "Trusted CA certificates for the ACME server.",
@@ -139,7 +143,7 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"active_key_version": schema.Int64Attribute{
 				Computed:            true,
-				MarkdownDescription: "Version of account key, starts at zero",
+				MarkdownDescription: "Current version of the account key, starting at zero.",
 			},
 		},
 		MarkdownDescription: "Manage PKI ACME accounts for external CA integration.",
@@ -229,7 +233,8 @@ func (r *PKIACMEAccountResource) Read(ctx context.Context, req resource.ReadRequ
 
 func (r *PKIACMEAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data PKIACMEAccountModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Use req.Config to read write-only fields, which are nullified in plan.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -283,9 +288,6 @@ func handleAccountResponseData(ctx context.Context, data *PKIACMEAccountModel, r
 	if apiModel.TrustedCA != "" {
 		data.TrustedCA = types.StringValue(apiModel.TrustedCA)
 	}
-
-	// Note: EAB credentials are write-only and won't be returned by the API
-	// Keep the values from state if they were set
 
 	return rd
 }
