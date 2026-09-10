@@ -4,8 +4,11 @@
 package pki_external_ca_test
 
 import (
+	"archive/tar"
 	"crypto/x509/pkix"
 	"fmt"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -17,8 +20,17 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
+	containerclient "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 )
+
+// EnvPebbleLocal is set by developers running Vault and the tests locally
+// (i.e. not in containers). When set, setupVaultAndPebble spins up a fresh
+// Pebble container and uses localhost so both Vault and the test runner can
+// reach it directly. When unset (CI default), a pre-running Pebble container
+// is expected and its stable Docker-network hostname is used instead.
+const EnvPebbleLocal = "PEBBLE_LOCAL"
 
 func TestAccPKIExternalCAOrderResource_identifiers(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
@@ -76,8 +88,41 @@ func testAccPKIExternalCAOrderImportStateIdFunc(resourceName string) resource.Im
 }
 
 func setupVaultAndPebble(t *testing.T) (string, string) {
-	ca, port := testutil.SetupPebbleAcmeServer(t)
-	return ca, fmt.Sprintf("https://localhost:%d/dir", port)
+	if os.Getenv(EnvPebbleLocal) != "" {
+		// Local dev: spin up a fresh Pebble container and return a localhost
+		// URL that both the test runner and a locally-running Vault can reach.
+		ca, port := testutil.SetupPebbleAcmeServer(t)
+		return ca, fmt.Sprintf("https://localhost:%d/dir", port)
+	}
+	// CI (PEBBLE_LOCAL unset): Pebble is already running as a service container.
+	// Find it by ancestor image and return its stable Docker-network hostname
+	// so that Vault, also running in a container, can reach it.
+	dockerAPI, err := docker.NewDockerAPI()
+	require.NoError(t, err)
+
+	f := containerclient.Filters{}
+	f.Add("ancestor", "docker.mirror.hashicorp.services/letsencrypt/pebble:latest")
+
+	containers, err := dockerAPI.ContainerList(t.Context(), containerclient.ContainerListOptions{Filters: f})
+	require.NoError(t, err)
+	require.Len(t, containers.Items, 1, "expected exactly 1 running Pebble container; ensure Pebble is started before setting %s", EnvPebbleLocal)
+
+	copyResult, err := dockerAPI.CopyFromContainer(t.Context(), containers.Items[0].ID, containerclient.CopyFromContainerOptions{
+		SourcePath: "test/certs/pebble.minica.pem",
+	})
+	require.NoError(t, err)
+	rdr := copyResult.Content
+	defer rdr.Close()
+
+	tr := tar.NewReader(rdr)
+	_, err = tr.Next()
+	require.NoError(t, err)
+
+	pebbleCa, err := io.ReadAll(tr)
+	require.NoError(t, err)
+
+	return string(pebbleCa), "https://pebble:14000/dir"
+
 }
 
 func TestAccPKIExternalCAOrderResource_csr(t *testing.T) {
