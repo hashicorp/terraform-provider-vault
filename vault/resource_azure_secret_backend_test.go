@@ -75,6 +75,18 @@ func getAzureBackendChecks(resourceName, path string, isUpdate bool) resource.Te
 		resource.TestCheckResourceAttr(resourceName, consts.FieldRootPasswordTTL, "2000000"),
 	}
 
+	if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion220) && provider.IsEnterpriseSupported(testProvider.Meta()) {
+		commonInitialChecks = append(
+			commonInitialChecks,
+			resource.TestCheckResourceAttr(resourceName, consts.FieldSeamlessRotation, "true"),
+		)
+
+		commonUpdateChecks = append(
+			commonUpdateChecks,
+			resource.TestCheckResourceAttr(resourceName, consts.FieldSeamlessRotation, "false"),
+		)
+	}
+
 	if !isUpdate {
 		baseChecks = append(baseChecks, commonInitialChecks...)
 	} else {
@@ -307,13 +319,14 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 func testAzureSecretBackend_initialConfig(path string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
-  path            = "%s"
-  subscription_id = "11111111-2222-3333-4444-111111111111"
-  tenant_id       = "11111111-2222-3333-4444-222222222222"
-  client_id       = "11111111-2222-3333-4444-333333333333"
-  client_secret   = "12345678901234567890"
-  environment     = "AzurePublicCloud"
-  disable_remount = true
+  path              = "%s"
+  subscription_id   = "11111111-2222-3333-4444-111111111111"
+  tenant_id         = "11111111-2222-3333-4444-222222222222"
+  client_id         = "11111111-2222-3333-4444-333333333333"
+  client_secret     = "12345678901234567890"
+  environment       = "AzurePublicCloud"
+  disable_remount   = true
+  seamless_rotation = true
 }`, path)
 }
 
@@ -327,53 +340,56 @@ resource "vault_azure_secret_backend" "test" {
   client_secret           = "098765432109876543214"
   environment             = "AzurePublicCloud"
   disable_remount         = true
-  root_password_ttl 	  = 2000000
+  root_password_ttl       = 2000000
+  seamless_rotation       = false
 }`, path)
 }
 
 func testAzureSecretBackend_remount(path string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
-  path            = "%s"
-  subscription_id = "11111111-2222-3333-4444-111111111111"
-  tenant_id       = "11111111-2222-3333-4444-222222222222"
-  client_id       = "11111111-2222-3333-4444-333333333333"
-  client_secret   = "12345678901234567890"
-  environment     = "AzurePublicCloud"
+  path              = "%s"
+  subscription_id   = "11111111-2222-3333-4444-111111111111"
+  tenant_id         = "11111111-2222-3333-4444-222222222222"
+  client_id         = "11111111-2222-3333-4444-333333333333"
+  client_secret     = "12345678901234567890"
+  environment       = "AzurePublicCloud"
+  seamless_rotation = false
 }`, path)
 }
 
 func testAccAzureSecretBackendConfig_wifBasic(path string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
-  path 					  = "%s"
-  subscription_id 		  = "11111111-2222-3333-4444-111111111111"
-  tenant_id       		  = "11111111-2222-3333-4444-222222222222"
-  client_id       		  = "11111111-2222-3333-4444-333333333333"
+  path                    = "%s"
+  subscription_id         = "11111111-2222-3333-4444-111111111111"
+  tenant_id               = "11111111-2222-3333-4444-222222222222"
+  client_id               = "11111111-2222-3333-4444-333333333333"
   identity_token_audience = "wif-audience"
-  identity_token_ttl 	  = 600
+  identity_token_ttl      = 600
+  seamless_rotation       = false
 }`, path)
 }
 
 func testAccAzureSecretBackendConfig_wifUpdated(path string) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
-  path 					  = "%s"
+  path                    = "%s"
   subscription_id         = "11111111-2222-3333-4444-111111111111"
   tenant_id               = "22222222-3333-4444-5555-333333333333"
   client_id               = "22222222-3333-4444-5555-444444444444"
   identity_token_audience = "wif-audience-updated"
-  identity_token_ttl 	  = 1800
+  identity_token_ttl      = 1800
+  seamless_rotation       = false
 }`, path)
 }
 
 func testAccAzureSecretBackendConfig_MountConfig(path string, isUpdate bool) string {
-
 	if !isUpdate {
 		return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
-  path 					      = "%s"
-  description 			      = "test desc"
+  path                        = "%s"
+  description                 = "test desc"
   subscription_id             = "11111111-2222-3333-4444-111111111111"
   tenant_id                   = "22222222-3333-4444-5555-333333333333"
   client_id                   = "22222222-3333-4444-5555-444444444444"
@@ -385,12 +401,13 @@ resource "vault_azure_secret_backend" "test" {
   delegated_auth_accessors    = ["header1", "header2"]
   listing_visibility          = "hidden"
   force_no_cache              = true
+  seamless_rotation           = false
 }`, path)
 	} else {
 		return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
-  path 					      = "%s"
-  description 			      = "test desc updated"
+  path                        = "%s"
+  description                 = "test desc updated"
   subscription_id             = "11111111-2222-3333-4444-111111111111"
   tenant_id                   = "22222222-3333-4444-5555-333333333333"
   client_id                   = "22222222-3333-4444-5555-444444444444"
@@ -402,6 +419,7 @@ resource "vault_azure_secret_backend" "test" {
   delegated_auth_accessors    = ["header1", "header2"]
   listing_visibility          = "unauth"
   force_no_cache              = true
+  seamless_rotation           = false
 }`, path)
 	}
 }
@@ -409,14 +427,15 @@ resource "vault_azure_secret_backend" "test" {
 func testAccAzureSecretBackendConfig_automatedRotation(path string, rotationSchedule string, rotationWindow, rotationPeriod int, disableRotation bool) string {
 	return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
-  path 					  = "%s"
-  subscription_id         = "11111111-2222-3333-4444-111111111111"
-  tenant_id               = "22222222-3333-4444-5555-333333333333"
-  client_id               = "22222222-3333-4444-5555-444444444444"
-  rotation_schedule       = "%s"
-  rotation_window         = "%d"
-  rotation_period         = "%d"
+  path                       = "%s"
+  subscription_id            = "11111111-2222-3333-4444-111111111111"
+  tenant_id                  = "22222222-3333-4444-5555-333333333333"
+  client_id                  = "22222222-3333-4444-5555-444444444444"
+  rotation_schedule          = "%s"
+  rotation_window            = "%d"
+  rotation_period            = "%d"
   disable_automated_rotation = %t
+  seamless_rotation          = false
 }
 `, path, rotationSchedule, rotationWindow, rotationPeriod, disableRotation)
 }
@@ -470,6 +489,7 @@ resource "vault_azure_secret_backend" "test" {
   client_secret_wo_version = %d
   environment              = "AzurePublicCloud"
   disable_remount          = true
+  seamless_rotation        = false
 }`, path, clientSecret, version)
 }
 
@@ -489,6 +509,7 @@ resource "vault_azure_secret_backend" "test" {
   client_secret            = "test-client-secret"
   client_secret_wo         = "test-client-secret-wo"
   client_secret_wo_version = 1
+  seamless_rotation        = false
 }`, path),
 				ExpectError: regexp.MustCompile(`Conflicting configuration arguments`),
 			},

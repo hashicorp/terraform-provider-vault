@@ -118,6 +118,12 @@ func azureSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL in seconds of the root password in Azure when rotate-root generates a new client secret",
 			},
+			consts.FieldSeamlessRotation: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     true,
+				Description: "Enable or disable seamless rotation for static roles. Does not affect existing static roles.",
+			},
 		},
 	}, false)
 
@@ -222,6 +228,13 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	useAPIVer220Ent := provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer220Ent {
+		if err := d.Set(consts.FieldSeamlessRotation, resp.Data[consts.FieldSeamlessRotation]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
@@ -280,6 +293,11 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 		consts.FieldEnvironment,
 		consts.FieldTenantID,
 		consts.FieldSubscriptionID,
+	}
+
+	useAPIVer220Ent := provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer220Ent {
+		fields = append(fields, consts.FieldSeamlessRotation)
 	}
 
 	data := make(map[string]interface{})
