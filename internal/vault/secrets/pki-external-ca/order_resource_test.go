@@ -101,7 +101,7 @@ func setupVaultAndPebble(t *testing.T) (string, string) {
 	require.NoError(t, err)
 
 	f := containerclient.Filters{}
-	f.Add("ancestor", "docker.mirror.hashicorp.services/letsencrypt/pebble:latest")
+	f.Add("ancestor", "ghcr.io/letsencrypt/pebble:2.8.0")
 
 	containers, err := dockerAPI.ContainerList(t.Context(), containerclient.ContainerListOptions{Filters: f})
 	require.NoError(t, err)
