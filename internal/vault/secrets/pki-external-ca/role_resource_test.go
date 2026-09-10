@@ -29,7 +29,7 @@ func TestAccPKIExternalCARoleResource_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -87,7 +87,7 @@ func TestAccPKIExternalCARoleResource_update(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
 		},
 		Steps: []resource.TestStep{
 			{
