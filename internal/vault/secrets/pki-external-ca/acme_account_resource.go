@@ -122,16 +122,20 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"eab_kid": schema.StringAttribute{
 				MarkdownDescription: "The external binding key ID to create the initial account.",
 				Optional:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot("eab_key")),
+				},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_key": schema.StringAttribute{
 				MarkdownDescription: "An url base64 encoded external binding token to create the initial account.",
 				Optional:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot("eab_kid")),
+				},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"trusted_ca": schema.StringAttribute{
 				MarkdownDescription: "Trusted CA certificates for the ACME server.",
@@ -283,9 +287,6 @@ func handleAccountResponseData(ctx context.Context, data *PKIACMEAccountModel, r
 	if apiModel.TrustedCA != "" {
 		data.TrustedCA = types.StringValue(apiModel.TrustedCA)
 	}
-
-	// Note: EAB credentials are write-only and won't be returned by the API
-	// Keep the values from state if they were set
 
 	return rd
 }
