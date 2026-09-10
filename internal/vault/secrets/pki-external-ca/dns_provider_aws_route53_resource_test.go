@@ -49,8 +49,9 @@ func TestAccPKIExternalCADNSProviderAWSRoute53_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIDNSProviderAWSRoute53ImportIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				// secret_access_key_wo is write-only — not returned by Vault
-				ImportStateVerifyIgnore: []string{consts.FieldSecretAccessKeyWO},
+				// secret_access_key_wo and its version counter are Terraform-side only —
+				// not stored or returned by Vault
+				ImportStateVerifyIgnore: []string{consts.FieldSecretAccessKeyWO, consts.FieldSecretAccessKeyWOVersion},
 			},
 			// update — change TTL, also exercises nameserver field
 			{

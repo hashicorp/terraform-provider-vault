@@ -132,14 +132,14 @@ func (r *PKIExternalCADNSProviderAzureResource) Schema(_ context.Context, _ reso
 				Optional:            true,
 				WriteOnly:           true,
 				Validators: []validator.String{
-					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientSecretWO)),
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldClientSecretWOVersion)),
 				},
 			},
 			consts.FieldClientSecretWOVersion: schema.Int64Attribute{
 				MarkdownDescription: "Version counter for the write-only `client_secret` field. Increment this value to trigger an update to the client secret in Vault.",
 				Optional:            true,
 				Validators: []validator.Int64{
-					int64validator.AlsoRequires(path.MatchRoot(consts.FieldClientSecret)),
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldClientSecretWO)),
 				},
 			},
 			consts.FieldTenantID: schema.StringAttribute{

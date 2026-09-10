@@ -51,8 +51,9 @@ func TestAccPKIExternalCADNSProviderGCP_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIDNSProviderGCPImportIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				// credentials_wo is write-only — not returned by Vault
-				ImportStateVerifyIgnore: []string{consts.FieldCredentialsWO},
+				// credentials_wo and its version counter are Terraform-side only —
+				// not stored or returned by Vault
+				ImportStateVerifyIgnore: []string{consts.FieldCredentialsWO, consts.FieldCredentialsWOVersion},
 			},
 			// update — also exercises nameserver field
 			{

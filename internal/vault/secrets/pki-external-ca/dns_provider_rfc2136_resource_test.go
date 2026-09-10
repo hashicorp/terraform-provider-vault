@@ -52,8 +52,9 @@ func TestAccPKIExternalCADNSProviderRFC2136_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIDNSProviderRFC2136ImportIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				// tsig_secret_wo is write-only — not returned by Vault
-				ImportStateVerifyIgnore: []string{consts.FieldTsigSecretWO},
+				// tsig_secret_wo and its version counter are Terraform-side only —
+				// not stored or returned by Vault
+				ImportStateVerifyIgnore: []string{consts.FieldTsigSecretWO, consts.FieldTsigSecretWOVersion},
 			},
 			// update
 			{

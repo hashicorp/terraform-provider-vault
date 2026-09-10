@@ -54,8 +54,9 @@ func TestAccPKIExternalCADNSProviderAzure_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIDNSProviderAzureImportIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				// client_secret_wo is write-only — not returned by Vault
-				ImportStateVerifyIgnore: []string{consts.FieldClientSecretWO},
+				// client_secret_wo and its version counter are Terraform-side only —
+				// not stored or returned by Vault
+				ImportStateVerifyIgnore: []string{consts.FieldClientSecretWO, consts.FieldClientSecretWOVersion},
 			},
 			// update — also exercises nameserver field
 			{

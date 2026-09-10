@@ -105,7 +105,7 @@ func (r *PKIExternalCADNSProviderAWSRoute53Resource) Schema(_ context.Context, _
 				Required:            true,
 			},
 			consts.FieldTTL: schema.Int64Attribute{
-				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges. Defaults to `60`.",
+				MarkdownDescription: "TTL for DNS TXT records used in DNS-01 challenges in seconds. Defaults to `60`.",
 				Optional:            true,
 				Computed:            true,
 			},
