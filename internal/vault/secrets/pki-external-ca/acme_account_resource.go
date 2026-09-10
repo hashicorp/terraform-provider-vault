@@ -143,7 +143,7 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"active_key_version": schema.Int64Attribute{
 				Computed:            true,
-				MarkdownDescription: "Version of account key, starts at zero",
+				MarkdownDescription: "Current version of the account key, starting at zero.",
 			},
 		},
 		MarkdownDescription: "Manage PKI ACME accounts for external CA integration.",
@@ -233,7 +233,8 @@ func (r *PKIACMEAccountResource) Read(ctx context.Context, req resource.ReadRequ
 
 func (r *PKIACMEAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data PKIACMEAccountModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Use req.Config to read write-only fields, which are nullified in plan.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
