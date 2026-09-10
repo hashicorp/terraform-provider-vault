@@ -116,9 +116,14 @@ func (r *TPMAuthBackendConfigResource) Create(ctx context.Context, req resource.
 	}
 
 	configPath := r.path(&data)
-	configResp, err := vaultClient.Logical().WriteWithContext(ctx, configPath, requestBody)
-	if err != nil {
+	if _, err := vaultClient.Logical().WriteWithContext(ctx, configPath, requestBody); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
+		return
+	}
+
+	configResp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 	if configResp == nil {
@@ -186,9 +191,14 @@ func (r *TPMAuthBackendConfigResource) Update(ctx context.Context, req resource.
 	}
 
 	configPath := r.path(&data)
-	configResp, err := vaultClient.Logical().WriteWithContext(ctx, configPath, requestBody)
-	if err != nil {
+	if _, err := vaultClient.Logical().WriteWithContext(ctx, configPath, requestBody); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
+		return
+	}
+
+	configResp, err := vaultClient.Logical().ReadWithContext(ctx, configPath)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 	if configResp == nil {
