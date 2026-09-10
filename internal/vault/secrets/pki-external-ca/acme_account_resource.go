@@ -120,7 +120,7 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_kid": schema.StringAttribute{
-				MarkdownDescription: "The external binding key ID to create the initial account.",
+				MarkdownDescription: "The external account binding key ID to create the initial account. If specified, `eab_key` must also be provided.",
 				Optional:            true,
 				WriteOnly:           true,
 				Validators: []validator.String{
@@ -129,7 +129,7 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_key": schema.StringAttribute{
-				MarkdownDescription: "An url base64 encoded external binding token to create the initial account.",
+				MarkdownDescription: "A URL base64-encoded external account binding HMAC key to create the initial account. If specified, `eab_kid` must also be provided.",
 				Optional:            true,
 				WriteOnly:           true,
 				Validators: []validator.String{

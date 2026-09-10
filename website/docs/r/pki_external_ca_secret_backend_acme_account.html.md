@@ -86,9 +86,9 @@ The following arguments are supported:
 
 * `key_type` - (Optional) Key type to generate for the account key. Valid values are `ec-256`, `ec-384`, `ec-521`, `rsa-2048`, `rsa-4096`, `rsa-8192`. Defaults to `ec-256`.
 
-* `eab_kid` - (Optional) The external account binding key ID to create the initial account. Required by some CAs for account registration. This is a write-only field.
+* `eab_kid` - (Optional) The external account binding key ID to create the initial account. Required by some CAs for account registration. If specified, `eab_key` is also required. This is a write-only field.
 
-* `eab_key` - (Optional) The external account binding HMAC key to create the initial account. Required by some CAs for account registration. This is a write-only field.
+* `eab_key` - (Optional) The external account binding HMAC key (URL base64-encoded) to create the initial account. Required by some CAs for account registration. If specified, `eab_kid` is also required. This is a write-only field.
 
 * `trusted_ca` - (Optional) PEM-encoded trusted CA certificates for the ACME server. Use this when connecting to an ACME server with a custom or self-signed certificate.
 
