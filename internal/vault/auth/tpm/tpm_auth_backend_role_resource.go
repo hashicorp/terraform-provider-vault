@@ -33,17 +33,17 @@ import (
 
 var tpmRoleRegexp = regexp.MustCompile(`^auth/(.+)/role/(.+)$`)
 
-var _ resource.ResourceWithImportState = &TPMAuthRoleResource{}
+var _ resource.ResourceWithImportState = &TPMAuthBackendRoleResource{}
 
-func NewTPMAuthRoleResource() resource.Resource {
-	return &TPMAuthRoleResource{}
+func NewTPMAuthBackendRoleResource() resource.Resource {
+	return &TPMAuthBackendRoleResource{}
 }
 
-type TPMAuthRoleResource struct {
+type TPMAuthBackendRoleResource struct {
 	base.ResourceWithConfigure
 }
 
-type TPMAuthRoleModel struct {
+type TPMAuthBackendRoleModel struct {
 	token.TokenModel
 
 	Mount       types.String `tfsdk:"mount"`
@@ -63,11 +63,11 @@ type tpmRoleAPIModel struct {
 	TPMGroupIDs []string `json:"tpmgroup_ids" mapstructure:"tpmgroup_ids"`
 }
 
-func (r *TPMAuthRoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *TPMAuthBackendRoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_tpm_auth_backend_role"
 }
 
-func (r *TPMAuthRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *TPMAuthBackendRoleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
@@ -110,8 +110,8 @@ func (r *TPMAuthRoleResource) Schema(_ context.Context, _ resource.SchemaRequest
 	token.MustAddBaseAndTokenSchemas(&resp.Schema)
 }
 
-func (r *TPMAuthRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data TPMAuthRoleModel
+func (r *TPMAuthBackendRoleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data TPMAuthBackendRoleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -162,8 +162,8 @@ func (r *TPMAuthRoleResource) Create(ctx context.Context, req resource.CreateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *TPMAuthRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data TPMAuthRoleModel
+func (r *TPMAuthBackendRoleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data TPMAuthBackendRoleModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -194,8 +194,8 @@ func (r *TPMAuthRoleResource) Read(ctx context.Context, req resource.ReadRequest
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *TPMAuthRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data TPMAuthRoleModel
+func (r *TPMAuthBackendRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var data TPMAuthBackendRoleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -237,8 +237,8 @@ func (r *TPMAuthRoleResource) Update(ctx context.Context, req resource.UpdateReq
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *TPMAuthRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data TPMAuthRoleModel
+func (r *TPMAuthBackendRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data TPMAuthBackendRoleModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -258,7 +258,7 @@ func (r *TPMAuthRoleResource) Delete(ctx context.Context, req resource.DeleteReq
 	}
 }
 
-func (r *TPMAuthRoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *TPMAuthBackendRoleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	mount, name, err := extractTPMRoleIdentifiers(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid import identifier",
@@ -293,11 +293,11 @@ func extractTPMRoleIdentifiers(importID string) (mount, name string, err error) 
 	return matches[1], matches[2], nil
 }
 
-func (r *TPMAuthRoleResource) path(data *TPMAuthRoleModel) string {
+func (r *TPMAuthBackendRoleResource) path(data *TPMAuthBackendRoleModel) string {
 	return fmt.Sprintf("auth/%s/role/%s", data.Mount.ValueString(), data.Name.ValueString())
 }
 
-func (r *TPMAuthRoleResource) getAPIModel(ctx context.Context, data *TPMAuthRoleModel) (map[string]any, diag.Diagnostics) {
+func (r *TPMAuthBackendRoleResource) getAPIModel(ctx context.Context, data *TPMAuthBackendRoleModel) (map[string]any, diag.Diagnostics) {
 	apiModel := tpmRoleAPIModel{
 		DisplayName: data.DisplayName.ValueString(),
 		CertTTL:     data.CertTTL.ValueInt64(),
@@ -325,7 +325,7 @@ func (r *TPMAuthRoleResource) getAPIModel(ctx context.Context, data *TPMAuthRole
 	return requestBody, nil
 }
 
-func (r *TPMAuthRoleResource) populateDataModelFromAPI(ctx context.Context, data *TPMAuthRoleModel, resp *api.Secret) diag.Diagnostics {
+func (r *TPMAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Context, data *TPMAuthBackendRoleModel, resp *api.Secret) diag.Diagnostics {
 	if resp == nil || resp.Data == nil {
 		return diag.Diagnostics{
 			diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil."),
