@@ -145,6 +145,22 @@ resource "vault_agent_registration" "example" {
 }
 ```
 
+### Agent Registry Record with Data Locality 
+
+```hcl
+resource "vault_identity_entity" "agent" {
+  name     = "my-agent-entity"
+  policies = ["default"]
+}
+
+resource "vault_agent_registration" "example" {
+  display_name = "my-agent"
+  entity_id    = vault_identity_entity.agent.id
+  local        = true 
+  description  = "Agent with optional RAR support"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -164,7 +180,10 @@ The following arguments are supported:
 * `description` - (Optional) A human-readable description of the Agent Registry record. This field is for documentation purposes and does not affect the agent's behavior.
 
 * `owner` - (Optional) Owner of the Agent Registry record.
+
 * `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional for this agent. This setting works in conjunction with the OAuth Resource Server profile's optional_authorization_details setting - RAR is optional if EITHER is `true`. Defaults to `false`. Requires Vault 2.0.3 or later.
+
+* `local` - (Optional) When `false`, the registration is written to replicated storage and propagated to all performance secondaries. When set to `true`, the registration remains local to the current cluster and is not replicated. Requires Vault 2.2.0 or later.
 
 ## Attributes Reference
 

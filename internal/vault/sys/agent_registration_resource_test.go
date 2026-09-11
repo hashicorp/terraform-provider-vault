@@ -474,6 +474,65 @@ func TestAccAgentRegistration_duplicateDisplayNameAcrossNamespaces(t *testing.T)
 	})
 }
 
+// TestAccAgentRegistration_local tests that the local flag is persisted and
+// read back correctly. A local registration is not replicated globally and
+// stays on the current cluster.
+func TestAccAgentRegistration_local(t *testing.T) {
+	displayName := acctest.RandomWithPrefix("test-agent")
+	resourceName := "vault_agent_registration.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAgentRegistrationConfig_local(displayName, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccAgentRegistrationImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldDisplayName,
+				ImportStateVerifyIgnore:              []string{consts.FieldLastUpdatedTime},
+			},
+		},
+	})
+}
+
+// TestAccAgentRegistration_localDefault tests that the local flag defaults to
+// false when not explicitly set.
+func TestAccAgentRegistration_localDefault(t *testing.T) {
+	displayName := acctest.RandomWithPrefix("test-agent")
+	resourceName := "vault_agent_registration.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAgentRegistrationConfig_basic(displayName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+				),
+			},
+		},
+	})
+}
+
 // Config helper functions
 
 func testAccAgentRegistrationConfig_basic(displayName string) string {
@@ -722,4 +781,19 @@ resource "vault_agent_registration" "test" {
   optional_authorization_details = %t
 }
 `, displayName, displayName, optionalRAR)
+}
+
+func testAccAgentRegistrationConfig_local(displayName string, local bool) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "test" {
+  name     = "%s-entity"
+  policies = ["default"]
+}
+
+resource "vault_agent_registration" "test" {
+  display_name = "%s"
+  entity_id    = vault_identity_entity.test.id
+  local        = %t
+}
+`, displayName, displayName, local)
 }
