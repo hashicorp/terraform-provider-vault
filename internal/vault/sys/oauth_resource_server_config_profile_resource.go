@@ -83,6 +83,7 @@ type OAuthResourceServerConfigProfileModel struct {
 	ClockSkewLeeway              types.Int64  `tfsdk:"clock_skew_leeway"`
 	Enabled                      types.Bool   `tfsdk:"enabled"`
 	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
+	Local                        types.Bool   `tfsdk:"local"`
 }
 
 // OAuthResourceServerConfigProfileAPIModel describes the Vault API data model
@@ -102,6 +103,7 @@ type OAuthResourceServerConfigProfileAPIModel struct {
 	ClockSkewLeeway              int                 `json:"clock_skew_leeway" mapstructure:"clock_skew_leeway"`
 	Enabled                      bool                `json:"enabled" mapstructure:"enabled"`
 	OptionalAuthorizationDetails bool                `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
+	Local                        bool                `json:"local" mapstructure:"local"`
 }
 
 // PublicKeyAPIModel represents a public key in the API
@@ -219,6 +221,14 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional. Defaults to false.",
+			},
+			consts.FieldLocal: schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
+				MarkdownDescription: "If true, this profile is cluster-scoped and never replicated to performance secondaries. " +
+					"If false (default), the profile is written to replicated storage and propagated to all secondaries. " +
+					"This field is immutable after creation; delete and recreate the profile to change locality.",
 			},
 		},
 		// Note: ListNestedBlock is used instead of ListNestedAttribute because this provider
@@ -532,6 +542,8 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 	// RAR support
 	data.OptionalAuthorizationDetails = types.BoolValue(apiModel.OptionalAuthorizationDetails)
 
+	data.Local = types.BoolValue(apiModel.Local)
+
 	return true
 }
 
@@ -613,6 +625,9 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 		vaultRequest[consts.FieldOptionalAuthorizationDetails] = data.OptionalAuthorizationDetails.ValueBool()
 	}
 
+	if !data.Local.IsNull() && !data.Local.IsUnknown() {
+		vaultRequest[consts.FieldLocal] = data.Local.ValueBool()
+	}
 	return vaultRequest
 }
 
