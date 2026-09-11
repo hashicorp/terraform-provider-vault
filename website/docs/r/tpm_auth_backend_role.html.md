@@ -64,8 +64,10 @@ The following arguments are supported:
 
 * `tpm_ids` - (Optional) Set of TPM record IDs authorized to authenticate with this role.
   These are the unique IDs assigned by Vault to TPM records (SHA256 of the EK public key).
+  At least one of `tpm_ids` or `tpmgroup_ids` must be specified.
 
 * `tpmgroup_ids` - (Optional) Set of TPM group IDs authorized to authenticate with this role.
+  At least one of `tpm_ids` or `tpmgroup_ids` must be specified.
 
 ### Common Token Arguments
 

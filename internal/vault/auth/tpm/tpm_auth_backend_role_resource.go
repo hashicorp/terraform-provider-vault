@@ -12,11 +12,13 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
@@ -97,11 +99,23 @@ func (r *TPMAuthBackendRoleResource) Schema(_ context.Context, _ resource.Schema
 			consts.FieldTPMIDs: schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Validators: []validator.Set{
+					setvalidator.AtLeastOneOf(
+						path.MatchRoot(consts.FieldTPMIDs),
+						path.MatchRoot(consts.FieldTPMGroupIDs),
+					),
+				},
 				Description: "Set of TPM record IDs authorized to authenticate with this role.",
 			},
 			consts.FieldTPMGroupIDs: schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
+				Validators: []validator.Set{
+					setvalidator.AtLeastOneOf(
+						path.MatchRoot(consts.FieldTPMIDs),
+						path.MatchRoot(consts.FieldTPMGroupIDs),
+					),
+				},
 				Description: "Set of TPM group IDs authorized to authenticate with this role.",
 			},
 		},

@@ -5,6 +5,7 @@ package tpm_test
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -18,6 +19,7 @@ import (
 )
 
 // TestAccTPMAuthRole validates the complete lifecycle of vault_tpm_auth_backend_role:
+//   - Step 0: Validator rejects config with neither tpm_ids nor tpmgroup_ids
 //   - Step 1: Create with only required fields to verify Vault-computed defaults
 //     (display_name defaults to role name, cert_ttl=0, token_type="default")
 //   - Step 2: Set cert_ttl explicitly and add tpmgroup_ids
@@ -39,6 +41,16 @@ func TestAccTPMAuthRole(t *testing.T) {
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
+			// Step 0: Validator rejects when neither tpm_ids nor tpmgroup_ids is set.
+			{
+				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
+					mount:     mount,
+					roleName:  roleName,
+					tpmName:   tpmName,
+					omitTPMID: true,
+				}),
+				ExpectError: regexp.MustCompile(`At least one attribute out of \[tpm_ids,tpmgroup_ids\] must be specified`),
+			},
 			// Step 1: Create with only required fields.
 			// Verifies that Vault-computed defaults are read back correctly:
 			//   - display_name defaults to the role name
@@ -65,7 +77,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 2: Set cert_ttl explicitly and add a tpmgroup_ids binding.
+			// Step 2: Set cert_ttl explicitly and add tpmgroup_ids.
 			// Verifies an in-place update (no replace) and that both ID sets are reflected.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
@@ -262,6 +274,7 @@ type tpmRoleFields struct {
 	tpmName        string
 	certTTL        int64
 	specifyCertTTL bool
+	omitTPMID      bool
 	withTPMGroupID bool
 	tokenTTL       int64
 	tokenMaxTTL    int64
@@ -273,11 +286,14 @@ type tpmRoleFields struct {
 // and its dependencies (mount, vault_identity_tpm, optionally vault_identity_tpm_group).
 // Only fields explicitly set via the fields struct are emitted.
 func testAccTPMAuthRoleConfig(f tpmRoleFields) string {
-	body := testAccTPMAuthRoleMountOnlyConfig(f.mount)
+	// Start with the auth backend mount.
+	config := testAccTPMAuthRoleMountOnlyConfig(f.mount)
 
-	body += fmt.Sprintf(`
+	// only needed when tpm_ids will be referenced
+	if !f.omitTPMID {
+		config += fmt.Sprintf(`
 resource "vault_identity_tpm" "test" {
-  name = %q
+  name              = %q
   tpm_ek_public_key = <<EOT
 -----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
@@ -285,43 +301,48 @@ MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
 EOT
 }
 `, f.tpmName)
+	}
 
+	// only needed when tpmgroup_ids will be referenced
 	if f.withTPMGroupID {
-		body += fmt.Sprintf(`
+		config += fmt.Sprintf(`
 resource "vault_identity_tpm_group" "test" {
   name = %q
 }
 `, f.roleName)
 	}
 
-	body += fmt.Sprintf(`
+	// Role resource and possible parameters
+	role := fmt.Sprintf(`
 resource "vault_tpm_auth_backend_role" "test" {
-  mount   = vault_auth_backend.tpm.path
-  name    = %q
-  tpm_ids = [vault_identity_tpm.test.tpm_id]
+  mount = vault_auth_backend.tpm.path
+  name  = %q
 `, f.roleName)
 
+	if !f.omitTPMID {
+		role += "  tpm_ids = [vault_identity_tpm.test.tpm_id]\n"
+	}
 	if f.withTPMGroupID {
-		body += "  tpmgroup_ids = [vault_identity_tpm_group.test.tpm_group_id]\n"
+		role += "  tpmgroup_ids = [vault_identity_tpm_group.test.tpm_group_id]\n"
 	}
 	if f.specifyCertTTL {
-		body += fmt.Sprintf("  cert_ttl = %d\n", f.certTTL)
+		role += fmt.Sprintf("  cert_ttl = %d\n", f.certTTL)
 	}
 	if f.tokenTTL != 0 {
-		body += fmt.Sprintf("  token_ttl = %d\n", f.tokenTTL)
+		role += fmt.Sprintf("  token_ttl = %d\n", f.tokenTTL)
 	}
 	if f.tokenMaxTTL != 0 {
-		body += fmt.Sprintf("  token_max_ttl = %d\n", f.tokenMaxTTL)
+		role += fmt.Sprintf("  token_max_ttl = %d\n", f.tokenMaxTTL)
 	}
 	if len(f.tokenPolicies) > 0 {
-		body += fmt.Sprintf("  token_policies = %s\n", renderStringSlice(f.tokenPolicies))
+		role += fmt.Sprintf("  token_policies = %s\n", renderStringSlice(f.tokenPolicies))
 	}
 	if f.tokenType != "" {
-		body += fmt.Sprintf("  token_type = %q\n", f.tokenType)
+		role += fmt.Sprintf("  token_type = %q\n", f.tokenType)
 	}
+	role += "}\n"
 
-	body += "}\n"
-	return body
+	return config + role
 }
 
 func testAccTPMAuthRoleNamespaceConfig(ns, mount, roleName, tpmName string) string {
