@@ -6,6 +6,8 @@ FEATURES:
 
 * **New Ephemeral Resource**: `vault_azure_access_token` for fetching Azure OAuth2 access tokens from Vault's Azure secrets engine static role credentials. Requires Vault 2.2.0 or later. ([#2974](https://github.com/hashicorp/terraform-provider-vault/pull/2974))
 * **New Resource for tokenization transforms**: Add new resources `vault_transform_transformation_tokenization` and `vault_transform_transformation_tokenization_store` for tokenization transformations in transform secrets engine and tokenization stores. Uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-tokenization-transformation) to support creating and updating of tokenization transformations and [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-tokenization-store) for tokenization stores. Supported parameters include `name`, `mapping_mode`, `max_ttl`, `allowed_roles`, `stores`, `convergent`, `deletion_allowed` for `vault_transform_transformation_tokenization` and `name`, `type`, `driver`, `connection_string`, `username`, `password`, `supported_transformations`, `schema`, `max_open_connections`, `max_idle_connections`, `max_connection_lifetime` for `vault_transform_transformation_tokenization_store`.
+* **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
+
 
 IMPROVEMENTS:
 
