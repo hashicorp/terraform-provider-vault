@@ -217,32 +217,63 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 
 	path := getKVV2Path(mount, name, consts.FieldData)
 
-	var buf []byte
+	var (
+		value any
+		field string
+	)
 	if v, ok := d.GetOk(consts.FieldDataJSON); ok {
-		buf = []byte(v.(string))
+		value = v
+		field = consts.FieldDataJSON
 	} else if d.IsNewResource() || d.HasChange(consts.FieldDataJSONWOVersion) {
-		p := cty.GetAttrPath(consts.FieldDataJSONWO)
-		woVal, _ := d.GetRawConfigAt(p)
-		buf = []byte(woVal.AsString())
+		ctyPath := cty.GetAttrPath(consts.FieldDataJSONWO)
+		ctyValue, _ := d.GetRawConfigAt(ctyPath)
+		if ctyValue.IsNull() || !ctyValue.IsKnown() {
+			return diag.Errorf("%s must be set and known", consts.FieldDataJSONWO)
+		}
+
+		value = ctyValue.AsString()
+		field = consts.FieldDataJSONWO
 	}
 
-	var secretData map[string]interface{}
-	err := json.Unmarshal(buf, &secretData)
-	if err != nil {
-		return diag.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
-	}
+	if value != nil {
+		strValue := value.(string)
 
-	data := map[string]interface{}{
-		"data": secretData,
-	}
+		var secretData map[string]any
+		err := json.Unmarshal([]byte(strValue), &secretData)
+		if err != nil {
+			return diag.Errorf("%s %#v syntax error: %s", field, strValue, err)
+		}
 
-	kvFields := []string{"cas", "options"}
-	for _, k := range kvFields {
-		data[k] = d.Get(k)
-	}
+		data := map[string]any{
+			"data": secretData,
+		}
 
-	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
-		return diag.FromErr(err)
+		options := d.Get("options").(map[string]any)
+		if options == nil {
+			options = make(map[string]any)
+		}
+
+		// We cannot use the GetOk method here because it assumes
+		// that setting the key to a zero-value and the value not existing
+		// both mean that the key does not exist
+		ctyPathCas := cty.GetAttrPath("cas")
+		ctyValueCas, _ := d.GetRawConfigAt(ctyPathCas)
+
+		if !ctyValueCas.IsNull() {
+			if !ctyValueCas.IsKnown() {
+				return diag.Errorf("cas must a known value")
+			}
+
+			options["cas"] = d.Get("cas").(int)
+		}
+
+		if len(options) > 0 {
+			data["options"] = options
+		}
+
+		if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
+			return diag.FromErr(err)
+		}
 	}
 
 	d.SetId(path)
