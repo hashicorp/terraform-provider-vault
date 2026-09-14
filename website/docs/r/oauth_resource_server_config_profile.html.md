@@ -190,7 +190,7 @@ The following arguments are supported:
 
 * `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional. Defaults to `false`. Requires Vault 2.0.3 or later.
 
-* `local` - (Optional) When `false`, the profile is written to replicated storage and propagated to all performance secondaries. When set to `true`, the profile remains local to the current cluster and is not replicated. Requires Vault 2.2.0 or later.
+* `local` - (Optional) When `false`, the profile is written to replicated storage and propagated to all performance secondaries. When set to `true`, the profile remains local to the current cluster and is not replicated. The `local` field cannnot be updated on a profile. Requires Vault 2.2.0 or later.
 
 ## Attributes Reference
 
@@ -221,9 +221,9 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_reso
   * When `use_jwks=true`: You must provide `jwks_uri` and cannot provide `public_keys`
   * When `use_jwks=false`: You must provide `public_keys` and cannot provide `jwks_uri`
 
-* **Issuer Uniqueness**: Each issuer ID must be unique within a namespace. You cannot have multiple profiles with the same issuer ID in the same namespace.
+* **Issuer Uniqueness**: Each issuer ID must be unique within a locality (globally replicated or local the cluster) and a namespace. You cannot have multiple profiles with the same issuer ID and locality in the same namespace.
 
-* **Profile Name Immutability**: The `profile_name` and `issuer_id` cannot be changed after creation. Changing these fields will force a new resource to be created.
+* **Field Immutability**: The `profile_name`, `issuer_id`, and `local` cannot be changed after creation. Changing these fields will force a new resource to be created.
 
 * **Key ID Uniqueness**: Within a profile, all key IDs must be unique. This applies to both JWKS keys and static PEM keys.
 
