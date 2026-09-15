@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -419,6 +420,42 @@ func TestAccOAuthResourceServerConfigProfile_localDefault(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccOAuthResourceServerConfigProfile_localRequiresReplace tests that
+// changing the local flag forces replacement instead of attempting an in-place
+// update.
+func TestAccOAuthResourceServerConfigProfile_localRequiresReplace(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_local(profileName, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+				),
+			},
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_local(profileName, true),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
 				),
 			},
 		},

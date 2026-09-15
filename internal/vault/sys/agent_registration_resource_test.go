@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -527,6 +528,43 @@ func TestAccAgentRegistration_localDefault(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccAgentRegistration_localRequiresReplace tests that changing the local
+// flag forces replacement instead of attempting an in-place update.
+func TestAccAgentRegistration_localRequiresReplace(t *testing.T) {
+	displayName := acctest.RandomWithPrefix("test-agent")
+	resourceName := "vault_agent_registration.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAgentRegistrationConfig_local(displayName, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+				),
+			},
+			{
+				Config: testAccAgentRegistrationConfig_local(displayName, true),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisplayName, displayName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
 				),
 			},
 		},
