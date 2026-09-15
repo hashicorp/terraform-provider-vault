@@ -13,7 +13,7 @@ IMPROVEMENTS:
 
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
 * Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
-
+* Add support for `delta_crl_distribution_points` in `vault_pki_secret_backend_config_urls` and `vault_pki_secret_backend_issuer` to configure Delta CRL URLs. (Vault 1.20+) ([#2761](https://github.com/hashicorp/terraform-provider-vault/pull/2761))
 
 BUG FIXES:
 
