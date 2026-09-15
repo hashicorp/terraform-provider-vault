@@ -189,9 +189,9 @@ func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
 		preCheck   func(t *testing.T)
 	}{
 		{
-			name:       "aks_wi",
-			authType:   consts.AuthTypeAKSWI,
-			configFunc: testAccAzureAuthBackendConfig_authTypeAKSWI,
+			name:       "aks_wif",
+			authType:   consts.AuthTypeAKSWIF,
+			configFunc: testAccAzureAuthBackendConfig_authTypeAKSWIF,
 			preCheck: func(t *testing.T) {
 				acctestutil.TestAccPreCheck(t)
 				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
@@ -250,7 +250,7 @@ func TestAccAzureAuthBackendConfig_authType(t *testing.T) {
 
 // TestAccAzureAuthBackendConfig_authTypeTransition verifies that auth_type can
 // be updated from one value to another without requiring resource replacement.
-// Only CE-compatible types (aks_wi, msi, root_creds) are used so this test
+// Only CE-compatible types (aks_wif, msi, root_creds) are used so this test
 // does not require Vault Enterprise.
 func TestAccAzureAuthBackendConfig_authTypeTransition(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-azure")
@@ -265,14 +265,14 @@ func TestAccAzureAuthBackendConfig_authTypeTransition(t *testing.T) {
 		CheckDestroy: testAccCheckAzureAuthBackendConfigDestroy,
 		Steps: []resource.TestStep{
 			{
-				// Step 1: create with aks_wi
-				Config: testAccAzureAuthBackendConfig_authTypeWithBackend(backend, consts.AuthTypeAKSWI, ""),
+				// Step 1: create with aks_wif
+				Config: testAccAzureAuthBackendConfig_authTypeWithBackend(backend, consts.AuthTypeAKSWIF, ""),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, consts.AuthTypeAKSWI),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, consts.AuthTypeAKSWIF),
 				),
 			},
 			{
-				// Step 2: transition aks_wi → msi (in-place update, no ForceNew)
+				// Step 2: transition aks_wif → msi (in-place update, no ForceNew)
 				Config: testAccAzureAuthBackendConfig_authTypeWithBackend(backend, consts.AuthTypeMSI, ""),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthType, consts.AuthTypeMSI),
@@ -519,7 +519,7 @@ resource "vault_azure_auth_backend_config" "config" {
 `, backend)
 }
 
-func testAccAzureAuthBackendConfig_authTypeAKSWI(backend string) string {
+func testAccAzureAuthBackendConfig_authTypeAKSWIF(backend string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "azure" {
   type        = "azure"
@@ -532,7 +532,7 @@ resource "vault_azure_auth_backend_config" "config" {
   tenant_id = "11111111-2222-3333-4444-555555555555"
   client_id = "11111111-2222-3333-4444-555555555555"
   resource  = "http://vault.hashicorp.com"
-  auth_type = "aks_wi"
+  auth_type = "aks_wif"
 }
 `, backend)
 }

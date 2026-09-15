@@ -671,6 +671,33 @@ const (
 	FieldProvider                           = "provider"
 	FieldAllowedOrigins                     = "allowed_origins"
 	FieldAllowedHeaders                     = "allowed_headers"
+	FieldAcmeAccountName                    = "acme_account_name"
+	FieldAllowedDomainOptions               = "allowed_domain_options"
+	FieldAllowedChallengeTypes              = "allowed_challenge_types"
+	FieldCsrGenerateKeyType                 = "csr_generate_key_type"
+	FieldCsrIdentifierPopulation            = "csr_identifier_population"
+	FieldCreationDate                       = "creation_date"
+	FieldForce                              = "force"
+	FieldIdentifiers                        = "identifiers"
+	FieldIdentifier                         = "identifier"
+	FieldExpires                            = "expires"
+	FieldLastUpdatedDate                    = "last_updated_date"
+	FieldDnsProviderName                    = "dns_provider_name"
+	FieldDnsProviderType                    = "dns_provider_type"
+	FieldNameserver                         = "nameserver"
+	FieldTsigKeyName                        = "tsig_key_name"
+	FieldTsigSecret                         = "tsig_secret"
+	FieldTsigSecretWO                       = "tsig_secret_wo"
+	FieldTsigSecretWOVersion                = "tsig_secret_wo_version"
+	FieldTsigAlgorithm                      = "tsig_algorithm"
+	FieldHostedZoneID                       = "hosted_zone_id"
+	FieldAccessKeyID                        = "access_key_id"
+	FieldSecretAccessKey                    = "secret_access_key"
+	FieldSecretAccessKeyWO                  = "secret_access_key_wo"
+	FieldSecretAccessKeyWOVersion           = "secret_access_key_wo_version"
+	FieldZoneName                           = "zone_name"
+	FieldImpersonateServiceAccount          = "impersonate_service_account"
+	FieldDefaultNameserver                  = "default_nameserver"
 
 	FieldInput                       = "input"
 	FieldKeyVersion                  = "key_version"
@@ -714,6 +741,12 @@ const (
 	FieldTokenBoundCIDRs             = "token_bound_cidrs"
 	FieldLocalSecretIDs              = "local_secret_ids"
 	FieldTokenNumUses                = "token_num_uses"
+	FieldDriver                      = "driver"
+	FieldConnectionString            = "connection_string"
+	FieldSupportedTransformations    = "supported_transformations"
+	FieldMaxOpenConnections          = "max_open_connections"
+	FieldMaxIdleConnections          = "max_idle_connections"
+	FieldMaxConnectionLifetime       = "max_connection_lifetime"
 	// OS Secrets Engine fields
 	FieldSSHHostKey                = "ssh_host_key"
 	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
@@ -926,6 +959,8 @@ const (
 	FieldAddGroupAliases            = "add_group_aliases"
 	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
+	FieldCertificateWO              = "certificate_wo"
+	FieldCertificateWOVersion       = "certificate_wo_version"
 
 	/*
 		common environment variables
@@ -1027,6 +1062,7 @@ const (
 	VaultVersion201  = "2.0.1"
 	VaultVersion203  = "2.0.3"
 	VaultVersion210  = "2.1.0"
+	VaultVersion211  = "2.1.1"
 	VaultVersion220  = "2.2.0"
 
 	/*
@@ -1069,7 +1105,7 @@ const (
 	AuthTypeRootCreds = "root_creds"
 	AuthTypePluginWIF = "plugin_wif"
 	AuthTypeMSI       = "msi"
-	AuthTypeAKSWI     = "aks_wi"
+	AuthTypeAKSWIF    = "aks_wif"
 
 	/*
 		misc. path related constants
