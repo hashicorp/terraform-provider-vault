@@ -1085,6 +1085,22 @@ const (
 	FieldSigningTime              = "signing_time"
 
 	/*
+		Vault SCIM Support
+	*/
+
+	FieldSCIMClientName                  = "client_name"
+	FieldAccessGrantPrincipal            = "access_grant_principal"
+	FieldDefaultSchemaVersion            = "default_schema_version"
+	FieldAllowUserAdoption               = "allow_user_adoption"
+	FieldAllowedExtraAliasMountAccessors = "allowed_extra_alias_mount_accessors"
+	FieldMaxActiveTokens                 = "max_active_tokens"
+	FieldMaxTokenTTL                     = "max_token_ttl"
+	FieldDeleteLinkedResources           = "delete_linked_resources"
+	FieldUnlinkResources                 = "unlink_resources"
+	FieldDeleting                        = "deleting"
+	FieldAliasMountAccessor              = "alias_mount_accessor"
+
+	/*
 		Vault auth methods
 	*/
 	AuthMethodAWS      = "aws"
