@@ -157,7 +157,7 @@ resource "vault_agent_registration" "example" {
   display_name = "my-agent"
   entity_id    = vault_identity_entity.agent.id
   local        = true
-  description  = "Agent with optional RAR support"
+  description  = "Agent local to the current cluster"
 }
 ```
 

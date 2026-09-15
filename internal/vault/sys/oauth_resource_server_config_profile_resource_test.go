@@ -381,7 +381,7 @@ func TestAccOAuthResourceServerConfigProfile_local(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion210)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
