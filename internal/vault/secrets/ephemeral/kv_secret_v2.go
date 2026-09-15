@@ -7,6 +7,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -16,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/vault/api"
-	"strconv"
 )
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
@@ -181,9 +182,10 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 	resp.Diagnostics.Append(diag...)
 	data.Data = secretData
 
-	jsonData, err := json.Marshal(data.Data)
+	jsonData, err := json.Marshal(readResp.Data)
 	if err != nil {
 		resp.Diagnostics.AddError("Error marshalling data to JSON", err.Error())
+		return
 	}
 
 	data.DataJSON = types.StringValue(string(jsonData))
