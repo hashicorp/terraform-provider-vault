@@ -226,6 +226,9 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Optional: true,
 				Computed: true,
 				Default:  booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
 				MarkdownDescription: "If true, this profile is cluster-scoped and never replicated to performance secondaries. " +
 					"If false (default), the profile is written to replicated storage and propagated to all secondaries. " +
 					"This field is immutable after creation; delete and recreate the profile to change locality.",

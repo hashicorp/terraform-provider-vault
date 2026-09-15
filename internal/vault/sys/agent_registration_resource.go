@@ -155,6 +155,9 @@ func (r *AgentRegistrationResource) Schema(ctx context.Context, req resource.Sch
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
 				MarkdownDescription: "When set to true, the agent registration is not replicated globally and will be local to the current cluster. Defaults to false.",
 			},
 		},

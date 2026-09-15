@@ -221,7 +221,7 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_reso
   * When `use_jwks=true`: You must provide `jwks_uri` and cannot provide `public_keys`
   * When `use_jwks=false`: You must provide `public_keys` and cannot provide `jwks_uri`
 
-* **Issuer Uniqueness**: Each issuer ID must be unique within a locality (globally replicated or local the cluster) and a namespace. You cannot have multiple profiles with the same issuer ID and locality in the same namespace.
+* **Issuer Uniqueness**: Each issuer ID must be unique within a locality (globally replicated or local to the cluster) and a namespace. You cannot have multiple profiles with the same issuer ID and locality in the same namespace.
 
 * **Field Immutability**: The `profile_name`, `issuer_id`, and `local` cannot be changed after creation. Changing these fields will force a new resource to be created.
 
