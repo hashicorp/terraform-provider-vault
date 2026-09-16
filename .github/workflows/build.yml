@@ -162,6 +162,7 @@ jobs:
         - "vault-enterprise:1.19.21-ent"
         - "vault-enterprise:1.20.15-ent"
         - "vault-enterprise:1.21.10-ent"
+        - "vault-enterprise:2.0.4-ent"
         - "vault-enterprise:2.1.0-ent"
         - "vault:latest"
         terraform_version:
