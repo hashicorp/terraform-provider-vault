@@ -16,9 +16,9 @@ binary {
 		suppress {
 			vulnerabilities = [
 				// GO-2026-5932 flags the golang.org/x/crypto/openpgp subpackage as unmaintained/unsafe.
-                                // TFVP does not import or call openpgp anywhere; confirmed via `go mod why` (package not
-                                // needed by the main module) and `govulncheck -mode=binary`, which found the symbol
-                                // unreachable in the built binary. False positive from module-level (non-symbol) matching.
+				// TFVP does not import or call openpgp anywhere; confirmed via `go mod why` (package not
+				// needed by the main module) and `govulncheck -mode=binary`, which found the symbol
+				// unreachable in the built binary. False positive from module-level (non-symbol) matching.
 				"GO-2026-5932"
 			]
 		}
