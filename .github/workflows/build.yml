@@ -107,7 +107,7 @@ jobs:
       fail-fast: true
       matrix:
         goos: [ freebsd, windows, linux, darwin ]
-        goarch: [ "386", "amd64", "arm", "arm64" ]
+        goarch: [ "386", "amd64", "arm", "arm64", "s390x" ]
         exclude:
           - goos: freebsd
             goarch: arm64
@@ -119,6 +119,12 @@ jobs:
             goarch: 386
           - goos: darwin
             goarch: arm
+          - goos: darwin
+            goarch: s390x
+          - goos: freebsd
+            goarch: s390x
+          - goos: windows
+            goarch: s390x
 
     name: Go ${{ needs.go-version.outputs.version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
