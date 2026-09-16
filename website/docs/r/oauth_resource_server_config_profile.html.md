@@ -10,7 +10,7 @@ description: |-
 
 Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These profiles define how Vault validates JWT tokens from OAuth 2.0 resource servers, enabling JWT-based authentication for API requests.
 
-~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.0.1 or later.
+~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.1.0 or later.
 
 ### Relationship to Agent Registry 
 
@@ -235,7 +235,7 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_reso
 
 * **Enterprise Feature**: OAuth Resource Server Configuration is available only in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
 
-* **Version Requirement**: This resource requires Vault 2.0.1 or later.
+* **Version Requirement**: This resource requires Vault 2.1.0 or later.
 
 ## Security Considerations
 
