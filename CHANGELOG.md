@@ -1,4 +1,4 @@
-## 5.12.0 (Unreleased)
+## 5.12.0 (Sep 16, 2026)
 
 FEATURES:
 
