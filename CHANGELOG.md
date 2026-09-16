@@ -23,6 +23,26 @@ BUILD:
 
 Add support for linux/s390x architecture. ([#3028](https://github.com/hashicorp/terraform-provider-vault/pull/3028))
 
+DEPENDENCIES:
+
+  * Build with Go 1.27.1
+  * Bumped 16 Go module dependencies ([#3036](https://github.com/hashicorp/terraform-provider-vault/pull/3036))
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.0 → v1.23.1
+  * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.14.0 → v1.14.1
+  * `github.com/aws/aws-sdk-go-v2` v1.43.5 → v1.46.0
+  * `github.com/aws/aws-sdk-go-v2/config` v1.32.36 → v1.33.3
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.19.35 → v1.20.3
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.18.36 → v1.19.2
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.59.0 → v1.63.0
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.45.5 → v1.49.0
+  * `github.com/aws/smithy-go` v1.27.7 → v1.28.1
+  * `github.com/go-sql-driver/mysql` v1.10.0 → v1.10.1
+  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.26.3 → v0.26.4
+  * `github.com/moby/moby/client` v0.5.1 → v0.6.0
+  * `github.com/stretchr/testify` v1.11.1 → v1.12.1
+  * `golang.org/x/crypto` v0.55.0 → v0.56.0
+  * `golang.org/x/oauth2` v0.36.0 → v0.37.0
+  * `google.golang.org/api` v0.293.0 → v0.297.0
 
 ## 5.11.0 (August 14, 2026)
 
