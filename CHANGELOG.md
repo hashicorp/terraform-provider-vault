@@ -9,6 +9,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* Add support for `delta_crl_distribution_points` in `vault_pki_secret_backend_config_urls` and `vault_pki_secret_backend_issuer` to configure Delta CRL URLs. (Vault 1.20+) ([#2761](https://github.com/hashicorp/terraform-provider-vault/pull/2761))
+
 * `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to allow ephemeral resource values, to supply the CA certificate. The `certificate` field is now `Computed` and `ForceNew` has been removed enabling in-place updates when the certificate changes instead of resource replacement.
 
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
