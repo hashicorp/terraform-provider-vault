@@ -10,7 +10,7 @@ description: |-
 
 Manages Agent Registry records in Vault Enterprise. An Agent Registry record allows you to register Vault agents with specific identity entities and configure ceiling policies that limit the maximum permissions an agent can obtain.
 
-~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.0.1 or later.
+~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.1.0 or later.
 
 ### Relationship to OAuth Resource Server 
 
@@ -216,4 +216,4 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_agent_regi
 
 * **Enterprise Feature**: Agent Registry records are only available in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
 
-* **Version Requirement**: This resource requires Vault 2.0.1 or later.
+* **Version Requirement**: This resource requires Vault 2.1.0 or later.
