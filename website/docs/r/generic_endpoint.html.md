@@ -95,8 +95,15 @@ The following arguments are supported:
   support the `PUT` methods and to determine whether they also support
   `DELETE` and `GET`.
 
-* `data_json` - (Required) String containing a JSON-encoded object that will be
-  written to the given path as the secret data.
+* `data_json` - (Optional) String containing a JSON-encoded object that will be
+  written to the given path as the secret data. Required if `data_json_wo` is not set.
+
+* `data_json_wo` - (Optional) String containing a JSON-encoded object that will be
+  written to the given path. Required if `data_json` is not set. **Note**: This
+  property is write-only and will not be read from the API or stored in state.
+
+* `data_json_wo_version` - (Optional) The version of the `data_json_wo`. For more
+  info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
 
 * `disable_read` - (Optional) True/false. Set this to true if your vault
   authentication is not able to read the data or if the endpoint does

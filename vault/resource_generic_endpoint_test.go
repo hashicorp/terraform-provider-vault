@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
@@ -17,6 +18,97 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
+
+func TestAccGenericEndpoint_data_json_wo(t *testing.T) {
+	t.Parallel()
+
+	resourceName := "vault_generic_endpoint.u1"
+	path := acctest.RandomWithPrefix("userpass")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccGenericEndpoint_data_json_woDestroy(path),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccGenericEndpoint_data_json_woConfig(path, "secret-one", 1),
+				Check: resource.ComposeTestCheckFunc(
+					testAccGenericEndpoint_data_json_woCheck(path, "secret-one"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDataJSONWOVersion, "1"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldDataJSON),
+				),
+			},
+			{
+				Config: testAccGenericEndpoint_data_json_woConfig(path, "secret-two", 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					testAccGenericEndpoint_data_json_woCheck(path, "secret-two"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDataJSONWOVersion, "2"),
+				),
+			},
+		},
+	})
+}
+
+func testAccGenericEndpoint_data_json_woConfig(upPath, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "userpass" {
+  type = "userpass"
+  path = "%s"
+}
+
+resource "vault_generic_endpoint" "u1" {
+  depends_on           = [vault_auth_backend.userpass]
+  path                 = "auth/%s/users/u1"
+  ignore_absent_fields = true
+
+  data_json_wo = jsonencode({
+    policies = ["default"]
+    password = "%s"
+  })
+  data_json_wo_version = %d
+}
+`, upPath, upPath, password, version)
+}
+
+func testAccGenericEndpoint_data_json_woCheck(upPath, password string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, err := testutil.GetResourceFromRootModule(s, "vault_generic_endpoint.u1")
+		if err != nil {
+			return err
+		}
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+
+		_, err = client.Logical().Write("auth/"+upPath+"/login/u1", map[string]interface{}{
+			"password": password,
+		})
+		if err != nil {
+			return fmt.Errorf("login failed for password %q: %s", password, err)
+		}
+		return nil
+	}
+}
+
+func testAccGenericEndpoint_data_json_woDestroy(upPath string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+		secret, err := client.Logical().Read("auth/" + upPath + "/users/u1")
+		if err != nil {
+			return err
+		}
+		if secret != nil {
+			return fmt.Errorf("user u1 still exists at auth/%s/users/u1", upPath)
+		}
+		return nil
+	}
+}
 
 func TestResourceGenericEndpoint(t *testing.T) {
 	path := acctest.RandomWithPrefix("userpass")

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -38,7 +39,7 @@ func genericEndpointResource(name string) *schema.Resource {
 			// possible, rather than forcing e.g. all values to be strings.
 			consts.FieldDataJSON: {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				Description: "JSON-encoded data to write.",
 				// We rebuild the attached JSON string to a simple single-line
 				// string. This makes terraform not want to change when an
@@ -46,9 +47,23 @@ func genericEndpointResource(name string) *schema.Resource {
 				// necessary when disable_read is false for comparing values.
 				// NormalizeDataJSON and ValidateDataJSON are in
 				// resource_generic_secret.
-				StateFunc:    NormalizeDataJSONFunc(name),
-				ValidateFunc: ValidateDataJSONFunc(name),
-				Sensitive:    true,
+				StateFunc:     NormalizeDataJSONFunc(name),
+				ValidateFunc:  ValidateDataJSONFunc(name),
+				Sensitive:     true,
+				ConflictsWith: []string{consts.FieldDataJSONWO},
+			},
+			consts.FieldDataJSONWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Write-only JSON-encoded data to write.",
+				WriteOnly:     true,
+				ConflictsWith: []string{consts.FieldDataJSON},
+			},
+			consts.FieldDataJSONWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only data.",
+				RequiredWith: []string{consts.FieldDataJSONWO},
 			},
 
 			"disable_read": {
@@ -98,10 +113,15 @@ func genericEndpointResourceWrite(d *schema.ResourceData, meta interface{}) erro
 		return e
 	}
 
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &data)
+	dataJSON, err := genericEndpointDataJSON(d)
 	if err != nil {
-		return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
+		return err
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal([]byte(dataJSON), &data)
+	if err != nil {
+		return fmt.Errorf("data_json %#v syntax error: %s", dataJSON, err)
 	}
 
 	path := d.Get("path").(string)
@@ -201,33 +221,76 @@ func genericEndpointResourceRead(d *schema.ResourceData, meta interface{}) error
 
 		log.Printf("[DEBUG] data from %q: %#v", path, data)
 
-		var relevantData map[string]interface{}
-		if ignore_absent_fields {
-			var suppliedData map[string]interface{}
-			err = json.Unmarshal([]byte(d.Get(consts.FieldDataJSON).(string)), &suppliedData)
-			if err != nil {
-				return fmt.Errorf("data_json %#v syntax error: %s", d.Get(consts.FieldDataJSON), err)
-			}
-			relevantData = suppliedData
-			for k, v := range data.Data {
-				if _, ok := suppliedData[k]; ok {
-					relevantData[k] = v
+		if !genericEndpointUsesWriteOnlyData(d) {
+			var relevantData map[string]interface{}
+			if ignore_absent_fields {
+				suppliedJSON, err := genericEndpointSuppliedDataJSON(d)
+				if err != nil {
+					return err
 				}
+				var suppliedData map[string]interface{}
+				err = json.Unmarshal([]byte(suppliedJSON), &suppliedData)
+				if err != nil {
+					return fmt.Errorf("data_json %#v syntax error: %s", suppliedJSON, err)
+				}
+				relevantData = suppliedData
+				for k, v := range data.Data {
+					if _, ok := suppliedData[k]; ok {
+						relevantData[k] = v
+					}
+				}
+			} else {
+				relevantData = data.Data
 			}
-		} else {
-			relevantData = data.Data
-		}
 
-		jsonData, err := json.Marshal(relevantData)
-		if err != nil {
-			return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
+			jsonData, err := json.Marshal(relevantData)
+			if err != nil {
+				return fmt.Errorf("error marshaling JSON for %q: %s", path, err)
+			}
+			if err := d.Set(consts.FieldDataJSON, string(jsonData)); err != nil {
+				return err
+			}
 		}
-		d.Set(consts.FieldDataJSON, string(jsonData))
-		d.Set("path", path)
+		if err := d.Set("path", path); err != nil {
+			return err
+		}
 	} else {
 		log.Printf("[WARN] endpoint does not refresh when disable_read is set to true")
 	}
-	d.Set("disable_read", !shouldRead)
-	d.Set("ignore_absent_fields", ignore_absent_fields)
-	return nil
+	if err := d.Set("disable_read", !shouldRead); err != nil {
+		return err
+	}
+	return d.Set("ignore_absent_fields", ignore_absent_fields)
+}
+
+func genericEndpointDataJSON(d *schema.ResourceData) (string, error) {
+	if v, ok := d.GetOk(consts.FieldDataJSON); ok {
+		return v.(string), nil
+	}
+	if d.IsNewResource() || d.HasChange(consts.FieldDataJSONWOVersion) {
+		p := cty.GetAttrPath(consts.FieldDataJSONWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			return woVal.AsString(), nil
+		}
+	}
+	return "", fmt.Errorf("either %s or %s must be set", consts.FieldDataJSON, consts.FieldDataJSONWO)
+}
+
+func genericEndpointUsesWriteOnlyData(d *schema.ResourceData) bool {
+	p := cty.GetAttrPath(consts.FieldDataJSONWO)
+	woVal, _ := d.GetRawConfigAt(p)
+	return !woVal.IsNull()
+}
+
+func genericEndpointSuppliedDataJSON(d *schema.ResourceData) (string, error) {
+	if v, ok := d.GetOk(consts.FieldDataJSON); ok {
+		return v.(string), nil
+	}
+	if genericEndpointUsesWriteOnlyData(d) {
+		p := cty.GetAttrPath(consts.FieldDataJSONWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		return woVal.AsString(), nil
+	}
+	return "", fmt.Errorf("either %s or %s must be set", consts.FieldDataJSON, consts.FieldDataJSONWO)
 }

@@ -18,6 +18,7 @@ For more information, see the [official HashiCorp documentation for Write-only A
 
 To mark the launch of the feature in `5.X`, the Vault provider has added the following write-only attributes:
 - [`vault_kv_secret_v2: data_json_wo`](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/kv_secret_v2#data_json_wo-1)
+- [`vault_generic_endpoint: data_json_wo`](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/generic_endpoint#data_json_wo-1)
 - [`vault_database_secret_backend_connection_: password_wo`](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/database_secret_backend_connection#password_wo-1)
 - [`vault_gcp_secret_backend: credentials_wo`](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/gcp_secret_backend#credentials_wo-1)
 
