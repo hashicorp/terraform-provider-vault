@@ -1,4 +1,4 @@
-## 5.12.0 (September 16, 2026)
+## 5.12.0 (September 17, 2026)
 
 FEATURES:
 
@@ -11,7 +11,7 @@ IMPROVEMENTS:
 
 * `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to allow ephemeral resource values, to supply the CA certificate. The `certificate` field is now `Computed` and `ForceNew` has been removed enabling in-place updates when the certificate changes instead of resource replacement. ([#3011](https://github.com/hashicorp/terraform-provider-vault/pull/3011))
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
-* Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#3017][#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
+* Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#3017](https://github.com/hashicorp/terraform-provider-vault/pull/3017)[#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
 
 
 BUG FIXES:
@@ -29,20 +29,25 @@ DEPENDENCIES:
   * Bumped 16 Go module dependencies ([#3036](https://github.com/hashicorp/terraform-provider-vault/pull/3036))
   * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.0 → v1.23.1
   * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.14.0 → v1.14.1
-  * `github.com/aws/aws-sdk-go-v2` v1.43.5 → v1.46.0
-  * `github.com/aws/aws-sdk-go-v2/config` v1.32.36 → v1.33.3
-  * `github.com/aws/aws-sdk-go-v2/credentials` v1.19.35 → v1.20.3
-  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.18.36 → v1.19.2
-  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.59.0 → v1.63.0
-  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.45.5 → v1.49.0
+  * `github.com/aws/aws-sdk-go-v2` v1.43.5 → v1.47.0
+  * `github.com/aws/aws-sdk-go-v2/config` v1.32.36 → v1.33.5
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.19.35 → v1.20.5
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.18.36 → v1.20.0
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.59.0 → v1.64.0
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.45.5 → v1.51.0
   * `github.com/aws/smithy-go` v1.27.7 → v1.28.1
   * `github.com/go-sql-driver/mysql` v1.10.0 → v1.10.1
-  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.26.3 → v0.26.4
+  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.26.3 → v0.27.1
   * `github.com/moby/moby/client` v0.5.1 → v0.6.0
   * `github.com/stretchr/testify` v1.11.1 → v1.12.1
-  * `golang.org/x/crypto` v0.55.0 → v0.56.0
+  * `golang.org/x/crypto` v0.55.0 → v0.57.0
   * `golang.org/x/oauth2` v0.36.0 → v0.37.0
-  * `google.golang.org/api` v0.293.0 → v0.297.0
+  * `google.golang.org/api` v0.293.0 → v0.298.0
+  * `github.com/hashicorp/consul/api` v1.34.4 → v1.34.5
+  * `github.com/hashicorp/vault-plugin-auth-kerberos` v1.17.1 → v0.18.0 
+  * `github.com/hashicorp/vault-plugin-auth-oci` v0.21.3 → v0.22.0 
+  * `golang.org/x/net` v0.58.0 → v0.59.0 
+  
 
 ## 5.11.0 (August 14, 2026)
 

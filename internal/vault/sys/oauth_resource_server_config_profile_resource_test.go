@@ -33,6 +33,7 @@ resource "vault_activation_flags" "oauth" {
 
 // TestAccOAuthResourceServerConfigProfile_jwks tests JWKS-based profile
 func TestAccOAuthResourceServerConfigProfile_jwks(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
 	profileName := acctest.RandomWithPrefix("test-profile")
 	resourceName := "vault_oauth_resource_server_config_profile.test"
 
