@@ -94,11 +94,15 @@ func (r *TPMAuthBackendConfigResource) Create(ctx context.Context, req resource.
 		return
 	}
 
+	if !provider.IsEnterpriseSupported(r.Meta()) {
+		resp.Diagnostics.AddError("Unsupported Vault edition", "TPM auth backend requires Vault Enterprise.")
+		return
+	}
 	// Check if Vault version supports TPM auth (requires 2.2.0+)
 	if !r.Meta().IsAPISupported(provider.VaultVersion220) {
 		resp.Diagnostics.AddError(
 			"Feature Not Supported",
-			fmt.Sprintf("TPM auth backend requires Vault version %s or later. Current Vault version: %s", provider.VaultVersion220, r.Meta().GetVaultVersion().String()),
+			fmt.Sprintf("TPM auth backend requires Vault version %s or later.", provider.VaultVersion220),
 		)
 		return
 	}
