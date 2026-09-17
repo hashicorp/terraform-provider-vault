@@ -26,7 +26,7 @@ Add support for linux/s390x architecture. ([#3028](https://github.com/hashicorp/
 DEPENDENCIES:
 
   * Build with Go 1.27.1
-  * Bumped 16 Go module dependencies ([#3036](https://github.com/hashicorp/terraform-provider-vault/pull/3036))
+  * Bumped 20 Go module dependencies ([#3036](https://github.com/hashicorp/terraform-provider-vault/pull/3036))
   * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.0 → v1.23.1
   * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.14.0 → v1.14.1
   * `github.com/aws/aws-sdk-go-v2` v1.43.5 → v1.47.0
@@ -44,7 +44,7 @@ DEPENDENCIES:
   * `golang.org/x/oauth2` v0.36.0 → v0.37.0
   * `google.golang.org/api` v0.293.0 → v0.298.0
   * `github.com/hashicorp/consul/api` v1.34.4 → v1.34.5
-  * `github.com/hashicorp/vault-plugin-auth-kerberos` v1.17.1 → v0.18.0 
+  * `github.com/hashicorp/vault-plugin-auth-kerberos` v0.17.1 → v0.18.0 
   * `github.com/hashicorp/vault-plugin-auth-oci` v0.21.3 → v0.22.0 
   * `golang.org/x/net` v0.58.0 → v0.59.0 
   
