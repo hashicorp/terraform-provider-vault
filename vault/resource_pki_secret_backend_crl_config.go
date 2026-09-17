@@ -165,7 +165,7 @@ func pkiSecretBackendCrlConfigRead(ctx context.Context, d *schema.ResourceData, 
 
 	if _, ok := d.GetOk(consts.FieldBackend); !ok {
 		// ensure that the backend is set on import
-		if err := d.Set(consts.FieldBackend, strings.TrimRight(path, crlConfigPathBase)); err != nil {
+		if err := d.Set(consts.FieldBackend, strings.TrimSuffix(path, crlConfigPathBase)); err != nil {
 			return diag.Errorf("failed setting field %s: %v", consts.FieldBackend, err)
 		}
 	}
