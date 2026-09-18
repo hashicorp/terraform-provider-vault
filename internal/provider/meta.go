@@ -276,7 +276,18 @@ func (p *ProviderMeta) setClient() error {
 	MaxHTTPRetriesCCC = GetResourceDataInt(d, "max_retries_ccc", "VAULT_MAX_RETRIES_CCC", DefaultMaxHTTPRetriesCCC)
 
 	// Set the namespace to the requested namespace, if provided
+	// Fall back to TFC_VAULT_NAMESPACE which is injected by Terraform Enterprise/Cloud when using Vault-backed dynamic credentials
 	namespace := GetResourceDataStr(d, consts.FieldNamespace, "VAULT_NAMESPACE", "")
+	if namespace == "" {
+		if ns := os.Getenv(consts.EnvVarTFCVaultNamespace); ns != "" {
+			log.Printf("[DEBUG] Setting namespace from %s: %q", consts.EnvVarTFCVaultNamespace, ns)
+			namespace = ns
+		}
+	}
+	if namespace != "" {
+		log.Printf("[DEBUG] Setting namespace on client early to %q, before token lookup", namespace)
+		client.SetNamespace(namespace)
+	}
 
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
