@@ -46,7 +46,7 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName,
 						consts.FieldDefaultRole, "admin"),
 					resource.TestCheckResourceAttrSet(resourceName,
-						fieldAccessor),
+						consts.FieldAccessor),
 				),
 			},
 			{
@@ -67,7 +67,7 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName,
 						consts.FieldDefaultRole, "project-aqua-developers"),
 					resource.TestCheckResourceAttrSet(resourceName,
-						fieldAccessor),
+						consts.FieldAccessor),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),

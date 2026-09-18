@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 var (
@@ -229,20 +230,18 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return nil
 	}
 
-	mounts, err := client.Sys().ListAuth()
+	mount, err := mountutil.GetAuthMount(ctx, client, id)
 	if err != nil {
-		return diag.Errorf("error listing auth mounts: %s", err)
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", id)
+			d.SetId("")
+			return nil
+		}
+		return diag.FromErr(err)
 	}
 
-	mountPath := id + "/"
-	if mount, ok := mounts[mountPath]; ok {
-		d.Set(consts.FieldAccessor, mount.Accessor)
-	} else if mount, ok := mounts[id]; ok {
-		d.Set(consts.FieldAccessor, mount.Accessor)
-	} else {
-		log.Printf("[WARN] Mount for %q not found in auth list; removing from state.", id)
-		d.SetId("")
-		return nil
+	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
+		return diag.FromErr(err)
 	}
 
 	if err := d.Set(consts.FieldPath, id); err != nil {
