@@ -331,7 +331,11 @@ func (r *IdentityTPMGroupResource) populateDataModelFromAPI(ctx context.Context,
 	data.TPMGroupID = types.StringValue(readResp.TPMGroupID)
 
 	if len(readResp.MemberTPMIDs) == 0 {
-		data.MemberTPMIDs = types.SetNull(types.StringType)
+		if data.MemberTPMIDs.IsNull() {
+			data.MemberTPMIDs = types.SetNull(types.StringType)
+		} else {
+			data.MemberTPMIDs, _ = types.SetValueFrom(ctx, types.StringType, []string{})
+		}
 	} else {
 		memberTPMIDs, memberDiags := types.SetValueFrom(ctx, types.StringType, readResp.MemberTPMIDs)
 		if memberDiags.HasError() {

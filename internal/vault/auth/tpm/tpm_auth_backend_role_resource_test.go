@@ -41,7 +41,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 0: Validator rejects when neither tpm_ids nor tpmgroup_ids is set.
+			// Step 1: Validator rejects when neither tpm_ids nor tpmgroup_ids is set.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
 					mount:     mount,
@@ -51,7 +51,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 				}),
 				ExpectError: regexp.MustCompile(`At least one attribute out of \[tpm_ids,tpmgroup_ids\] must be specified`),
 			},
-			// Step 1: Create with only required fields.
+			// Step 2: Create with only required fields. Either tpm_ids or tpmgroup_ids must be set.
 			// Verifies that Vault-computed defaults are read back correctly:
 			//   - display_name defaults to the role name
 			//   - cert_ttl is 0 (Vault always returns a value; 0 means "use backend default")
@@ -77,7 +77,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 2: Set cert_ttl explicitly and add tpmgroup_ids.
+			// Step 3: Set cert_ttl explicitly and add tpmgroup_ids.
 			// Verifies an in-place update (no replace) and that both ID sets are reflected.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
@@ -104,22 +104,24 @@ func TestAccTPMAuthRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 3: Set cert_ttl back to 0 to "unset" it explicitly.
+			// Step 4: Set cert_ttl back to 0 to "unset" it explicitly
 			// Vault always returns a value; 0 means "use backend default".
+			// Omit tpm_id to clear the entry.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
 					mount:          mount,
 					roleName:       roleName,
 					tpmName:        tpmName,
+					omitTPMID:      true,
+					withTPMGroupID: true,
 					certTTL:        0,
 					specifyCertTTL: true,
-					withTPMGroupID: true,
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
 					resource.TestCheckResourceAttr(resourceName, "name", roleName),
 					resource.TestCheckResourceAttr(resourceName, "cert_ttl", "0"),
-					resource.TestCheckResourceAttr(resourceName, "tpm_ids.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tpm_ids.#", "0"),
 					resource.TestCheckResourceAttr(resourceName, "tpmgroup_ids.#", "1"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
@@ -131,7 +133,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 4: Set token fields.
+			// Step 5: Set token fields.
 			// Verifies that all standard token fields are written and read back with no drift.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
@@ -163,7 +165,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 5: Revert to minimal config (required fields only).
+			// Step 6: Revert to minimal config (required fields only).
 			// Verifies that clearing optional fields restores Vault defaults with no drift.
 			// cert_ttl reverts to 0 (Vault always returns a value).
 			{
@@ -190,7 +192,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 6: Import state to verify zero drift.
+			// Step 7: Import state to verify zero drift.
 			{
 				ResourceName:                         resourceName,
 				ImportState:                          true,
@@ -198,7 +200,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "mount",
 			},
-			// Step 7: Destroy the role (keep the mount).
+			// Step 8: Destroy the role (keep the mount).
 			{
 				Config: testAccTPMAuthRoleMountOnlyConfig(mount),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
