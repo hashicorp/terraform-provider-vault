@@ -107,7 +107,7 @@ jobs:
       fail-fast: true
       matrix:
         goos: [ freebsd, windows, linux, darwin ]
-        goarch: [ "386", "amd64", "arm", "arm64" ]
+        goarch: [ "386", "amd64", "arm", "arm64", "s390x" ]
         exclude:
           - goos: freebsd
             goarch: arm64
@@ -119,6 +119,12 @@ jobs:
             goarch: 386
           - goos: darwin
             goarch: arm
+          - goos: darwin
+            goarch: s390x
+          - goos: freebsd
+            goarch: s390x
+          - goos: windows
+            goarch: s390x
 
     name: Go ${{ needs.go-version.outputs.version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
@@ -153,10 +159,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.19.20-ent"
-        - "vault-enterprise:1.20.14-ent"
-        - "vault-enterprise:1.21.9-ent"
+        - "vault-enterprise:1.19.22-ent"
+        - "vault-enterprise:1.20.16-ent"
+        - "vault-enterprise:1.21.11-ent"
         - "vault-enterprise:2.0.4-ent"
+        - "vault-enterprise:2.1.1-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
@@ -168,7 +175,12 @@ jobs:
         image: hashicorp/${{ matrix.image }}
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
-          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
+          VAULT_LICENSE: >-
+            ${{
+              startsWith(matrix.image, 'vault-enterprise:1.') && secrets.VAULT_LICENSE_1_X ||
+              startsWith(matrix.image, 'vault-enterprise:2.') && secrets.VAULT_LICENSE_2_X ||
+              secrets.VAULT_LICENSE
+            }}
           VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VAULT_LOCAL_CONFIG: |
             {"plugin_directory": "/vault/plugins"}
@@ -224,6 +236,7 @@ jobs:
           - 18093:18093
           - 18094:18094
         options: >-
+          --ulimit nofile=200000:200000
           --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
           --health-interval 1s
           --health-timeout 5s

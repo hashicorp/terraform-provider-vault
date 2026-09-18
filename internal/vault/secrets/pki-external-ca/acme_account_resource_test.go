@@ -29,7 +29,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion210)
 		},
 		Steps: []resource.TestStep{
 			{
@@ -41,6 +41,7 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.0", "test@example.com"),
 					resource.TestCheckResourceAttr(resourceName, "key_type", "ec-256"),
+					resource.TestCheckResourceAttr(resourceName, "default_nameserver", "8.8.8.8"),
 					resource.TestCheckResourceAttr(resourceName, "trusted_ca", ca+"\n"),
 					resource.TestCheckResourceAttr(resourceName, "active_key_version", "0"),
 				),
@@ -51,7 +52,9 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 				ImportStateIdFunc:                    testAccPKIACMEAccountImportStateIdFunc(resourceName),
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
-				ImportStateVerifyIgnore:              []string{"eab_kid", "eab_key"},
+				// eab_kid and eab_key are write-only; default_nameserver is not
+				// returned by Vault's read endpoint.
+				ImportStateVerifyIgnore: []string{"eab_kid", "eab_key", consts.FieldDefaultNameserver},
 			},
 			{
 				// Only trusted_ca can be updated without re-creation
@@ -63,12 +66,13 @@ func TestAccPKIACMEAccount_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "email_contacts.0", "test@example.com"),
 					resource.TestCheckResourceAttr(resourceName, "key_type", "ec-256"),
+					resource.TestCheckResourceAttr(resourceName, "default_nameserver", "8.8.8.8"),
 					resource.TestCheckResourceAttr(resourceName, "trusted_ca", "\n"+ca+"\n"),
 					resource.TestCheckResourceAttr(resourceName, "active_key_version", "0"),
 				),
 			},
 			{
-				// Because we change email contacts and key type this will be a re-creation
+				// Changing email_contacts and key_type forces re-creation.
 				Config: testPKIACMEAccount_updateConfig(backend, accountName, directoryUrl, ca),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
@@ -95,12 +99,13 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
-  mount           = vault_mount.test.path
-  name            = "%s"
-  directory_url   = "%s"
-  email_contacts  = ["test@example.com"]
-  key_type        = "ec-256"
-  trusted_ca      = <<EOT
+  mount              = vault_mount.test.path
+  name               = "%s"
+  directory_url      = "%s"
+  email_contacts     = ["test@example.com"]
+  key_type           = "ec-256"
+  default_nameserver = "8.8.8.8"
+  trusted_ca         = <<EOT
 %s
 EOT
 }
@@ -116,12 +121,13 @@ resource "vault_mount" "test" {
 }
 
 resource "vault_pki_external_ca_secret_backend_acme_account" "test" {
-  mount           = vault_mount.test.path
-  name            = "%s"
-  directory_url   = "%s"
-  email_contacts  = ["test@example.com", "admin@example.com"]
-  key_type        = "rsa-2048"
-  trusted_ca      = <<EOT
+  mount              = vault_mount.test.path
+  name               = "%s"
+  directory_url      = "%s"
+  email_contacts     = ["test@example.com", "admin@example.com"]
+  key_type           = "rsa-2048"
+  default_nameserver = "8.8.8.8"
+  trusted_ca         = <<EOT
 %s
 EOT
 }
