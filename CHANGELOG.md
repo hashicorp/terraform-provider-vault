@@ -1,3 +1,10 @@
+## 5.13.0 (Unreleased)
+
+IMPROVEMENTS:
+
+* `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
+* `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039)) 
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:
