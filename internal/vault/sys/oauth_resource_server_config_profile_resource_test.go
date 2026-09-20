@@ -16,8 +16,24 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
+// oauthActivationFlagHCL returns the HCL block to activate the oauth-resource-server
+// flag and a depends_on snippet for the profile resource. Both are empty strings on
+// Vault 2.1.0+, where the activation-flags path was removed and the feature is always on.
+func oauthActivationFlagHCL() (flagBlock, dependsOn string) {
+	if acctestutil.IsAPIVersionGTE(provider.VaultVersion210) {
+		return "", ""
+	}
+	return `
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+`, `  depends_on = [vault_activation_flags.oauth]
+`
+}
+
 // TestAccOAuthResourceServerConfigProfile_jwks tests JWKS-based profile
 func TestAccOAuthResourceServerConfigProfile_jwks(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
 	profileName := acctest.RandomWithPrefix("test-profile")
 	resourceName := "vault_oauth_resource_server_config_profile.test"
 
@@ -379,30 +395,24 @@ func TestAccOAuthResourceServerConfigProfile_rarUpdate(t *testing.T) {
 // Config helper functions
 
 func testAccOAuthResourceServerConfigProfileConfig_jwks(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on   = [vault_activation_flags.oauth]
-  profile_name = "%s"
+%s  profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
   jwks_uri     = "https://example.com/.well-known/jwks.json"
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_jwksUpdated(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on        = [vault_activation_flags.oauth]
-  profile_name      = "%s"
+%s  profile_name      = "%s"
   issuer_id         = "https://example.com"
   use_jwks          = true
   jwks_uri          = "https://example.com/.well-known/jwks.json"
@@ -410,21 +420,18 @@ resource "vault_oauth_resource_server_config_profile" "test" {
   user_claim        = "email"
   clock_skew_leeway = 30
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_pem(profileName, publicKeyPEM string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on   = [vault_activation_flags.oauth]
-  profile_name = "%s"
+%s  profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = false
-  
+
   public_keys {
     key_id = "key-1"
     pem    = <<-EOT
@@ -432,53 +439,45 @@ resource "vault_oauth_resource_server_config_profile" "test" {
 EOT
   }
 }
-`, profileName, publicKeyPEM)
+`, flagBlock, dependsOn, profileName, publicKeyPEM)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_withAudiences(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on   = [vault_activation_flags.oauth]
-  profile_name = "%s"
+%s  profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
   jwks_uri     = "https://example.com/.well-known/jwks.json"
   audiences    = ["api.example.com", "vault.example.com"]
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_namespace(ns, profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_namespace" "test" {
   path = "%s"
 }
 
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on   = [vault_activation_flags.oauth]
-  namespace    = vault_namespace.test.path
+%s  namespace    = vault_namespace.test.path
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
   jwks_uri     = "https://example.com/.well-known/jwks.json"
 }
-`, ns, profileName)
+`, flagBlock, ns, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_twoNamespaces(ns1, ns2, profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_namespace" "test1" {
   path = "%s"
 }
@@ -489,8 +488,7 @@ resource "vault_namespace" "test2" {
 
 # First profile with profile_name in namespace 1
 resource "vault_oauth_resource_server_config_profile" "test1" {
-  depends_on   = [vault_activation_flags.oauth]
-  namespace    = vault_namespace.test1.path
+%s  namespace    = vault_namespace.test1.path
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
@@ -500,65 +498,55 @@ resource "vault_oauth_resource_server_config_profile" "test1" {
 # Second profile with the same profile_name in namespace 2
 # This should succeed because profile_name uniqueness is namespace-scoped
 resource "vault_oauth_resource_server_config_profile" "test2" {
-  depends_on   = [vault_activation_flags.oauth]
-  namespace    = vault_namespace.test2.path
+%s  namespace    = vault_namespace.test2.path
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
   jwks_uri     = "https://example.com/.well-known/jwks.json"
 }
-`, ns1, ns2, profileName, profileName)
+`, flagBlock, ns1, ns2, dependsOn, profileName, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_algorithms(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on            = [vault_activation_flags.oauth]
-  profile_name          = "%s"
-  issuer_id             = "https://example.com"
-  use_jwks              = true
-  jwks_uri              = "https://example.com/.well-known/jwks.json"
-  supported_algorithms  = ["RS256", "ES256"]
+%s  profile_name         = "%s"
+  issuer_id            = "https://example.com"
+  use_jwks             = true
+  jwks_uri             = "https://example.com/.well-known/jwks.json"
+  supported_algorithms = ["RS256", "ES256"]
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_rarOptional(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on                       = [vault_activation_flags.oauth]
-  profile_name                     = "%s"
-  issuer_id                        = "https://example.com"
-  use_jwks                         = true
-  jwks_uri                         = "https://example.com/.well-known/jwks.json"
-  optional_authorization_details   = true
+%s  profile_name                   = "%s"
+  issuer_id                      = "https://example.com"
+  use_jwks                       = true
+  jwks_uri                       = "https://example.com/.well-known/jwks.json"
+  optional_authorization_details = true
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_rarMandatory(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on                       = [vault_activation_flags.oauth]
-  profile_name                     = "%s"
-  issuer_id                        = "https://example.com"
-  use_jwks                         = true
-  jwks_uri                         = "https://example.com/.well-known/jwks.json"
-  optional_authorization_details   = false
+%s  profile_name                   = "%s"
+  issuer_id                      = "https://example.com"
+  use_jwks                       = true
+  jwks_uri                       = "https://example.com/.well-known/jwks.json"
+  optional_authorization_details = false
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
