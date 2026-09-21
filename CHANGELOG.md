@@ -18,8 +18,8 @@ IMPROVEMENTS:
 
 * `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to allow ephemeral resource values, to supply the CA certificate. The `certificate` field is now `Computed` and `ForceNew` has been removed enabling in-place updates when the certificate changes instead of resource replacement. ([#3011](https://github.com/hashicorp/terraform-provider-vault/pull/3011))
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
-* Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
 * Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#3017](https://github.com/hashicorp/terraform-provider-vault/pull/3017)[#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
+
 
 BUG FIXES:
 
