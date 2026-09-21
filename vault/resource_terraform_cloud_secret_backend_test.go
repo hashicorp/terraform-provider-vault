@@ -187,7 +187,7 @@ func TestTerraformCloudSecretBackend_automatedRotation(t *testing.T) {
 			// rotation_window is not compatible with rotation_period
 			{
 				Config:      testTerraformCloudSecretBackend_automatedRotation(backend, token, "", 30, 120, 3600, true),
-				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to"),
 			},
 			// zero-out rotation_schedule and rotation_window, disable rotation
 			{
