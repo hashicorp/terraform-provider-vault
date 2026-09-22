@@ -477,20 +477,6 @@ func testAccOAuthResourceServerConfigProfilePreCheck(t *testing.T, minVersion *v
 	)
 }
 
-func testAccOAuthResourceServerConfigProfileActivationFlagsConfig() string {
-	return `
-variable "vault_test_activate_oauth_resource_server" {
-  type = bool
-}
-
-resource "vault_activation_flags" "oauth" {
-  count = var.vault_test_activate_oauth_resource_server ? 1 : 0
-
-  feature = "oauth-resource-server"
-}
-`
-}
-
 func testAccOAuthResourceServerConfigProfileConfig_jwks(profileName string) string {
 	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
