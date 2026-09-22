@@ -781,6 +781,8 @@ const (
 	FieldDereferenceAliases                   = "dereference_aliases"
 	FieldEnableSamaccountnameLogin            = "enable_samaccountname_login"
 	FieldAnonymousGroupSearch                 = "anonymous_group_search"
+	FieldLastRotationTolerance                = "last_rotation_tolerance"
+	FieldUsePre111GroupCNBehavior             = "use_pre111_group_cn_behavior"
 	FieldAliasNameSource                      = "alias_name_source"
 	FieldAliasMetadata                        = "alias_metadata"
 	FieldBoundServiceAccountNames             = "bound_service_account_names"
