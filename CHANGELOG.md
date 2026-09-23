@@ -9,6 +9,10 @@ IMPROVEMENTS:
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
 * `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039)) 
 
+BUG FIXES:
+
+* `vault_identity_entity`: Fix panic on create when the entity already exists and Vault returns a non-nil response with a null `data` field (e.g. Vault Enterprise 2.0.3+). The provider now returns a clean "already exists" error instead of crashing. ([#3055](https://github.com/hashicorp/terraform-provider-vault/pull/3055))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:

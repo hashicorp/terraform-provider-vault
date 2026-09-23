@@ -397,7 +397,7 @@ func TestIdentityEntityCreate_alreadyExists(t *testing.T) {
 	handler := testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1/identity/entity":
-            // Non-nil response with a null "data" field (entity already exists).
+			// Non-nil response with a null "data" field (entity already exists).
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"request_id": "test-request-id",
 				"data":       nil,
