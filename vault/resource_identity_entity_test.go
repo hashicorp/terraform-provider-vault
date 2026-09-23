@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/group"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -379,6 +381,60 @@ func TestReadEntity(t *testing.T) {
 				t.Fatalf("expected %d retries, actual %d", tt.expectedRetries, r.Retries)
 			}
 		})
+	}
+}
+
+// TestIdentityEntityCreate_alreadyExists is a regression test
+
+// It reproduces the Vault Enterprise 2.0.3 behavior where POST
+// /identity/entity returns a 200 response with a non-nil body but a null
+// "data" field when the entity already exists. Before the fix, the create
+// path assumed a nil *api.Secret in this situation and panicked with
+// "interface conversion: interface {} is nil, not string" while doing
+// resp.Data["id"].(string). This test asserts that identityEntityCreate
+// instead returns a clean "already exists" error, with no panic.
+func TestIdentityEntityCreate_alreadyExists(t *testing.T) {
+	handler := testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/identity/entity":
+            // Non-nil response with a null "data" field (entity already exists).
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"request_id": "test-request-id",
+				"data":       nil,
+			})
+		case "/v1/identity/entity/name/app1":
+			// Realistic fallback lookup response: the entity actually
+			// exists, so the "may be imported" hint can be resolved.
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":   "existing-entity-id",
+					"name": "app1",
+				},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"errors": []string{"not found"}})
+		}
+	})
+	meta := testProviderMeta(t, handler)
+
+	rsc := identityEntityResource()
+	d := rsc.TestResourceData()
+	d.Set(consts.FieldName, "app1")
+
+	// The key assertion here is that this call does not panic. Prior to the
+	// fix, this line would crash the whole test binary rather than
+	// surfacing as a normal test failure.
+	err := identityEntityCreate(d, meta)
+
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("expected an 'already exists' error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "existing-entity-id") {
+		t.Errorf("expected error to include the existing entity id for import, got: %v", err)
 	}
 }
 
