@@ -8,9 +8,10 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"strconv"
 	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -275,7 +276,7 @@ func TestPkiSecretBackendIntermediateCertificate_multiIssuer(t *testing.T) {
 			{
 				Config: testPkiSecretBackendIntermediateCertRequestConfig_multiIssuerInternal(path, keyName),
 				Check: resource.ComposeTestCheckFunc(
-					append(internalChecks)...,
+					internalChecks...,
 				),
 			},
 			{

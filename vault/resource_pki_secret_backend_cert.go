@@ -113,7 +113,6 @@ func pkiSecretBackendCertResource() *schema.Resource {
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 				ForceNew: true,
-				Default:  "changeit",
 			},
 			consts.FieldPKCS12Encoder: {
 				Type:     schema.TypeString,
@@ -123,7 +122,6 @@ format is set to "pkcs12_bundle". Valid values are "modern2026" and
 "modern2023". Defaults to "modern2026", which uses the newer PKCS#12 
 integrity format (PBMAC1).`,
 				ForceNew:     true,
-				Default:      "modern2026",
 				ValidateFunc: validation.StringInSlice([]string{"modern2026", "modern2023"}, false),
 			},
 			consts.FieldJKSPassword: {
@@ -134,7 +132,6 @@ integrity format (PBMAC1).`,
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 				ForceNew: true,
-				Default:  "changeit",
 			},
 			consts.FieldJKSPrivateKeyAlias: {
 				Type:     schema.TypeString,
@@ -145,7 +142,6 @@ integrity format (PBMAC1).`,
 			This parameter is ignored by endpoints that return TrustedCertificateEntry values
 			(JKS trust stores), and entry aliases are assigned incrementing numeric strings starting at "1".`,
 				ForceNew: true,
-				Default:  "1",
 			},
 			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,
@@ -280,6 +276,7 @@ func pkiSecretBackendCertCreate(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldPrivateKeyFormat,
 		consts.FieldNotAfter,
 	}
+
 	// Only add additional format parameters if supported
 	if provider.IsAPISupported(meta, provider.VaultVersion210) {
 		certAPIFields = append(certAPIFields,

@@ -16,7 +16,7 @@ jobs:
     outputs:
       version: ${{ steps.go-version.outputs.version }}
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: go-version
         run: echo "version=$(cat .go-version)" >> "$GITHUB_OUTPUT"
 
@@ -34,7 +34,7 @@ jobs:
       product-prerelease-version: ${{ steps.set-product-version.outputs.prerelease-product-version }}
       product-minor-version: ${{ steps.set-product-version.outputs.minor-product-version }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set variables
         id: set-product-version
         uses: hashicorp/actions-set-product-version@v2
@@ -49,7 +49,7 @@ jobs:
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
     steps:
       - name: "Checkout directory"
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Generate metadata file
         id: generate-metadata-file
         uses: hashicorp/actions-generate-metadata@v1
@@ -58,7 +58,7 @@ jobs:
           product: ${{ env.PKG_NAME }}
           repositoryOwner: "hashicorp"
           repository: "terraform-provider-vault"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: metadata.json
           path: ${{ steps.generate-metadata-file.outputs.filepath }}
@@ -67,8 +67,8 @@ jobs:
     needs: [go-version]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: '.go-version'
           cache: false
@@ -80,7 +80,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Cache go build
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cache/go-build
@@ -107,7 +107,7 @@ jobs:
       fail-fast: true
       matrix:
         goos: [ freebsd, windows, linux, darwin ]
-        goarch: [ "386", "amd64", "arm", "arm64" ]
+        goarch: [ "386", "amd64", "arm", "arm64", "s390x" ]
         exclude:
           - goos: freebsd
             goarch: arm64
@@ -119,10 +119,16 @@ jobs:
             goarch: 386
           - goos: darwin
             goarch: arm
+          - goos: darwin
+            goarch: s390x
+          - goos: freebsd
+            goarch: s390x
+          - goos: windows
+            goarch: s390x
 
     name: Go ${{ needs.go-version.outputs.version }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: hashicorp/actions-go-build@v1
         env:
           CGO_ENABLED: 0
@@ -153,10 +159,11 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.19.17-ent"
-        - "vault-enterprise:1.20.11-ent"
-        - "vault-enterprise:1.21.6-ent"
-        - "vault-enterprise:2.0.1-ent"
+        - "vault-enterprise:1.19.22-ent"
+        - "vault-enterprise:1.20.16-ent"
+        - "vault-enterprise:1.21.11-ent"
+        - "vault-enterprise:2.0.4-ent"
+        - "vault-enterprise:2.1.1-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
@@ -168,7 +175,12 @@ jobs:
         image: hashicorp/${{ matrix.image }}
         env:
           VAULT_DEV_ROOT_TOKEN_ID: root
-          VAULT_LICENSE: ${{ secrets.VAULT_LICENSE }}
+          VAULT_LICENSE: >-
+            ${{
+              startsWith(matrix.image, 'vault-enterprise:1.') && secrets.VAULT_LICENSE_1_X ||
+              startsWith(matrix.image, 'vault-enterprise:2.') && secrets.VAULT_LICENSE_2_X ||
+              secrets.VAULT_LICENSE
+            }}
           VAULT_AUTH_CONFIG_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VAULT_LOCAL_CONFIG: |
             {"plugin_directory": "/vault/plugins"}
@@ -224,6 +236,7 @@ jobs:
           - 18093:18093
           - 18094:18094
         options: >-
+          --ulimit nofile=200000:200000
           --health-cmd "curl -f http://Administrator:password@127.0.0.1:8091/sampleBuckets"
           --health-interval 1s
           --health-timeout 5s
@@ -262,8 +275,8 @@ jobs:
       - name: install ldap utils
         run:
           sudo apt-get install -y ldap-utils
-      - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
-      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: '.go-version'
           cache: false
@@ -328,7 +341,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
       - name: Cache go build
-        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cache/go-build
@@ -403,7 +416,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout directory"
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: ${{ env.PKG_NAME }}
       - name: "Copy manifest from checkout directory to a file with the desired name"
@@ -417,7 +430,7 @@ jobs:
 
           cp "$source" "$destination"
           echo "filename=$destination" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: terraform-registry-manifest.json
           path: ${{ steps.terraform-registry-manifest.outputs.filename }}

@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -54,9 +55,11 @@ type AgentRegistrationModel struct {
 	CeilingPolicies              types.List   `tfsdk:"ceiling_policies"`
 	NoDefaultCeilingPolicy       types.Bool   `tfsdk:"no_default_ceiling_policy"`
 	Description                  types.String `tfsdk:"description"`
+	Owner                        types.String `tfsdk:"owner"`
 	CreationTime                 types.String `tfsdk:"creation_time"`
 	LastUpdatedTime              types.String `tfsdk:"last_updated_time"`
 	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
+	Local                        types.Bool   `tfsdk:"local"`
 }
 
 // AgentRegistrationAPIModel describes the Vault API data model.
@@ -67,9 +70,11 @@ type AgentRegistrationAPIModel struct {
 	CeilingPolicies              []string `json:"ceiling_policies" mapstructure:"ceiling_policies"`
 	NoDefaultCeilingPolicy       bool     `json:"no_default_ceiling_policy" mapstructure:"no_default_ceiling_policy"`
 	Description                  string   `json:"description" mapstructure:"description"`
+	Owner                        string   `json:"owner" mapstructure:"owner"`
 	CreationTime                 string   `json:"creation_time" mapstructure:"creation_time"`
 	LastUpdatedTime              string   `json:"last_updated_time" mapstructure:"last_updated_time"`
 	OptionalAuthorizationDetails bool     `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
+	Local                        bool     `json:"local" mapstructure:"local"`
 }
 
 // Metadata defines the resource name as it would appear in Terraform configurations
@@ -123,6 +128,10 @@ func (r *AgentRegistrationResource) Schema(ctx context.Context, req resource.Sch
 				Optional:            true,
 				MarkdownDescription: "Detailed description of the agent's purpose.",
 			},
+			consts.FieldOwner: schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "Owner of the agent registration.",
+			},
 			consts.FieldCreationTime: schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "Timestamp when the registration was created.",
@@ -142,6 +151,15 @@ func (r *AgentRegistrationResource) Schema(ctx context.Context, req resource.Sch
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional for this agent. This setting works in conjunction with the OAuth Resource Server profile's optional_authorization_details setting - RAR is optional if EITHER is true. Defaults to false.",
+			},
+			consts.FieldLocal: schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
+				MarkdownDescription: "When set to true, the agent registration is not replicated globally and will be local to the current cluster. Defaults to false.",
 			},
 		},
 		MarkdownDescription: "Manages Agent Registry registrations in Vault Enterprise. " +
@@ -200,6 +218,12 @@ func (r *AgentRegistrationResource) Create(ctx context.Context, req resource.Cre
 
 	if !data.Description.IsNull() && !data.Description.IsUnknown() {
 		vaultRequest[consts.FieldDescription] = data.Description.ValueString()
+	}
+	if !data.Owner.IsNull() && !data.Owner.IsUnknown() {
+		vaultRequest[consts.FieldOwner] = data.Owner.ValueString()
+	}
+	if !data.Local.IsNull() && !data.Local.IsUnknown() {
+		vaultRequest[consts.FieldLocal] = data.Local.ValueBool()
 	}
 
 	// RAR support
@@ -328,6 +352,9 @@ func (r *AgentRegistrationResource) Update(ctx context.Context, req resource.Upd
 
 	if !data.Description.IsNull() && !data.Description.IsUnknown() {
 		vaultRequest[consts.FieldDescription] = data.Description.ValueString()
+	}
+	if !data.Owner.IsNull() && !data.Owner.IsUnknown() {
+		vaultRequest[consts.FieldOwner] = data.Owner.ValueString()
 	}
 
 	// RAR support
@@ -479,6 +506,9 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 	if apiModel.Description != "" {
 		data.Description = types.StringValue(apiModel.Description)
 	}
+	if apiModel.Owner != "" {
+		data.Owner = types.StringValue(apiModel.Owner)
+	}
 
 	// Filter out default policies from ceiling_policies
 	// Similar to how vault_token resource filters out "default" policy
@@ -499,6 +529,7 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 	}
 
 	data.NoDefaultCeilingPolicy = types.BoolValue(apiModel.NoDefaultCeilingPolicy)
+	data.Local = types.BoolValue(apiModel.Local)
 
 	// RAR support
 	data.OptionalAuthorizationDetails = types.BoolValue(apiModel.OptionalAuthorizationDetails)

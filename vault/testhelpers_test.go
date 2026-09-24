@@ -136,3 +136,11 @@ func SkipOnAPIVersion(t *testing.T, m interface{}, cmp func(*version.Version) bo
 		t.Skipf(format, args...)
 	}
 }
+
+// SkipIfNotEnterprise skips the test if the running Vault is not Enterprise.
+func SkipIfNotEnterprise(t *testing.T, m interface{}) {
+	t.Helper()
+	if !provider.IsEnterpriseSupported(m) {
+		t.Skip("Vault Enterprise is required for this test")
+	}
+}

@@ -8,11 +8,9 @@ description: |-
 
 # vault\_agent\_registration
 
-~> **Preview feature:** This feature is currently available as a preview and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
-
 Manages Agent Registry records in Vault Enterprise. An Agent Registry record allows you to register Vault agents with specific identity entities and configure ceiling policies that limit the maximum permissions an agent can obtain.
 
-~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.0.1 or later.
+~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.1.0 or later.
 
 ### Relationship to OAuth Resource Server 
 
@@ -147,6 +145,22 @@ resource "vault_agent_registration" "example" {
 }
 ```
 
+### Agent Registry Record with Data Locality 
+
+```hcl
+resource "vault_identity_entity" "agent" {
+  name     = "my-agent-entity"
+  policies = ["default"]
+}
+
+resource "vault_agent_registration" "example" {
+  display_name = "my-agent"
+  entity_id    = vault_identity_entity.agent.id
+  local        = true
+  description  = "Agent local to the current cluster"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -157,7 +171,7 @@ The following arguments are supported:
 
 * `display_name` - (Required) The display name for the Agent Registry record. This field must be unique per Vault namespace. Within Terraform, this is used as the unique identifier for the agent. Changing this on an existing resource will force the resource to be deleted from Vault and a new resource to be created in Vault.
 
-* `entity_id` - (Required) The ID of the identity entity to associate with this Agent Registry record. The entity must exist before you create the Agent Registry record.
+* `entity_id` - (Required) The ID of the identity entity to associate with this Agent Registry record. The entity must exist before you create the Agent Registry record. The entity ID for a registration must be unique within the locality (globally replicated or local to the cluster).
 
 * `ceiling_policies` - (Optional) A list of policy names that define the maximum permissions this agent can obtain. These policies act as a ceiling - the agent cannot obtain permissions beyond what these policies allow, even if the entity or token policies would grant more permissions. By default, Vault applies a default ceiling policy unless `no_default_ceiling_policy` is set to `true`.
 
@@ -165,7 +179,11 @@ The following arguments are supported:
 
 * `description` - (Optional) A human-readable description of the Agent Registry record. This field is for documentation purposes and does not affect the agent's behavior.
 
+* `owner` - (Optional) Owner of the Agent Registry record.
+
 * `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional for this agent. This setting works in conjunction with the OAuth Resource Server profile's optional_authorization_details setting - RAR is optional if EITHER is `true`. Defaults to `false`. Requires Vault 2.0.3 or later.
+
+* `local` - (Optional) When `false`, the registration is written to replicated storage and propagated to all performance secondaries. When set to `true`, the registration remains local to the current cluster and is not replicated. The `local` field cannot be updated on a registration. Requires Vault 2.2.0 or later.
 
 ## Attributes Reference
 
@@ -211,10 +229,14 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_agent_regi
 
 * **Entity Requirement**: The identity entity specified in `entity_id` must exist before you create the Agent Registry record. The entity defines the base identity for the agent.
 
+* **Entity Uniqueness**: The identity entity specified in `entity_id` must be unique within the locality (globally replicated or local to the cluster).
+
 * **Display Name Uniqueness**: The `display_name` must be unique within the namespace. Attempting to create multiple Agent Registry records with the same display name will result in an error.
 
 * **Immutable Display Name**: Changing the `display_name` requires destroying and recreating the Agent Registry record, as it serves as the unique identifier.
 
+* **Immutable Locality**: Changing the `local` flag of a registration requires destroying and recreating the Agent Registry record.
+
 * **Enterprise Feature**: Agent Registry records are only available in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
 
-* **Version Requirement**: This resource requires Vault 2.0.1 or later.
+* **Version Requirement**: This resource requires Vault 2.1.0 or later.

@@ -9,33 +9,36 @@ import (
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
-	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
-	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
-	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
-	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
-	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
-	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
-	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
-
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	sdkv2provider "github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/cloudfoundry"
+	ephemeralauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/ephemeral"
+	kerberosauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/kerberos"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	tpmauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/tpm"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
+	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/identity"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
+	ephemeralsecrets "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/ephemeral"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/gcpkms"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
+	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
+	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
+	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 )
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
@@ -240,6 +243,10 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return append([]func() resource.Resource{
 		spiffe.NewSpiffeAuthConfigResource,
 		spiffe.NewSpiffeAuthRoleResource,
+		identity.NewIdentityTPMResource,
+		identity.NewIdentityTPMGroupResource,
+		tpmauth.NewTPMAuthBackendConfigResource,
+		tpmauth.NewTPMAuthBackendRoleResource,
 		cloudfoundry.NewCFAuthBackendConfigResource,
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		userpass.NewUserpassAuthUserResource,
@@ -260,6 +267,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		sysconfig.NewControlGroupConfigResource,
 		sys.NewRaftSnapshotAgentConfigResource,
 		azure.NewAzureStaticRoleResource,
+		gcpkms.NewGCPKMSSecretBackendResource,
+		gcpkms.NewGCPKMSSecretBackendKeyResource,
 		kmip.NewKMIPListenerResource,
 		kmip.NewKMIPCAGeneratedResource,
 		kmip.NewKMIPCAImportedResource,
@@ -271,6 +280,10 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCAOrderResource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
 		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
+		pki_external_ca.NewPKIExternalCADNSProviderAWSRoute53Resource,
+		pki_external_ca.NewPKIExternalCADNSProviderRFC2136Resource,
+		pki_external_ca.NewPKIExternalCADNSProviderGCPResource,
+		pki_external_ca.NewPKIExternalCADNSProviderAzureResource,
 		sys.NewActivationFlagsResource,
 		keymgmt.NewKeyResource,
 		keymgmt.NewAWSKMSResource,
@@ -281,6 +294,9 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		keymgmt.NewReplicateKeyResource,
 		alicloud.NewAliCloudSecretBackendResource,
 		alicloud.NewAliCloudSecretBackendRoleResource,
+		kerberosauth.NewKerberosAuthBackendConfigResource,
+		kerberosauth.NewKerberosAuthBackendLDAPConfigResource,
+		kerberosauth.NewKerberosAuthBackendGroupResource,
 	}, testResources()...)
 }
 
@@ -291,6 +307,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewGenericEphemeralSecretResource,
 		ephemeralsecrets.NewAzureStaticCredsEphemeralSecretResource,
 		ephemeralsecrets.NewAzureAccessCredentialsEphemeralResource,
+		ephemeralsecrets.NewAzureAccessTokenEphemeralResource,
 		ephemeralsecrets.NewGCPServiceAccountKeyEphemeralResource,
 		ephemeralsecrets.NewGCPOAuth2AccessTokenEphemeralResource,
 		ephemeralsecrets.NewAWSAccessCredentialsEphemeralSecretResource,
@@ -305,6 +322,11 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewTerraformTokenEphemeralSecretResource,
 		ephemeralauth.NewTokenEphemeralResource,
 		ephemeralgeneric.NewGenericEndpointEphemeralResource,
+		gcpkms.NewGCPKMSEncryptEphemeralResource,
+		gcpkms.NewGCPKMSDecryptEphemeralResource,
+		gcpkms.NewGCPKMSReencryptEphemeralResource,
+		gcpkms.NewGCPKMSSignEphemeralResource,
+		kerberosauth.NewKerberosAuthBackendLoginEphemeralResource,
 	}
 }
 
@@ -317,6 +339,7 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 	return []func() datasource.DataSource{
 		sys.NewActivationFlagsDataSource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeDataSource,
+		gcpkms.NewGCPKMSVerifyDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
 	}

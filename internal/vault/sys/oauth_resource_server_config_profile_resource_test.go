@@ -5,10 +5,13 @@ package sys_test
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -16,16 +19,30 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
+// oauthActivationFlagHCL returns the HCL block to activate the oauth-resource-server
+// flag and a depends_on snippet for the profile resource. Both are empty strings on
+// Vault 2.1.0+, where the activation-flags path was removed and the feature is always on.
+func oauthActivationFlagHCL() (flagBlock, dependsOn string) {
+	if acctestutil.IsAPIVersionGTE(provider.VaultVersion210) {
+		return "", ""
+	}
+	return `
+resource "vault_activation_flags" "oauth" {
+  feature = "oauth-resource-server"
+}
+`, `  depends_on = [vault_activation_flags.oauth]
+`
+}
+
 // TestAccOAuthResourceServerConfigProfile_jwks tests JWKS-based profile
 func TestAccOAuthResourceServerConfigProfile_jwks(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
 	profileName := acctest.RandomWithPrefix("test-profile")
 	resourceName := "vault_oauth_resource_server_config_profile.test"
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -68,9 +85,7 @@ mwIDAQAB
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -102,9 +117,7 @@ func TestAccOAuthResourceServerConfigProfile_withAudiences(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -128,9 +141,7 @@ func TestAccOAuthResourceServerConfigProfile_update(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -161,9 +172,7 @@ func TestAccOAuthResourceServerConfigProfile_requiresReplace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -191,9 +200,7 @@ func TestAccOAuthResourceServerConfigProfile_namespace(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -224,9 +231,7 @@ func TestAccOAuthResourceServerConfigProfile_algorithms(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -253,9 +258,7 @@ func TestAccOAuthResourceServerConfigProfile_duplicateProfileNameAcrossNamespace
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion201)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion201)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -285,9 +288,7 @@ func TestAccOAuthResourceServerConfigProfile_rarOptional(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion203)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -315,9 +316,7 @@ func TestAccOAuthResourceServerConfigProfile_rarMandatory(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion203)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -345,9 +344,7 @@ func TestAccOAuthResourceServerConfigProfile_rarUpdate(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion203)
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion203)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
@@ -376,33 +373,129 @@ func TestAccOAuthResourceServerConfigProfile_rarUpdate(t *testing.T) {
 	})
 }
 
-// Config helper functions
+// TestAccOAuthResourceServerConfigProfile_local tests that the local flag is
+// persisted and read back correctly. A local profile is cluster-scoped and
+// never replicated to performance secondaries.
+func TestAccOAuthResourceServerConfigProfile_local(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
 
-func testAccOAuthResourceServerConfigProfileConfig_jwks(profileName string) string {
-	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_local(profileName, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName),
+				ImportStateVerify: true,
+			},
+		},
+	})
 }
 
+// TestAccOAuthResourceServerConfigProfile_localDefault tests that the local
+// flag defaults to false when not explicitly set.
+func TestAccOAuthResourceServerConfigProfile_localDefault(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_jwks(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccOAuthResourceServerConfigProfile_localRequiresReplace tests that
+// changing the local flag forces replacement instead of attempting an in-place
+// update.
+func TestAccOAuthResourceServerConfigProfile_localRequiresReplace(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_local(profileName, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "false"),
+				),
+			},
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_local(profileName, true),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLocal, "true"),
+				),
+			},
+		},
+	})
+}
+
+// Config helper functions
+
+func testAccOAuthResourceServerConfigProfilePreCheck(t *testing.T, minVersion *version.Version) {
+	t.Helper()
+	acctestutil.TestAccPreCheck(t)
+	acctestutil.TestEntPreCheck(t)
+	acctestutil.SkipIfAPIVersionLT(t, minVersion)
+
+	meta := acctestutil.TestProvider.Meta().(*provider.ProviderMeta)
+	t.Setenv(
+		"TF_VAR_vault_test_activate_oauth_resource_server",
+		strconv.FormatBool(!meta.IsAPISupported(provider.VaultVersion210)),
+	)
+}
+
+func testAccOAuthResourceServerConfigProfileConfig_jwks(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
+	return fmt.Sprintf(`
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on   = [vault_activation_flags.oauth]
-  profile_name = "%s"
+%s  profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
   jwks_uri     = "https://example.com/.well-known/jwks.json"
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_jwksUpdated(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on        = [vault_activation_flags.oauth]
-  profile_name      = "%s"
+%s  profile_name      = "%s"
   issuer_id         = "https://example.com"
   use_jwks          = true
   jwks_uri          = "https://example.com/.well-known/jwks.json"
@@ -410,21 +503,18 @@ resource "vault_oauth_resource_server_config_profile" "test" {
   user_claim        = "email"
   clock_skew_leeway = 30
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_pem(profileName, publicKeyPEM string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on   = [vault_activation_flags.oauth]
-  profile_name = "%s"
+%s  profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = false
-  
+
   public_keys {
     key_id = "key-1"
     pem    = <<-EOT
@@ -432,53 +522,45 @@ resource "vault_oauth_resource_server_config_profile" "test" {
 EOT
   }
 }
-`, profileName, publicKeyPEM)
+`, flagBlock, dependsOn, profileName, publicKeyPEM)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_withAudiences(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on   = [vault_activation_flags.oauth]
-  profile_name = "%s"
+%s  profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
   jwks_uri     = "https://example.com/.well-known/jwks.json"
   audiences    = ["api.example.com", "vault.example.com"]
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_namespace(ns, profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_namespace" "test" {
   path = "%s"
 }
 
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on   = [vault_activation_flags.oauth]
-  namespace    = vault_namespace.test.path
+%s  namespace    = vault_namespace.test.path
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
   jwks_uri     = "https://example.com/.well-known/jwks.json"
 }
-`, ns, profileName)
+`, flagBlock, ns, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_twoNamespaces(ns1, ns2, profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_namespace" "test1" {
   path = "%s"
 }
@@ -489,8 +571,7 @@ resource "vault_namespace" "test2" {
 
 # First profile with profile_name in namespace 1
 resource "vault_oauth_resource_server_config_profile" "test1" {
-  depends_on   = [vault_activation_flags.oauth]
-  namespace    = vault_namespace.test1.path
+%s  namespace    = vault_namespace.test1.path
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
@@ -500,65 +581,69 @@ resource "vault_oauth_resource_server_config_profile" "test1" {
 # Second profile with the same profile_name in namespace 2
 # This should succeed because profile_name uniqueness is namespace-scoped
 resource "vault_oauth_resource_server_config_profile" "test2" {
-  depends_on   = [vault_activation_flags.oauth]
-  namespace    = vault_namespace.test2.path
+%s  namespace    = vault_namespace.test2.path
   profile_name = "%s"
   issuer_id    = "https://example.com"
   use_jwks     = true
   jwks_uri     = "https://example.com/.well-known/jwks.json"
 }
-`, ns1, ns2, profileName, profileName)
+`, flagBlock, ns1, ns2, dependsOn, profileName, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_algorithms(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on            = [vault_activation_flags.oauth]
-  profile_name          = "%s"
-  issuer_id             = "https://example.com"
-  use_jwks              = true
-  jwks_uri              = "https://example.com/.well-known/jwks.json"
-  supported_algorithms  = ["RS256", "ES256"]
+%s  profile_name         = "%s"
+  issuer_id            = "https://example.com"
+  use_jwks             = true
+  jwks_uri             = "https://example.com/.well-known/jwks.json"
+  supported_algorithms = ["RS256", "ES256"]
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_rarOptional(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on                       = [vault_activation_flags.oauth]
-  profile_name                     = "%s"
-  issuer_id                        = "https://example.com"
-  use_jwks                         = true
-  jwks_uri                         = "https://example.com/.well-known/jwks.json"
-  optional_authorization_details   = true
+%s  profile_name                   = "%s"
+  issuer_id                      = "https://example.com"
+  use_jwks                       = true
+  jwks_uri                       = "https://example.com/.well-known/jwks.json"
+  optional_authorization_details = true
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_rarMandatory(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
+%s
+resource "vault_oauth_resource_server_config_profile" "test" {
+%s  profile_name                   = "%s"
+  issuer_id                      = "https://example.com"
+  use_jwks                       = true
+  jwks_uri                       = "https://example.com/.well-known/jwks.json"
+  optional_authorization_details = false
+}
+`, flagBlock, dependsOn, profileName)
 }
 
+func testAccOAuthResourceServerConfigProfileConfig_local(profileName string, local bool) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
+	return fmt.Sprintf(`
+%s
 resource "vault_oauth_resource_server_config_profile" "test" {
-  depends_on                       = [vault_activation_flags.oauth]
-  profile_name                     = "%s"
-  issuer_id                        = "https://example.com"
-  use_jwks                         = true
-  jwks_uri                         = "https://example.com/.well-known/jwks.json"
-  optional_authorization_details   = false
+%s profile_name = "%s"
+  issuer_id    = "https://example.com"
+  use_jwks     = true
+  jwks_uri     = "https://example.com/.well-known/jwks.json"
+  local        = %t
 }
-`, profileName)
+`, flagBlock, dependsOn, profileName, local)
 }
 
 func testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {

@@ -783,6 +783,14 @@ var (
 			Resource:      UpdateSchemaResource(transformTransformationResource()),
 			PathInventory: []string{"/transform/transformation/{name}"},
 		},
+		"vault_transform_transformation_tokenization": {
+			Resource:      UpdateSchemaResource(transformTransformationTokenizationResource()),
+			PathInventory: []string{"/transform/transformations/tokenization/{name}"},
+		},
+		"vault_transform_transformation_tokenization_store": {
+			Resource:      UpdateSchemaResource(transformTransformationTokenizationStoreResource()),
+			PathInventory: []string{"/transform/stores/{name}"},
+		},
 		"vault_transform_template": {
 			Resource:      UpdateSchemaResource(transformTemplateResource()),
 			PathInventory: []string{"/transform/template/{name}"},
@@ -794,6 +802,10 @@ var (
 		"vault_transform_alphabet": {
 			Resource:      UpdateSchemaResource(transformAlphabetResource()),
 			PathInventory: []string{"/transform/alphabet/{name}"},
+		},
+		"vault_transform_key_configuration": {
+			Resource:      UpdateSchemaResource(transformKeyConfigResource()),
+			PathInventory: []string{"/transform/tokenization/keys/{name}/config"},
 		},
 		"vault_saml_auth_backend": {
 			Resource:      UpdateSchemaResource(samlAuthBackendResource()),
