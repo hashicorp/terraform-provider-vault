@@ -27,34 +27,37 @@ const (
 	fieldEnv      = "env"
 	fieldOCIImage = "oci_image"
 	fieldRuntime  = "runtime"
+	fieldReload   = "reload"
 )
 
 var (
 	// Version regex is intentionally loose, its main purpose is to disallow
 	// slashes so they can be used to delineate from the name. Version segment
 	// is optional.
-	pluginIDRegex = regexp.MustCompile(`^(auth|secret|database)(?:/version/([0-9a-zA-Z.+-]+?))?/name/(.+)$`)
+	pluginIDRegex = regexp.MustCompile(`^(?P<type>auth|secret|database)(?:/version/(?P<version>[0-9a-zA-Z.+-]+?))?(?:/reload/(?P<reload>true))?/name/(?P<name>.+)$`)
 )
 
-func pluginFromID(id string) (typ string, name string, version string) {
+func pluginFromID(id string) (string, string, string, bool) {
 	matches := pluginIDRegex.FindStringSubmatch(id)
-	switch {
-	case matches == nil || len(matches) < 3:
-		return "", "", ""
-	case len(matches) == 3:
-		return matches[1], matches[2], ""
-	default:
-		return matches[1], matches[3], matches[2]
+	result := make(map[string]string)
+	for i, name := range pluginIDRegex.SubexpNames() {
+		if i != 0 && name != "" && i < len(matches) {
+			result[name] = matches[i]
+		}
 	}
+	return result["type"], result["name"], result["version"], result["reload"] == "true"
 }
 
-func idFromPlugin(typ, name, version string) string {
-	if version == "" {
-		return fmt.Sprintf("%s/name/%s", typ, name)
-
+func idFromPlugin(typ, name, version string, reload bool) string {
+	result := typ
+	if version != "" {
+		result += fmt.Sprintf("/version/%s", version)
 	}
-
-	return fmt.Sprintf("%s/version/%s/name/%s", typ, version, name)
+	if reload {
+		result += "/reload/true"
+	}
+	result += fmt.Sprintf("/name/%s", name)
+	return result
 }
 
 func pluginResource() *schema.Resource {
@@ -126,6 +129,12 @@ func pluginResource() *schema.Resource {
 				Description: "Vault plugin runtime to use if oci_image is specified.",
 				Optional:    true,
 			},
+			fieldReload: {
+				Type:        schema.TypeBool,
+				Description: "Reload the plugin.",
+				Default:     false,
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -142,7 +151,9 @@ func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 	}
 	name := d.Get(consts.FieldName).(string)
 	version := d.Get(consts.FieldVersion).(string)
-	id := idFromPlugin(pluginType.String(), name, version)
+	reload := d.Get(fieldReload).(bool)
+
+	id := idFromPlugin(pluginType.String(), name, version, reload)
 
 	if diagErr := versionedPluginsSupported(meta, version); diagErr != nil {
 		return diagErr
@@ -171,8 +182,19 @@ func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) 
 	}
 	log.Printf("[DEBUG] Wrote plugin %q", id)
 
-	d.SetId(id)
+	if reload && d.HasChangesExcept(fieldReload) {
+		log.Printf("[DEBUG] Reloading plugin %q", id)
+		_, err = client.Sys().ReloadPluginWithContext(ctx, &api.ReloadPluginInput{
+			Plugin: name,
+			Scope:  "global",
+		})
+		if err != nil {
+			return diag.Errorf("error reloading plugin %q: %s", id, err)
+		}
+		log.Printf("[DEBUG] Reloaded plugin %q", id)
+	}
 
+	d.SetId(id)
 	return pluginRead(ctx, d, meta)
 }
 
@@ -182,7 +204,7 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		return diag.FromErr(e)
 	}
 
-	typ, name, version := pluginFromID(d.Id())
+	typ, name, version, reload := pluginFromID(d.Id())
 	if typ == "" || name == "" {
 		diag.Errorf("invalid ID %q, must be of form :type/name/:name or :type/version/:version/name/:name", d.Id())
 	}
@@ -224,6 +246,7 @@ func pluginRead(ctx context.Context, d *schema.ResourceData, meta interface{}) d
 		fieldCommand:        resp.Command,
 		fieldOCIImage:       resp.OCIImage,
 		fieldRuntime:        resp.Runtime,
+		fieldReload:         reload,
 	}
 	if len(resp.Args) > 0 {
 		result[fieldArgs] = resp.Args
