@@ -114,6 +114,7 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				ValidateFunc:  ValidateDataJSONFunc(name),
 				Sensitive:     true,
 				ConflictsWith: []string{consts.FieldDataJSONWO},
+				ExactlyOneOf:  []string{consts.FieldDataJSON, consts.FieldDataJSONWO},
 			},
 			consts.FieldDataJSONWO: {
 				Type:          schema.TypeString,
