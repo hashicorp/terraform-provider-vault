@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
 
-const defaultAzureScope = "https://management.azure.com/"
+const defaultAzureScope = "https://management.azure.com//.default"
 
 func init() {
 	field := consts.FieldAuthLoginAzure
@@ -64,6 +64,7 @@ func GetAzureLoginSchemaResource(authField string) *schema.Resource {
 				Description: "The resource group for the machine that generated the MSI token. " +
 					"This information can be obtained through instance metadata.",
 			},
+
 			consts.FieldVMName: {
 				Type:     schema.TypeString,
 				Optional: true,
@@ -175,7 +176,7 @@ func (l *AuthLoginAzure) Login(client *api.Client) (*api.Secret, error) {
 
 	if v, ok := l.params[consts.FieldVMName]; ok {
 		params[consts.FieldVMName] = v
-	} else if v, ok := l.params[consts.FieldVMName]; ok {
+	} else if v, ok := l.params[consts.FieldVMSSName]; ok {
 		params[consts.FieldVMSSName] = v
 	}
 
@@ -190,17 +191,24 @@ func (l *AuthLoginAzure) Login(client *api.Client) (*api.Secret, error) {
 }
 
 func (l *AuthLoginAzure) getJWT(ctx context.Context) (string, error) {
-	if v, ok := l.params[consts.FieldJWT]; ok {
-		return v.(string), nil
+	if jwt, ok := l.params[consts.FieldJWT].(string); ok && jwt != "" {
+		return jwt, nil
 	}
 
-	// attempt to get the token from Azure
-	credOpts := &azidentity.ManagedIdentityCredentialOptions{}
-	if v, ok := l.params[consts.FieldClientID]; ok {
-		credOpts.ID = azidentity.ClientID(v.(string))
+	// Initialize DefaultAzureCredential
+	// https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#DefaultAzureCredential
+	// DefaultAzureCredential attempts to authenticate with each of these credential types, in the following order, stopping when one provides a token:
+	// EnvironmentCredential
+	// WorkloadIdentityCredential, if environment variable configuration is set by the Azure workload identity webhook. Use WorkloadIdentityCredential directly when not using the webhook or needing more control over its configuration.
+	// ManagedIdentityCredential
+	// AzureCLICredential
+	// AzureDeveloperCLICredential
+	credOpts := azidentity.DefaultAzureCredentialOptions{}
+	if v, ok := l.params[consts.FieldTenantID]; ok {
+		credOpts.TenantID = v.(string)
 	}
 
-	creds, err := azidentity.NewManagedIdentityCredential(credOpts)
+	creds, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return "", err
 	}
@@ -213,6 +221,7 @@ func (l *AuthLoginAzure) getJWT(ctx context.Context) (string, error) {
 	tOpts := policy.TokenRequestOptions{
 		Scopes: scopes,
 	}
+
 	if v, ok := l.params[consts.FieldTenantID]; ok {
 		tOpts.TenantID = v.(string)
 	}
