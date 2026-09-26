@@ -57,6 +57,12 @@ resource "vault_database_secret_backend_connection" "postgres" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's
+  configured [namespace](/docs/providers/vault/index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `mount` - (Required) Mount path for the KVV2 engine in Vault without trailing or leading slashes.
 
 * `mount_id` - (Optional) If value is set, will defer provisioning the ephemeral resource until
