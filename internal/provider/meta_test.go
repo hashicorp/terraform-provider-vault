@@ -461,6 +461,75 @@ func TestGetClient(t *testing.T) {
 	}
 }
 
+func TestSetClient_NamespaceHeaderOnLookupSelf(t *testing.T) {
+	const wantNamespace = "ns1"
+
+	var lookupSelfNamespaceHeader string
+	var sawLookupSelf bool
+
+	mockVaultHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/auth/token/lookup-self":
+			sawLookupSelf = true
+			lookupSelfNamespaceHeader = r.Header.Get(vault_consts.NamespaceHeaderName)
+			response := map[string]interface{}{
+				"data": map[string]interface{}{
+					"id":        "test-token",
+					"policies":  []string{"default"},
+					"ttl":       3600,
+					"renewable": true,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		case "/v1/auth/token/create":
+			response := map[string]interface{}{
+				"auth": map[string]interface{}{
+					"client_token":   "child-token-123",
+					"policies":       []string{"default"},
+					"lease_duration": 3600,
+					"renewable":      true,
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		default:
+			w.WriteHeader(http.StatusNotImplemented)
+		}
+	})
+
+	config, ln := testutil.TestHTTPServer(t, mockVaultHandler)
+	defer ln.Close()
+
+	d := schema.TestResourceDataRaw(t,
+		map[string]*schema.Schema{
+			consts.FieldNamespace: {Type: schema.TypeString, Required: true},
+			consts.FieldAddress:   {Type: schema.TypeString, Required: true},
+			consts.FieldToken:     {Type: schema.TypeString, Required: true},
+		},
+		map[string]interface{}{
+			consts.FieldNamespace: wantNamespace,
+			consts.FieldAddress:   config.Address,
+			consts.FieldToken:     "test-token",
+		},
+	)
+
+	p := &ProviderMeta{resourceData: d}
+
+	if _, err := p.GetClient(); err != nil {
+		t.Fatalf("GetClient() unexpected error: %v", err)
+	}
+
+	if !sawLookupSelf {
+		t.Fatal("expected a request to /v1/auth/token/lookup-self, got none")
+	}
+
+	if lookupSelfNamespaceHeader != wantNamespace {
+		t.Errorf("lookup-self request namespace header = %q, want %q",
+			lookupSelfNamespaceHeader, wantNamespace)
+	}
+}
+
 func TestIsAPISupported(t *testing.T) {
 	testutil.SkipTestAcc(t)
 	testutil.TestAccPreCheck(t)

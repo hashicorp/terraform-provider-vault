@@ -278,6 +278,17 @@ func (p *ProviderMeta) setClient() error {
 	// Set the namespace to the requested namespace, if provided
 	namespace := GetResourceDataStr(d, consts.FieldNamespace, "VAULT_NAMESPACE", "")
 
+	if namespace != "" {
+		// This block executes when the namespace was explicitly
+		// configured on the provider (not derived from the token)
+		// or when the namespace was not configured on the provider but was derived from the token
+		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
+			return fmt.Errorf("failed to set namespace on provider: %w", err)
+		}
+		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
+		client.SetNamespace(namespace)
+	}
+
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
 		return err
@@ -371,17 +382,6 @@ func (p *ProviderMeta) setClient() error {
 		if setNamespaceFromToken {
 			namespace = tokenNamespace
 		}
-	}
-
-	if namespace != "" {
-		// This block executes when the namespace was explicitly
-		// configured on the provider (not derived from the token)
-		// or when the namespace was not configured on the provider but was derived from the token
-		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
-			return fmt.Errorf("failed to set namespace on provider: %w", err)
-		}
-		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
-		client.SetNamespace(namespace)
 	}
 
 	p.client = client
