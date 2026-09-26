@@ -247,3 +247,65 @@ resource "vault_rabbitmq_secret_backend" "test" {
 		},
 	})
 }
+
+// testAccRabbitMQSecretBackendConfig_passwordWOWithDescription is identical
+// to testAccRabbitMQSecretBackendConfig_passwordWO but allows the caller to
+// vary the `description` field. It is used by the regression test for the
+// bug where updating an unrelated field while leaving password_wo_version
+// unchanged caused the apply to fail with a "missing password" error from
+// the rabbitmq plugin endpoint.
+func testAccRabbitMQSecretBackendConfig_passwordWOWithDescription(path, description, connectionUri, username, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_rabbitmq_secret_backend" "test" {
+  path                = "%s"
+  description         = "%s"
+  connection_uri      = "%s"
+  username            = "%s"
+  password_wo         = "%s"
+  password_wo_version = %d
+}`, path, description, connectionUri, username, password, version)
+}
+
+// TestAccRabbitMQSecretBackend_passwordWOPersistsOnUnrelatedUpdate is a
+// regression test for the bug where updating an unrelated field while
+// password_wo_version stays unchanged caused the provider to omit `password`
+// from the request to the full-replace `<mount>/config/connection` endpoint.
+// The rabbitmq plugin rejects an empty password with `missing password`, so
+// the bug surfaces as a hard apply failure rather than silent data loss.
+//
+// See https://github.com/hashicorp/terraform-provider-vault/issues/2900.
+func TestAccRabbitMQSecretBackend_passwordWOPersistsOnUnrelatedUpdate(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-rabbitmq-wo-unrelated")
+	connectionUri, username, password := testutil.GetTestRMQCreds(t)
+	resourceType := "vault_rabbitmq_secret_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeRabbitMQ, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccRabbitMQSecretBackendConfig_passwordWOWithDescription(
+					path, "initial", connectionUri, username, password, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "initial"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordWOVersion, "1"),
+				),
+			},
+			{
+				// Update only `description`; keep password_wo_version at 1.
+				// Before the fix, this apply would fail because the provider
+				// would resolve password to "" and the rabbitmq plugin would
+				// reject the empty password.
+				Config: testAccRabbitMQSecretBackendConfig_passwordWOWithDescription(
+					path, "updated", connectionUri, username, password, 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDescription, "updated"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordWOVersion, "1"),
+				),
+			},
+		},
+	})
+}
