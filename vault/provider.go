@@ -107,6 +107,14 @@ var (
 			Resource:      UpdateSchemaResource(genericSecretDataSource()),
 			PathInventory: []string{"/secret/data/{path}"},
 		},
+		"vault_pki_access_credentials": {
+			Resource:      pkiAccessCredentialsDataSource(),
+			PathInventory: []string{"/pki/issue/{name}"},
+		},
+		"vault_consul_access_credentials": {
+			Resource:      consulAccessCredentialsDataSource(),
+			PathInventory: []string{"/consul/creds/{role}"},
+		},
 		"vault_policy_document": {
 			Resource:      UpdateSchemaResource(policyDocumentDataSource()),
 			PathInventory: []string{"/sys/policy/{name}"},
