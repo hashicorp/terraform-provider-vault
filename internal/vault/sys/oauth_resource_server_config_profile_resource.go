@@ -84,6 +84,7 @@ type OAuthResourceServerConfigProfileModel struct {
 	ClockSkewLeeway              types.Int64  `tfsdk:"clock_skew_leeway"`
 	Enabled                      types.Bool   `tfsdk:"enabled"`
 	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
+	AuthorizationDetailsClaim    types.String `tfsdk:"authorization_details_claim"`
 	Local                        types.Bool   `tfsdk:"local"`
 }
 
@@ -104,6 +105,7 @@ type OAuthResourceServerConfigProfileAPIModel struct {
 	ClockSkewLeeway              int                 `json:"clock_skew_leeway" mapstructure:"clock_skew_leeway"`
 	Enabled                      bool                `json:"enabled" mapstructure:"enabled"`
 	OptionalAuthorizationDetails bool                `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
+	AuthorizationDetailsClaim    string              `json:"authorization_details_claim" mapstructure:"authorization_details_claim"`
 	Local                        bool                `json:"local" mapstructure:"local"`
 }
 
@@ -222,6 +224,12 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional. Defaults to false.",
+			},
+			consts.FieldAuthorizationDetailsClaim: schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				Default:             stringdefault.StaticString("authorization_details"),
+				MarkdownDescription: "The claim to use for RAR (Rich Authorization Requests) authorization details. Defaults to 'authorization_details'.",
 			},
 			consts.FieldLocal: schema.BoolAttribute{
 				Optional: true,
@@ -516,6 +524,10 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 		data.UserClaim = types.StringValue(apiModel.UserClaim)
 	}
 
+	if apiModel.AuthorizationDetailsClaim != "" {
+		data.AuthorizationDetailsClaim = types.StringValue(apiModel.AuthorizationDetailsClaim)
+	}
+
 	if apiModel.JwtType != "" {
 		data.JwtType = types.StringValue(apiModel.JwtType)
 	}
@@ -604,6 +616,10 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 	// Optional string fields
 	if !data.UserClaim.IsNull() && !data.UserClaim.IsUnknown() {
 		vaultRequest[consts.FieldUserClaim] = data.UserClaim.ValueString()
+	}
+
+	if !data.AuthorizationDetailsClaim.IsNull() && !data.AuthorizationDetailsClaim.IsUnknown() {
+		vaultRequest[consts.FieldAuthorizationDetailsClaim] = data.AuthorizationDetailsClaim.ValueString()
 	}
 
 	if !data.JwtType.IsNull() && !data.JwtType.IsUnknown() {
