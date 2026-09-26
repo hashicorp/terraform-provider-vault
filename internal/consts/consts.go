@@ -978,6 +978,8 @@ const (
 		common environment variables
 	*/
 	EnvVarVaultNamespaceImport = "TERRAFORM_VAULT_NAMESPACE_IMPORT"
+	// EnvVarTFCVaultNamespace is set by Terraform Enterprise/Cloud when using Vault-backed dynamic credentials
+	EnvVarTFCVaultNamespace = "TFC_VAULT_NAMESPACE"
 	// EnvVarSkipChildToken to allow user from creating child tokens
 	EnvVarSkipChildToken = "TERRAFORM_VAULT_SKIP_CHILD_TOKEN"
 	// EnvVarUsername to get the username for the userpass auth method
