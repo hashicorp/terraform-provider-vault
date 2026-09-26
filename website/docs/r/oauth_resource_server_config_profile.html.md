@@ -118,6 +118,16 @@ resource "vault_oauth_resource_server_config_profile" "rar_mandatory" {
   # Require authorization_details in JWT tokens (default behavior)
   optional_authorization_details   = false
 }
+
+resource "vault_oauth_resource_server_config_profile" "rar_custom_claim" {
+  profile_name                     = "rar-custom-claim-profile"
+  issuer_id                        = "https://auth.example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://auth.example.com/.well-known/jwks.json"
+
+  # Use a custom claim name for authorization details
+  authorization_details_claim      = "rar_details"
+}
 ```
 
 ### Profile in a Namespace
@@ -189,6 +199,8 @@ The following arguments are supported:
 * `enabled` - (Optional) Whether this profile is enabled for JWT validation. Disabled profiles are ignored during JWT authentication. Defaults to `true`.
 
 * `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional. Defaults to `false`. Requires Vault 2.0.3 or later.
+
+* `authorization_details_claim` - (Optional) The string name of the JWT claim that contains RAR (Rich Authorization Requests) authorization details. Defaults to `authorization_details`. Requires Vault 2.2.0 or later.
 
 * `local` - (Optional) When `false`, the profile is written to replicated storage and propagated to all performance secondaries. When set to `true`, the profile remains local to the current cluster and is not replicated. The `local` field cannot be updated on a profile. Requires Vault 2.2.0 or later.
 
