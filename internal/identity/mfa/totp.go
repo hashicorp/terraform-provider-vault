@@ -71,6 +71,12 @@ var (
 			Description: `The number of delay periods that are allowed when validating a TOTP token. ` +
 				`This value can either be 0 or 1.`,
 		},
+		consts.FieldEnableSelfEnrollment: {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: `If true, allows users to enroll themselves in this MFA method. Vault Enterprise only.`,
+		},
 		consts.FieldMaxValidationAttempts: {
 			Type:        schema.TypeInt,
 			Optional:    true,

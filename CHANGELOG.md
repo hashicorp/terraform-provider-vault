@@ -4,6 +4,10 @@ FEATURES:
 
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
 
+FEATURES:
+
+* `resource/vault_identity_mfa_totp`: Add support for the `enable_self_enrollment` field, allowing users to control whether end users can self-enroll in the TOTP MFA method. Requires Vault Enterpise. ([#2919](https://github.com/hashicorp/terraform-provider-vault/pull/2920))
+
 IMPROVEMENTS:
 
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
