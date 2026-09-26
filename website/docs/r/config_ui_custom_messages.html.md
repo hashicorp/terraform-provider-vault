@@ -8,7 +8,7 @@ description: |-
 
 # vault\_config\_ui\_custom\_message
 
-Manages a UI custom message in Vault. Custom messages are displayed in the Vault UI either on the login page or immediately after succesfully logging in.
+Manages a UI custom message in Vault. Custom messages are displayed in the Vault UI either on the login page or immediately after successfully logging in.
 
 **Note** this feature is available only with Vault Enterprise.
 

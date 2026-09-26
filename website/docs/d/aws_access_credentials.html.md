@@ -21,7 +21,7 @@ for more details.
 ~> **Note**
 When using the outputs of this data source to authenticate with the [Terraform Provider for AWS](https://registry.terraform.io/providers/hashicorp/aws/latest/docs) or
 the [Terraform Provider for AWS Cloud Control](https://registry.terraform.io/providers/hashicorp/awscc/latest/docs),
-the credentials leased from Vault cannnot be renewed.
+the credentials leased from Vault cannot be renewed.
 Ensure that the lease is long enough for Terraform to complete.
 
 ## Example Usage

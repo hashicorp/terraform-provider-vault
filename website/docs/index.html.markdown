@@ -49,7 +49,7 @@ to the state and consider carefully whether such usage is compatible with
 their security policies.
 
 Please see the [Vault Policies and the Terraform Vault Provider](/docs/providers/vault/guides/policies.html)
-guide for details on token capabilites.
+guide for details on token capabilities.
 
 ## Using Vault credentials in Terraform configuration
 
@@ -214,7 +214,7 @@ variables in order to keep credential information out of the configuration.
   Normally the version is dynamically set from the */sys/seal-status* API endpoint. In the case where this endpoint
   is not available an override can be specified here.
 
-~> Setting the `vault_version_override` determines Vault server's API compatability, so
+~> Setting the `vault_version_override` determines Vault server's API compatibility, so
 it's important that the value specified here matches the target server. It is recommended to
 only ever use this option in the case where the server version cannot be dynamically determined.
 
