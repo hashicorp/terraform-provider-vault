@@ -54,7 +54,7 @@ func TestPlugin(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPluginConfig(typ, destName, version, sha256, cmd, args, env),
+				Config: testPluginConfig(typ, destName, version, sha256, cmd, args, env, false),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
@@ -62,12 +62,13 @@ func TestPlugin(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
 					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256),
 					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
+					resource.TestCheckResourceAttr(resourceName, fieldReload, "false"),
 					testValidateList(resourceName, fieldArgs, []string{"--foo"}),
 					testValidateList(resourceName, fieldEnv, []string{"FOO=BAR"}),
 				),
 			},
 			{
-				Config: testPluginConfig(typ, destName, version, sha256Updated, cmd, argsUpdated, envUpdated),
+				Config: testPluginConfig(typ, destName, version, sha256Updated, cmd, argsUpdated, envUpdated, false),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
@@ -75,6 +76,35 @@ func TestPlugin(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
 					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256Updated),
 					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
+					resource.TestCheckResourceAttr(resourceName, fieldReload, "false"),
+					testValidateList(resourceName, fieldArgs, []string{"--bar"}),
+					testValidateList(resourceName, fieldEnv, []string{"FOO=BAZ"}),
+				),
+			},
+			{
+				Config: testPluginConfig(typ, destName, version, sha256, cmd, args, envUpdated, true),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
+					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256),
+					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
+					resource.TestCheckResourceAttr(resourceName, fieldReload, "true"),
+					testValidateList(resourceName, fieldArgs, []string{"--foo"}),
+					testValidateList(resourceName, fieldEnv, []string{"FOO=BAZ"}),
+				),
+			},
+			{
+				Config: testPluginConfig(typ, destName, version, sha256Updated, cmd, argsUpdated, envUpdated, false),
+				Check: resource.ComposeTestCheckFunc(
+
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldName, destName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, version),
+					resource.TestCheckResourceAttr(resourceName, fieldSHA256, sha256Updated),
+					resource.TestCheckResourceAttr(resourceName, fieldCommand, cmd),
+					resource.TestCheckResourceAttr(resourceName, fieldReload, "false"),
 					testValidateList(resourceName, fieldArgs, []string{"--bar"}),
 					testValidateList(resourceName, fieldEnv, []string{"FOO=BAZ"}),
 				),
@@ -111,7 +141,7 @@ func TestPlugin_ent(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPluginConfig_ent(typ, name, version, args, env),
+				Config: testPluginConfig_ent(typ, name, version, args, env, false),
 				Check: resource.ComposeTestCheckFunc(
 
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, typ),
@@ -125,7 +155,7 @@ func TestPlugin_ent(t *testing.T) {
 	})
 }
 
-func testPluginConfig(pluginType, name, version, sha256, command, args, env string) string {
+func testPluginConfig(pluginType, name, version, sha256, command, args, env string, reload bool) string {
 	return fmt.Sprintf(`
 resource "vault_plugin" "test" {
   type      = "%s"
@@ -135,11 +165,12 @@ resource "vault_plugin" "test" {
   command   = "%s"
   args      = %s
   env       = %s
+  reload    = %t
 }
-`, pluginType, name, version, sha256, command, args, env)
+`, pluginType, name, version, sha256, command, args, env, reload)
 }
 
-func testPluginConfig_ent(pluginType, name, version, args, env string) string {
+func testPluginConfig_ent(pluginType, name, version, args, env string, reload bool) string {
 	return fmt.Sprintf(`
 resource "vault_plugin" "test" {
   type      = "%s"
@@ -147,8 +178,9 @@ resource "vault_plugin" "test" {
   version   = "%s"
   args      = %s
   env       = %s
+  reload    = %t
 }
-`, pluginType, name, version, args, env)
+`, pluginType, name, version, args, env, reload)
 }
 
 func testValidateList(resourceName, attr string, expected []string) resource.TestCheckFunc {
@@ -180,20 +212,22 @@ func TestPluginFromID(t *testing.T) {
 		typ     string
 		name    string
 		version string
+		reload  bool
 	}{
-		"auth":                             {"auth/version/v1.0.0/name/foo", "auth", "foo", "v1.0.0"},
-		"secret":                           {"secret/version/v1.0.0/name/foo", "secret", "foo", "v1.0.0"},
-		"database":                         {"database/version/v1.0.0/name/foo", "database", "foo", "v1.0.0"},
-		"no version":                       {"auth/name/foo", "auth", "foo", ""},
-		"weird version":                    {"auth/version/bad-semver/name/foo", "auth", "foo", "bad-semver"},
-		"name with slashes":                {"auth/version/v1.0.0/name/foo/bar/baz", "auth", "foo/bar/baz", "v1.0.0"},
-		"no version and name with slashes": {"auth/name/foo/bar/baz", "auth", "foo/bar/baz", ""},
-		"missing type":                     {"version/v1.0.0/name/foo", "", "", ""},
-		"invalid type":                     {"new-type/version/v1.0.0/name/foo", "", "", ""},
-		"missing name":                     {"auth/version/v1.0.0", "", "", ""},
+		"auth":                             {"auth/version/v1.0.0/name/foo", "auth", "foo", "v1.0.0", false},
+		"secret":                           {"secret/version/v1.0.0/name/foo", "secret", "foo", "v1.0.0", false},
+		"database":                         {"database/version/v1.0.0/name/foo", "database", "foo", "v1.0.0", false},
+		"no version":                       {"auth/name/foo", "auth", "foo", "", false},
+		"weird version":                    {"auth/version/bad-semver/name/foo", "auth", "foo", "bad-semver", false},
+		"name with slashes":                {"auth/version/v1.0.0/name/foo/bar/baz", "auth", "foo/bar/baz", "v1.0.0", false},
+		"no version and name with slashes": {"auth/name/foo/bar/baz", "auth", "foo/bar/baz", "", false},
+		"missing type":                     {"version/v1.0.0/name/foo", "", "", "", false},
+		"invalid type":                     {"new-type/version/v1.0.0/name/foo", "", "", "", false},
+		"missing name":                     {"auth/version/v1.0.0", "", "", "", false},
+		"reload true":                      {"auth/version/v1.0.0/reload/true/name/foo", "auth", "foo", "v1.0.0", true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			typ, name, version := pluginFromID(tc.id)
+			typ, name, version, reload := pluginFromID(tc.id)
 			if typ != tc.typ {
 				t.Errorf("expected type %q, got %q", tc.typ, typ)
 			}
@@ -202,6 +236,9 @@ func TestPluginFromID(t *testing.T) {
 			}
 			if version != tc.version {
 				t.Errorf("expected version %q, got %q", tc.version, version)
+			}
+			if reload != tc.reload {
+				t.Errorf("expected reload %v, got %v", tc.reload, reload)
 			}
 		})
 	}
