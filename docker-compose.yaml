@@ -5,7 +5,7 @@ version: "2.2"
 
 services:
   vault:
-    image: vault:latest
+    image: hashicorp/vault:latest
     cap_add:
     - "IPC_LOCK"
     ports:
