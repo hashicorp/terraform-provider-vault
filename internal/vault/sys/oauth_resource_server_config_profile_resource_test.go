@@ -5,10 +5,13 @@ package sys_test
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -510,6 +513,19 @@ func TestAccOAuthResourceServerConfigProfile_localRequiresReplace(t *testing.T) 
 			},
 		},
 	})
+}
+
+func testAccOAuthResourceServerConfigProfilePreCheck(t *testing.T, minVersion *version.Version) {
+	t.Helper()
+	acctestutil.TestAccPreCheck(t)
+	acctestutil.TestEntPreCheck(t)
+	acctestutil.SkipIfAPIVersionLT(t, minVersion)
+
+	meta := acctestutil.TestProvider.Meta().(*provider.ProviderMeta)
+	t.Setenv(
+		"TF_VAR_vault_test_activate_oauth_resource_server",
+		strconv.FormatBool(!meta.IsAPISupported(provider.VaultVersion210)),
+	)
 }
 
 // Config helper functions
