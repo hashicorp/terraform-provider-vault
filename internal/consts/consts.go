@@ -337,6 +337,8 @@ const (
 	FieldTemplate                           = "template"
 	FieldTemplates                          = "templates"
 	FieldTweakSource                        = "tweak_source"
+	FieldFpeAlgorithm                       = "fpe_algorithm"
+	FieldMaxTweakLen                        = "max_tweak_len"
 	FieldMappingMode                        = "mapping_mode"
 	FieldStores                             = "stores"
 	FieldConvergent                         = "convergent"
