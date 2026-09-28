@@ -7,7 +7,8 @@ FEATURES:
 IMPROVEMENTS:
 
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
-* `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039)) 
+* `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
+* `vault_oauth_resource_server_config_profile`: Add `unique_id_claim` and `actor_claim` parameters to support configuring the JWT claim used as the token unique identifier and the actor claim for delegation scenarios. Requires Vault 2.2.0 or later. ([#TODO](https://github.com/hashicorp/terraform-provider-vault/pull/3060))
 
 ## 5.12.0 (September 17, 2026)
 
@@ -19,8 +20,6 @@ FEATURES:
 * `vault_azure_auth_backend_config`: Add `auth_type` field to explicitly control how Vault authenticates to Azure APIs. Valid values are `root_creds`, `plugin_wif`, `msi`, and `aks_wif`. When omitted, Vault retains its existing credential-discovery behaviour for backward compatibility ([#2999](https://github.com/hashicorp/terraform-provider-vault/pull/2999)). Requires Vault 2.2.0+.
 
 IMPROVEMENTS:
-
-* `vault_oauth_resource_server_config_profile`: Add `unique_id_claim` and `actor_claim` parameters to support configuring the JWT claim used as the token unique identifier and the actor claim for delegation scenarios. Requires Vault 2.2.0 or later. ([#TODO](https://github.com/hashicorp/terraform-provider-vault/pull/TODO))
 
 * `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to allow ephemeral resource values, to supply the CA certificate. The `certificate` field is now `Computed` and `ForceNew` has been removed enabling in-place updates when the certificate changes instead of resource replacement. ([#3011](https://github.com/hashicorp/terraform-provider-vault/pull/3011))
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
