@@ -284,10 +284,6 @@ func (p *ProviderMeta) setClient() error {
 			namespace = ns
 		}
 	}
-	if namespace != "" {
-		log.Printf("[DEBUG] Setting namespace on client early to %q, before token lookup", namespace)
-		client.SetNamespace(namespace)
-	}
 
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
