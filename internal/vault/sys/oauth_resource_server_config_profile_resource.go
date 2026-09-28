@@ -84,6 +84,8 @@ type OAuthResourceServerConfigProfileModel struct {
 	ClockSkewLeeway              types.Int64  `tfsdk:"clock_skew_leeway"`
 	Enabled                      types.Bool   `tfsdk:"enabled"`
 	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
+	UniqueIDClaim                types.String `tfsdk:"unique_id_claim"`
+	ActorClaim                   types.String `tfsdk:"actor_claim"`
 	Local                        types.Bool   `tfsdk:"local"`
 }
 
@@ -104,6 +106,8 @@ type OAuthResourceServerConfigProfileAPIModel struct {
 	ClockSkewLeeway              int                 `json:"clock_skew_leeway" mapstructure:"clock_skew_leeway"`
 	Enabled                      bool                `json:"enabled" mapstructure:"enabled"`
 	OptionalAuthorizationDetails bool                `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
+	UniqueIDClaim                string              `json:"unique_id_claim" mapstructure:"unique_id_claim"`
+	ActorClaim                   string              `json:"actor_claim" mapstructure:"actor_claim"`
 	Local                        bool                `json:"local" mapstructure:"local"`
 }
 
@@ -222,6 +226,16 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional. Defaults to false.",
+			},
+			consts.FieldUniqueIDClaim: schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. Requires Vault 2.2.0 or later.",
+			},
+			consts.FieldActorClaim: schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "The JWT claim to use as the actor identifier for delegation/chained-token scenarios (RFC 8693 `act` claim). Requires Vault 2.2.0 or later.",
 			},
 			consts.FieldLocal: schema.BoolAttribute{
 				Optional: true,
@@ -546,6 +560,20 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 	// RAR support
 	data.OptionalAuthorizationDetails = types.BoolValue(apiModel.OptionalAuthorizationDetails)
 
+	// Unique ID claim
+	if apiModel.UniqueIDClaim != "" {
+		data.UniqueIDClaim = types.StringValue(apiModel.UniqueIDClaim)
+	} else {
+		data.UniqueIDClaim = types.StringNull()
+	}
+
+	// Actor claim
+	if apiModel.ActorClaim != "" {
+		data.ActorClaim = types.StringValue(apiModel.ActorClaim)
+	} else {
+		data.ActorClaim = types.StringNull()
+	}
+
 	data.Local = types.BoolValue(apiModel.Local)
 
 	return true
@@ -629,9 +657,20 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 		vaultRequest[consts.FieldOptionalAuthorizationDetails] = data.OptionalAuthorizationDetails.ValueBool()
 	}
 
+	// Unique ID claim
+	if !data.UniqueIDClaim.IsNull() && !data.UniqueIDClaim.IsUnknown() {
+		vaultRequest[consts.FieldUniqueIDClaim] = data.UniqueIDClaim.ValueString()
+	}
+
+	// Actor claim
+	if !data.ActorClaim.IsNull() && !data.ActorClaim.IsUnknown() {
+		vaultRequest[consts.FieldActorClaim] = data.ActorClaim.ValueString()
+	}
+
 	if !data.Local.IsNull() && !data.Local.IsUnknown() {
 		vaultRequest[consts.FieldLocal] = data.Local.ValueBool()
 	}
+
 	return vaultRequest
 }
 
