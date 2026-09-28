@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -43,6 +44,21 @@ func transitDecryptDataSource() *schema.Resource {
 				Required:    true,
 				Description: "Transit encrypted cipher text.",
 			},
+			consts.FieldHashAlgorithm: {
+				Type:     schema.TypeString,
+				Optional: true,
+				Default:  "sha2-256",
+				Description: "Specifies the hash algorithm to use for decryption. Currently only applies to RSA key types. Default is sha2-256. " +
+					"Supported values are: sha1, sha2-224, sha2-256, sha2-384, sha2-512, sha3-224, sha3-256, sha3-384, sha3-512",
+				ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"sha1", "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512"}),
+			},
+			consts.FieldPaddingScheme: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "oaep",
+				Description:  "Specifies the RSA encryption padding scheme for RSA keys.",
+				ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"oaep", "pkcs1v15"}),
+			},
 		},
 	}
 }
@@ -61,6 +77,13 @@ func transitDecryptDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	payload := map[string]interface{}{
 		"ciphertext": ciphertext,
 		"context":    context,
+	}
+
+	if v, ok := d.GetOk(consts.FieldHashAlgorithm); ok {
+		payload[consts.FieldHashAlgorithm] = v.(string)
+	}
+	if v, ok := d.GetOk(consts.FieldPaddingScheme); ok {
+		payload[consts.FieldPaddingScheme] = v.(string)
 	}
 
 	decryptedData, err := client.Logical().Write(backend+"/decrypt/"+key, payload)
