@@ -168,7 +168,7 @@ func ldapSecretBackendResource() *schema.Resource {
 			Computed: true,
 			Description: "If true, Vault automatically unlocks the admin managed LDAP account after a successful " +
 				"static-role rotation. Applies to all roles on this mount unless overridden per role. " +
-				"Active Directory schema only. Requires Vault 2.2.0+.",
+				"Active Directory schema only. Requires Vault Enterprise 2.2.0+.",
 		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
@@ -301,7 +301,7 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		}
 	}
 
-	// auto_unlock (mount-level), gated on Vault 2.2.0+ Enterprise
+	// auto_unlock (mount-level), gated on Vault Enterprise 2.2.0+
 	if provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta) {
 		data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
 	}
