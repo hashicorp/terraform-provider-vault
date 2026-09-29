@@ -297,8 +297,11 @@ func managedKeysPKCSConfigSchema() schemaMap {
 		consts.FieldRsaOaepHash: {
 			Type:     schema.TypeString,
 			Optional: true,
+			Computed: true,
 			Description: "The hash algorithm to use for RSA-OAEP encryption with mechanism CKM_RSA_PKCS_OAEP. " +
-				"Supported values are: sha1, sha224, sha256, sha384, sha512",
+				"Only applies when 'mechanism' is set to 'CKM_RSA_PKCS_OAEP'. " +
+				"Supported values are: sha1, sha224, sha256, sha384, sha512. " +
+				"If not set, Vault defaults to sha256.",
 			ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"sha1", "sha224", "sha256", "sha384", "sha512"}),
 		},
 	}
