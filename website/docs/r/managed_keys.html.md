@@ -202,8 +202,9 @@ The following arguments are supported:
 * `max_parallel` - (Optional) The number of concurrent requests that may be in flight to the HSM at any given time.
 
 * `rsa_oaep_hash` - (Optional) The hash algorithm to use for RSA-OAEP encryption
-  with mechanism `CKM_RSA_PKCS_OAEP`. Supported values are: `sha1`, `sha224`,
-  `sha256`, `sha384`, `sha512`.
+  with mechanism `CKM_RSA_PKCS_OAEP`. Only applies when `mechanism` is set to
+  `CKM_RSA_PKCS_OAEP`. Supported values are: `sha1`, `sha224`, `sha256`, `sha384`,
+  `sha512`. If not set, Vault defaults to `sha256`.
 
 
 ### GCP Cloud KMS Parameters
