@@ -27,11 +27,11 @@ func TestDataSourceTransitDecrypt(t *testing.T) {
 	})
 }
 
-// TestDataSourceTransitDecryptRSA_OAEP verifies that hash_algorith and
+// TestDataSourceTransitDecryptRSA_OAEP verifies that hash_algorithm and
 // oaep are accepted and round-trip correctly for RSA decrypt,
 // producing the original plaintext.
 func TestDataSourceTransitDecryptRSA_OAEP(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
@@ -50,7 +50,7 @@ func TestDataSourceTransitDecryptRSA_OAEP(t *testing.T) {
 // TestDataSourceTransitDecryptRSA_PKCS1v15 verifies that padding_scheme=pkcs1v15
 // is accepted and round-trips correctly for RSA decrypt, producing the original plaintext.
 func TestDataSourceTransitDecryptRSA_PKCS1v15(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{

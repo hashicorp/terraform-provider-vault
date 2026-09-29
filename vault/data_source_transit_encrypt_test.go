@@ -30,7 +30,7 @@ func TestDataSourceTransitEncrypt(t *testing.T) {
 // TestDataSourceTransitEncryptRSA_OAEP verifies that hash_algorithm and
 // oaep are accepted and produce ciphertext when using an RSA key.
 func TestDataSourceTransitEncryptRSA_OAEP(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
@@ -49,7 +49,7 @@ func TestDataSourceTransitEncryptRSA_OAEP(t *testing.T) {
 // TestDataSourceTransitEncryptRSA_PKCS1v15 verifies that padding_scheme=pkcs1v15
 // is accepted and produces ciphertext when using an RSA key.
 func TestDataSourceTransitEncryptRSA_PKCS1v15(t *testing.T) {
-	resource.Test(t, resource.TestCase{
+	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
 		Steps: []resource.TestStep{
