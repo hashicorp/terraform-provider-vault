@@ -45,6 +45,17 @@ Each document configuration may have one or more `rule` blocks, which each accep
 
 * `key_version` - (Optional) The version of the key to use for encryption. If not set, uses the latest version. Must be greater than or equal to the key's `min_encryption_version`, if set.
 
+* `hash_algorithm` - (Optional) Specifies the hash algorithm to use for
+  encryption. Only applies to RSA key types; ignored for all other key types.
+  Supported values are: `sha1`, `sha2-224`, `sha2-256`, `sha2-384`, `sha2-512`,
+  `sha3-224`, `sha3-256`, `sha3-384`, `sha3-512`. If not set, Vault defaults to
+  `sha2-256` for RSA keys.
+
+* `padding_scheme` - (Optional) Specifies the RSA padding scheme to use for
+  encryption. Only applies to RSA key types; ignored for all other key types.
+  Supported values are: `oaep`, `pkcs1v15`. If not set, Vault defaults to `oaep`
+  for RSA keys.
+
 ## Attributes Reference
 
 * `ciphertext` - Encrypted ciphertext returned from Vault

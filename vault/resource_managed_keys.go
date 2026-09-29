@@ -294,6 +294,16 @@ func managedKeysPKCSConfigSchema() schemaMap {
 			Description: "The number of concurrent requests that may be in flight to the HSM at any given time." +
 				" Default is 1",
 		},
+		consts.FieldRsaOaepHash: {
+			Type:     schema.TypeString,
+			Optional: true,
+			Computed: true,
+			Description: "The hash algorithm to use for RSA-OAEP encryption with mechanism CKM_RSA_PKCS_OAEP. " +
+				"Only applies when 'mechanism' is set to 'CKM_RSA_PKCS_OAEP'. " +
+				"Supported values are: sha1, sha224, sha256, sha384, sha512. " +
+				"If not set, Vault defaults to sha256.",
+			ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"sha1", "sha224", "sha256", "sha384", "sha512"}),
+		},
 	}
 
 	return setCommonManagedKeysSchema(s)
@@ -411,6 +421,14 @@ func managedKeysAzureConfigSchema() schemaMap {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The type of key to use",
+		},
+		consts.FieldEncryptionMode: {
+			Type:     schema.TypeString,
+			Optional: true,
+			Default:  "envelope",
+			Description: "The encryption mode to use for the key. `envelope` uses AES-GCM envelope encryption, " +
+				"`raw` encrypts directly with the KMS key.",
+			ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"envelope", "raw"}),
 		},
 	}
 
