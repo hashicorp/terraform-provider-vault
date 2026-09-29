@@ -27,6 +27,25 @@ func TestDataSourceTransitEncrypt(t *testing.T) {
 	})
 }
 
+// TestDataSourceTransitEncryptRSA_Defaults verifies that hash_algorithm and
+// padding_scheme are absent from state when not set in config (Computed, no Default).
+func TestDataSourceTransitEncryptRSA_Defaults(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceTransitEncryptRSA_defaults_config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("data.vault_transit_encrypt.rsa", "hash_algorithm"),
+					resource.TestCheckNoResourceAttr("data.vault_transit_encrypt.rsa", "padding_scheme"),
+					resource.TestCheckResourceAttrSet("data.vault_transit_encrypt.rsa", "ciphertext"),
+				),
+			},
+		},
+	})
+}
+
 // TestDataSourceTransitEncryptRSA_OAEP verifies that hash_algorithm and
 // oaep are accepted and produce ciphertext when using an RSA key.
 func TestDataSourceTransitEncryptRSA_OAEP(t *testing.T) {
@@ -57,6 +76,7 @@ func TestDataSourceTransitEncryptRSA_PKCS1v15(t *testing.T) {
 				Config: testDataSourceTransitEncryptRSA_pkcs1v15_config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_transit_encrypt.rsa", "padding_scheme", "pkcs1v15"),
+					resource.TestCheckNoResourceAttr("data.vault_transit_encrypt.rsa", "hash_algorithm"),
 					resource.TestCheckResourceAttrSet("data.vault_transit_encrypt.rsa", "ciphertext"),
 				),
 			},
@@ -110,6 +130,27 @@ data "vault_transit_encrypt" "rsa" {
   plaintext      = "hello rsa oaep"
   hash_algorithm = "sha2-384"
   padding_scheme = "oaep"
+}
+`
+
+var testDataSourceTransitEncryptRSA_defaults_config = `
+resource "vault_mount" "transit_rsa" {
+  path        = "transit-rsa-enc-defaults"
+  type        = "transit"
+  description = "Transit mount for RSA default hash/padding encrypt tests"
+}
+
+resource "vault_transit_secret_backend_key" "rsa" {
+  name             = "rsa-defaults-test"
+  backend          = vault_mount.transit_rsa.path
+  type             = "rsa-2048"
+  deletion_allowed = true
+}
+
+data "vault_transit_encrypt" "rsa" {
+  backend   = vault_mount.transit_rsa.path
+  key       = vault_transit_secret_backend_key.rsa.name
+  plaintext = "hello rsa defaults"
 }
 `
 

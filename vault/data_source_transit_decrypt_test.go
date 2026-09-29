@@ -27,6 +27,26 @@ func TestDataSourceTransitDecrypt(t *testing.T) {
 	})
 }
 
+// TestDataSourceTransitDecryptRSA_Defaults verifies that hash_algorithm and
+// padding_scheme are absent from state when not set in config (Computed, no Default),
+// and that Vault still decrypts the ciphertext correctly using its own defaults.
+func TestDataSourceTransitDecryptRSA_Defaults(t *testing.T) {
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceTransitDecryptRSA_defaults_config,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("data.vault_transit_decrypt.rsa", "hash_algorithm"),
+					resource.TestCheckNoResourceAttr("data.vault_transit_decrypt.rsa", "padding_scheme"),
+					resource.TestCheckResourceAttr("data.vault_transit_decrypt.rsa", "plaintext", "hello rsa defaults"),
+				),
+			},
+		},
+	})
+}
+
 // TestDataSourceTransitDecryptRSA_OAEP verifies that hash_algorithm and
 // oaep are accepted and round-trip correctly for RSA decrypt,
 // producing the original plaintext.
@@ -49,6 +69,7 @@ func TestDataSourceTransitDecryptRSA_OAEP(t *testing.T) {
 
 // TestDataSourceTransitDecryptRSA_PKCS1v15 verifies that padding_scheme=pkcs1v15
 // is accepted and round-trips correctly for RSA decrypt, producing the original plaintext.
+// hash_algorithm is not set, so it should be absent from state.
 func TestDataSourceTransitDecryptRSA_PKCS1v15(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
@@ -58,6 +79,7 @@ func TestDataSourceTransitDecryptRSA_PKCS1v15(t *testing.T) {
 				Config: testDataSourceTransitDecryptRSA_pkcs1v15_config,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.vault_transit_decrypt.rsa", "padding_scheme", "pkcs1v15"),
+					resource.TestCheckNoResourceAttr("data.vault_transit_decrypt.rsa", "hash_algorithm"),
 					resource.TestCheckResourceAttr("data.vault_transit_decrypt.rsa", "plaintext", "hello rsa pkcs1v15"),
 				),
 			},
@@ -119,6 +141,33 @@ data "vault_transit_decrypt" "rsa" {
   ciphertext     = data.vault_transit_encrypt.rsa.ciphertext
   hash_algorithm = "sha2-384"
   padding_scheme = "oaep"
+}
+`
+
+var testDataSourceTransitDecryptRSA_defaults_config = `
+resource "vault_mount" "transit_rsa" {
+  path        = "transit-rsa-dec-defaults"
+  type        = "transit"
+  description = "Transit mount for RSA default hash/padding decrypt tests"
+}
+
+resource "vault_transit_secret_backend_key" "rsa" {
+  name             = "rsa-defaults-test"
+  backend          = vault_mount.transit_rsa.path
+  type             = "rsa-2048"
+  deletion_allowed = true
+}
+
+data "vault_transit_encrypt" "rsa" {
+  backend   = vault_mount.transit_rsa.path
+  key       = vault_transit_secret_backend_key.rsa.name
+  plaintext = "hello rsa defaults"
+}
+
+data "vault_transit_decrypt" "rsa" {
+  backend    = vault_mount.transit_rsa.path
+  key        = vault_transit_secret_backend_key.rsa.name
+  ciphertext = data.vault_transit_encrypt.rsa.ciphertext
 }
 `
 
