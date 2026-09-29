@@ -47,16 +47,18 @@ func transitEncryptDataSource() *schema.Resource {
 			consts.FieldHashAlgorithm: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Default:  "sha2-256",
-				Description: "Specifies the hash algorithm to use for encryption. Currently only applies to RSA key types. Default is sha2-256. " +
-					"Supported values are: sha1, sha2-224, sha2-256, sha2-384, sha2-512, sha3-224, sha3-256, sha3-384, sha3-512",
+				Computed: true,
+				Description: "Specifies the hash algorithm to use for RSA key encryption. " +
+					"Only applies to RSA key types; ignored for all other key types. " +
+					"Supported values are: sha1, sha2-224, sha2-256, sha2-384, sha2-512, sha3-224, sha3-256, sha3-384, sha3-512. " +
+					"If not set, Vault defaults to sha2-256 for RSA keys.",
 				ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"sha1", "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512"}),
 			},
 			consts.FieldPaddingScheme: {
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "oaep",
-				Description:  "Specifies the RSA encryption padding scheme for RSA keys.",
+				Type:             schema.TypeString,
+				Optional:         true,
+				Computed:         true,
+				Description:      "Specifies the RSA padding scheme to use for encryption. Only applies to RSA key types; ignored for all other key types. Supported values are: oaep, pkcs1v15. If not set, Vault defaults to oaep for RSA keys.",
 				ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"oaep", "pkcs1v15"}),
 			},
 			"ciphertext": {
