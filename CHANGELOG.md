@@ -1,6 +1,6 @@
 ## 5.13.0 (Unreleased)
 
-FEATURES:
+FEATURES: 
 
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
@@ -12,6 +12,10 @@ IMPROVEMENTS:
 * `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
 * `vault_pki_external_ca_secret_backend_acme_account`: Remove redundant `Sensitive` attribute from write-only fields `eab_kid` and `eab_key`, and add mutual-requirement validation so both fields must be specified together. ([#3038](https://github.com/hashicorp/terraform-provider-vault/pull/3038))
 * `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
+
+BUG FIXES:
+
+* provider: Use the provider's `namespace` rather than the `VAULT_NAMESPACE` environment variable when performing the token self-lookup during provider configuration. Previously a `VAULT_NAMESPACE` pointing at an unrelated namespace caused configuration to fail with a 403. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
 
 ## 5.12.0 (September 17, 2026)
 
