@@ -78,6 +78,23 @@ var ldapSecretBackendLibrarySetFields = []string{
 	consts.FieldDisableCheckInEnforcement,
 }
 
+func ldapSecretBackendLibrarySetData(d *schema.ResourceData) map[string]interface{} {
+	data := map[string]interface{}{}
+	for _, field := range ldapSecretBackendLibrarySetFields {
+		if v, ok := d.GetOk(field); ok {
+			data[field] = v
+		}
+	}
+
+	// GetOk returns false for the zero value, but false must still be sent so
+	// disable_check_in_enforcement can be changed from true to false.
+	if v, ok := d.GetOkExists(consts.FieldDisableCheckInEnforcement); ok {
+		data[consts.FieldDisableCheckInEnforcement] = v
+	}
+
+	return data
+}
+
 func createUpdateLDAPLibrarySetResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
@@ -88,12 +105,7 @@ func createUpdateLDAPLibrarySetResource(ctx context.Context, d *schema.ResourceD
 	set := d.Get(consts.FieldName).(string)
 	libraryPath := fmt.Sprintf("%s/library/%s", path, set)
 	log.Printf("[DEBUG] Creating LDAP library set at %q", libraryPath)
-	data := map[string]interface{}{}
-	for _, field := range ldapSecretBackendLibrarySetFields {
-		if v, ok := d.GetOk(field); ok {
-			data[field] = v
-		}
-	}
+	data := ldapSecretBackendLibrarySetData(d)
 
 	if _, err := client.Logical().WriteWithContext(ctx, libraryPath, data); err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", libraryPath, err))
