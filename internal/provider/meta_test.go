@@ -461,6 +461,126 @@ func TestGetClient(t *testing.T) {
 	}
 }
 
+func TestSetClient_NamespaceHeaderOnLookupSelf(t *testing.T) {
+	tests := []struct {
+		name         string
+		configuredNS string
+		envNS        string
+		tokenNS      string
+		wantLookupNS string
+		wantClientNS string
+		wantCreateNS string
+	}{
+		{
+			name:         "configured-namespace-takes-precedence",
+			configuredNS: "provider-ns",
+			envNS:        "env-ns",
+			tokenNS:      "token-ns",
+			wantLookupNS: "provider-ns",
+			wantClientNS: "provider-ns",
+			wantCreateNS: "token-ns",
+		},
+		{
+			name:         "token-namespace-fallback-is-preserved",
+			tokenNS:      "token-ns",
+			wantClientNS: "token-ns",
+			wantCreateNS: "token-ns",
+		},
+		{
+			name:         "root-namespace-token-creates-child-token-in-root",
+			configuredNS: "provider-ns",
+			wantLookupNS: "provider-ns",
+			wantClientNS: "provider-ns",
+			wantCreateNS: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("VAULT_NAMESPACE", tt.envNS)
+
+			var lookupSelfNamespaceHeader, createNamespaceHeader string
+			mockVaultHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/v1/auth/token/lookup-self":
+					lookupSelfNamespaceHeader = r.Header.Get(vault_consts.NamespaceHeaderName)
+					response := map[string]interface{}{
+						"data": map[string]interface{}{
+							"id":                      "test-token",
+							"policies":                []string{"default"},
+							"ttl":                     3600,
+							"renewable":               true,
+							consts.FieldNamespacePath: tt.tokenNS,
+						},
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(response)
+				case "/v1/auth/token/create":
+					createNamespaceHeader = r.Header.Get(vault_consts.NamespaceHeaderName)
+					response := map[string]interface{}{
+						"auth": map[string]interface{}{
+							"client_token":   "child-token",
+							"policies":       []string{"default"},
+							"lease_duration": 3600,
+							"renewable":      true,
+						},
+					}
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(response)
+				default:
+					w.WriteHeader(http.StatusNotImplemented)
+				}
+			})
+
+			config, ln := testutil.TestHTTPServer(t, mockVaultHandler)
+			defer ln.Close()
+
+			d := schema.TestResourceDataRaw(t,
+				map[string]*schema.Schema{
+					consts.FieldNamespace: {
+						Type:     schema.TypeString,
+						Optional: true,
+					},
+					consts.FieldAddress: {
+						Type:     schema.TypeString,
+						Required: true,
+					},
+					consts.FieldToken: {
+						Type:     schema.TypeString,
+						Required: true,
+					},
+				},
+				map[string]interface{}{
+					consts.FieldNamespace: tt.configuredNS,
+					consts.FieldAddress:   config.Address,
+					consts.FieldToken:     "test-token",
+				},
+			)
+
+			p := &ProviderMeta{resourceData: d}
+			client, err := p.GetClient()
+			if err != nil {
+				t.Fatalf("GetClient() unexpected error: %v", err)
+			}
+
+			if lookupSelfNamespaceHeader != tt.wantLookupNS {
+				t.Errorf("lookup-self namespace header = %q, want %q",
+					lookupSelfNamespaceHeader, tt.wantLookupNS)
+			}
+			if createNamespaceHeader != tt.wantCreateNS {
+				t.Errorf("token/create namespace header = %q, want %q",
+					createNamespaceHeader, tt.wantCreateNS)
+			}
+			if got := client.Headers().Get(vault_consts.NamespaceHeaderName); got != tt.wantClientNS {
+				t.Errorf("client namespace header = %q, want %q", got, tt.wantClientNS)
+			}
+			if got := d.Get(consts.FieldNamespace); got != tt.wantClientNS {
+				t.Errorf("provider namespace = %q, want %q", got, tt.wantClientNS)
+			}
+		})
+	}
+}
+
 func TestIsAPISupported(t *testing.T) {
 	testutil.SkipTestAcc(t)
 	testutil.TestAccPreCheck(t)
