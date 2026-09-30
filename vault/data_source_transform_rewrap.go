@@ -94,26 +94,27 @@ func readTransformRewrapRoleResource(d *schema.ResourceData, meta interface{}) e
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 
 	data := make(map[string]interface{})
-	if val, ok := d.GetOkExists("batch_input"); ok {
-		data["batch_input"] = val
-	}
-	if val, ok := d.GetOkExists("decode_transformation"); ok {
-		data["decode_transformation"] = val
-	}
-	if val, ok := d.GetOkExists("decode_tweak"); ok {
-		data["decode_tweak"] = val
-	}
 	if val, ok := d.GetOkExists("role_name"); ok {
 		data["role_name"] = val
 	}
-	if val, ok := d.GetOkExists("transformation"); ok {
-		data["transformation"] = val
-	}
-	if val, ok := d.GetOkExists("tweak"); ok {
-		data["tweak"] = val
-	}
-	if val, ok := d.GetOkExists("value"); ok {
-		data["value"] = val
+	if val, ok := d.GetOkExists("batch_input"); ok {
+		data["batch_input"] = val
+	} else {
+		if val, ok := d.GetOkExists("decode_transformation"); ok {
+			data["decode_transformation"] = val
+		}
+		if val, ok := d.GetOkExists("transformation"); ok {
+			data["transformation"] = val
+		}
+		if val, ok := d.GetOkExists("decode_tweak"); ok {
+			data["decode_tweak"] = val
+		}
+		if val, ok := d.GetOkExists("tweak"); ok {
+			data["tweak"] = val
+		}
+		if val, ok := d.GetOkExists("value"); ok {
+			data["value"] = val
+		}
 	}
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 	resp, err := client.Logical().Write(vaultPath, data)
@@ -125,14 +126,18 @@ func readTransformRewrapRoleResource(d *schema.ResourceData, meta interface{}) e
 		return nil
 	}
 	d.SetId(vaultPath)
-	if err := d.Set("batch_results", resp.Data["batch_results"]); err != nil {
-		return err
-	}
-	if err := d.Set("encoded_value", resp.Data["encoded_value"]); err != nil {
-		return err
-	}
-	if err := d.Set("tweak", resp.Data["tweak"]); err != nil {
-		return err
+	batchResults, batchOk := resp.Data["batch_results"]
+	if batchOk {
+		if err := d.Set("batch_results", batchResults); err != nil {
+			return err
+		}
+	} else {
+		if err := d.Set("encoded_value", resp.Data["encoded_value"]); err != nil {
+			return err
+		}
+		if err := d.Set("tweak", resp.Data["tweak"]); err != nil {
+			return err
+		}
 	}
 	return nil
 }

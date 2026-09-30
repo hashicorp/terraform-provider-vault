@@ -125,6 +125,7 @@ func TestAccRewrapBatch(t *testing.T) {
 						"data.vault_transform_encode.encoded", "encoded_value",
 						"data.vault_transform_rewrap.rewrapped", "batch_results.0.encoded_value",
 					),
+					resource.TestCheckNoResourceAttr("data.vault_transform_rewrap.rewrapped", "encoded_value"),
 				),
 			},
 		},
@@ -174,6 +175,7 @@ data "vault_transform_encode" "encoded" {
 data "vault_transform_rewrap" "rewrapped" {
   path      = vault_transform_role.payments.path
   role_name = "payments"
+  value     = data.vault_transform_encode.encoded.encoded_value # value should be ignored
   batch_input = [{
     "value"                 = data.vault_transform_encode.encoded.encoded_value,
     "transformation"        = vault_transform_transformation.ccn-fpe-dst.name,
