@@ -64,6 +64,8 @@ The following arguments are supported:
 
 * `key_bits` - (Optional) The number of bits to use
 
+* `parameter_set` - (Optional) For ML-DSA keys, specifies the parameter set
+
 * `signature_bits` - (Optional) The number of bits to use in the signature algorithm
 
 * `exclude_cn_from_sans` - (Optional) Flag to exclude CN from SANs

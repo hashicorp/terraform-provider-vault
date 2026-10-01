@@ -413,3 +413,61 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
 }
 `, keyName, accessKey, secretKey, path)
 }
+
+func TestPkiSecretBackendIntermediateCertRequest_mldsa(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+
+	resourceName := "vault_pki_secret_backend_intermediate_cert_request.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_mldsa(path, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+					resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCSR),
+				),
+			},
+			{
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_mldsa(path, `parameter_set = "65"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "backend", path),
+					resource.TestCheckResourceAttr(resourceName, "type", "internal"),
+					resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "65"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCSR),
+				),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendIntermediateCertRequestConfig_mldsa(path, extraConfig string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  common_name = "test.my.domain"
+  key_type    = "ml-dsa"
+  %s
+}
+`, path, extraConfig)
+}

@@ -92,10 +92,12 @@ The following arguments are supported:
 
 * `email_protection_flag` - (Optional) Flag to specify certificates for email protection use
 
-* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `any`
+* `key_type` - (Optional) The generated key type, choices: `rsa`, `ec`, `ed25519`, `ml-dsa`, `any`
   Defaults to `rsa`
 
 * `key_bits` - (Optional) The number of bits of generated keys
+
+* `parameter_set` - (Optional) For ml-dsa keys, specifies the parameter set.
 
 * `signature_bits` - (Optional) The number of bits to use in the signature algorithm
 
