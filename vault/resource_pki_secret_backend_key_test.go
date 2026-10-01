@@ -85,23 +85,88 @@ func TestAccPKISecretBackendKey_basic(t *testing.T) {
 	})
 }
 
-func testAccPKISecretBackendKey_basic(path, keyName, keyType, keyBits string) string {
+func TestAccPKISecretBackendKey_mldsa(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-pki")
+	resourceType := "vault_pki_secret_backend_key"
+	resourceName := resourceType + ".test"
+	keyName := acctest.RandomWithPrefix("tf-pki-key-mldsa")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypePKI, consts.FieldBackend),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccPKISecretBackendKey_mldsa(mount, keyName, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "44"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyID),
+				),
+			},
+			{
+				Config: testAccPKISecretBackendKey_mldsa(mount, keyName, `parameter_set = "65"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "65"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyID),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldType, consts.FieldKeyBits, consts.FieldParameterSet},
+			},
+		},
+	})
+}
+
+func testAccPKISecretBackendKey_mldsa(path, keyName, extraConfig string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
-  path                      = "%s"
-  type                      = "pki"
-  description               = "test"
-  default_lease_ttl_seconds = "86400"
-  max_lease_ttl_seconds     = "86400"
+		path                      = "%s"
+		type                      = "pki"
+		description               = "test"
+		default_lease_ttl_seconds = "86400"
+		max_lease_ttl_seconds     = "86400"
 }
 
 resource "vault_pki_secret_backend_key" "test" {
-  backend  = vault_mount.test.path
-  type     = "exported"
-  key_name = "%s"
-  key_type = "%s"
-  key_bits = "%s"
-}`, path, keyName, keyType, keyBits)
+		backend  = vault_mount.test.path
+		type     = "exported"
+		key_name = "%s"
+		key_type = "ml-dsa"
+		%s
+}
+`, path, keyName, extraConfig)
+}
+
+func testAccPKISecretBackendKey_basic(path, keyName, keyType, keyBits string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+		path                      = "%s"
+		type                      = "pki"
+		description               = "test"
+		default_lease_ttl_seconds = "86400"
+		max_lease_ttl_seconds     = "86400"
+}
+
+resource "vault_pki_secret_backend_key" "test" {
+		backend  = vault_mount.test.path
+		type     = "exported"
+		key_name = "%s"
+		key_type = "%s"
+		key_bits = "%s"
+}
+`, path, keyName, keyType, keyBits)
 }
 
 func testCapturePKIKeyID(resourceName string, store *testPKIKeyStore) resource.TestCheckFunc {

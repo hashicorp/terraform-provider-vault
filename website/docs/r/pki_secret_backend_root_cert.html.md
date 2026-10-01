@@ -84,6 +84,8 @@ The following arguments are supported:
 
 * `key_bits` - (Optional) The number of bits to use
 
+* `parameter_set` - (Optional) For ML-DSA keys, specifies the parameter set
+
 * `signature_bits` - (Optional) The number of bits to use in the signature algorithm
 
 * `max_path_length` - (Optional) The maximum path length to encode in the generated certificate

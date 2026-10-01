@@ -26,6 +26,9 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 		CreateContext: pkiSecretBackendIntermediateCertRequestCreate,
 		ReadContext:   pkiSecretBackendIntermediateCertRequestRead,
 		DeleteContext: pkiSecretBackendIntermediateCertRequestDelete,
+		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			return pkiValidateKeyTypeField(d, meta)
+		},
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
@@ -105,7 +108,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Description:  "The desired key type.",
 				ForceNew:     true,
 				Default:      "rsa",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519", "ml-dsa"}, false),
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
@@ -113,6 +116,14 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Description: "The number of bits to use.",
 				ForceNew:    true,
 				Default:     2048,
+			},
+			consts.FieldParameterSet: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "The parameter set for ml-dsa keys",
+				ForceNew:     true,
+				ValidateFunc: validation.StringInSlice([]string{"44", "65", "87"}, false),
 			},
 			consts.FieldSignatureBits: {
 				Type:        schema.TypeInt,
@@ -293,6 +304,10 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	// Fields only used when we are generating a key
 	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
 		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
+		// For parameter set, this is only supported in Vault 2.20+
+		if provider.IsAPISupported(meta, provider.VaultVersion220) {
+			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldParameterSet)
+		}
 	}
 
 	if isIssuerAPISupported {

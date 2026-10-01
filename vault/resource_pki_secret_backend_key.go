@@ -29,6 +29,9 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 		UpdateContext: pkiSecretBackendKeyUpdate,
 		DeleteContext: pkiSecretBackendKeyDelete,
 		ReadContext:   provider.ReadContextWrapper(pkiSecretBackendKeyRead),
+		CustomizeDiff: func(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+			return pkiValidateKeyTypeField(d, meta)
+		},
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
@@ -56,7 +59,14 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				ForceNew:    true,
-				Description: "Specifies the desired key type; must be 'rsa', 'ed25519' or 'ec'.",
+				Description: "Specifies the desired key type; must be 'rsa', 'ed25519', 'ec', or 'ml-dsa'.",
+			},
+			consts.FieldParameterSet: {
+				Type:        schema.TypeString,
+				Optional:    true,
+				ForceNew:    true,
+				Default:     "44",
+				Description: "Specifies a parameter set for ml-dsa; must be '44', '65' or '87'.",
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
@@ -110,6 +120,10 @@ func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	if keyType == kmsType {
 		fields = append(fields, consts.FieldManagedKeyName, consts.FieldManagedKeyID)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		fields = append(fields, consts.FieldParameterSet)
 	}
 
 	data := map[string]interface{}{}
@@ -227,6 +241,13 @@ func pkiSecretBackendKeyRead(ctx context.Context, d *schema.ResourceData, meta i
 	if err := d.Set(consts.FieldKeyBits, d.Get(consts.FieldKeyBits)); err != nil {
 		return diag.Errorf("error setting state key %q for PKI Secret Key, err=%s",
 			consts.FieldKeyBits, err)
+	}
+
+	// parameter_set not returned from Vault
+	// set from config
+	if err := d.Set(consts.FieldParameterSet, d.Get(consts.FieldParameterSet)); err != nil {
+		return diag.Errorf("error setting state key %q for PKI Secret Key, err=%s",
+			consts.FieldParameterSet, err)
 	}
 
 	return nil
