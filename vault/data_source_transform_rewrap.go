@@ -38,7 +38,6 @@ func transformRewrapDataSource() *schema.Resource {
 			"batch_results": {
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeMap},
-				Optional:    true,
 				Computed:    true,
 				Description: "The result of rewrapping batch_input.",
 			},
@@ -93,31 +92,36 @@ func readTransformRewrapRoleResource(d *schema.ResourceData, meta interface{}) e
 	vaultPath := util.ParsePath(path, transformRewrapRoleEndpoint, d)
 
 	data := make(map[string]interface{})
-	if val, ok := d.GetOkExists("role_name"); ok {
+	if val, ok := d.GetOk("role_name"); ok {
 		data["role_name"] = val
 	}
-	if val, ok := d.GetOkExists("batch_input"); ok {
+	if val, ok := d.GetOk("batch_input"); ok {
 		data["batch_input"] = val
 	} else {
-		if val, ok := d.GetOkExists("decode_transformation"); ok {
+		if val, ok := d.GetOk("decode_transformation"); ok {
 			data["decode_transformation"] = val
 		}
-		if val, ok := d.GetOkExists("transformation"); ok {
+		if val, ok := d.GetOk("transformation"); ok {
 			data["transformation"] = val
 		}
-		if val, ok := d.GetOkExists("decode_tweak"); ok {
+		if val, ok := d.GetOk("decode_tweak"); ok {
 			data["decode_tweak"] = val
 		}
-		if val, ok := d.GetOkExists("tweak"); ok {
+		if val, ok := d.GetOk("tweak"); ok {
 			data["tweak"] = val
 		}
-		if val, ok := d.GetOkExists("value"); ok {
+		if val, ok := d.GetOk("value"); ok {
 			data["value"] = val
 		}
 	}
 	log.Printf("[DEBUG] Writing %q", vaultPath)
 	resp, err := client.Logical().Write(vaultPath, data)
 	if err != nil {
+		if util.Is404(err) {
+			log.Printf("[WARN] %q not found, removing from state", vaultPath)
+			d.SetId("")
+			return nil
+		}
 		return fmt.Errorf("error writing %q: %s", vaultPath, err)
 	}
 	if resp == nil {
@@ -128,14 +132,14 @@ func readTransformRewrapRoleResource(d *schema.ResourceData, meta interface{}) e
 	batchResults, batchOk := resp.Data["batch_results"]
 	if batchOk {
 		if err := d.Set("batch_results", batchResults); err != nil {
-			return err
+			return fmt.Errorf("error setting batch_results: %w", err)
 		}
 	} else {
 		if err := d.Set("encoded_value", resp.Data["encoded_value"]); err != nil {
-			return err
+			return fmt.Errorf("error setting encoded_value: %w", err)
 		}
 		if err := d.Set("tweak", resp.Data["tweak"]); err != nil {
-			return err
+			return fmt.Errorf("error setting tweak: %w", err)
 		}
 	}
 	return nil
