@@ -64,8 +64,8 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 			consts.FieldParameterSet: {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 				ForceNew:    true,
-				Default:     "44",
 				Description: "Specifies a parameter set for ml-dsa; must be '44', '65' or '87'.",
 			},
 			consts.FieldKeyBits: {
@@ -243,7 +243,7 @@ func pkiSecretBackendKeyRead(ctx context.Context, d *schema.ResourceData, meta i
 			consts.FieldKeyBits, err)
 	}
 
-	// parameter_set not returned from Vault
+	// parameter_set is not returned from Vault
 	// set from config
 	if err := d.Set(consts.FieldParameterSet, d.Get(consts.FieldParameterSet)); err != nil {
 		return diag.Errorf("error setting state key %q for PKI Secret Key, err=%s",
