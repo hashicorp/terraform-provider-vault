@@ -156,6 +156,17 @@ func scimClientCreate(ctx context.Context, d *schema.ResourceData, meta interfac
 	name := d.Get(consts.FieldSCIMClientName).(string)
 	path := fmt.Sprintf("identity/scim/client/%s", name)
 
+	// Vault treats POST as an upsert, so creating an existing name would silently
+	// overwrite that client. Fail instead and point the user at import.
+	existing, err := client.Logical().ReadWithContext(ctx, path)
+	if err != nil {
+		return diag.Errorf("error checking for existing SCIM client %q: %s", name, err)
+	}
+	if existing != nil {
+		return diag.Errorf("SCIM client %q already exists in Vault; import it with "+
+			"`terraform import vault_scim_client.<name> %s` instead of creating it", name, name)
+	}
+
 	// access_grant_principal is the only required field besides the name.
 	data := map[string]interface{}{
 		consts.FieldAccessGrantPrincipal: d.Get(consts.FieldAccessGrantPrincipal),

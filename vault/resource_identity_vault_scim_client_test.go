@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -282,6 +283,30 @@ func TestAccIdentityVaultSCIMClient_import(t *testing.T) {
 	})
 }
 
+// testAccLinkGroupToSCIMClient creates a group and links it to the named SCIM
+// client through Vault's link-group endpoint, so the client owns a resource.
+// It returns the group ID.
+func testAccLinkGroupToSCIMClient(clientName string) (string, error) {
+	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+	grp, err := client.Logical().Write("identity/group", map[string]interface{}{
+		"name": "linked-" + clientName,
+	})
+	if err != nil {
+		return "", fmt.Errorf("creating group: %w", err)
+	}
+	groupID := grp.Data["id"].(string)
+
+	if _, err := client.Logical().Write(
+		fmt.Sprintf("identity/scim/client/%s/link-group", clientName),
+		map[string]interface{}{"group_id": groupID},
+	); err != nil {
+		return "", fmt.Errorf("linking group %s: %w", groupID, err)
+	}
+
+	return groupID, nil
+}
+
 // TestAccIdentityVaultSCIMClient_destroyDefaultWithLinkedResourcesFails links a
 // group to the client, then destroys it with deletion_policy unset. Vault must
 // refuse, and its "SCIM client has linked resources" error must reach the user.
@@ -301,17 +326,7 @@ func TestAccIdentityVaultSCIMClient_destroyDefaultWithLinkedResourcesFails(t *te
 				// Vault's link-group endpoint so the client owns a resource.
 				Config: testAccIdentityVaultSCIMClientConfig(clientName),
 				Check: func(s *terraform.State) error {
-					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-					grp, err := client.Logical().Write("identity/group", map[string]interface{}{
-						"name": "linked-" + clientName,
-					})
-					if err != nil {
-						return fmt.Errorf("creating group: %w", err)
-					}
-					_, err = client.Logical().Write(
-						fmt.Sprintf("identity/scim/client/%s/link-group", clientName),
-						map[string]interface{}{"group_id": grp.Data["id"]},
-					)
+					_, err := testAccLinkGroupToSCIMClient(clientName)
 					return err
 				},
 			},
@@ -325,6 +340,57 @@ func TestAccIdentityVaultSCIMClient_destroyDefaultWithLinkedResourcesFails(t *te
 			{
 				// Set a policy so the framework's final destroy can clean up.
 				Config: testAccIdentityVaultSCIMClientConfig(clientName, fmt.Sprintf(`deletion_policy = %q`, consts.DeletionPolicyDeleteChildResources)),
+			},
+		},
+	})
+}
+
+// TestAccIdentityVaultSCIMClient_createExistingFails creates a client directly
+// in Vault, then applies a config with the same name. Vault treats POST as an
+// upsert, so without the guard the apply would silently overwrite that client.
+func TestAccIdentityVaultSCIMClient_createExistingFails(t *testing.T) {
+	clientName := acctest.RandomWithPrefix("tf-scim-client")
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			skipIfSCIMClientUnsupported(t)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+					// A separate principal, so Vault's duplicate-principal check
+					// cannot fire before the provider's own guard does.
+					ent, err := client.Logical().Write("identity/entity", map[string]interface{}{
+						"name": "preexisting-" + clientName,
+					})
+					if err != nil {
+						t.Fatalf("creating entity: %s", err)
+					}
+					entityID := ent.Data["id"].(string)
+
+					if _, err := client.Logical().Write("identity/scim/client/"+clientName,
+						map[string]interface{}{"access_grant_principal": entityID}); err != nil {
+						t.Fatalf("creating pre-existing client: %s", err)
+					}
+
+					t.Cleanup(func() {
+						_, _ = client.Logical().Delete("identity/scim/client/" + clientName)
+						// Client removal is asynchronous; wait before removing the entity.
+						for i := 0; i < 20; i++ {
+							if r, _ := client.Logical().Read("identity/scim/client/" + clientName); r == nil {
+								break
+							}
+							time.Sleep(500 * time.Millisecond)
+						}
+						_, _ = client.Logical().Delete("identity/entity/id/" + entityID)
+					})
+				},
+				Config:      testAccIdentityVaultSCIMClientConfig(clientName),
+				ExpectError: regexp.MustCompile(`already exists in Vault`),
 			},
 		},
 	})
@@ -353,17 +419,18 @@ func TestAccIdentityVaultSCIMClient_duplicateAccessGrantPrincipal(t *testing.T) 
 }
 
 // TestAccIdentityVaultSCIMClient_destroyPolicies destroys a client under each
-// deletion_policy value with nothing linked to it.
-// Each case creates a client and lets the framework destroy it, then
-// CheckDestroy confirms Vault no longer has the client. An empty policy sends a
-// plain DELETE; the other two send the matching Vault query flag.
+// deletion_policy value. The two policy cases link a group to the client first,
+// so they also check what each policy does to it: delete_child_resources
+// removes the group, orphan_child_resources keeps it but clears its SCIM link.
 func TestAccIdentityVaultSCIMClient_destroyPolicies(t *testing.T) {
 	tests := map[string]struct {
-		attr string // extra attribute for the client block; empty means no policy
+		policy        string // deletion_policy value; empty means unset
+		linkGroup     bool   // link a group to the client before destroying
+		groupSurvives bool   // whether the linked group must still exist afterwards
 	}{
-		"policy unset":           {attr: ""},
-		"delete_child_resources": {attr: fmt.Sprintf(`deletion_policy = %q`, consts.DeletionPolicyDeleteChildResources)},
-		"orphan_child_resources": {attr: fmt.Sprintf(`deletion_policy = %q`, consts.DeletionPolicyOrphanChildResources)},
+		"policy unset":           {},
+		"delete_child_resources": {policy: consts.DeletionPolicyDeleteChildResources, linkGroup: true},
+		"orphan_child_resources": {policy: consts.DeletionPolicyOrphanChildResources, linkGroup: true, groupSurvives: true},
 	}
 
 	for name, tc := range tests {
@@ -371,8 +438,50 @@ func TestAccIdentityVaultSCIMClient_destroyPolicies(t *testing.T) {
 			clientName := acctest.RandomWithPrefix("tf-scim-client")
 
 			var attrs []string
-			if tc.attr != "" {
-				attrs = append(attrs, tc.attr)
+			if tc.policy != "" {
+				attrs = append(attrs, fmt.Sprintf(`deletion_policy = %q`, tc.policy))
+			}
+
+			var groupID string
+			step := resource.TestStep{Config: testAccIdentityVaultSCIMClientConfig(clientName, attrs...)}
+			if tc.linkGroup {
+				step.Check = func(s *terraform.State) error {
+					var err error
+					groupID, err = testAccLinkGroupToSCIMClient(clientName)
+					return err
+				}
+			}
+
+			checkDestroy := func(s *terraform.State) error {
+				if err := testAccCheckIdentityVaultSCIMClientDestroy(s); err != nil {
+					return err
+				}
+				if !tc.linkGroup {
+					return nil
+				}
+
+				client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+				grp, err := client.Logical().Read("identity/group/id/" + groupID)
+				if err != nil {
+					return fmt.Errorf("reading group %s: %w", groupID, err)
+				}
+
+				if !tc.groupSurvives {
+					if grp != nil {
+						return fmt.Errorf("group %s should have been deleted with the client", groupID)
+					}
+					return nil
+				}
+
+				if grp == nil {
+					return fmt.Errorf("group %s should have been kept, but it is gone", groupID)
+				}
+				if v, _ := grp.Data["scim_client_id"].(string); v != "" {
+					return fmt.Errorf("group %s should be unlinked, but scim_client_id is %q", groupID, v)
+				}
+				// The group is kept on purpose, so remove it here.
+				_, _ = client.Logical().Delete("identity/group/id/" + groupID)
+				return nil
 			}
 
 			resource.Test(t, resource.TestCase{
@@ -381,10 +490,8 @@ func TestAccIdentityVaultSCIMClient_destroyPolicies(t *testing.T) {
 					skipIfSCIMClientUnsupported(t)
 				},
 				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-				CheckDestroy:             testAccCheckIdentityVaultSCIMClientDestroy,
-				Steps: []resource.TestStep{
-					{Config: testAccIdentityVaultSCIMClientConfig(clientName, attrs...)},
-				},
+				CheckDestroy:             checkDestroy,
+				Steps:                    []resource.TestStep{step},
 			})
 		})
 	}
