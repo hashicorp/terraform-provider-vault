@@ -1100,7 +1100,6 @@ const (
 	FieldDeletionPolicy                  = "deletion_policy"
 	FieldDeleting                        = "deleting"
 	FieldAliasMountAccessor              = "alias_mount_accessor"
-	//FieldUnlinkResources                 = "unlink_resources"
 
 	// deletion_policy accepted values (Terraform-facing enum)
 	DeletionPolicyOrphanChildResources = "orphan_child_resources"
