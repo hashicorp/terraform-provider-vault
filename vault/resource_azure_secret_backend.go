@@ -118,6 +118,11 @@ func azureSecretBackendResource() *schema.Resource {
 				Computed:    true,
 				Description: "The TTL in seconds of the root password in Azure when rotate-root generates a new client secret",
 			},
+			consts.FieldSeamlessRotation: {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Description: "Enable or disable seamless rotation for static roles. Does not affect existing static roles.",
+			},
 		},
 	}, false)
 
@@ -222,6 +227,13 @@ func azureSecretBackendRead(ctx context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	useAPIVer220Ent := provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer220Ent {
+		if err := d.Set(consts.FieldSeamlessRotation, resp.Data[consts.FieldSeamlessRotation]); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	if err := readMount(ctx, d, meta, true, false); err != nil {
 		return diag.FromErr(err)
 	}
@@ -242,6 +254,10 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 	path := d.Id()
 
 	data := azureSecretBackendRequestData(d, meta)
+	useAPIVer220Ent := provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer220Ent && d.HasChange(consts.FieldSeamlessRotation) {
+		data[consts.FieldSeamlessRotation] = d.Get(consts.FieldSeamlessRotation)
+	}
 	if len(data) > 0 {
 		_, err := client.Logical().WriteWithContext(ctx, azureSecretBackendPath(path), data)
 		if err != nil {
@@ -324,6 +340,13 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer119Ent {
 		automatedrotationutil.ParseAutomatedRotationFields(d, data)
+	}
+
+	useAPIVer220Ent := provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta)
+	if useAPIVer220Ent {
+		if v, ok := d.GetOk(consts.FieldSeamlessRotation); ok && v != nil {
+			data[consts.FieldSeamlessRotation] = v.(bool)
+		}
 	}
 
 	return data
