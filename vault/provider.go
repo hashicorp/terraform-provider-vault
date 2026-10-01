@@ -815,6 +815,10 @@ var (
 			Resource:      UpdateSchemaResource(samlAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/saml/role/{name}"},
 		},
+		"vault_scim_client": {
+			Resource:      UpdateSchemaResource(scimClientResource()),
+			PathInventory: []string{"/identity/scim/client/{client_name}"},
+		},
 		"vault_secrets_sync_config": {
 			Resource:      UpdateSchemaResource(secretsSyncConfigResource()),
 			PathInventory: []string{"/sys/sync/config"},

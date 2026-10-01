@@ -231,6 +231,7 @@ func scimClientRead(ctx context.Context, d *schema.ResourceData, meta interface{
 	// known list to keep in control of which fields get written into
 	// the Terraform state.
 	fields := []string{
+		consts.FieldSCIMClientName,
 		consts.FieldClientID,
 		consts.FieldAccessGrantPrincipal,
 		consts.FieldAliasMountAccessor,
@@ -279,9 +280,16 @@ func scimClientUpdate(ctx context.Context, d *schema.ResourceData, meta interfac
 		consts.FieldAccessGrantPrincipal: d.Get(consts.FieldAccessGrantPrincipal),
 	}
 
-	// alias_mount_accessor and client_name are ForceNew which triggers a
-	// replace, not an update. They are excluded while the remaining mutable fields
-	// exist for an in place update.
+	// alias_mount_accessor is ForceNew, so its value can never change here, but
+	// Vault treats an omitted alias_mount_accessor on an existing client as an
+	// attempt to clear it and rejects the request. Always resend the current
+	// value when one is set.
+	if v, ok := d.GetOk(consts.FieldAliasMountAccessor); ok {
+		data[consts.FieldAliasMountAccessor] = v
+	}
+
+	// client_name is also ForceNew. The remaining mutable fields are only sent
+	// when they changed, for an in place update.
 	updatableFields := []string{
 		consts.FieldDefaultSchemaVersion,
 		consts.FieldAllowUserAdoption,
@@ -323,21 +331,25 @@ func scimClientDelete(ctx context.Context, d *schema.ResourceData, meta interfac
 	// the one Terraform value onto the correct Vault query param here. Leaving
 	// deletion_policy unset sends a plain delete with no query params, which
 	// only succeeds if the client has no linked entities/groups.
-	deletePath := path
+	//
+	// The flags are sent as query parameters via DeleteWithData. Appending
+	// "?..." to the path instead would be percent-encoded into the path itself
+	// and Vault would answer "unsupported path".
+	var query map[string][]string
 
 	switch d.Get(consts.FieldDeletionPolicy).(string) {
 	case consts.DeletionPolicyDeleteChildResources:
 		// Delete the client AND everything it owns (entities/groups/aliases)
-		deletePath = path + "?delete-linked-resources=true"
+		query = map[string][]string{"delete-linked-resources": {"true"}}
 	case consts.DeletionPolicyOrphanChildResources:
 		// Detach owned resources from the client without deleting them,
 		// then remove the client itself.
-		deletePath = path + "?unlink-resources=true"
+		query = map[string][]string{"unlink-resources": {"true"}}
 	}
 
 	// Begin deletion. Vault marks the client as "deleting" and starts
 	// cleanup in the background rather than finishing synchronously.
-	if _, err := client.Logical().DeleteWithContext(ctx, deletePath); err != nil {
+	if _, err := client.Logical().DeleteWithDataWithContext(ctx, path, query); err != nil {
 		return diag.Errorf("error deleting SCIM client %q: %s", name, err)
 	}
 
