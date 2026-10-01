@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -16,6 +17,20 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
+
+// validateSCIMClientName rejects names containing uppercase letters. Vault
+// lowercases client_name on write but looks it up case-sensitively, so a
+// mixed-case name would be created under a different name than the one
+// Terraform reads back, leaving an untracked client in Vault.
+func validateSCIMClientName(v interface{}, k string) ([]string, []error) {
+	name := v.(string)
+	if name != strings.ToLower(name) {
+		return nil, []error{fmt.Errorf(
+			"%s %q must be lowercase because Vault lowercases SCIM client names; use %q",
+			k, name, strings.ToLower(name))}
+	}
+	return nil, nil
+}
 
 func scimClientResource() *schema.Resource {
 	return &schema.Resource{
@@ -31,10 +46,12 @@ func scimClientResource() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			consts.FieldSCIMClientName: {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "The name of the SCIM client.",
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: validateSCIMClientName,
+				Description: "The name of the SCIM client. Must be lowercase, because Vault " +
+					"lowercases client names when it stores them.",
 			},
 			consts.FieldAccessGrantPrincipal: {
 				Type:        schema.TypeString,
@@ -110,14 +127,6 @@ func scimClientResource() *schema.Resource {
 					"along with the client. Leave unset for a plain delete (fails if the client still " +
 					"owns linked resources). Only consulted at destroy time.",
 			},
-
-			// consts.FieldUnlinkResources: {
-			// 	Type:     schema.TypeBool,
-			// 	Optional: true,
-			// 	Default:  false,
-			// 	Description: "On destroy, detach managed entities/groups/aliases from this SCIM client " +
-			// 		"without deleting them. Mutually exclusive with delete_linked_resources.",
-			// },
 			consts.FieldClientID: {
 				Type:        schema.TypeString,
 				Computed:    true,
@@ -132,27 +141,22 @@ func scimClientResource() *schema.Resource {
 	}
 }
 
-/*
-
-// Optimize this function so that is reads only once
-
-*/
 // scimClientCreate handles Terraform "create" for a vault_scim_client resource.
 // It POSTs the new SCIM client config to Vault and reads back the full state
 // afterward so all computed fields are populated.
 func scimClientCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
-	//Get an authenticated Vault API client for the current provider config.
+	// Get an authenticated Vault API client for the current provider config.
 	client, er := provider.GetClient(d, meta)
 	if er != nil {
 		return diag.FromErr(er)
 	}
 
-	// SCIM clients are addressed by name in Vault where the API path is built from.
+	// SCIM clients are addressed by name, so the API path is built from it.
 	name := d.Get(consts.FieldSCIMClientName).(string)
 	path := fmt.Sprintf("identity/scim/client/%s", name)
 
-	// acccess_grant_principle is the only required field besides the name.
+	// access_grant_principal is the only required field besides the name.
 	data := map[string]interface{}{
 		consts.FieldAccessGrantPrincipal: d.Get(consts.FieldAccessGrantPrincipal),
 	}
@@ -187,7 +191,7 @@ func scimClientCreate(ctx context.Context, d *schema.ResourceData, meta interfac
 	// `terraform import` will use to look the resource up.
 	d.SetId(name)
 
-	// A create returns the full client object in th response body,
+	// A create returns the full client object in the response body,
 	// including the server generated client_id.
 	if resp != nil {
 		if v, ok := resp.Data[consts.FieldClientID]; ok {
@@ -257,10 +261,10 @@ func scimClientRead(ctx context.Context, d *schema.ResourceData, meta interface{
 }
 
 // scimClientUpdate handles Terraform "update" for a vault_scim_client resource.
-// It sends only the fields that actually changed, since Vault preserves any
-// field that's omitted from the request rather than resetting it. Unlike
-// `Create`, this always ends with a `Read` call, because Vault's update response
-// has no body to read state from directly.
+// Vault accepts a partial write for most fields, so only changed fields are
+// sent. alias_mount_accessor is the exception: omitting it on an existing client
+// is treated as an attempt to clear it and is rejected, so it is always resent.
+// The update response has no body, so state is refreshed with a follow-up Read.
 func scimClientUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 
 	// Get an authenticated Vault API client for the current provider config.

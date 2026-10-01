@@ -395,6 +395,7 @@ func TestAccIdentityVaultSCIMClient_destroyPolicies(t *testing.T) {
 // with the schema validator's message, so nothing is created.
 func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 	tests := map[string]struct {
+		name    string // overrides the generated client_name when set
 		attr    string // the invalid attribute line added to the client block
 		wantErr *regexp.Regexp
 	}{
@@ -414,11 +415,25 @@ func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 			attr:    `max_token_ttl = -10`,
 			wantErr: regexp.MustCompile(`expected max_token_ttl to be at least \(0\)`),
 		},
+		// Vault lowercases client names but looks them up case-sensitively, so
+		// a mixed-case name would be created and then not found on read.
+		"client_name with uppercase": {
+			name:    "Mixed-Case-Client",
+			wantErr: regexp.MustCompile(`must be lowercase because Vault lowercases SCIM client names`),
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			clientName := acctest.RandomWithPrefix("tf-scim-client")
+			if tc.name != "" {
+				clientName = tc.name
+			}
+
+			var attrs []string
+			if tc.attr != "" {
+				attrs = append(attrs, tc.attr)
+			}
 
 			// No Enterprise or version gate: these fail at plan time, so they
 			// run against any Vault server.
@@ -427,7 +442,7 @@ func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				Steps: []resource.TestStep{
 					{
-						Config:      testAccIdentityVaultSCIMClientConfig(clientName, tc.attr),
+						Config:      testAccIdentityVaultSCIMClientConfig(clientName, attrs...),
 						PlanOnly:    true,
 						ExpectError: tc.wantErr,
 					},
