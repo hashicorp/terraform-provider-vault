@@ -91,7 +91,6 @@ func readTransformRewrapRoleResource(d *schema.ResourceData, meta interface{}) e
 	}
 	path := d.Get("path").(string)
 	vaultPath := util.ParsePath(path, transformRewrapRoleEndpoint, d)
-	log.Printf("[DEBUG] Writing %q", vaultPath)
 
 	data := make(map[string]interface{})
 	if val, ok := d.GetOkExists("role_name"); ok {
