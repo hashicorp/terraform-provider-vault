@@ -260,6 +260,7 @@ func (r *AzureSecretsStaticRoleResource) Read(ctx context.Context, req resource.
 
 	useAPIVer220Ent := provider.IsAPISupported(r.Meta(), provider.VaultVersion220) && provider.IsEnterpriseSupported(r.Meta())
 	if useAPIVer220Ent {
+
 		if apiModel.SeamlessRotation != nil {
 			data.SeamlessRotation = types.BoolValue(apiModel.SeamlessRotation.(bool))
 		}
@@ -323,57 +324,6 @@ func (r *AzureSecretsStaticRoleResource) Update(ctx context.Context, req resourc
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *AzureSecretsStaticRoleResource) buildParamsForSeamlessRotation(
-	ctx context.Context,
-	data *AzureStaticRoleModel,
-) (params map[string]any, diags diag.Diagnostics) {
-	params = map[string]any{}
-	useAPIVer220Ent := provider.IsAPISupported(r.Meta(), provider.VaultVersion220) &&
-		provider.IsEnterpriseSupported(r.Meta())
-
-	require220 := func(field string) bool {
-		if !useAPIVer220Ent {
-			diags.AddError(
-				"Requires Vault Enterprise 2.2.0 or later",
-				fmt.Sprintf("Field %q is not supported", consts.FieldRotationPeriod),
-			)
-		}
-
-		return useAPIVer220Ent
-	}
-
-	if !data.RotationPeriod.IsNull() && require220(consts.FieldRotationPeriod) {
-		rp := data.RotationPeriod.ValueInt64()
-
-		// If TTL was also set to a non-zero value, make sure that it
-		// matches rotation_period (if it is also non-zero).
-		if !data.TTL.IsNull() {
-			if ttl := data.TTL.ValueInt64(); ttl != 0 && rp != 0 && rp != ttl {
-				diags.AddError(
-					"Conflicting lifetime intervals",
-					fmt.Sprintf(
-						"Expected %[1]s and %[2]s to match when both are specified "+
-							"(got %[1]s=%[3]d, %[2]s=%[4]d)",
-						consts.FieldTTL, consts.FieldRotationPeriod, ttl, rp,
-					),
-				)
-			}
-		} else {
-			params[consts.FieldRotationPeriod] = rp
-		}
-	}
-
-	if !data.RotationGracePeriod.IsNull() && require220(consts.FieldRotationGracePeriod) {
-		params[consts.FieldRotationGracePeriod] = data.RotationGracePeriod.ValueInt64()
-	}
-
-	if !data.SeamlessRotation.IsNull() && require220(consts.FieldSeamlessRotation) {
-		params[consts.FieldSeamlessRotation] = data.SeamlessRotation.ValueBool()
-	}
-
-	return params, diags
-}
-
 func (r *AzureSecretsStaticRoleResource) buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -403,12 +353,15 @@ func (r *AzureSecretsStaticRoleResource) buildVaultRequestFromModel(ctx context.
 		vaultRequest[consts.FieldDeferInitialCreds] = true
 	}
 
+	if r.handleSeamlessRotationParams(data, vaultRequest, &diags); diags.HasError() {
+		return nil, diags
+	}
+
 	return vaultRequest, diags
 }
 
 func (r *AzureSecretsStaticRoleResource) buildVaultRequestForImportCreate(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	var ttl int64
 
 	req := map[string]any{
 		consts.FieldApplicationObjectID: data.ApplicationObjectID.ValueString(),
@@ -420,34 +373,7 @@ func (r *AzureSecretsStaticRoleResource) buildVaultRequestForImportCreate(ctx co
 	}
 
 	if !data.TTL.IsNull() {
-		ttl = data.TTL.ValueInt64()
-		req[consts.FieldTTL] = ttl
-	}
-
-	if !data.RotationPeriod.IsNull() {
-		rp := data.RotationPeriod.ValueInt64()
-		req[consts.FieldRotationPeriod] = rp
-
-		// If TTL was also set to a non-zero value, make sure that it matches
-		// rotation period (if it is also non-zero).
-		if ttl != 0 && rp != 0 && rp != ttl {
-			diags.AddError(
-				"Conflicting lifetime intervals",
-				fmt.Sprintf(
-					"Expected %[1]s and %[2]s to match when both are specified "+
-						"(got %[1]s=%[3]d, %[2]s=%[4]d)",
-					consts.FieldTTL, consts.FieldRotationPeriod, ttl, rp,
-				),
-			)
-		}
-	}
-
-	if !data.RotationGracePeriod.IsNull() {
-		req[consts.FieldRotationPeriod] = data.RotationGracePeriod.ValueInt64()
-	}
-
-	if !data.SeamlessRotation.IsNull() {
-		req[consts.FieldSeamlessRotation] = data.SeamlessRotation.ValueBool()
+		req[consts.FieldTTL] = data.TTL.ValueInt64()
 	}
 
 	if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
@@ -463,7 +389,60 @@ func (r *AzureSecretsStaticRoleResource) buildVaultRequestForImportCreate(ctx co
 		req[consts.FieldSkipImportRotation] = true
 	}
 
+	if r.handleSeamlessRotationParams(data, req, &diags); diags.HasError() {
+		return nil, diags
+	}
+
 	return req, diags
+}
+
+func (r *AzureSecretsStaticRoleResource) handleSeamlessRotationParams(
+	data *AzureStaticRoleModel,
+	req map[string]any,
+	diags *diag.Diagnostics,
+) {
+	useAPIVer220Ent := provider.IsAPISupported(r.Meta(), provider.VaultVersion220) &&
+		provider.IsEnterpriseSupported(r.Meta())
+
+	require220 := func(field string) bool {
+		if !useAPIVer220Ent {
+			diags.AddError(
+				"Requires Vault Enterprise 2.2.0 or later",
+				fmt.Sprintf("Field %q is not supported", field),
+			)
+		}
+
+		return useAPIVer220Ent
+	}
+
+	if !data.RotationPeriod.IsNull() && require220(consts.FieldRotationPeriod) {
+		rp := data.RotationPeriod.ValueInt64()
+
+		// If TTL was also set to a non-zero value, make sure that it
+		// matches rotation_period (if it is also non-zero).
+		if !data.TTL.IsNull() {
+			if ttl := data.TTL.ValueInt64(); ttl != 0 && rp != 0 && rp != ttl {
+				diags.AddError(
+					"Conflicting lifetime intervals",
+					fmt.Sprintf(
+						"Expected %[1]s and %[2]s to match when both are specified "+
+							"(got %[1]s=%[3]d, %[2]s=%[4]d)",
+						consts.FieldTTL, consts.FieldRotationPeriod, ttl, rp,
+					),
+				)
+			}
+		} else {
+			req[consts.FieldRotationPeriod] = rp
+		}
+	}
+
+	if !data.RotationGracePeriod.IsNull() && require220(consts.FieldRotationGracePeriod) {
+		req[consts.FieldRotationGracePeriod] = data.RotationGracePeriod.ValueInt64()
+	}
+
+	if !data.SeamlessRotation.IsNull() && require220(consts.FieldSeamlessRotation) {
+		req[consts.FieldSeamlessRotation] = data.SeamlessRotation.ValueBool()
+	}
 }
 
 func (r *AzureSecretsStaticRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
