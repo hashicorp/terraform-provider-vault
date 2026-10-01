@@ -8,7 +8,7 @@ IMPROVEMENTS:
 
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
 * `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039)) 
-* `vault_pki_secret_backend_key`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_intermediate_cert_request`, `vault_pki_secret_backend_role`: Add support for  `ml-dsa` key type and `parameter_set` field. Requires Vault 2.2.0 or later.
+* `vault_pki_secret_backend_key`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_intermediate_cert_request`, `vault_pki_secret_backend_role`: Add support for  `ml-dsa` key type and `parameter_set` field. Requires Vault 2.2.0 or later. ([#3070](https://github.com/hashicorp/terraform-provider-vault/pull/3070))
 
 ## 5.12.0 (September 17, 2026)
 
