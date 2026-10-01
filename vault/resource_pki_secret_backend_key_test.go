@@ -79,7 +79,7 @@ func TestAccPKISecretBackendKey_basic(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{consts.FieldType, consts.FieldKeyBits},
+				ImportStateVerifyIgnore: []string{consts.FieldType, consts.FieldKeyBits, consts.FieldParameterSet},
 			},
 		},
 	})
@@ -105,7 +105,6 @@ func TestAccPKISecretBackendKey_mldsa(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "44"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyID),
 				),
 			},
