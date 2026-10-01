@@ -7,10 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/go-cty/cty"
 	"log"
 	"regexp"
 	"time"
+
+	"github.com/hashicorp/go-cty/cty"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -223,6 +224,9 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 	} else if d.IsNewResource() || d.HasChange(consts.FieldDataJSONWOVersion) {
 		p := cty.GetAttrPath(consts.FieldDataJSONWO)
 		woVal, _ := d.GetRawConfigAt(p)
+		if woVal.IsNull() {
+			return diag.Errorf("data_json must not be empty")
+		}
 		buf = []byte(woVal.AsString())
 	}
 
