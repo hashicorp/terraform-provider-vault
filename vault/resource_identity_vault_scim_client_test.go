@@ -24,6 +24,35 @@ import (
 // or newer, ignoring any prerelease suffix. A plain SkipIfAPIVersionLT would
 // skip on "2.2.0-beta1" or "2.2.0-rc1" because semver sorts prereleases below
 // the final release, even though those builds already ship SCIM clients.
+//
+// # Running these tests against a local Vault server
+//
+// SCIM clients are a Vault Enterprise feature, so a local Enterprise dev server
+// is needed. Build it with the "enterprise" build tag (without it the SCIM
+// routes are missing and every create fails with "unsupported path"), and point
+// it at your own license file through VAULT_LICENSE_PATH:
+//
+//	go build -tags "enterprise testonly" -o /tmp/vault-ent .
+//	VAULT_LICENSE_PATH=/path/to/your/vault.hclic /tmp/vault-ent server -dev \
+//	    -dev-root-token-id=<dev-token> -dev-listen-address=127.0.0.1:8200
+//
+// Then, from another shell, run the tests with the dev server's address and
+// token:
+//
+//	TF_ACC=1 TF_ACC_ENTERPRISE=1 \
+//	VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=<dev-token> \
+//	go test -v -run TestAccIdentityVaultSCIMClient ./vault
+//
+// Keep this safe:
+//   - Use a throwaway dev server only. Dev mode is in-memory, unsealed and
+//     unauthenticated by design, so never use it for real data.
+//   - Bind it to 127.0.0.1 so it is not reachable from the network.
+//   - The tests create and destroy real resources on whichever server
+//     VAULT_ADDR points at. Never point them at a shared or production cluster.
+//   - Never commit the license file or a real token. Pass them through the
+//     environment or a file outside the repository, and use a dev-only token
+//     instead of a real one.
+//   - Stop the server when finished.
 func skipIfSCIMClientUnsupported(t *testing.T) {
 	t.Helper()
 	SkipOnAPIVersion(t, testProvider.Meta(), func(cur *version.Version) bool {
@@ -31,7 +60,9 @@ func skipIfSCIMClientUnsupported(t *testing.T) {
 	}, "Vault version < %q", provider.VaultVersion220)
 }
 
-// Test 1: Create with required fields only (client_id is computed; deleting is false)
+// TestAccIdentityVaultSCIMClient_requiredFieldsOnly creates a client with only
+// the required fields and checks that client_id is computed, deleting is false,
+// and Vault's defaults are applied.
 func TestAccIdentityVaultSCIMClient_requiredFieldsOnly(t *testing.T) {
 	clientName := acctest.RandomWithPrefix("tf-scim-client")
 	resourceName := "vault_scim_client.test"
@@ -45,7 +76,7 @@ func TestAccIdentityVaultSCIMClient_requiredFieldsOnly(t *testing.T) {
 		CheckDestroy:             testAccCheckIdentityVaultSCIMClientDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityVaultSCIMClientConfig_requiredOnly(clientName),
+				Config: testAccIdentityVaultSCIMClientConfig(clientName),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldSCIMClientName, clientName),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldClientID),
@@ -58,7 +89,8 @@ func TestAccIdentityVaultSCIMClient_requiredFieldsOnly(t *testing.T) {
 	})
 }
 
-// Test 2: Create with all optional fields (All fields stored in state correctly)
+// TestAccIdentityVaultSCIMClient_allOptionalFields creates a client with every
+// optional field set and checks that each value is stored in state.
 func TestAccIdentityVaultSCIMClient_allOptionalFields(t *testing.T) {
 	clientName := acctest.RandomWithPrefix("tf-scim-client")
 	resourceName := "vault_scim_client.test"
@@ -89,7 +121,9 @@ func TestAccIdentityVaultSCIMClient_allOptionalFields(t *testing.T) {
 	})
 }
 
-// Test 3: Change alias_mount_accessor (Plan shows ForceNew)
+// TestAccIdentityVaultSCIMClient_changeAliasMountAccessorForceNew points the
+// client at a different auth mount and checks that the client is replaced
+// (new client_id), since alias_mount_accessor is ForceNew.
 func TestAccIdentityVaultSCIMClient_changeAliasMountAccessorForceNew(t *testing.T) {
 	clientName := acctest.RandomWithPrefix("tf-scim-client")
 	resourceName := "vault_scim_client.test"
@@ -137,7 +171,9 @@ func TestAccIdentityVaultSCIMClient_changeAliasMountAccessorForceNew(t *testing.
 	})
 }
 
-// Test 4: Update access_grant_principal in-place (No replacement; Read reflects new value)
+// TestAccIdentityVaultSCIMClient_updateAccessGrantPrincipalInPlace changes the
+// principal entity's config and checks that the client is updated in place,
+// keeping the same client_id.
 func TestAccIdentityVaultSCIMClient_updateAccessGrantPrincipalInPlace(t *testing.T) {
 	clientName := acctest.RandomWithPrefix("tf-scim-client")
 	resourceName := "vault_scim_client.test"
@@ -187,7 +223,9 @@ func TestAccIdentityVaultSCIMClient_updateAccessGrantPrincipalInPlace(t *testing
 	})
 }
 
-// Test 5: Update max_active_tokens, allow_user_adoption, allow_group_adoption (In-place update)
+// TestAccIdentityVaultSCIMClient_updateOptionalFieldsInPlace changes
+// max_active_tokens, max_token_ttl, allow_user_adoption and allow_group_adoption
+// and checks that the new values are read back after the update.
 func TestAccIdentityVaultSCIMClient_updateOptionalFieldsInPlace(t *testing.T) {
 	clientName := acctest.RandomWithPrefix("tf-scim-client")
 	resourceName := "vault_scim_client.test"
@@ -221,7 +259,9 @@ func TestAccIdentityVaultSCIMClient_updateOptionalFieldsInPlace(t *testing.T) {
 	})
 }
 
-// Test 6: ImportStateVerify (client_name as import ID round-trips cleanly)
+// TestAccIdentityVaultSCIMClient_import imports a client by client_name and
+// checks that the imported state matches the created state, ignoring
+// deletion_policy because Vault never returns it.
 func TestAccIdentityVaultSCIMClient_import(t *testing.T) {
 	clientName := acctest.RandomWithPrefix("tf-scim-client")
 	resourceName := "vault_scim_client.test"
@@ -235,14 +275,16 @@ func TestAccIdentityVaultSCIMClient_import(t *testing.T) {
 		CheckDestroy:             testAccCheckIdentityVaultSCIMClientDestroy,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccIdentityVaultSCIMClientConfig_requiredOnly(clientName),
+				Config: testAccIdentityVaultSCIMClientConfig(clientName),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDeletionPolicy),
 		},
 	})
 }
 
-// Test 8: Destroy with deletion_policy unset, client has linked resources
+// TestAccIdentityVaultSCIMClient_destroyDefaultWithLinkedResourcesFails links a
+// group to the client, then destroys it with deletion_policy unset. Vault must
+// refuse, and its "SCIM client has linked resources" error must reach the user.
 func TestAccIdentityVaultSCIMClient_destroyDefaultWithLinkedResourcesFails(t *testing.T) {
 	clientName := acctest.RandomWithPrefix("tf-scim-client")
 
@@ -257,7 +299,7 @@ func TestAccIdentityVaultSCIMClient_destroyDefaultWithLinkedResourcesFails(t *te
 			{
 				// Create the client, then link a group to it out-of-band through
 				// Vault's link-group endpoint so the client owns a resource.
-				Config: testAccIdentityVaultSCIMClientConfig_requiredOnly(clientName),
+				Config: testAccIdentityVaultSCIMClientConfig(clientName),
 				Check: func(s *terraform.State) error {
 					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 					grp, err := client.Logical().Write("identity/group", map[string]interface{}{
@@ -276,19 +318,21 @@ func TestAccIdentityVaultSCIMClient_destroyDefaultWithLinkedResourcesFails(t *te
 			{
 				// With deletion_policy unset, Vault refuses to delete a client that
 				// still owns resources, and that error must reach the operator.
-				Config:      testAccIdentityVaultSCIMClientConfig_requiredOnly(clientName),
+				Config:      testAccIdentityVaultSCIMClientConfig(clientName),
 				Destroy:     true,
 				ExpectError: regexp.MustCompile(`SCIM client has linked resources`),
 			},
 			{
 				// Set a policy so the framework's final destroy can clean up.
-				Config: testAccIdentityVaultSCIMClientConfig_deletionPolicy(clientName, consts.DeletionPolicyDeleteChildResources),
+				Config: testAccIdentityVaultSCIMClientConfig(clientName, fmt.Sprintf(`deletion_policy = %q`, consts.DeletionPolicyDeleteChildResources)),
 			},
 		},
 	})
 }
 
-// Test 12: Two vault_scim_client resources with the same access_grant_principal (Apply-time error)
+// TestAccIdentityVaultSCIMClient_duplicateAccessGrantPrincipal creates two
+// clients that share one access_grant_principal and expects the second create
+// to fail, since Vault allows each principal on only one client.
 func TestAccIdentityVaultSCIMClient_duplicateAccessGrantPrincipal(t *testing.T) {
 	name1 := acctest.RandomWithPrefix("tf-scim-client-1")
 	name2 := acctest.RandomWithPrefix("tf-scim-client-2")
@@ -308,32 +352,28 @@ func TestAccIdentityVaultSCIMClient_duplicateAccessGrantPrincipal(t *testing.T) 
 	})
 }
 
-// Destroy: client with each deletion_policy and nothing linked to it (tests 7, 9, 10).
+// TestAccIdentityVaultSCIMClient_destroyPolicies destroys a client under each
+// deletion_policy value with nothing linked to it.
 // Each case creates a client and lets the framework destroy it, then
 // CheckDestroy confirms Vault no longer has the client. An empty policy sends a
 // plain DELETE; the other two send the matching Vault query flag.
 func TestAccIdentityVaultSCIMClient_destroyPolicies(t *testing.T) {
 	tests := map[string]struct {
-		config func(name string) string
+		attr string // extra attribute for the client block; empty means no policy
 	}{
-		"policy unset": {
-			config: testAccIdentityVaultSCIMClientConfig_requiredOnly,
-		},
-		"delete_child_resources": {
-			config: func(name string) string {
-				return testAccIdentityVaultSCIMClientConfig_deletionPolicy(name, consts.DeletionPolicyDeleteChildResources)
-			},
-		},
-		"orphan_child_resources": {
-			config: func(name string) string {
-				return testAccIdentityVaultSCIMClientConfig_deletionPolicy(name, consts.DeletionPolicyOrphanChildResources)
-			},
-		},
+		"policy unset":           {attr: ""},
+		"delete_child_resources": {attr: fmt.Sprintf(`deletion_policy = %q`, consts.DeletionPolicyDeleteChildResources)},
+		"orphan_child_resources": {attr: fmt.Sprintf(`deletion_policy = %q`, consts.DeletionPolicyOrphanChildResources)},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			clientName := acctest.RandomWithPrefix("tf-scim-client")
+
+			var attrs []string
+			if tc.attr != "" {
+				attrs = append(attrs, tc.attr)
+			}
 
 			resource.Test(t, resource.TestCase{
 				PreCheck: func() {
@@ -343,43 +383,35 @@ func TestAccIdentityVaultSCIMClient_destroyPolicies(t *testing.T) {
 				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				CheckDestroy:             testAccCheckIdentityVaultSCIMClientDestroy,
 				Steps: []resource.TestStep{
-					{Config: tc.config(clientName)},
+					{Config: testAccIdentityVaultSCIMClientConfig(clientName, attrs...)},
 				},
 			})
 		})
 	}
 }
 
-// Plan-time validation: bad values are rejected before any Vault call
-// (tests 11, 13, 14, 15). Every case is a single PlanOnly step that must fail
+// TestAccIdentityVaultSCIMClient_invalidInputs checks that bad values are
+// rejected before any Vault call. Every case is a single PlanOnly step that must fail
 // with the schema validator's message, so nothing is created.
 func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 	tests := map[string]struct {
-		config  func(name string) string
+		attr    string // the invalid attribute line added to the client block
 		wantErr *regexp.Regexp
 	}{
 		"invalid deletion_policy": {
-			config: func(name string) string {
-				return testAccIdentityVaultSCIMClientConfig_deletionPolicy(name, "invalid_policy")
-			},
+			attr:    `deletion_policy = "invalid_policy"`,
 			wantErr: regexp.MustCompile(`expected deletion_policy to be one of`),
 		},
 		"invalid default_schema_version": {
-			config: func(name string) string {
-				return testAccIdentityVaultSCIMClientConfig_schemaVersion(name, "3.0")
-			},
+			attr:    `default_schema_version = "3.0"`,
 			wantErr: regexp.MustCompile(`expected default_schema_version to be one of`),
 		},
 		"max_active_tokens zero": {
-			config: func(name string) string {
-				return testAccIdentityVaultSCIMClientConfig_maxActiveTokens(name, 0)
-			},
+			attr:    `max_active_tokens = 0`,
 			wantErr: regexp.MustCompile(`expected max_active_tokens to be at least \(1\)`),
 		},
 		"max_token_ttl negative": {
-			config: func(name string) string {
-				return testAccIdentityVaultSCIMClientConfig_maxTokenTTL(name, -10)
-			},
+			attr:    `max_token_ttl = -10`,
 			wantErr: regexp.MustCompile(`expected max_token_ttl to be at least \(0\)`),
 		},
 	}
@@ -395,7 +427,7 @@ func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 				ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 				Steps: []resource.TestStep{
 					{
-						Config:      tc.config(clientName),
+						Config:      testAccIdentityVaultSCIMClientConfig(clientName, tc.attr),
 						PlanOnly:    true,
 						ExpectError: tc.wantErr,
 					},
@@ -405,7 +437,8 @@ func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 	}
 }
 
-// CheckDestroy verifies the resource was actually deleted from Vault
+// testAccCheckIdentityVaultSCIMClientDestroy verifies that every vault_scim_client
+// in state was actually deleted from Vault.
 func testAccCheckIdentityVaultSCIMClientDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "vault_scim_client" {
@@ -431,7 +464,18 @@ func testAccCheckIdentityVaultSCIMClientDestroy(s *terraform.State) error {
 }
 
 // Configuration helper functions
-func testAccIdentityVaultSCIMClientConfig_requiredOnly(name string) string {
+
+// testAccIdentityVaultSCIMClientConfig returns a config with one entity and one
+// vault_scim_client that uses it as its access_grant_principal. Each extraAttrs
+// entry is written as an extra attribute line inside the client block, for
+// example `max_active_tokens = 5` or `deletion_policy = "orphan_child_resources"`.
+// Pass none for a client with only the required fields.
+func testAccIdentityVaultSCIMClientConfig(name string, extraAttrs ...string) string {
+	extra := ""
+	for _, attr := range extraAttrs {
+		extra += "  " + attr + "\n"
+	}
+
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "principal" {
   name = "principal-%s"
@@ -440,8 +484,8 @@ resource "vault_identity_entity" "principal" {
 resource "vault_scim_client" "test" {
   client_name            = %q
   access_grant_principal = vault_identity_entity.principal.id
-}
-`, name, name)
+%s}
+`, name, name, extra)
 }
 
 func testAccIdentityVaultSCIMClientConfig_allFields(name, schemaVersion string, maxTokens, ttl int, allowUser, allowGroup bool) string {
@@ -510,20 +554,6 @@ resource "vault_scim_client" "test" {
 `, entitySuffix, clientName, clientName)
 }
 
-func testAccIdentityVaultSCIMClientConfig_deletionPolicy(name, policy string) string {
-	return fmt.Sprintf(`
-resource "vault_identity_entity" "principal" {
-  name = "principal-%s"
-}
-
-resource "vault_scim_client" "test" {
-  client_name            = %q
-  access_grant_principal = vault_identity_entity.principal.id
-  deletion_policy        = %q
-}
-`, name, name, policy)
-}
-
 func testAccIdentityVaultSCIMClientConfig_duplicatePrincipal(name1, name2 string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "shared_principal" {
@@ -541,46 +571,4 @@ resource "vault_scim_client" "c2" {
   depends_on             = [vault_scim_client.c1]
 }
 `, name1, name1, name2)
-}
-
-func testAccIdentityVaultSCIMClientConfig_schemaVersion(name, version string) string {
-	return fmt.Sprintf(`
-resource "vault_identity_entity" "principal" {
-  name = "principal-%s"
-}
-
-resource "vault_scim_client" "test" {
-  client_name            = %q
-  access_grant_principal = vault_identity_entity.principal.id
-  default_schema_version = %q
-}
-`, name, name, version)
-}
-
-func testAccIdentityVaultSCIMClientConfig_maxActiveTokens(name string, tokens int) string {
-	return fmt.Sprintf(`
-resource "vault_identity_entity" "principal" {
-  name = "principal-%s"
-}
-
-resource "vault_scim_client" "test" {
-  client_name            = %q
-  access_grant_principal = vault_identity_entity.principal.id
-  max_active_tokens      = %d
-}
-`, name, name, tokens)
-}
-
-func testAccIdentityVaultSCIMClientConfig_maxTokenTTL(name string, ttl int) string {
-	return fmt.Sprintf(`
-resource "vault_identity_entity" "principal" {
-  name = "principal-%s"
-}
-
-resource "vault_scim_client" "test" {
-  client_name            = %q
-  access_grant_principal = vault_identity_entity.principal.id
-  max_token_ttl          = %d
-}
-`, name, name, ttl)
 }
