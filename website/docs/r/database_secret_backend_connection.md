@@ -333,7 +333,7 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
-* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+* `disable_escaping` - (Optional) Disable special character escaping in username and password. Advised `true` or `false`, default is `false`.
 
 * `username_template` - (Optional) Template describing how dynamic usernames are generated.
 
@@ -363,7 +363,7 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
-* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+* `disable_escaping` - (Optional) Disable special character escaping in username and password. Advised `true` or `false`, default is `false`.
 
 * `contained_db` - (Optional bool: false) For Vault v1.9+. Set to true when the target is a
   Contained Database, e.g. AzureSQL.
@@ -447,7 +447,7 @@ See the [Vault
 
 * `service_account_json` - (Optional) JSON encoding of an IAM access key. Requires `auth_type` to be `gcp_iam`.
 
-* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+* `disable_escaping` - (Optional) Disable special character escaping in username and password. Advised `true` or `false`, default is `false`.
 
 * `username_template` - (Optional) For Vault v1.7+. The template to use for username generation.
 See the [Vault
@@ -562,7 +562,7 @@ See the [Vault
 
 * `password` - (Optional) The root credential password used in the connection URL.
 
-* `disable_escaping` - (Optional) Disable special character escaping in username and password.
+* `disable_escaping` - (Optional) Disable special character escaping in username and password. Advised `true` or `false`, default is `false`.
 
 * `username_template` - (Optional) - [Template](https://www.vaultproject.io/docs/concepts/username-templating) describing how dynamic usernames are generated.
 
