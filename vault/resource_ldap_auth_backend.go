@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
@@ -431,7 +432,16 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		if mountutil.IsMountNotFoundError(err) {
 			log.Printf("[WARN] Mount %q not found, removing from state.", path)
 			d.SetId("")
-			return nil
+			return diag.Diagnostics{
+				{
+					Severity: diag.Warning,
+					Summary:  "Mount not found",
+					Detail: fmt.Sprintf(
+						"Mount %q was not found and has been removed from state. "+
+							"If this is unexpected, verify the mount exists in the current "+
+							"namespace and that your provider configuration is correct.", path),
+				},
+			}
 		}
 		return diag.FromErr(err)
 	}
@@ -453,7 +463,16 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if resp == nil {
 		log.Printf("[WARN] LDAP auth backend config %q not found, removing from state", path)
 		d.SetId("")
-		return nil
+		return diag.Diagnostics{
+			{
+				Severity: diag.Warning,
+				Summary:  "LDAP auth backend config not found",
+				Detail: fmt.Sprintf(
+					"LDAP auth backend config %q was not found and has been removed from state. "+
+						"If this is unexpected, verify the mount exists in the current "+
+						"namespace and that your provider configuration is correct.", path),
+			},
+		}
 	}
 
 	if err := readTokenFields(d, resp); err != nil {

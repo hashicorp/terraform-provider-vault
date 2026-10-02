@@ -49,6 +49,14 @@ func TestAccAwsAuthBackendConfigIdentity(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Metadata+".#", "0"),
 				),
 			},
+			{
+				Config: testAccAwsAuthBackendConfigIdentity_canonicalArn(backend),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIAMAlias, "canonical_arn"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldEC2Alias, "role_id"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
@@ -102,6 +110,21 @@ resource "vault_auth_backend" "aws" {
 resource "vault_aws_auth_backend_config_identity" "config" {
   backend = vault_auth_backend.aws.path
   iam_alias = "full_arn"
+  iam_metadata = ["client_user_id"]
+}`, backend)
+}
+
+func testAccAwsAuthBackendConfigIdentity_canonicalArn(backend string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "aws" {
+  path = "%s"
+  type = "aws"
+  description = "Test auth backend for AWS backend config"
+}
+
+resource "vault_aws_auth_backend_config_identity" "config" {
+  backend      = vault_auth_backend.aws.path
+  iam_alias    = "canonical_arn"
   iam_metadata = ["client_user_id"]
 }`, backend)
 }
