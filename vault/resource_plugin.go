@@ -66,7 +66,7 @@ func pluginResource() *schema.Resource {
 		DeleteContext: pluginDelete,
 		CustomizeDiff: pluginCustomizeDiff,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: pluginImportState,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -135,6 +135,18 @@ func pluginResource() *schema.Resource {
 			},
 		},
 	}
+}
+
+// pluginImportState seeds fields that cannot be read back from the plugin
+// catalog API. download is write-only, so imported plugins get the schema
+// default; users registering with download = true will see one in-place
+// update on the first plan after import.
+func pluginImportState(ctx context.Context, d *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	if err := d.Set(fieldDownload, false); err != nil {
+		return nil, err
+	}
+
+	return []*schema.ResourceData{d}, nil
 }
 
 func pluginWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
