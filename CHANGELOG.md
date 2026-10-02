@@ -12,6 +12,10 @@ IMPROVEMENTS:
 * `vault_pki_external_ca_secret_backend_acme_account`: Remove redundant `Sensitive` attribute from write-only fields `eab_kid` and `eab_key`, and add mutual-requirement validation so both fields must be specified together. ([#3038](https://github.com/hashicorp/terraform-provider-vault/pull/3038))
 * `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
 
+BUG FIXES:
+
+* `vault_identity_entity`: Fix panic on create when the entity already exists and Vault returns a non-nil response with a null `data` field (e.g. Vault Enterprise 2.0.3+). The provider now returns a clean "already exists" error instead of crashing. ([#3055](https://github.com/hashicorp/terraform-provider-vault/pull/3055))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:
