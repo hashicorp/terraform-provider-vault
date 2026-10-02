@@ -373,6 +373,35 @@ func TestAccOAuthResourceServerConfigProfile_rarUpdate(t *testing.T) {
 	})
 }
 
+// TestAccOAuthResourceServerConfigProfile_claimsConfig tests unique_id_claim and actor_claim fields
+func TestAccOAuthResourceServerConfigProfile_claimsConfig(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_claimsConfig(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUniqueIDClaim, "jti"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldActorClaim, "act"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName),
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 // TestAccOAuthResourceServerConfigProfile_local tests that the local flag is
 // persisted and read back correctly. A local profile is cluster-scoped and
 // never replicated to performance secondaries.
@@ -628,6 +657,21 @@ resource "vault_oauth_resource_server_config_profile" "test" {
   use_jwks                       = true
   jwks_uri                       = "https://example.com/.well-known/jwks.json"
   optional_authorization_details = false
+}
+`, flagBlock, dependsOn, profileName)
+}
+
+func testAccOAuthResourceServerConfigProfileConfig_claimsConfig(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
+	return fmt.Sprintf(`
+%s
+resource "vault_oauth_resource_server_config_profile" "test" {
+%s  profile_name    = "%s"
+  issuer_id       = "https://example.com"
+  use_jwks        = true
+  jwks_uri        = "https://example.com/.well-known/jwks.json"
+  unique_id_claim = "jti"
+  actor_claim     = "act"
 }
 `, flagBlock, dependsOn, profileName)
 }

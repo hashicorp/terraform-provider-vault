@@ -192,6 +192,11 @@ The following arguments are supported:
 
 * `local` - (Optional) When `false`, the profile is written to replicated storage and propagated to all performance secondaries. When set to `true`, the profile remains local to the current cluster and is not replicated. The `local` field cannot be updated on a profile. Requires Vault 2.2.0 or later.
 
+* `unique_id_claim` - (Optional) The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. Requires Vault 2.2.0 or later.
+
+* `actor_claim` - (Optional) The JWT claim to use as the actor identifier for delegation and chained-token scenarios (RFC 8693 `act` claim). Requires Vault 2.2.0 or later.
+
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
