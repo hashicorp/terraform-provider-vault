@@ -118,6 +118,10 @@ The following attributes are exported in addition to the above:
 
 * `metadata` - Metadata associated with this secret read from Vault.
 
+* `version` - Version of the secret. Set from the version returned by Vault on the
+  most recent write, so it reflects the version produced by the current apply. This can
+  be used to trigger dependent resources when the secret changes.
+
 ## Import
 
 KV-V2 secrets can be imported using the `path`, e.g.
