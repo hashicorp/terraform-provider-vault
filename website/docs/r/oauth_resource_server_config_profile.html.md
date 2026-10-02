@@ -200,7 +200,7 @@ The following arguments are supported:
 
 * `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional. Defaults to `false`. Requires Vault 2.0.3 or later.
 
-* `authorization_details_claim` - (Optional) The string name of the JWT claim that contains RAR (Rich Authorization Requests) authorization details. Defaults to `authorization_details`. Requires Vault 2.2.0 or later.
+* `authorization_details_claim` - (Optional) The string name of the JWT claim that contains RAR (Rich Authorization Requests) authorization details. Requires Vault 2.2.0 or later when set. If omitted, Vault 2.2.0 and later use `authorization_details`.
 
 * `local` - (Optional) When `false`, the profile is written to replicated storage and propagated to all performance secondaries. When set to `true`, the profile remains local to the current cluster and is not replicated. The `local` field cannot be updated on a profile. Requires Vault 2.2.0 or later.
 
