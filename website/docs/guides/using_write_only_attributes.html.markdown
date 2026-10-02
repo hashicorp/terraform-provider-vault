@@ -77,7 +77,7 @@ During `terraform plan` you will see that the write-only attribute is marked app
 
 ```
 
-Upon `terrform apply` you will see in `terraform.tfstate` that the write-only attribute from the configuration is not reflected in the state:
+Upon `terraform apply` you will see in `terraform.tfstate` that the write-only attribute from the configuration is not reflected in the state:
 
 ```
     ...
