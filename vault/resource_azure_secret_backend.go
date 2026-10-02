@@ -255,7 +255,7 @@ func azureSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta 
 
 	data := azureSecretBackendRequestData(d, meta)
 	useAPIVer220Ent := provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta)
-	if useAPIVer220Ent && d.HasChange(consts.FieldSeamlessRotation) {
+	if useAPIVer220Ent && (d.HasChange(consts.FieldSeamlessRotation) || d.IsNewResource()) {
 		data[consts.FieldSeamlessRotation] = d.Get(consts.FieldSeamlessRotation)
 	}
 	if len(data) > 0 {
@@ -344,8 +344,8 @@ func azureSecretBackendRequestData(d *schema.ResourceData, meta interface{}) map
 
 	useAPIVer220Ent := provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer220Ent {
-		if v, ok := d.GetOk(consts.FieldSeamlessRotation); ok && v != nil {
-			data[consts.FieldSeamlessRotation] = v.(bool)
+		if d.IsNewResource() || d.HasChange(consts.FieldSeamlessRotation) {
+			data[consts.FieldSeamlessRotation] = d.Get(consts.FieldSeamlessRotation)
 		}
 	}
 
