@@ -142,6 +142,9 @@ func TestPlugin_entDownload(t *testing.T) {
 		PreCheck: func() {
 			testutil.TestAccPreCheck(t)
 			testutil.SkipTestEnvUnset(t, envPluginEntName, envPluginEntVersion, envPluginEntType)
+			// download is rejected by OSS Vault ("download is an enterprise only feature").
+			// CI sets VAULT_PLUGIN_ENT_* for every matrix job, including vault:latest.
+			SkipIfNotEnterprise(t, testProvider.Meta())
 			// Automatic plugin downloads were added in Vault Enterprise 1.20
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion120)
 		},
