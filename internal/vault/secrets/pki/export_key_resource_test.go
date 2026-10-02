@@ -52,27 +52,29 @@ func TestAccPKIExportKeyResource(t *testing.T) {
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create with minimal config — only required fields.
+			// Create with name and key_type set — all computed fields must be populated.
 			{
-				Config: testAccPKIExportKeyConfig(mount, "ec-p256", ""),
+				Config: testAccPKIExportKeyConfig(mount, "ec-p256", "my-wrapping-key"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "key_type", "ec-p256"),
+					resource.TestCheckResourceAttr(resourceAddress, "name", "my-wrapping-key"),
 					resource.TestCheckResourceAttrSet(resourceAddress, "export_key_uuid"),
 					resource.TestCheckResourceAttrSet(resourceAddress, "public_key"),
 					resource.TestCheckResourceAttrSet(resourceAddress, "export_key_hmac"),
 					resource.TestCheckResourceAttrSet(resourceAddress, "created_at"),
 				),
 			},
-			// Add a name — Optional/Computed, must not force replacement.
+			// Change key_type — must destroy and recreate (RequiresReplace).
 			{
-				Config: testAccPKIExportKeyConfig(mount, "ec-p256", "my-wrapping-key"),
+				Config: testAccPKIExportKeyConfig(mount, "ec-p384", "my-wrapping-key"),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "key_type", "ec-p384"),
 					resource.TestCheckResourceAttr(resourceAddress, "name", "my-wrapping-key"),
-					resource.TestCheckResourceAttr(resourceAddress, "key_type", "ec-p256"),
 					resource.TestCheckResourceAttrSet(resourceAddress, "export_key_uuid"),
+					resource.TestCheckResourceAttrSet(resourceAddress, "export_key_hmac"),
 				),
 			},
-			// Import the existing key by <mount>/export/<uuid> and verify state matches.
+			// Import by <mount>/export/<uuid> and verify full state is reconstructed.
 			{
 				ResourceName:                         resourceAddress,
 				ImportState:                          true,

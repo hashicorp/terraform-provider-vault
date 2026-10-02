@@ -106,6 +106,10 @@ func (r *PKIExportKeyResource) Schema(_ context.Context, _ resource.SchemaReques
 				Description: "Optional human-readable label for this export key.",
 				Optional:    true,
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					// Vault has no update endpoint — name is set at creation time only.
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"export_key_uuid": schema.StringAttribute{
 				Description: "UUID assigned by Vault to this export key.",
