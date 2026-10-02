@@ -126,9 +126,18 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 				Optional:    true,
 				Description: "The ARN or hardware device number of the device configured to the IAM user for multi-factor authentication. Only required if the IAM user has an MFA device set up in AWS.",
 			},
+			consts.FieldMetadata: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.0.0+.",
+			},
 		},
 	}
-}
+	}
 
 func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)
@@ -229,6 +238,16 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
 	_, err := client.Logical().Write(backend+"/roles/"+name, data)
 	if err != nil {
@@ -304,6 +323,12 @@ func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 	}
 	if v, ok := secret.Data[consts.FieldMFASerialNumber]; ok {
 		d.Set(consts.FieldMFASerialNumber, v)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, secret.Data[consts.FieldMetadata]); err != nil {
+			return fmt.Errorf("error setting %s: %s", consts.FieldMetadata, err)
+		}
 	}
 
 	d.Set("backend", strings.Join(pathPieces[:len(pathPieces)-2], "/"))
