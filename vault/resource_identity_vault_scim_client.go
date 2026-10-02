@@ -277,6 +277,12 @@ func scimClientRead(ctx context.Context, d *schema.ResourceData, meta interface{
 // is treated as an attempt to clear it and is rejected, so it is always resent.
 // The update response has no body, so state is refreshed with a follow-up Read.
 func scimClientUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	// deletion_policy is only read at destroy time, so a change to just that
+	// field needs no Vault call. Terraform has already saved the planned value
+	// in state.
+	if !d.HasChangesExcept(consts.FieldDeletionPolicy) {
+		return nil
+	}
 
 	// Get an authenticated Vault API client for the current provider config.
 	client, er := provider.GetClient(d, meta)

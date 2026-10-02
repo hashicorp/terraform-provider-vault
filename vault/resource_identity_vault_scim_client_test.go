@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -25,35 +26,6 @@ import (
 // or newer, ignoring any prerelease suffix. A plain SkipIfAPIVersionLT would
 // skip on "2.2.0-beta1" or "2.2.0-rc1" because semver sorts prereleases below
 // the final release, even though those builds already ship SCIM clients.
-//
-// # Running these tests against a local Vault server
-//
-// SCIM clients are a Vault Enterprise feature, so a local Enterprise dev server
-// is needed. Build it with the "enterprise" build tag (without it the SCIM
-// routes are missing and every create fails with "unsupported path"), and point
-// it at your own license file through VAULT_LICENSE_PATH:
-//
-//	go build -tags "enterprise testonly" -o /tmp/vault-ent .
-//	VAULT_LICENSE_PATH=/path/to/your/vault.hclic /tmp/vault-ent server -dev \
-//	    -dev-root-token-id=<dev-token> -dev-listen-address=127.0.0.1:8200
-//
-// Then, from another shell, run the tests with the dev server's address and
-// token:
-//
-//	TF_ACC=1 TF_ACC_ENTERPRISE=1 \
-//	VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=<dev-token> \
-//	go test -v -run TestAccIdentityVaultSCIMClient ./vault
-//
-// Keep this safe:
-//   - Use a throwaway dev server only. Dev mode is in-memory, unsealed and
-//     unauthenticated by design, so never use it for real data.
-//   - Bind it to 127.0.0.1 so it is not reachable from the network.
-//   - The tests create and destroy real resources on whichever server
-//     VAULT_ADDR points at. Never point them at a shared or production cluster.
-//   - Never commit the license file or a real token. Pass them through the
-//     environment or a file outside the repository, and use a dev-only token
-//     instead of a real one.
-//   - Stop the server when finished.
 func skipIfSCIMClientUnsupported(t *testing.T) {
 	t.Helper()
 	SkipOnAPIVersion(t, testProvider.Meta(), func(cur *version.Version) bool {
@@ -255,6 +227,106 @@ func TestAccIdentityVaultSCIMClient_updateOptionalFieldsInPlace(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserAdoption, "true"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowGroupAdoption, "true"),
 				),
+			},
+		},
+	})
+}
+
+// TestSCIMClientUpdate_skipsWriteForDeletionPolicyOnlyChange checks that
+// scimClientUpdate makes no Vault call when deletion_policy is the only field
+// that changed, since that field is only read at destroy time. It needs no
+// server: the guard returns before the Vault client is requested, so a nil meta
+// shows whether it fired. If it did not, GetClient fails on the nil meta.
+func TestSCIMClientUpdate_skipsWriteForDeletionPolicyOnlyChange(t *testing.T) {
+	tests := map[string]struct {
+		raw      map[string]interface{}
+		wantSkip bool
+	}{
+		"only deletion_policy changes": {
+			raw:      map[string]interface{}{consts.FieldDeletionPolicy: consts.DeletionPolicyOrphanChildResources},
+			wantSkip: true,
+		},
+		"another field changes": {
+			raw: map[string]interface{}{consts.FieldMaxActiveTokens: 5},
+		},
+		"deletion_policy and another field change": {
+			raw: map[string]interface{}{
+				consts.FieldDeletionPolicy:  consts.DeletionPolicyOrphanChildResources,
+				consts.FieldMaxActiveTokens: 5,
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			d := schema.TestResourceDataRaw(t, scimClientResource().Schema, tc.raw)
+
+			diags := scimClientUpdate(context.Background(), d, nil)
+
+			if tc.wantSkip && diags.HasError() {
+				t.Fatalf("expected no Vault call, but got: %v", diags)
+			}
+			if !tc.wantSkip && !diags.HasError() {
+				t.Fatal("expected the update to reach the Vault client, but it was skipped")
+			}
+		})
+	}
+}
+
+// TestAccIdentityVaultSCIMClient_updateDeletionPolicyOnly changes only
+// deletion_policy on an existing client and checks that the new value is saved
+// in state while client_id and the other fields stay the same. The skipped
+// Vault write itself is covered by the unit test above.
+func TestAccIdentityVaultSCIMClient_updateDeletionPolicyOnly(t *testing.T) {
+	clientName := acctest.RandomWithPrefix("tf-scim-client")
+	resourceName := "vault_scim_client.test"
+	var clientID string
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			skipIfSCIMClientUnsupported(t)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityVaultSCIMClientDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityVaultSCIMClientConfig(clientName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldDeletionPolicy),
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return fmt.Errorf("not found: %s", resourceName)
+						}
+						clientID = rs.Primary.Attributes[consts.FieldClientID]
+						return nil
+					},
+				),
+			},
+			{
+				Config: testAccIdentityVaultSCIMClientConfig(clientName,
+					fmt.Sprintf(`deletion_policy = %q`, consts.DeletionPolicyOrphanChildResources)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeletionPolicy, consts.DeletionPolicyOrphanChildResources),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxActiveTokens, "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeleting, "false"),
+					func(s *terraform.State) error {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return fmt.Errorf("not found: %s", resourceName)
+						}
+						if got := rs.Primary.Attributes[consts.FieldClientID]; got != clientID {
+							return fmt.Errorf("client_id changed from %s to %s", clientID, got)
+						}
+						return nil
+					},
+				),
+			},
+			{
+				// A plan right after must be empty: nothing should drift.
+				Config:   testAccIdentityVaultSCIMClientConfig(clientName, fmt.Sprintf(`deletion_policy = %q`, consts.DeletionPolicyOrphanChildResources)),
+				PlanOnly: true,
 			},
 		},
 	})
@@ -610,6 +682,10 @@ resource "vault_scim_client" "test" {
 `, name, name, extra)
 }
 
+// testAccIdentityVaultSCIMClientConfig_allFields returns a config with a userpass
+// auth mount, an entity, and a vault_scim_client that sets every optional field:
+// alias_mount_accessor (the mount's accessor), default_schema_version, both
+// adoption flags, max_active_tokens and max_token_ttl.
 func testAccIdentityVaultSCIMClientConfig_allFields(name, schemaVersion string, maxTokens, ttl int, allowUser, allowGroup bool) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "userpass" {
@@ -663,6 +739,9 @@ resource "vault_scim_client" "test" {
 `, name, which)
 }
 
+// testAccIdentityVaultSCIMClientConfig_principal returns a config whose principal
+// entity is named "<entitySuffix>-<clientName>". Changing entitySuffix between
+// steps renames the entity while the client config stays the same.
 func testAccIdentityVaultSCIMClientConfig_principal(clientName, entitySuffix string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "principal" {
@@ -676,6 +755,10 @@ resource "vault_scim_client" "test" {
 `, entitySuffix, clientName, clientName)
 }
 
+// testAccIdentityVaultSCIMClientConfig_duplicatePrincipal returns a config with
+// two clients, name1 and name2, that share one entity as their
+// access_grant_principal. Vault allows each principal on only one client, so
+// creating the second (which depends on the first) must fail.
 func testAccIdentityVaultSCIMClientConfig_duplicatePrincipal(name1, name2 string) string {
 	return fmt.Sprintf(`
 resource "vault_identity_entity" "shared_principal" {
