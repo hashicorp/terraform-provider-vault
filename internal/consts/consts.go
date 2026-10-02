@@ -897,6 +897,7 @@ const (
 	FieldCreationTime                 = "creation_time"
 	FieldLastUpdatedTime              = "last_updated_time"
 	FieldOptionalAuthorizationDetails = "optional_authorization_details"
+	FieldAuthorizationDetailsClaim    = "authorization_details_claim"
 
 	/*
 		raft snapshot agent config fields

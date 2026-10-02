@@ -373,6 +373,71 @@ func TestAccOAuthResourceServerConfigProfile_rarUpdate(t *testing.T) {
 	})
 }
 
+// TestAccOAuthResourceServerConfigProfile_authorizationDetailsClaimDefault tests that
+// authorization_details_claim defaults to "authorization_details" when not set.
+func TestAccOAuthResourceServerConfigProfile_authorizationDetailsClaimDefault(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_jwks(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthorizationDetailsClaim, "authorization_details"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldID),
+				),
+			},
+		},
+	})
+}
+
+// TestAccOAuthResourceServerConfigProfile_authorizationDetailsClaim tests setting a
+// custom authorization_details_claim value.
+func TestAccOAuthResourceServerConfigProfile_authorizationDetailsClaim(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_authorizationDetailsClaim(profileName, "rar_details"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthorizationDetailsClaim, "rar_details"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldID),
+				),
+			},
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_authorizationDetailsClaim(profileName, "custom_claim"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthorizationDetailsClaim, "custom_claim"),
+				),
+			},
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_jwks(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAuthorizationDetailsClaim, "authorization_details"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName),
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 // TestAccOAuthResourceServerConfigProfile_local tests that the local flag is
 // persisted and read back correctly. A local profile is cluster-scoped and
 // never replicated to performance secondaries.
@@ -630,6 +695,20 @@ resource "vault_oauth_resource_server_config_profile" "test" {
   optional_authorization_details = false
 }
 `, flagBlock, dependsOn, profileName)
+}
+
+func testAccOAuthResourceServerConfigProfileConfig_authorizationDetailsClaim(profileName, claim string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
+	return fmt.Sprintf(`
+%s
+resource "vault_oauth_resource_server_config_profile" "test" {
+%s  profile_name                 = %q
+  issuer_id                    = "https://example.com"
+  use_jwks                     = true
+  jwks_uri                     = "https://example.com/.well-known/jwks.json"
+  authorization_details_claim  = %q
+}
+`, flagBlock, dependsOn, profileName, claim)
 }
 
 func testAccOAuthResourceServerConfigProfileConfig_local(profileName string, local bool) string {
