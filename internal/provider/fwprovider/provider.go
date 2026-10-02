@@ -329,6 +329,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		gcpkms.NewGCPKMSReencryptEphemeralResource,
 		gcpkms.NewGCPKMSSignEphemeralResource,
 		kerberosauth.NewKerberosAuthBackendLoginEphemeralResource,
+		pkibyok.NewPKICAKeyExportEphemeralResource,
 	}
 }
 
