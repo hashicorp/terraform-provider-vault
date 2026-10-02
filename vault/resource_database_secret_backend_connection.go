@@ -232,9 +232,20 @@ func getDatabaseSchema(typ schema.ValueType) schemaMap {
 					},
 					consts.FieldPassword: {
 						Type:        schema.TypeString,
-						Required:    true,
+						Optional:    true,
 						Description: "The password to be used in the connection URL",
 						Sensitive:   true,
+					},
+					consts.FieldPasswordWO: {
+						Type:        schema.TypeString,
+						Optional:    true,
+						Description: "Write-only field for the password to be used in the connection URL",
+						WriteOnly:   true,
+					},
+					consts.FieldPasswordWOVersion: {
+						Type:        schema.TypeInt,
+						Optional:    true,
+						Description: "Version counter for the password write-only field",
 					},
 					consts.FieldCACert: {
 						Type:        schema.TypeString,
@@ -1521,6 +1532,11 @@ func getElasticsearchConnectionDetailsFromResponse(d *schema.ResourceData, prefi
 		result["username_template"] = v.(string)
 	}
 
+	// ensure password_wo_version is updated in state
+	if v, ok := d.GetOk(prefix + consts.FieldPasswordWOVersion); ok {
+		result[consts.FieldPasswordWOVersion] = v.(int)
+	}
+
 	return result
 }
 
@@ -1854,10 +1870,34 @@ func setElasticsearchDatabaseConnectionData(d *schema.ResourceData, prefix strin
 		data["username"] = v.(string)
 	}
 
+	// Vault does not return the password in the API. If the root credentials have been rotated, sending
+	// the old password in the update request would break the connection config. Thus we only send it,
+	// if it actually changed to still support updating it for non-rotated cases.
 	passwordKey := prefix + consts.FieldPassword
-	if v, ok := d.GetOk(passwordKey); ok {
-		if d.IsNewResource() || d.HasChange(passwordKey) {
+	passwordWriteOnlyVersionKey := prefix + consts.FieldPasswordWOVersion
+	if d.IsNewResource() || d.HasChange(passwordKey) || d.HasChange(passwordWriteOnlyVersionKey) {
+		if v, ok := d.GetOk(passwordKey); ok && v != nil {
+			log.Printf("[DEBUG] using persisted password; please use new write-only attributes `password_wo` " +
+				"and `password_wo_version` for security")
 			data[consts.FieldPassword] = v.(string)
+		} else if d.HasChange(passwordWriteOnlyVersionKey) {
+			engineName, engineIdx, err := databaseEngineNameAndIndexFromPrefix(prefix)
+			if err != nil {
+				// this should not happen, since we control how the prefix is created
+				panic(fmt.Sprintf("[ERROR] invalid prefix %q for database connection: %s", prefix, err))
+			}
+
+			idx, err := strconv.Atoi(engineIdx)
+			if err != nil {
+				// this should not happen, since we control how the index has been set
+				panic(fmt.Sprintf("[ERROR] unable to convert string index to integer: %s", err))
+			}
+
+			// construct path to use GetRawConfig
+			path := cty.GetAttrPath(engineName).IndexInt(idx).GetAttr(consts.FieldPasswordWO)
+			if pwWo, _ := d.GetRawConfigAt(path); !pwWo.IsNull() {
+				data[consts.FieldPassword] = pwWo.AsString()
+			}
 		}
 	}
 
