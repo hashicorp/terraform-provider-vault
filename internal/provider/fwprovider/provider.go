@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
+	pkibyok "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
@@ -284,6 +285,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCADNSProviderRFC2136Resource,
 		pki_external_ca.NewPKIExternalCADNSProviderGCPResource,
 		pki_external_ca.NewPKIExternalCADNSProviderAzureResource,
+		pkibyok.NewPKIExportKeyResource,
 		sys.NewActivationFlagsResource,
 		keymgmt.NewKeyResource,
 		keymgmt.NewAWSKMSResource,
