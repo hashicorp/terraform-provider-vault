@@ -517,6 +517,128 @@ func TestAccKubernetesAuthBackendConfig_writeOnlyJWT(t *testing.T) {
 	})
 }
 
+// testAccKubernetesAuthBackendConfigConfig_writeOnlyJWTWithIssuer is identical
+// to testAccKubernetesAuthBackendConfigConfig_writeOnlyJWT but allows the
+// caller to vary the `issuer` field. It is used by the regression test for
+// the bug where updating an unrelated field while leaving
+// `token_reviewer_jwt_wo_version` unchanged caused the JWT to be silently
+// cleared in Vault.
+func testAccKubernetesAuthBackendConfigConfig_writeOnlyJWTWithIssuer(backend, jwt string, version int, issuer string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "kubernetes" {
+  type = "kubernetes"
+  path = "%s"
+}
+
+resource "vault_kubernetes_auth_backend_config" "config" {
+  backend = vault_auth_backend.kubernetes.path
+  kubernetes_host = "http://example.com:443"
+  kubernetes_ca_cert = %q
+  token_reviewer_jwt_wo = %q
+  token_reviewer_jwt_wo_version = %d
+  issuer = %q
+  disable_local_ca_jwt = true
+}
+`, backend, kubernetesCAcert, jwt, version, issuer)
+}
+
+// testAccCheckKubernetesAuthBackendConfigJWTSet verifies that the
+// token_reviewer_jwt is still configured server-side in Vault by reading the
+// resource and asserting that `token_reviewer_jwt_set` is `true`.
+//
+// The Vault auth/<mount>/config endpoint never returns the JWT itself, but it
+// does return a `token_reviewer_jwt_set` boolean; this is the only reliable
+// way to assert that the JWT survived an update from the server's
+// perspective.
+func testAccCheckKubernetesAuthBackendConfigJWTSet(resourceName string, want bool) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found in state: %s", resourceName)
+		}
+
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+
+		secret, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return fmt.Errorf("error reading Kubernetes auth backend config %q: %s",
+				rs.Primary.ID, err)
+		}
+		if secret == nil {
+			return fmt.Errorf("Kubernetes auth backend config %q not found", rs.Primary.ID)
+		}
+
+		raw, ok := secret.Data["token_reviewer_jwt_set"]
+		if !ok {
+			return fmt.Errorf("token_reviewer_jwt_set not present in response for %q",
+				rs.Primary.ID)
+		}
+		got, ok := raw.(bool)
+		if !ok {
+			return fmt.Errorf("token_reviewer_jwt_set is not a bool, got %T (%v)", raw, raw)
+		}
+		if got != want {
+			return fmt.Errorf("token_reviewer_jwt_set mismatch for %q: want %t, got %t",
+				rs.Primary.ID, want, got)
+		}
+		return nil
+	}
+}
+
+// TestAccKubernetesAuthBackendConfig_writeOnlyJWTPersistsOnUnrelatedUpdate is a
+// regression test for the bug where updating a non-write-only field on the
+// resource (e.g. `issuer`) while leaving `token_reviewer_jwt_wo_version`
+// unchanged caused the provider to omit `token_reviewer_jwt` from the Vault
+// write request, which in turn cleared the previously-stored JWT in Vault.
+//
+// See https://github.com/hashicorp/terraform-provider-vault/issues/2900.
+func TestAccKubernetesAuthBackendConfig_writeOnlyJWTPersistsOnUnrelatedUpdate(t *testing.T) {
+	backend := acctest.RandomWithPrefix("kubernetes")
+	jwt := kubernetesJWT
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckKubernetesAuthBackendConfigDestroy,
+		Steps: []resource.TestStep{
+			{
+				// Initial create with the write-only JWT and a known issuer.
+				Config: testAccKubernetesAuthBackendConfigConfig_writeOnlyJWTWithIssuer(
+					backend, jwt, 1, "kubernetes/serviceaccount"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldIssuer, "kubernetes/serviceaccount"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldTokenReviewerJWTWOVersion, "1"),
+					testAccCheckKubernetesAuthBackendConfigJWTSet(
+						"vault_kubernetes_auth_backend_config.config", true),
+				),
+			},
+			{
+				// Update only `issuer`, leave token_reviewer_jwt_wo_version at 1.
+				// Before the fix, the provider would omit token_reviewer_jwt
+				// from the write payload and Vault would clear it
+				// (token_reviewer_jwt_set => false).
+				Config: testAccKubernetesAuthBackendConfigConfig_writeOnlyJWTWithIssuer(
+					backend, jwt, 1, "https://kubernetes.default.svc"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldIssuer, "https://kubernetes.default.svc"),
+					resource.TestCheckResourceAttr("vault_kubernetes_auth_backend_config.config",
+						consts.FieldTokenReviewerJWTWOVersion, "1"),
+					testAccCheckKubernetesAuthBackendConfigJWTSet(
+						"vault_kubernetes_auth_backend_config.config", true),
+				),
+			},
+		},
+	})
+}
+
 func testAccKubernetesAuthBackendConfigConfig_full(backend, caCert, jwt, issuer string,
 	disableIssValidation, disableLocalCaJwt, omitCA bool,
 ) string {
