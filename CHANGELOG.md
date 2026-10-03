@@ -12,6 +12,11 @@ IMPROVEMENTS:
 * `vault_pki_external_ca_secret_backend_acme_account`: Remove redundant `Sensitive` attribute from write-only fields `eab_kid` and `eab_key`, and add mutual-requirement validation so both fields must be specified together. ([#3038](https://github.com/hashicorp/terraform-provider-vault/pull/3038))
 * `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
 
+BUG FIXES:
+
+* `vault_gcp_secret_impersonated_account`: Fix perpetual diff on `ttl` when it is set as a duration string such as `"1h"`, which Vault returns as seconds. ([#3072](https://github.com/hashicorp/terraform-provider-vault/pull/3072))
+* `vault_pki_secret_backend_config_auto_tidy`: Fix perpetual diff on `pause_duration` when its value differs from Vault's normalized form, e.g. `"1m"` read back as `"1m0s"`. Fields Vault stores as whole seconds now show a sub-second value such as `"1500ms"` as a diff instead of silently suppressing it. ([#3072](https://github.com/hashicorp/terraform-provider-vault/pull/3072))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:
