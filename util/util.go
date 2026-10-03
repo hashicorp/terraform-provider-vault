@@ -41,6 +41,23 @@ func JsonDiffSuppress(k, old, new string, _ *schema.ResourceData) bool {
 	return reflect.DeepEqual(oldJSON, newJSON)
 }
 
+// DurationDiffSuppress treats "1h" and "3600" as equal: Vault accepts duration
+// strings but returns most durations as seconds.
+func DurationDiffSuppress(_, old, new string, _ *schema.ResourceData) bool {
+	if old == "" || new == "" {
+		return false
+	}
+	oldDuration, err := parseutil.ParseDurationSecond(old)
+	if err != nil {
+		return false
+	}
+	newDuration, err := parseutil.ParseDurationSecond(new)
+	if err != nil {
+		return false
+	}
+	return oldDuration == newDuration
+}
+
 func ToStringArray(input []interface{}) []string {
 	output := make([]string, len(input))
 
