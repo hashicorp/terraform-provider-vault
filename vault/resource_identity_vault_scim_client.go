@@ -19,8 +19,8 @@ import (
 )
 
 // validateSCIMClientName rejects names containing uppercase letters. Vault
-// lowercases client_name on write but looks it up case-sensitively, so a
-// mixed-case name would be created under a different name than the one
+// lowercases client_name on write but looks it up case sensitively, so a
+// mixed case name would be created under a different name than the one
 // Terraform reads back, leaving an untracked client in Vault.
 func validateSCIMClientName(v interface{}, k string) ([]string, []error) {
 	name := v.(string)
@@ -32,6 +32,8 @@ func validateSCIMClientName(v interface{}, k string) ([]string, []error) {
 	return nil, nil
 }
 
+// scimClientResource returns the schema and CRUD functions for the
+// vault_scim_client resource.
 func scimClientResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: scimClientCreate,
@@ -352,10 +354,6 @@ func scimClientDelete(ctx context.Context, d *schema.ResourceData, meta interfac
 	// the one Terraform value onto the correct Vault query param here. Leaving
 	// deletion_policy unset sends a plain delete with no query params, which
 	// only succeeds if the client has no linked entities/groups.
-	//
-	// The flags are sent as query parameters via DeleteWithData. Appending
-	// "?..." to the path instead would be percent-encoded into the path itself
-	// and Vault would answer "unsupported path".
 	var query map[string][]string
 
 	switch d.Get(consts.FieldDeletionPolicy).(string) {
