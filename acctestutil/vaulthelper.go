@@ -55,6 +55,25 @@ func SkipIfAPIVersionGTE(t *testing.T, ver *version.Version) {
 	SkipIfAPIVersion(t, f, "Vault version >= %q", ver)
 }
 
+// IsAPIVersionGTE returns true if the running Vault version is >= ver.
+// Unlike the Skip* helpers it does not require a *testing.T, so it can be
+// used in config-builder functions that run before a test step executes.
+// Returns false if TestProvider is nil or the version has not been set yet.
+func IsAPIVersionGTE(ver *version.Version) bool {
+	if TestProvider == nil {
+		return false
+	}
+	pm, ok := TestProvider.Meta().(*provider.ProviderMeta)
+	if !ok {
+		return false
+	}
+	curVersion := pm.GetVaultVersion()
+	if curVersion == nil {
+		return false
+	}
+	return curVersion.GreaterThanOrEqual(ver)
+}
+
 func SkipIfAPIVersion(t *testing.T, cmp CompareVaultVersionFunc, format string, args ...interface{}) {
 	t.Helper()
 
