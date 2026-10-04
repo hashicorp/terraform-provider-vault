@@ -211,6 +211,10 @@ var (
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
 		},
+		"vault_transform_rewrap": {
+			Resource:      UpdateSchemaResource(transformRewrapDataSource()),
+			PathInventory: []string{"/transform/rewrap/{role_name}"},
+		},
 		"vault_transit_sign": {
 			Resource:      UpdateSchemaResource(transitSignDataSource()),
 			PathInventory: []string{"/transit/sign/{name}"},

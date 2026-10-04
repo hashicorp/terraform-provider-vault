@@ -116,7 +116,7 @@ The following arguments are supported:
 * `auto_unlock` - (Optional) If true, Vault automatically attempts to unlock the admin managed LDAP account
   after every successful static-role password rotation. Applies to all static roles on this mount
   unless overridden at the role level. Defaults to false. Active Directory schema only.
-  Requires Vault 2.2.0+.
+  Requires Vault Enterprise 2.2.0+.
 
 ### Common Mount Arguments
 These arguments are common across all resources that mount a secret engine.

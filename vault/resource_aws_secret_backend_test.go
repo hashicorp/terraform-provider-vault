@@ -196,7 +196,7 @@ func TestAccAWSSecretBackend_automatedRotation(t *testing.T) {
 			},
 			{
 				Config:      testAccAWSSecretBackendConfig_automatedRotation(path, "", 30, 120, true),
-				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to"),
 			},
 			// zero-out rotation_schedule and rotation_window
 			{

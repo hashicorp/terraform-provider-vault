@@ -287,7 +287,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 			{
 				// do an error
 				Config:      testAccAzureSecretBackendConfig_automatedRotation(backend, "", 900, 600, false),
-				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to"),
 			},
 			{ // try again but with schedule (from nothing
 				Config: testAccAzureSecretBackendConfig_automatedRotation(backend, "*/20 * * * SUN", 3600, 0, false),
