@@ -49,7 +49,7 @@ func TestAzureSecretBackend(t *testing.T) {
 				Check:  getAzureBackendChecks(resourceName, updatedPath, false),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldClientSecret, consts.FieldDisableRemount),
+				consts.FieldClientSecret, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
 		},
 	})
 }
@@ -135,7 +135,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 					getSeamlessRotationCheckFunc(resourceName, true),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
 		},
 	})
 }
@@ -199,7 +199,8 @@ func TestAccAzureSecretBackend_MountConfig(t *testing.T) {
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldDisableRemount,
-				consts.FieldClientSecret),
+				consts.FieldClientSecret,
+				consts.FieldSeamlessRotation),
 		},
 	})
 }
@@ -247,7 +248,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 				Config: testAzureSecretBackend_remount(updatedPath),
 				Check:  resource.ComposeTestCheckFunc(azureUpdatedCheckFuncs...),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
 		},
 	})
 }
@@ -318,7 +319,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					getSeamlessRotationCheckFunc(resourceName, true),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
 		},
 	})
 }
@@ -472,7 +473,7 @@ func TestAccAzureSecretBackend_clientSecretWriteOnly(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldClientSecretWO, consts.FieldClientSecretWOVersion, consts.FieldDisableRemount),
+				consts.FieldClientSecretWO, consts.FieldClientSecretWOVersion, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
 		},
 	})
 }
