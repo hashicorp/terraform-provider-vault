@@ -976,6 +976,10 @@ const (
 	FieldCertificateWO              = "certificate_wo"
 	FieldCertificateWOVersion       = "certificate_wo_version"
 
+	// Azure seamless rotation
+	FieldSeamlessRotation    = "seamless_rotation"
+	FieldRotationGracePeriod = "rotation_grace_period"
+
 	/*
 		common environment variables
 	*/
