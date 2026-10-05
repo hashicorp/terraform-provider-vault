@@ -38,7 +38,7 @@ import (
 
 const defaultAuthorizationDetailsClaim = "authorization_details"
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
+// Ensure the implementation satisfies the expected interfaces
 var (
 	_ resource.ResourceWithConfigure  = &OAuthResourceServerConfigProfileResource{}
 	_ resource.ResourceWithModifyPlan = &OAuthResourceServerConfigProfileResource{}
