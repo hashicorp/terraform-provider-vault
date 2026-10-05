@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -554,8 +555,26 @@ func TestAccAzureSecretBackend_SeamlessRotation(t *testing.T) {
 						getSeamlessRotationCheckFunc(resourceName, true))...,
 				),
 			},
+			// omit seamless_rotation param in next check (should remain true)
+			{
+				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzurePublicCloud"),
+				Check: resource.ComposeTestCheckFunc(
+					append(
+						commonChecks,
+						getSeamlessRotationCheckFunc(resourceName, true))...,
+				),
+			},
 			{
 				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzurePublicCloud", false),
+				Check: resource.ComposeTestCheckFunc(
+					append(
+						commonChecks,
+						getSeamlessRotationCheckFunc(resourceName, false))...,
+				),
+			},
+			// omit seamless_rotation param in next check (should remain false)
+			{
+				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzurePublicCloud"),
 				Check: resource.ComposeTestCheckFunc(
 					append(
 						commonChecks,
@@ -589,18 +608,36 @@ func TestAccAzureSecretBackend_SeamlessRotation(t *testing.T) {
 	})
 }
 
-func testAccAzureSecretBackend_SeamlessRotation(path string, env string, seamless bool) string {
-	return fmt.Sprintf(`
-resource "vault_azure_secret_backend" "test" {
-  path              = "%s"
-  subscription_id   = "11111111-2222-3333-4444-111111111111"
-  tenant_id         = "11111111-2222-3333-4444-222222222222"
-  client_id         = "11111111-2222-3333-4444-333333333333"
-  client_secret     = "12345678901234567890"
-  environment       = "%s"
-  disable_remount   = true
-  seamless_rotation = %t
-}`, path, env, seamless)
+// testAccAzureSecretBackend_SeamlessRotation generates a new plan. If seamless
+// is not specified, then "seamless_rotation" is omitted from the config.
+func testAccAzureSecretBackend_SeamlessRotation(path string, env string, seamless ...bool) string {
+	var b strings.Builder
+	type attr struct {
+		key string
+		val string
+	}
+
+	attrs := []attr{
+		{"path", strconv.Quote(path)},
+		{"subscription_id", strconv.Quote("11111111-2222-3333-4444-111111111111")},
+		{"tenant_id", strconv.Quote("11111111-2222-3333-4444-222222222222")},
+		{"client_id", strconv.Quote("11111111-2222-3333-4444-333333333333")},
+		{"client_secret", strconv.Quote("12345678901234567890")},
+		{"environment", strconv.Quote(env)},
+		{"disable_remount", strconv.FormatBool(true)},
+	}
+
+	if len(seamless) > 0 {
+		attrs = append(attrs, attr{"seamless_rotation", strconv.FormatBool(seamless[0])})
+	}
+
+	b.WriteString(`resource "vault_azure_secret_backend" "test" {`)
+	for i := range attrs {
+		fmt.Fprintf(&b, "\n  % -20s = %s", attrs[i].key, attrs[i].val)
+	}
+
+	b.WriteString("\n}")
+	return b.String()
 }
 
 func supportsVaultVersion220Ent() bool {
