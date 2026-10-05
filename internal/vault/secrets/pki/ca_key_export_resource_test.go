@@ -24,9 +24,9 @@ import (
 )
 
 var (
-	reBase64     = regexp.MustCompile(`^[A-Za-z0-9+/].*={0,2}$`)
-	reHMAC       = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
-	reRFC3339    = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}`)
+	reBase64  = regexp.MustCompile(`^[A-Za-z0-9+/].*={0,2}$`)
+	reHMAC    = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+	reRFC3339 = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}`)
 )
 
 // TestPKICAKeyExportEphemeralResourceSchema verifies the schema compiles and
