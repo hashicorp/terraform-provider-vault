@@ -434,6 +434,10 @@ func TestAccOAuthResourceServerConfigProfile_authorizationDetailsClaim(t *testin
 				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName),
 				ImportStateVerify: true,
 			},
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_authorizationDetailsClaimUnknown(profileName, "deferred_claim"),
+				Check:  resource.TestCheckResourceAttr(resourceName, consts.FieldAuthorizationDetailsClaim, "deferred_claim"),
+			},
 		},
 	})
 }
@@ -711,6 +715,37 @@ resource "vault_oauth_resource_server_config_profile" "test" {
 `, flagBlock, dependsOn, profileName, claim)
 }
 
+// testAccOAuthResourceServerConfigProfileConfig_authorizationDetailsClaimUnknown
+// returns a profile configuration that sets authorization_details_claim from a
+// terraform_data output. The terraform_data resource is new in the step that
+// applies this configuration, so the claim is unknown during plan and resolves
+// during apply.
+//
+// It guards against ModifyPlan treating an unknown claim like an omitted one
+// and planning the default "authorization_details". If the prior state holds a
+// custom claim, Terraform rejects that plan with "Provider produced invalid
+// plan". If the prior state holds the default, the apply fails with "Provider
+// produced inconsistent final plan" when other attributes also change;
+// otherwise, the plan shows no changes, so the apply doesn't write the
+// configured claim. Use this configuration in a step after one that sets a
+// custom claim, and verify that the resolved claim is written.
+func testAccOAuthResourceServerConfigProfileConfig_authorizationDetailsClaimUnknown(profileName, claim string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
+	return fmt.Sprintf(`
+%s
+resource "terraform_data" "claim" {
+  input = %q
+}
+
+resource "vault_oauth_resource_server_config_profile" "test" {
+%s  profile_name                = %q
+  issuer_id                   = "https://example.com"
+  use_jwks                    = true
+  jwks_uri                    = "https://example.com/.well-known/jwks.json"
+  authorization_details_claim = terraform_data.claim.output
+}
+`, flagBlock, claim, dependsOn, profileName)
+}
 func testAccOAuthResourceServerConfigProfileConfig_local(profileName string, local bool) string {
 	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`

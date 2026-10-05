@@ -284,7 +284,11 @@ func (r *OAuthResourceServerConfigProfileResource) ModifyPlan(ctx context.Contex
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	if !configuredClaim.IsNull() && !configuredClaim.IsUnknown() {
+	// An unknown value comes from config and resolves during apply; only an
+	// omitted (null) value should reset to the default.
+	if !configuredClaim.IsNull() {
+		return
+	}
 		return
 	}
 	if !provider.IsAPISupported(r.Meta(), provider.VaultVersion220) {
