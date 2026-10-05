@@ -49,7 +49,7 @@ func TestAzureSecretBackend(t *testing.T) {
 				Check:  getAzureBackendChecks(resourceName, updatedPath, false),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldClientSecret, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
+				consts.FieldClientSecret, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -86,7 +86,7 @@ func getAzureBackendChecks(resourceName, path string, isUpdate bool) resource.Te
 		baseChecks = append(baseChecks, resource.TestCheckResourceAttr(
 			resourceName,
 			consts.FieldSeamlessRotation,
-			strconv.FormatBool(true), // default value for new mounts
+			strconv.FormatBool(false),
 		))
 	}
 
@@ -120,7 +120,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "600"),
-					getSeamlessRotationCheckFunc(resourceName, true),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -132,10 +132,10 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "22222222-3333-4444-5555-444444444444"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience-updated"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
-					getSeamlessRotationCheckFunc(resourceName, true),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -171,7 +171,7 @@ func TestAccAzureSecretBackend_MountConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
 					resource.TestCheckResourceAttr(resourceName, "force_no_cache", "true"),
-					getSeamlessRotationCheckFunc(resourceName, true),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -194,13 +194,12 @@ func TestAccAzureSecretBackend_MountConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
 					resource.TestCheckResourceAttr(resourceName, "force_no_cache", "true"),
-					getSeamlessRotationCheckFunc(resourceName, true),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldDisableRemount,
-				consts.FieldClientSecret,
-				consts.FieldSeamlessRotation),
+				consts.FieldClientSecret),
 		},
 	})
 }
@@ -220,7 +219,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, "12345678901234567890"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldEnvironment, "AzurePublicCloud"),
-		getSeamlessRotationCheckFunc(resourceName, true),
+		getSeamlessRotationCheckFunc(resourceName, false),
 	}
 
 	azureUpdatedCheckFuncs := []resource.TestCheckFunc{
@@ -230,7 +229,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, "12345678901234567890"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldEnvironment, "AzurePublicCloud"),
-		getSeamlessRotationCheckFunc(resourceName, true),
+		getSeamlessRotationCheckFunc(resourceName, false),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -276,7 +275,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
-					getSeamlessRotationCheckFunc(resourceName, true),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -288,7 +287,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SAT"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
-					getSeamlessRotationCheckFunc(resourceName, true),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -300,7 +299,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
-					getSeamlessRotationCheckFunc(resourceName, true),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -316,10 +315,10 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SUN"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
-					getSeamlessRotationCheckFunc(resourceName, true),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount),
 		},
 	})
 }
@@ -473,7 +472,7 @@ func TestAccAzureSecretBackend_clientSecretWriteOnly(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldClientSecretWO, consts.FieldClientSecretWOVersion, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
+				consts.FieldClientSecretWO, consts.FieldClientSecretWOVersion, consts.FieldDisableRemount),
 		},
 	})
 }

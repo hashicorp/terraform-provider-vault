@@ -121,7 +121,7 @@ func azureSecretBackendResource() *schema.Resource {
 			consts.FieldSeamlessRotation: {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     true,
+				Computed:    true,
 				Description: "Enable or disable seamless rotation for static roles. Does not affect existing static roles.",
 			},
 		},
