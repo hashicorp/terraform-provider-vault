@@ -104,7 +104,7 @@ The following arguments are supported:
   a rotation when a scheduled token rotation occurs. The default rotation window is
   unbound and the minimum allowable window is `3600`. Requires Vault Enterprise 1.19+. *Available only for Vault Enterprise*
 
-- `seamless_rotation` (`bool: true`) - Enables automated seamless rotation by default for newly created static roles when `true`. For more information about seamless rotation, refer to the [Static Roles section](https://developer.hashicorp.com/vault/docs/secrets/azure#static-roles) for the Azure Secrets Engine.
+- `seamless_rotation` (`bool: true`) - Enables automated seamless rotation by default for newly created static roles when `true`. For more information about seamless rotation, refer to the [Static Roles section](https://developer.hashicorp.com/vault/docs/secrets/azure#static-roles) for the Azure Secrets Engine. *Available only for Vault Enterprise 2.2.0 and later.*
 
 - `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
   *Available only for Vault Enterprise*
