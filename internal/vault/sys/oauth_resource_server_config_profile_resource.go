@@ -39,8 +39,10 @@ import (
 const defaultAuthorizationDetailsClaim = "authorization_details"
 
 // Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ resource.ResourceWithConfigure = &OAuthResourceServerConfigProfileResource{}
-var _ resource.ResourceWithModifyPlan = &OAuthResourceServerConfigProfileResource{}
+var (
+	_ resource.ResourceWithConfigure  = &OAuthResourceServerConfigProfileResource{}
+	_ resource.ResourceWithModifyPlan = &OAuthResourceServerConfigProfileResource{}
+)
 
 // NewOAuthResourceServerConfigProfileResource returns the implementation for this resource
 func NewOAuthResourceServerConfigProfileResource() resource.Resource {
@@ -287,8 +289,6 @@ func (r *OAuthResourceServerConfigProfileResource) ModifyPlan(ctx context.Contex
 	// An unknown value comes from config and resolves during apply; only an
 	// omitted (null) value should reset to the default.
 	if !configuredClaim.IsNull() {
-		return
-	}
 		return
 	}
 	if !provider.IsAPISupported(r.Meta(), provider.VaultVersion220) {
