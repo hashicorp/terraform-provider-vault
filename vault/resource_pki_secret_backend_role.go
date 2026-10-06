@@ -262,7 +262,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Optional:     true,
 				Computed:     true,
 				Description:  "Parameter set for an ml-dsa key type.",
-				ValidateFunc: validation.StringInSlice([]string{"44", "65", "87"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"ml-dsa-44", "ml-dsa-65", "ml-dsa-87"}, false),
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,

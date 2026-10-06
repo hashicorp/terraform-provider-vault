@@ -123,7 +123,7 @@ func pkiSecretBackendIntermediateCertRequestResource() *schema.Resource {
 				Computed:     true,
 				Description:  "The parameter set for ml-dsa keys",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"44", "65", "87"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"ml-dsa-44", "ml-dsa-65", "ml-dsa-87"}, false),
 			},
 			consts.FieldSignatureBits: {
 				Type:        schema.TypeInt,

@@ -109,12 +109,12 @@ func TestAccPKISecretBackendKey_mldsa(t *testing.T) {
 				),
 			},
 			{
-				Config: testAccPKISecretBackendKey_mldsa(mount, keyName, `parameter_set = "65"`),
+				Config: testAccPKISecretBackendKey_mldsa(mount, keyName, `parameter_set = "ml-dsa-65"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyName, keyName),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "65"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "ml-dsa-65"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldKeyID),
 				),
 			},

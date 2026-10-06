@@ -66,7 +66,7 @@ func pkiSecretBackendKeyResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				ForceNew:    true,
-				Description: "Specifies a parameter set for ml-dsa; must be '44', '65' or '87'.",
+				Description: "Specifies a parameter set for ml-dsa; must be 'ml-dsa-44', 'ml-dsa-65' or 'ml-dsa-87'.",
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,

@@ -401,10 +401,10 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 					meta := testProvider.Meta().(*provider.ProviderMeta)
 					return !meta.IsAPISupported(provider.VaultVersion220), nil
 				},
-				Config: testPkiSecretBackendRoleConfig_mldsa(name, backend, `parameter_set = "65"`),
+				Config: testPkiSecretBackendRoleConfig_mldsa(name, backend, `parameter_set = "ml-dsa-65"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "key_type", "ml-dsa"),
-					resource.TestCheckResourceAttr(resourceName, "parameter_set", "65"),
+					resource.TestCheckResourceAttr(resourceName, "parameter_set", "ml-dsa-65"),
 				),
 			},
 		},

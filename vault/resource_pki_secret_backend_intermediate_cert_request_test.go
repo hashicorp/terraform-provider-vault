@@ -438,13 +438,13 @@ func TestPkiSecretBackendIntermediateCertRequest_mldsa(t *testing.T) {
 				),
 			},
 			{
-				Config: testPkiSecretBackendIntermediateCertRequestConfig_mldsa(path, `parameter_set = "65"`),
+				Config: testPkiSecretBackendIntermediateCertRequestConfig_mldsa(path, `parameter_set = "ml-dsa-65"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "backend", path),
 					resource.TestCheckResourceAttr(resourceName, "type", "internal"),
 					resource.TestCheckResourceAttr(resourceName, "common_name", "test.my.domain"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "65"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "ml-dsa-65"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCSR),
 				),
 			},

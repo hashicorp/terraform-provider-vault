@@ -244,7 +244,7 @@ integrity format (PBMAC1).`,
 				Computed:     true,
 				Description:  "The parameter set for ml-dsa.",
 				ForceNew:     true,
-				ValidateFunc: validation.StringInSlice([]string{"44", "65", "87"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"ml-dsa-44", "ml-dsa-65", "ml-dsa-87"}, false),
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,

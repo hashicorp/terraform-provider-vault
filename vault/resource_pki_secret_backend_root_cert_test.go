@@ -681,13 +681,13 @@ func TestPkiSecretBackendRootCertificate_mldsa(t *testing.T) {
 				),
 			},
 			{
-				Config: testPkiSecretBackendRootCertificateConfig_mldsa(path, `parameter_set = "65"`),
+				Config: testPkiSecretBackendRootCertificateConfig_mldsa(path, `parameter_set = "ml-dsa-65"`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "65"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "ml-dsa-65"),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCertificate),
 					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuingCA),
 				),
