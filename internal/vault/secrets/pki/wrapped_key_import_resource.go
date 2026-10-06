@@ -62,11 +62,7 @@ func (r *PKIWrappedKeyImportResource) Metadata(_ context.Context, req resource.M
 
 func (r *PKIWrappedKeyImportResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Imports a BYOK-wrapped CA private key into a PKI secrets engine mount. " +
-			"This is a write-only trigger resource: Create calls `POST /:mount/keys/import` and records " +
-			"the resulting `key_id` in Terraform state. There is no BYOK-specific Read or Delete endpoint — " +
-			"the imported key becomes a standard PKI key once created. Destroying this resource removes it " +
-			"from Terraform state only; the key itself is not deleted from Vault.",
+		Description: "Imports a BYOK-wrapped CA private key into a PKI secrets engine mount.",
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
 				Description: "Path of the destination PKI secrets engine mount.",
@@ -76,7 +72,7 @@ func (r *PKIWrappedKeyImportResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"key_name": schema.StringAttribute{
-				Description: "Optional human-readable name for the imported key in Vault.",
+				Description: "Human-readable name for the imported key in Vault.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -85,20 +81,15 @@ func (r *PKIWrappedKeyImportResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"wrapped_key": schema.StringAttribute{
-				Description: "Base64-encoded wrapped CA private key blob produced by " +
-					"`vault_pki_secret_backend_ca_key_export`. Write-only — sent to Vault " +
-					"on create and never stored in Terraform state.",
-				Required:  true,
-				Sensitive: true,
-				WriteOnly: true,
+				Description: "Base64-encoded wrapped CA private key blob.",
+				Required:    true,
+				Sensitive:   true,
+				WriteOnly:   true,
 			},
 			"export_key_hmac": schema.StringAttribute{
-				Description: `HMAC fingerprint of the wrapping key used to encrypt the blob ` +
-					`(format "sha256:<hex>"). Write-only — used to identify the wrapping key ` +
-					`for decryption and not stored in state after create. Obtain from ` +
-					"`vault_pki_secret_backend_export_key.export_key_hmac`.",
-				Required:  true,
-				WriteOnly: true,
+				Description: "HMAC fingerprint of the wrapping key used to encrypt the blob.",
+				Required:    true,
+				WriteOnly:   true,
 			},
 			"key_id": schema.StringAttribute{
 				Description: "UUID assigned by Vault to the imported key.",
@@ -108,7 +99,7 @@ func (r *PKIWrappedKeyImportResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"key_type": schema.StringAttribute{
-				Description: `Key algorithm type as reported by Vault after import (e.g. "rsa", "ec", "ed25519").`,
+				Description: "Key algorithm type as reported by Vault after import.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),

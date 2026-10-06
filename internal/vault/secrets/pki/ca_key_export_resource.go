@@ -63,8 +63,7 @@ func (r *PKICAKeyExportEphemeralResource) Metadata(_ context.Context, req epheme
 
 func (r *PKICAKeyExportEphemeralResource) Schema(_ context.Context, _ ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = ephemeralschema.Schema{
-		MarkdownDescription: "Ephemeral resource that wraps a CA private key for BYOK migration. " +
-			"The wrapped_key blob is never written to Terraform state.",
+		Description: "Ephemeral resource that wraps a CA private key for BYOK CA migration. The wrapped key is never written to Terraform state.",
 		Attributes: map[string]ephemeralschema.Attribute{
 			consts.FieldMount: ephemeralschema.StringAttribute{
 				Description: "Path of the source PKI secrets engine mount.",
@@ -75,16 +74,16 @@ func (r *PKICAKeyExportEphemeralResource) Schema(_ context.Context, _ ephemeral.
 				Required:    true,
 			},
 			"public_key": ephemeralschema.StringAttribute{
-				Description: "PKIX PEM public key of the destination wrapping key. Obtain from vault_pki_secret_backend_export_key.public_key.",
+				Description: "PEM-encoded public key of the destination wrapping keypair.",
 				Required:    true,
 			},
 			"wrapped_key": ephemeralschema.StringAttribute{
-				Description: "Base64-encoded encrypted blob containing the wrapped CA private key. Pass to vault_pki_secret_backend_wrapped_key_import.",
+				Description: "Base64-encoded encrypted blob containing the wrapped CA private key.",
 				Computed:    true,
 				Sensitive:   true,
 			},
 			"export_key_hmac": ephemeralschema.StringAttribute{
-				Description: `HMAC fingerprint of the wrapping public key (format "sha256:<hex>"). Pass alongside wrapped_key to the import resource.`,
+				Description: "HMAC fingerprint of the wrapping public key.",
 				Computed:    true,
 			},
 			"exported_at": ephemeralschema.StringAttribute{

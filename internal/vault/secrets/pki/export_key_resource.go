@@ -82,9 +82,7 @@ func (r *PKIExportKeyResource) Metadata(_ context.Context, req resource.Metadata
 
 func (r *PKIExportKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a BYOK wrapping key on a PKI secrets engine mount. " +
-			"Vault generates an asymmetric keypair; the public key is shared with the source " +
-			"mount operator for CA key encryption. The private key never leaves Vault.",
+		Description: "Manages a wrapping keypair on a PKI secrets engine mount for BYOK CA migration.",
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
 				Description: "Path of the PKI secrets engine mount.",
@@ -95,7 +93,7 @@ func (r *PKIExportKeyResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"key_type": schema.StringAttribute{
-				Description: `Wrapping key algorithm. Supported values: "rsa-2048", "rsa-3072", "rsa-4096", "rsa-8192", "ec-p256", "ec-p384", "ec-p521", "ml-kem-768", "ml-kem-1024".`,
+				Description: "Algorithm for the wrapping keypair.",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					// Vault generates the keypair on creation; the algorithm cannot be changed.
@@ -103,7 +101,7 @@ func (r *PKIExportKeyResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"name": schema.StringAttribute{
-				Description: "Optional human-readable label for this export key.",
+				Description: "Human-readable name for this export key.",
 				Optional:    true,
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
@@ -119,14 +117,14 @@ func (r *PKIExportKeyResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"public_key": schema.StringAttribute{
-				Description: "PKIX PEM-encoded public key. Pass this to the source mount operator to encrypt the CA private key.",
+				Description: "PEM-encoded public key returned by Vault.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"export_key_hmac": schema.StringAttribute{
-				Description: `SHA-256 HMAC fingerprint of the public key (format "sha256:<hex>"). Pass this alongside wrapped_key to the import endpoint.`,
+				Description: "Deterministic fingerprint of the public key.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
