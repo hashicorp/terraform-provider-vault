@@ -17,8 +17,6 @@ import (
 	pki "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki"
 )
 
-// TestPKIWrappedKeyImportResourceSchema verifies the schema compiles and passes
-// Terraform's internal consistency checks without a live Vault server.
 func TestPKIWrappedKeyImportResourceSchema(t *testing.T) {
 	t.Parallel()
 
@@ -37,13 +35,7 @@ func TestPKIWrappedKeyImportResourceSchema(t *testing.T) {
 	}
 }
 
-// TestAccPKIWrappedKeyImportResource exercises the full BYOK import flow
-// end-to-end against a live Vault Enterprise instance:
-//
-//  1. Create — source mount + root CA, destination mount + wrapping key,
-//     ephemeral CA export, import resource. Asserts key_id and key_type are set.
-//  2. PlanOnly — verifies no spurious diff after apply (Read no-op + UseStateForUnknown
-//     working correctly for computed fields).
+// TestAccPKIWrappedKeyImportResource tests the full BYOK flow (export key + CA export + wrapped import).
 func TestAccPKIWrappedKeyImportResource(t *testing.T) {
 	srcMount := acctest.RandomWithPrefix("pki-src")
 	dstMount := acctest.RandomWithPrefix("pki-dst")
@@ -57,7 +49,6 @@ func TestAccPKIWrappedKeyImportResource(t *testing.T) {
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			// Full BYOK flow — create wrapping key, export CA key, import.
-			// key_id and key_type must be populated from the Vault response.
 			{
 				Config: testAccPKIWrappedKeyImportConfig(srcMount, dstMount),
 				Check: resource.ComposeTestCheckFunc(
@@ -67,7 +58,7 @@ func TestAccPKIWrappedKeyImportResource(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, "mount", dstMount),
 				),
 			},
-			// No-diff check — Read is a no-op so plan must show No changes.
+			// Plan-only step to verify no unexpected drift on subsequent plans.
 			{
 				Config:   testAccPKIWrappedKeyImportConfig(srcMount, dstMount),
 				PlanOnly: true,
@@ -76,9 +67,6 @@ func TestAccPKIWrappedKeyImportResource(t *testing.T) {
 	})
 }
 
-// testAccPKIWrappedKeyImportConfig produces the full three-resource BYOK config:
-// source mount + root CA, destination mount + wrapping key (ec-p256),
-// ephemeral CA export, and the wrapped key import resource under test.
 func testAccPKIWrappedKeyImportConfig(srcMount, dstMount string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "src" {

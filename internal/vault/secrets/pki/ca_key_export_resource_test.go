@@ -29,8 +29,6 @@ var (
 	reRFC3339 = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}`)
 )
 
-// TestPKICAKeyExportEphemeralResourceSchema verifies the schema compiles and
-// passes Terraform's internal consistency checks without a live Vault server.
 func TestPKICAKeyExportEphemeralResourceSchema(t *testing.T) {
 	t.Parallel()
 
@@ -49,13 +47,7 @@ func TestPKICAKeyExportEphemeralResourceSchema(t *testing.T) {
 	}
 }
 
-// TestAccPKICAKeyExportEphemeralResource is a full acceptance test that runs
-// against a live Vault Enterprise instance. It exercises the end-to-end BYOK
-// flow: create a wrapping key on the destination mount, then export the source
-// CA key encrypted under that wrapping key. The echo provider captures the
-// ephemeral result so that statecheck assertions can inspect the output fields
-// (wrapped_key, export_key_hmac, exported_at) without them ever being written
-// to Terraform state.
+// TestAccPKICAKeyExportEphemeralResource verifies the ephemeral export endpoint via the echo provider.
 func TestAccPKICAKeyExportEphemeralResource(t *testing.T) {
 	srcMount := acctest.RandomWithPrefix("pki-src")
 	dstMount := acctest.RandomWithPrefix("pki-dst")
@@ -67,6 +59,7 @@ func TestAccPKICAKeyExportEphemeralResource(t *testing.T) {
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		// Include echo provider to capture ephemeral values for state check assertions.
 		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
 			"echo": echoprovider.NewProviderServer(),
 		},
@@ -74,15 +67,12 @@ func TestAccPKICAKeyExportEphemeralResource(t *testing.T) {
 			{
 				Config: testAccPKICAKeyExportConfig(srcMount, dstMount),
 				ConfigStateChecks: []statecheck.StateCheck{
-					// wrapped_key must be a non-empty base64 string.
 					statecheck.ExpectKnownValue(resourceAddress,
 						tfjsonpath.New("data").AtMapKey("wrapped_key"),
 						knownvalue.StringRegexp(reBase64)),
-					// export_key_hmac must carry the "sha256:" prefix used by Vault.
 					statecheck.ExpectKnownValue(resourceAddress,
 						tfjsonpath.New("data").AtMapKey("export_key_hmac"),
 						knownvalue.StringRegexp(reHMAC)),
-					// exported_at must be a non-empty RFC3339 timestamp.
 					statecheck.ExpectKnownValue(resourceAddress,
 						tfjsonpath.New("data").AtMapKey("exported_at"),
 						knownvalue.StringRegexp(reRFC3339)),
@@ -92,13 +82,6 @@ func TestAccPKICAKeyExportEphemeralResource(t *testing.T) {
 	})
 }
 
-// testAccPKICAKeyExportConfig produces a two-mount Terraform config that:
-//  1. Creates a source PKI mount and generates an internal RSA-2048 root CA.
-//  2. Creates a destination PKI mount and provisions a wrapping key (export key).
-//  3. Declares an ephemeral vault_pki_secret_backend_ca_key_export that calls
-//     POST /:src_mount/keys/:ca_key_uuid/export with the destination public key.
-//  4. Feeds the ephemeral result through the echo provider so statecheck
-//     assertions can inspect it.
 func testAccPKICAKeyExportConfig(srcMount, dstMount string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "src" {

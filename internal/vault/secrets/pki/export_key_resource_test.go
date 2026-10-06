@@ -18,8 +18,6 @@ import (
 	pki "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki"
 )
 
-// TestPKIExportKeyResourceSchema verifies the schema compiles and passes
-// Terraform's internal consistency checks without needing a live Vault.
 func TestPKIExportKeyResourceSchema(t *testing.T) {
 	t.Parallel()
 
@@ -38,9 +36,6 @@ func TestPKIExportKeyResourceSchema(t *testing.T) {
 	}
 }
 
-// TestAccPKIExportKeyResource is a full acceptance test that runs against a
-// live Vault Enterprise instance. It steps through create, update (name), and
-// delete, then verifies import state round-trips cleanly.
 func TestAccPKIExportKeyResource(t *testing.T) {
 	mount := acctest.RandomWithPrefix("pki-byok")
 	resourceAddress := "vault_pki_secret_backend_export_key.test"
@@ -52,7 +47,7 @@ func TestAccPKIExportKeyResource(t *testing.T) {
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create with name and key_type set — all computed fields must be populated.
+			// Create wrapping key and verify computed fields are set.
 			{
 				Config: testAccPKIExportKeyConfig(mount, "ec-p256", "my-wrapping-key"),
 				Check: resource.ComposeTestCheckFunc(
@@ -64,7 +59,7 @@ func TestAccPKIExportKeyResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceAddress, "created_at"),
 				),
 			},
-			// Change key_type — must destroy and recreate (RequiresReplace).
+			// Update key_type to verify RequiresReplace behavior.
 			{
 				Config: testAccPKIExportKeyConfig(mount, "ec-p384", "my-wrapping-key"),
 				Check: resource.ComposeTestCheckFunc(
@@ -74,7 +69,7 @@ func TestAccPKIExportKeyResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceAddress, "export_key_hmac"),
 				),
 			},
-			// Import by <mount>/export/<uuid> and verify full state is reconstructed.
+			// Verify import by <mount>/export/<uuid>.
 			{
 				ResourceName:                         resourceAddress,
 				ImportState:                          true,

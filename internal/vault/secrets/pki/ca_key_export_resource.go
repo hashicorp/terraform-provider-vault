@@ -21,22 +21,15 @@ import (
 
 var _ ephemeral.EphemeralResource = &PKICAKeyExportEphemeralResource{}
 
-// NewPKICAKeyExportEphemeralResource is the constructor registered in provider.go.
 func NewPKICAKeyExportEphemeralResource() ephemeral.EphemeralResource {
 	return &PKICAKeyExportEphemeralResource{}
 }
 
-// PKICAKeyExportEphemeralResource wraps a CA private key for BYOK migration.
-// It is ephemeral because wrapped_key must never be written to Terraform state —
-// doing so would expose the CA private key to anyone with state file access.
+// PKICAKeyExportEphemeralResource wraps a CA private key for migration without storing it in state.
 type PKICAKeyExportEphemeralResource struct {
 	base.EphemeralResourceWithConfigure
 }
 
-// PKICAKeyExportModel is the Terraform data model for this ephemeral resource.
-// BaseModelEphemeral provides namespace and mount_id. mount_id defers the Open
-// call until the PKI mount is known, preventing Terraform from calling Open
-// before the mount resource has been created.
 type PKICAKeyExportModel struct {
 	base.BaseModelEphemeral
 
@@ -48,13 +41,11 @@ type PKICAKeyExportModel struct {
 	ExportedAt    types.String `tfsdk:"exported_at"`
 }
 
-// PKICAKeyExportAPIResponse mirrors the four fields Vault returns from
-// POST /:mount/keys/:ca_key_uuid/export.
 type PKICAKeyExportAPIResponse struct {
-	CAKeyUUID     string `json:"ca_key_uuid" mapstructure:"ca_key_uuid"`
-	WrappedKey    string `json:"wrapped_key" mapstructure:"wrapped_key"`
+	CAKeyUUID     string `json:"ca_key_uuid"     mapstructure:"ca_key_uuid"`
+	WrappedKey    string `json:"wrapped_key"    mapstructure:"wrapped_key"`
 	ExportKeyHMAC string `json:"export_key_hmac" mapstructure:"export_key_hmac"`
-	ExportedAt    string `json:"exported_at" mapstructure:"exported_at"`
+	ExportedAt    string `json:"exported_at"    mapstructure:"exported_at"`
 }
 
 func (r *PKICAKeyExportEphemeralResource) Metadata(_ context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
@@ -93,14 +84,10 @@ func (r *PKICAKeyExportEphemeralResource) Schema(_ context.Context, _ ephemeral.
 		},
 	}
 
-	// Injects namespace and mount_id required by all ephemeral resources in this provider.
 	base.MustAddBaseEphemeralSchema(&resp.Schema)
 }
 
-// Open calls POST /:mount/keys/:ca_key_uuid/export. The ca_key_uuid goes in the
-// URL path; only public_key is sent in the request body. Vault wraps the CA private
-// key and returns the encrypted blob. The result is written to the ephemeral result,
-// never to persistent Terraform state.
+// Open calls POST /:mount/keys/:ca_key_uuid/export with the destination wrapping public key.
 func (r *PKICAKeyExportEphemeralResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
 	var data PKICAKeyExportModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -153,7 +140,6 @@ func (r *PKICAKeyExportEphemeralResource) populateModel(data *PKICAKeyExportMode
 	return nil
 }
 
-// path builds the Vault API path: /:mount/keys/:ca_key_uuid/export
 func (r *PKICAKeyExportEphemeralResource) path(mount, caKeyUUID string) string {
 	return fmt.Sprintf("%s/keys/%s/export", mount, caKeyUUID)
 }

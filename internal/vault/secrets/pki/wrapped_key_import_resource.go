@@ -21,22 +21,15 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-// NewPKIWrappedKeyImportResource is the constructor registered in provider.go.
 func NewPKIWrappedKeyImportResource() resource.Resource {
 	return &PKIWrappedKeyImportResource{}
 }
 
-// PKIWrappedKeyImportResource imports a BYOK-wrapped CA private key into a PKI
-// mount. This is a write-only trigger resource: Create fires POST /keys/import
-// and records the resulting key_id in Terraform state. There is no BYOK-specific
-// Read or Delete endpoint — once imported the key is a standard PKI key whose
-// lifecycle is managed outside Terraform. Destroy removes it from Terraform state
-// only; the key is not deleted from Vault.
+// PKIWrappedKeyImportResource imports a wrapped CA private key into a PKI mount.
 type PKIWrappedKeyImportResource struct {
 	base.ResourceWithConfigure
 }
 
-// PKIWrappedKeyImportModel is the Terraform state model.
 type PKIWrappedKeyImportModel struct {
 	base.BaseModel
 
@@ -48,8 +41,6 @@ type PKIWrappedKeyImportModel struct {
 	KeyType       types.String `tfsdk:"key_type"`
 }
 
-// PKIWrappedKeyImportAPIResponse mirrors the fields Vault returns from
-// POST /:mount/keys/import.
 type PKIWrappedKeyImportAPIResponse struct {
 	KeyID   string `json:"key_id"   mapstructure:"key_id"`
 	KeyName string `json:"key_name" mapstructure:"key_name"`
@@ -111,14 +102,9 @@ func (r *PKIWrappedKeyImportResource) Schema(_ context.Context, _ resource.Schem
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
-// Create calls POST /:mount/keys/import with wrapped_key + export_key_hmac.
-// Vault decrypts the blob using the export key identified by export_key_hmac
-// and imports the CA private key. The response contains key_id and key_type
-// which are stored in Terraform state for reference.
+// Create calls POST /:mount/keys/import with the wrapped key blob and export key HMAC.
 func (r *PKIWrappedKeyImportResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	// plan holds computed fields (key_id, key_type, key_name, mount, namespace).
-	// config holds write-only fields (wrapped_key, export_key_hmac) which are
-	// only available from the raw config, not from plan state.
+	// Write-only attributes must be read from Config rather than Plan.
 	var plan PKIWrappedKeyImportModel
 	var config PKIWrappedKeyImportModel
 
@@ -160,24 +146,17 @@ func (r *PKIWrappedKeyImportResource) Create(ctx context.Context, req resource.C
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-// Read is a no-op. The import endpoint is write-only — Vault has no
-// BYOK-specific read path for an imported key. State is preserved as written
-// by Create.
+// Read is a no-op as the import endpoint is write-only.
 func (r *PKIWrappedKeyImportResource) Read(_ context.Context, _ resource.ReadRequest, _ *resource.ReadResponse) {
 }
 
-// Update is required by the resource.Resource interface but will never be
-// called — every user-settable field is RequiresReplace.
 func (r *PKIWrappedKeyImportResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
 }
 
-// Delete removes the resource from Terraform state only. The imported CA key
-// in Vault is not deleted — there is no BYOK-specific delete endpoint. The
-// key's lifecycle in Vault is managed as a standard PKI key independently.
+// Delete removes the resource from Terraform state; the key remains in Vault.
 func (r *PKIWrappedKeyImportResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
 }
 
-// populateModel decodes the POST /keys/import response into the model.
 func (r *PKIWrappedKeyImportResource) populateModel(data *PKIWrappedKeyImportModel, vaultResp *api.Secret) diag.Diagnostics {
 	if vaultResp == nil || vaultResp.Data == nil {
 		return diag.Diagnostics{diag.NewErrorDiagnostic("Missing data in API response", "The API response or response data was nil.")}
@@ -199,7 +178,6 @@ func (r *PKIWrappedKeyImportResource) populateModel(data *PKIWrappedKeyImportMod
 	return nil
 }
 
-// importPath builds POST /:mount/keys/import
 func (r *PKIWrappedKeyImportResource) importPath(mount string) string {
 	return fmt.Sprintf("%s/keys/import", mount)
 }
