@@ -957,3 +957,73 @@ resource "vault_consul_secret_backend" "test" {
 	 bootstrap = false
 }`, path)
 }
+
+// testConsulSecretBackend_writeOnlyTokenWithDescription is identical to
+// testConsulSecretBackend_writeOnlyToken but allows the caller to vary the
+// `description` field. It is used by
+// TestConsulSecretBackend_WriteOnlyTokenPersistsOnUnrelatedUpdate to exercise
+// the regression case where an unrelated field is updated while
+// token_wo_version stays the same.
+func testConsulSecretBackend_writeOnlyTokenWithDescription(path, description string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path                 = "%s"
+  description          = "%s"
+  address              = "127.0.0.1:8500"
+  token_wo             = "test-token-wo-%d"
+  token_wo_version     = %d
+  scheme               = "http"
+}`, path, description, version, version)
+}
+
+// TestConsulSecretBackend_WriteOnlyTokenPersistsOnUnrelatedUpdate is a
+// regression test for the bug where updating an unrelated field on the
+// resource (here `description`) while leaving `token_wo_version` unchanged
+// caused the provider to omit `token` from the Vault `<backend>/config/access`
+// write request, which then cleared (or auto-bootstrapped over) the
+// previously-stored ACL token.
+//
+// See https://github.com/hashicorp/terraform-provider-vault/issues/2900.
+//
+// The Consul `<backend>/config/access` Read endpoint does not return the
+// stored token, so the test cannot directly assert server-side preservation.
+// It instead verifies that the second apply (with the same token_wo_version
+// and only `description` changed) succeeds and that token_wo_version stays
+// at 1 — the silent-clear is then surfaced indirectly by any downstream
+// role/credential operations a user performs against the backend.
+func TestConsulSecretBackend_WriteOnlyTokenPersistsOnUnrelatedUpdate(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-consul-wo-unrelated")
+	resourceType := "vault_consul_secret_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeConsul, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testConsulSecretBackend_writeOnlyTokenWithDescription(path, "initial", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "description", "initial"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenWOVersion, "1"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldTokenWO),
+				),
+			},
+			{
+				// Update only `description`; keep token_wo_version at 1.
+				// Before the fix, the provider would resolve token to "" in
+				// the update path and omit it from the request, causing the
+				// Consul plugin endpoint to either replace the stored token
+				// with an auto-bootstrapped ACL token or fail outright.
+				Config: testConsulSecretBackend_writeOnlyTokenWithDescription(path, "updated description", 1),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", "updated description"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldTokenWOVersion, "1"),
+					resource.TestCheckNoResourceAttr(resourceName, consts.FieldTokenWO),
+				),
+			},
+		},
+	})
+}
