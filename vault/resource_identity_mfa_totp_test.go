@@ -122,3 +122,51 @@ resource "%s" "test" {
 		},
 	})
 }
+
+func TestIdentityMFATOTPEnterpriseEnableSelfEnrollment(t *testing.T) {
+	t.Parallel()
+	testutil.SkipTestAccEnt(t)
+
+	resourceName := mfa.ResourceNameTOTP + ".test"
+
+	checksCommon := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldUUID),
+		resource.TestCheckResourceAttrSet(resourceName, consts.FieldMethodID),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldNamespaceID, "root"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldType, mfa.MethodTypeTOTP),
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "%s" "test" {
+  issuer                 = "issuer1"
+  enable_self_enrollment = true
+}
+`, mfa.ResourceNameTOTP),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					append(checksCommon,
+						resource.TestCheckResourceAttr(resourceName, consts.FieldIssuer, "issuer1"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldEnableSelfEnrollment, "true"),
+					)...),
+			},
+			{
+				Config: fmt.Sprintf(`
+resource "%s" "test" {
+  issuer                 = "issuer1"
+  enable_self_enrollment = false
+}
+`, mfa.ResourceNameTOTP),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					append(checksCommon,
+						resource.TestCheckResourceAttr(resourceName, consts.FieldIssuer, "issuer1"),
+						resource.TestCheckResourceAttr(resourceName, consts.FieldEnableSelfEnrollment, "false"),
+					)...),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		},
+	})
+}

@@ -6,6 +6,10 @@ FEATURES:
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
 * **New Resource for transform rewrapping**: Add new resource `vault_transform_rewrap` to support rewrapping FPE transformations. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
 
+FEATURES:
+
+* `resource/vault_identity_mfa_totp`: Add support for the `enable_self_enrollment` field, allowing users to control whether end users can self-enroll in the TOTP MFA method. Requires Vault Enterpise. ([#2919](https://github.com/hashicorp/terraform-provider-vault/pull/2920))
+
 IMPROVEMENTS:
 
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
