@@ -67,6 +67,19 @@ func TestGCPSecretImpersonatedAccount(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ttl", "700"),
 				),
 			},
+			{
+				Config:             testGCPSecretImpersonatedAccount_ttl(backend, impersonatedAccount, credentials, serviceAccountEmail, "1500ms"),
+				ExpectNonEmptyPlan: true,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "ttl", "1"),
+				),
+			},
+			{
+				Config: testGCPSecretImpersonatedAccount_ttl(backend, impersonatedAccount, credentials, serviceAccountEmail, "1h"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "ttl", "3600"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
@@ -119,6 +132,20 @@ resource "vault_gcp_secret_impersonated_account" "test" {
 	ttl = 700
 }
 `, testGCPSecretImpersonatedAccount_backend(backend, credentials), impersonatedAccount, serviceAccountEmail)
+}
+
+func testGCPSecretImpersonatedAccount_ttl(backend, impersonatedAccount, credentials, serviceAccountEmail, ttl string) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_gcp_secret_impersonated_account" "test" {
+	backend = vault_gcp_secret_backend.test.path
+	impersonated_account = "%s"
+	token_scopes   = ["https://www.googleapis.com/auth/cloud-platform"]
+	service_account_email = "%s"
+	ttl = "%s"
+}
+`, testGCPSecretImpersonatedAccount_backend(backend, credentials), impersonatedAccount, serviceAccountEmail, ttl)
 }
 
 func testGCPSecretImpersonatedAccount_backend(path, credentials string) string {
