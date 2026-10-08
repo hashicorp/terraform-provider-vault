@@ -73,7 +73,9 @@ The following arguments are supported:
 To read data from the "generic" secret backend mounted in Vault by
 default, this should be prefixed with `secret/`. Reading from other backends
 with this data source is possible; consult each backend's documentation
-to see which endpoints support the `GET` method.
+to see which endpoints support the `GET` method. For KV v2 mounts the `data/`
+API prefix is added automatically, unless the path already contains the
+`data/` or `metadata/` prefix.
 
 * `version` - The version of the secret to read. This is used by the
 Vault KV secrets engine - version 2 to indicate which version of the secret

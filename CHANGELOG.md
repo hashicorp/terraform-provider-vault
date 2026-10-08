@@ -14,6 +14,10 @@ IMPROVEMENTS:
 * `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
 * `vault_oauth_resource_server_config_profile`: Add support for `authorization_details_claim` field. Requires Vault 2.2.0 or later. ([#3058](https://github.com/hashicorp/terraform-provider-vault/pull/3058))
 
+BUG FIXES:
+
+* `vault_generic_secret`: Fix `path` values that already contain the KV v2 `data/` or `metadata/` prefix being rewritten to `data/data/...` or `data/metadata/...`, so explicit metadata paths can be read. ([#3068](https://github.com/hashicorp/terraform-provider-vault/issues/3068))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:
