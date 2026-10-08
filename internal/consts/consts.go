@@ -897,6 +897,7 @@ const (
 	FieldCreationTime                 = "creation_time"
 	FieldLastUpdatedTime              = "last_updated_time"
 	FieldOptionalAuthorizationDetails = "optional_authorization_details"
+	FieldAuthorizationDetailsClaim    = "authorization_details_claim"
 
 	/*
 		raft snapshot agent config fields
@@ -975,6 +976,10 @@ const (
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
 	FieldCertificateWO              = "certificate_wo"
 	FieldCertificateWOVersion       = "certificate_wo_version"
+
+	// Azure seamless rotation
+	FieldSeamlessRotation    = "seamless_rotation"
+	FieldRotationGracePeriod = "rotation_grace_period"
 
 	/*
 		common environment variables
