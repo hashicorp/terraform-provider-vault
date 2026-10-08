@@ -110,17 +110,17 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				// string. These make Terraform not want to change when an extra
 				// space is included in the JSON string. It is also necessary
 				// when disable_read is false for comparing values.
-				StateFunc:     NormalizeDataJSONFunc(name),
-				ValidateFunc:  ValidateDataJSONFunc(name),
-				Sensitive:     true,
-				ConflictsWith: []string{consts.FieldDataJSONWO},
+				StateFunc:    NormalizeDataJSONFunc(name),
+				ValidateFunc: ValidateDataJSONFunc(name),
+				Sensitive:    true,
+				ExactlyOneOf: []string{consts.FieldDataJSON, consts.FieldDataJSONWO},
 			},
 			consts.FieldDataJSONWO: {
-				Type:          schema.TypeString,
-				Optional:      true,
-				Description:   "Write-Only JSON-encoded secret data to write.",
-				WriteOnly:     true,
-				ConflictsWith: []string{consts.FieldDataJSON},
+				Type:         schema.TypeString,
+				Optional:     true,
+				Description:  "Write-Only JSON-encoded secret data to write.",
+				WriteOnly:    true,
+				ExactlyOneOf: []string{consts.FieldDataJSON, consts.FieldDataJSONWO},
 			},
 			consts.FieldDataJSONWOVersion: {
 				Type:         schema.TypeInt,
@@ -223,6 +223,9 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 	} else if d.IsNewResource() || d.HasChange(consts.FieldDataJSONWOVersion) {
 		p := cty.GetAttrPath(consts.FieldDataJSONWO)
 		woVal, _ := d.GetRawConfigAt(p)
+		if woVal.IsNull() {
+			return diag.Errorf("one of %q or %q must be set", consts.FieldDataJSON, consts.FieldDataJSONWO)
+		}
 		buf = []byte(woVal.AsString())
 	}
 
