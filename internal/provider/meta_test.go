@@ -461,13 +461,12 @@ func TestGetClient(t *testing.T) {
 	}
 }
 
-func TestSetClient_NamespaceHeaderOnLookupSelf(t *testing.T) {
+func TestSetClient_NamespaceHandling(t *testing.T) {
 	tests := []struct {
 		name         string
 		configuredNS string
 		envNS        string
 		tokenNS      string
-		wantLookupNS string
 		wantClientNS string
 		wantCreateNS string
 	}{
@@ -476,8 +475,14 @@ func TestSetClient_NamespaceHeaderOnLookupSelf(t *testing.T) {
 			configuredNS: "provider-ns",
 			envNS:        "env-ns",
 			tokenNS:      "token-ns",
-			wantLookupNS: "provider-ns",
 			wantClientNS: "provider-ns",
+			wantCreateNS: "token-ns",
+		},
+		{
+			name:         "environment-namespace-is-cleared-for-token-lookup",
+			envNS:        "env-ns",
+			tokenNS:      "token-ns",
+			wantClientNS: "env-ns",
 			wantCreateNS: "token-ns",
 		},
 		{
@@ -489,7 +494,6 @@ func TestSetClient_NamespaceHeaderOnLookupSelf(t *testing.T) {
 		{
 			name:         "root-namespace-token-creates-child-token-in-root",
 			configuredNS: "provider-ns",
-			wantLookupNS: "provider-ns",
 			wantClientNS: "provider-ns",
 			wantCreateNS: "",
 		},
@@ -563,9 +567,9 @@ func TestSetClient_NamespaceHeaderOnLookupSelf(t *testing.T) {
 				t.Fatalf("GetClient() unexpected error: %v", err)
 			}
 
-			if lookupSelfNamespaceHeader != tt.wantLookupNS {
-				t.Errorf("lookup-self namespace header = %q, want %q",
-					lookupSelfNamespaceHeader, tt.wantLookupNS)
+			if lookupSelfNamespaceHeader != "" {
+				t.Errorf("lookup-self namespace header = %q, want empty",
+					lookupSelfNamespaceHeader)
 			}
 			if createNamespaceHeader != tt.wantCreateNS {
 				t.Errorf("token/create namespace header = %q, want %q",

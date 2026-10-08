@@ -247,6 +247,10 @@ func (p *ProviderMeta) setClient() error {
 		return fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
+	// lookup-self is resolved from the token's namespace, so the client must not
+	// inherit VAULT_NAMESPACE before the token is inspected.
+	client.ClearNamespace()
+
 	// setting this is critical for proper namespace handling
 	client.SetCloneHeaders(true)
 
@@ -277,12 +281,6 @@ func (p *ProviderMeta) setClient() error {
 
 	// Set the namespace to the requested namespace, if provided
 	namespace := GetResourceDataStr(d, consts.FieldNamespace, "VAULT_NAMESPACE", "")
-	if namespace != "" {
-		// Apply the configured namespace before the first API call so it takes
-		// precedence over VAULT_NAMESPACE in the Vault API client's defaults.
-		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
-		client.SetNamespace(namespace)
-	}
 
 	authLogin, err := GetAuthLogin(d)
 	if err != nil {
@@ -376,15 +374,18 @@ func (p *ProviderMeta) setClient() error {
 
 		if setNamespaceFromToken {
 			namespace = tokenNamespace
-			log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
-			client.SetNamespace(namespace)
 		}
 	}
 
 	if namespace != "" {
+		// This block executes when the namespace was explicitly
+		// configured on the provider (not derived from the token)
+		// or when the namespace was not configured on the provider but was derived from the token
 		if err := d.Set(consts.FieldNamespace, namespace); err != nil {
 			return fmt.Errorf("failed to set namespace on provider: %w", err)
 		}
+		log.Printf("[DEBUG] Setting namespace on client to %q", namespace)
+		client.SetNamespace(namespace)
 	}
 
 	p.client = client
@@ -596,13 +597,9 @@ func createChildToken(d *schema.ResourceData, c *api.Client, namespace string) (
 		return "", err
 	}
 
-	// The child token must be created in the parent token's namespace, not the
-	// provider namespace that may already be set on the client.
 	if namespace != "" {
 		log.Printf("[INFO] Creating child token, namespace=%q", namespace)
 		clone.SetNamespace(namespace)
-	} else {
-		clone.ClearNamespace()
 	}
 	// In order to enforce our relatively-short lease TTL, we derive a
 	// temporary child token that inherits all the policies of the
