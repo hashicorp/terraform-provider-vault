@@ -1,0 +1,30 @@
+# .release/agent-config.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# Release Prep Agent — repo-specific steps for terraform-provider-vault
+#
+# This file lives at .release/agent-config.yaml inside the target repo.
+# The Release Prep Agent fetches it via the GitHub API and runs each step
+# in order inside a local clone of the repo.
+#
+# Supported placeholders in `run`:
+#   {version}  — the release version (e.g. 5.13.0)
+#
+# Steps run as shell commands (bash) inside the cloned repo root.
+# ─────────────────────────────────────────────────────────────────────────────
+
+repo_specific_steps:
+
+  # Update the version/VERSION file to the new release version.
+  # This file is read by the Go build to embed the version string.
+  # This is the only TFVP-specific step — all Go dependency updates
+  # (including vault/api and vault/sdk) are handled by update-go-deps.sh
+  # in the update_dependencies node which runs after this node.
+  - name: update_version_file
+    run: "echo '{version}' > version/VERSION"
+
+  # NOTE: build.yaml acceptance test matrix check is a manual step.
+  # The agent raises the PR; the engineer verifies the matrix before merging.
+  # If you want the agent to warn about it, uncomment the step below:
+  #
+  # - name: check_build_matrix
+  #   run: "grep -q '{version}' .github/workflows/build.yaml && echo 'matrix ok' || (echo 'WARNING: build.yaml matrix may need updating for {version}' && exit 0)"
