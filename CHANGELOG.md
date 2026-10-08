@@ -16,7 +16,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* provider: Use the provider's `namespace` rather than the `VAULT_NAMESPACE` environment variable when performing the token self-lookup during provider configuration. Previously a `VAULT_NAMESPACE` pointing at an unrelated namespace caused configuration to fail with a 403. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
+* provider: Perform token self-lookup without a namespace header so Vault resolves the token's own namespace. This prevents an unrelated `VAULT_NAMESPACE` from causing provider configuration failures and allows Terraform to recover when a configured namespace has been deleted outside Terraform. The configured provider namespace is still used for resource operations. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
 
 ## 5.12.0 (September 17, 2026)
 
