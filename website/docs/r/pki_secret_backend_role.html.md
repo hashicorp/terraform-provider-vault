@@ -97,7 +97,7 @@ The following arguments are supported:
 
 * `key_bits` - (Optional) The number of bits of generated keys
 
-* `parameter_set` - (Optional) For ml-dsa keys, specifies the parameter set.
+* `parameter_set` - (Optional) For ML-DSA keys, specifies the parameter set; must be `ml-dsa-44` (default), `ml-dsa-65`, or `ml-dsa-87`
 
 * `signature_bits` - (Optional) The number of bits to use in the signature algorithm
 

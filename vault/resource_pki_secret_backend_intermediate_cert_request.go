@@ -304,7 +304,7 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	// Fields only used when we are generating a key
 	if !(intermediateType == keyTypeKMS || intermediateType == consts.FieldExisting) {
 		intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
-		// For parameter set, this is only supported in Vault 2.20+
+		// For parameter set, this is only supported in Vault 2.2.0+
 		if provider.IsAPISupported(meta, provider.VaultVersion220) {
 			intermediateCertAPIFields = append(intermediateCertAPIFields, consts.FieldParameterSet)
 		}

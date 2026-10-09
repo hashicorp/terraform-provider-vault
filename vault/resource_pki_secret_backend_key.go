@@ -243,11 +243,12 @@ func pkiSecretBackendKeyRead(ctx context.Context, d *schema.ResourceData, meta i
 			consts.FieldKeyBits, err)
 	}
 
-	// parameter_set is not returned from Vault
-	// set from config
-	if err := d.Set(consts.FieldParameterSet, d.Get(consts.FieldParameterSet)); err != nil {
-		return diag.Errorf("error setting state key %q for PKI Secret Key, err=%s",
-			consts.FieldParameterSet, err)
+	// set parameter set on config, only on Vault 2.2.0+ and if the key type is ml-dsa
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && d.Get(consts.FieldKeyType).(string) == "ml-dsa" {
+		if err := d.Set(consts.FieldParameterSet, d.Get(consts.FieldParameterSet)); err != nil {
+			return diag.Errorf("error setting state key %q for PKI Secret Key, err=%s",
+				consts.FieldParameterSet, err)
+		}
 	}
 
 	return nil

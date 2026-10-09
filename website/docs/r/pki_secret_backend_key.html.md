@@ -47,7 +47,7 @@ The following arguments are supported:
 
 * `key_type` - (Optional) Specifies the desired key type; must be `rsa`, `ed25519`, `ec`, or `ml-dsa`.
 
-* `parameter_set` - (Optional) For ML-DSA keys, specifies the parameter set; must be `"44"` (default), `"65"`, or `"87"`
+* `parameter_set` - (Optional) For ML-DSA keys, specifies the parameter set; must be `ml-dsa-44` (default), `ml-dsa-65`, or `ml-dsa-87`
 
 * `key_bits` - (Optional) Specifies the number of bits to use for the generated keys. 
   Allowed values are 0 (universal default); with `key_type=rsa`, allowed values are:

@@ -544,7 +544,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	// Fields only used when we are generating a key
 	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
-		// For parameter set, this is only supported in Vault 2.20+
+		// For parameter set, this is only supported in Vault 2.2.0+
 		if provider.IsAPISupported(meta, provider.VaultVersion220) {
 			rootCertAPIFields = append(rootCertAPIFields, consts.FieldParameterSet)
 		}
