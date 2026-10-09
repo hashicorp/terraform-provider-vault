@@ -14,6 +14,10 @@ IMPROVEMENTS:
 * `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
 * `vault_oauth_resource_server_config_profile`: Add support for `authorization_details_claim` field. Requires Vault 2.2.0 or later. ([#3058](https://github.com/hashicorp/terraform-provider-vault/pull/3058))
 
+BUG FIXES:
+
+* provider: Perform token self-lookup without a namespace header so Vault resolves the token's own namespace. This prevents an unrelated `VAULT_NAMESPACE` from causing provider configuration failures and allows Terraform to recover when a configured namespace has been deleted outside Terraform. The configured provider namespace is still used for resource operations. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:

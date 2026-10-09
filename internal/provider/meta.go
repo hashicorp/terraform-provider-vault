@@ -247,6 +247,10 @@ func (p *ProviderMeta) setClient() error {
 		return fmt.Errorf("failed to configure Vault API: %s", err)
 	}
 
+	// lookup-self is resolved from the token's namespace, so the client must not
+	// inherit VAULT_NAMESPACE before the token is inspected.
+	client.ClearNamespace()
+
 	// setting this is critical for proper namespace handling
 	client.SetCloneHeaders(true)
 
