@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -92,6 +93,14 @@ func (r *PKICAKeyExportEphemeralResource) Open(ctx context.Context, req ephemera
 	var data PKICAKeyExportModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !r.Meta().IsAPISupported(provider.VaultVersion220) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			fmt.Sprintf("vault_pki_secret_backend_ca_key_export requires Vault version %s or later.", provider.VaultVersion220),
+		)
 		return
 	}
 

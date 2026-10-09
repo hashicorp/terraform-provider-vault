@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/vault/api"
 )
 
@@ -111,6 +112,14 @@ func (r *PKIWrappedKeyImportResource) Create(ctx context.Context, req resource.C
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !r.Meta().IsAPISupported(provider.VaultVersion220) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			fmt.Sprintf("vault_pki_secret_backend_wrapped_key_import requires Vault version %s or later.", provider.VaultVersion220),
+		)
 		return
 	}
 
