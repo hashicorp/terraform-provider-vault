@@ -1105,6 +1105,31 @@ const (
 	FieldSigningTime              = "signing_time"
 
 	/*
+		Vault SCIM Support
+	*/
+
+	FieldSCIMClientName                  = "client_name"
+	FieldAccessGrantPrincipal            = "access_grant_principal"
+	FieldDefaultSchemaVersion            = "default_schema_version"
+	FieldAllowUserAdoption               = "allow_user_adoption"
+	FieldAllowGroupAdoption              = "allow_group_adoption"
+	FieldAllowedExtraAliasMountAccessors = "allowed_extra_alias_mount_accessors"
+	FieldMaxActiveTokens                 = "max_active_tokens"
+	FieldMaxTokenTTL                     = "max_token_ttl"
+	FieldDeleteLinkedResources           = "delete_linked_resources"
+	FieldDeletionPolicy                  = "deletion_policy"
+	FieldDeleting                        = "deleting"
+	FieldAliasMountAccessor              = "alias_mount_accessor"
+
+	// deletion_policy accepted values (Terraform-facing enum)
+	DeletionPolicyOrphanChildResources = "orphan_child_resources"
+	DeletionPolicyDeleteChildResources = "delete_child_resources"
+
+	// Vault DELETE query param names deletion_policy maps onto
+	scimDeleteQueryParamUnlinkResources       = "unlink-resources"
+	scimDeleteQueryParamDeleteLinkedResources = "delete-linked-resources"
+
+	/*
 		Vault auth methods
 	*/
 	AuthMethodAWS      = "aws"

@@ -2,6 +2,8 @@
 
 FEATURES:
 
+* **New Resource**: `vault_scim_client` for managing Vault Enterprise SCIM 2.0 clients. Supports a `deletion_policy` argument to control cleanup of linked entities and groups on destroy. Requires Vault Enterprise 2.2.0 or later. ([#3073](https://github.com/hashicorp/terraform-provider-vault/pull/3073
+))
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
 * **New Resource for transform rewrapping**: Add new resource `vault_transform_rewrap` to support rewrapping FPE transformations. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
