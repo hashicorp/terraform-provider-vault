@@ -10,21 +10,32 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
+// FlattenVaultDuration converts a Vault TypeDurationSecond value (integer seconds)
+// to a short-form duration string (e.g. "8760h"). Returns "" for zero or nil —
+// 0 is the zero-value for this type and indicates "unset".
 func FlattenVaultDuration(d interface{}) string {
 	if d == nil {
-		return time.Duration(0).String()
+		return ""
 	}
 
-	switch d.(type) {
+	var secs int64
+	switch v := d.(type) {
 	case int:
-		return util.ShortDur(time.Duration(d.(int)) * time.Second)
+		secs = int64(v)
 	case int64:
-		return util.ShortDur(time.Duration(d.(int64)) * time.Second)
+		secs = v
 	case json.Number:
-		if i, err := d.(json.Number).Int64(); err == nil {
-			return util.ShortDur(time.Duration(i) * time.Second)
+		i, err := v.Int64()
+		if err != nil {
+			return ""
 		}
+		secs = i
+	default:
+		return ""
 	}
 
-	return time.Duration(0).String()
+	if secs == 0 {
+		return ""
+	}
+	return util.ShortDur(time.Duration(secs) * time.Second)
 }
