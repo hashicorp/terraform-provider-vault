@@ -18,6 +18,10 @@ BUG FIXES:
 
 * provider: Perform token self-lookup without a namespace header so Vault resolves the token's own namespace. This prevents an unrelated `VAULT_NAMESPACE` from causing provider configuration failures and allows Terraform to recover when a configured namespace has been deleted outside Terraform. The configured provider namespace is still used for resource operations. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
 
+BUG FIXES:
+
+* `vault_identity_entity`: Fix panic on create when the entity already exists and Vault returns a non-nil response with a null `data` field (e.g. Vault Enterprise 2.0.3+). The provider now returns a clean "already exists" error instead of crashing. ([#3055](https://github.com/hashicorp/terraform-provider-vault/pull/3055))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:
