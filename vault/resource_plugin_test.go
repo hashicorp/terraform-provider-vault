@@ -158,6 +158,7 @@ func TestPlugin_entDownload(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, fieldDownload, "true"),
 				),
 			},
+			testutil.GetImportTestStep(resourceName, false, nil, fieldDownload),
 		},
 	})
 }
