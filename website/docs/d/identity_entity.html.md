@@ -97,7 +97,7 @@ The following attributes are exported:
 
 * `metadata` - Arbitrary metadata
 
-* `mount_accessor` - Authentication mount acccessor which this alias belongs to
+* `mount_accessor` - Authentication mount accessor which this alias belongs to
 
 * `mount_path` - Authentication mount path which this alias belongs to
 
