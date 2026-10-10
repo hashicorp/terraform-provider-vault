@@ -21,6 +21,10 @@ BUG FIXES:
 
 * provider: Perform token self-lookup without a namespace header so Vault resolves the token's own namespace. This prevents an unrelated `VAULT_NAMESPACE` from causing provider configuration failures and allows Terraform to recover when a configured namespace has been deleted outside Terraform. The configured provider namespace is still used for resource operations. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
 
+BUG FIXES:
+
+* `vault_generic_secret`: Fix `path` values that already contain the KV v2 `data/` or `metadata/` prefix being rewritten to `data/data/...` or `data/metadata/...`, so explicit metadata paths can be read. ([#3068](https://github.com/hashicorp/terraform-provider-vault/issues/3068))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:
