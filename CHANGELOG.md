@@ -7,10 +7,12 @@ FEATURES:
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
 * **New Resource for transform rewrapping**: Add new resource `vault_transform_rewrap` to support rewrapping FPE transformations. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
 
+
 IMPROVEMENTS:
 
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
-* `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
+* `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039)) 
+* Add support for `delta_crl_distribution_points` in `vault_pki_secret_backend_config_urls` and `vault_pki_secret_backend_issuer` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#2761](https://github.com/hashicorp/terraform-provider-vault/pull/2761))
 * `vault_pki_external_ca_secret_backend_acme_account`: Remove redundant `Sensitive` attribute from write-only fields `eab_kid` and `eab_key`, and add mutual-requirement validation so both fields must be specified together. ([#3038](https://github.com/hashicorp/terraform-provider-vault/pull/3038))
 * `vault_plugin`: Add `download` field to let Vault Enterprise (1.20+) automatically download official enterprise plugin artifacts from releases.hashicorp.com during registration, instead of requiring the artifact to be pre-staged in the server's `plugin_directory`. ([#3022](https://github.com/hashicorp/terraform-provider-vault/pull/3022))
 * `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
