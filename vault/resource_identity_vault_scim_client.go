@@ -333,6 +333,21 @@ func scimClientUpdate(ctx context.Context, d *schema.ResourceData, meta interfac
 	return scimClientRead(ctx, d, meta)
 }
 
+// scimDeleteQuery maps a deletion_policy value onto the Vault DELETE query
+// params. An unset policy yields nil, i.e. a plain delete.
+func scimDeleteQuery(policy string) map[string][]string {
+	switch policy {
+	case consts.DeletionPolicyDeleteChildResources:
+		// Delete the client AND everything it owns (entities/groups/aliases)
+		return map[string][]string{consts.SCIMDeleteQueryParamDeleteLinkedResources: {"true"}}
+	case consts.DeletionPolicyOrphanChildResources:
+		// Detach owned resources from the client without deleting them,
+		// then remove the client itself.
+		return map[string][]string{consts.SCIMDeleteQueryParamUnlinkResources: {"true"}}
+	}
+	return nil
+}
+
 // scimClientDelete handles Terraform `destroy` for a vault_scim_client resource.
 // Deleting a SCIM client that still owns entities/groups is async in Vault, so
 // this issues the delete request and then polls until Vault confirms the
@@ -354,17 +369,7 @@ func scimClientDelete(ctx context.Context, d *schema.ResourceData, meta interfac
 	// the one Terraform value onto the correct Vault query param here. Leaving
 	// deletion_policy unset sends a plain delete with no query params, which
 	// only succeeds if the client has no linked entities/groups.
-	var query map[string][]string
-
-	switch d.Get(consts.FieldDeletionPolicy).(string) {
-	case consts.DeletionPolicyDeleteChildResources:
-		// Delete the client AND everything it owns (entities/groups/aliases)
-		query = map[string][]string{"delete-linked-resources": {"true"}}
-	case consts.DeletionPolicyOrphanChildResources:
-		// Detach owned resources from the client without deleting them,
-		// then remove the client itself.
-		query = map[string][]string{"unlink-resources": {"true"}}
-	}
+	query := scimDeleteQuery(d.Get(consts.FieldDeletionPolicy).(string))
 
 	// Begin deletion. Vault marks the client as "deleting" and starts
 	// cleanup in the background rather than finishing synchronously.

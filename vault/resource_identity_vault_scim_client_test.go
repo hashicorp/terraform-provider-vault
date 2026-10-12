@@ -6,7 +6,10 @@ package vault
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"reflect"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 
@@ -268,6 +271,107 @@ func TestSCIMClientUpdate_skipsWriteForDeletionPolicyOnlyChange(t *testing.T) {
 			}
 			if !tc.wantSkip && !diags.HasError() {
 				t.Fatal("expected the update to reach the Vault client, but it was skipped")
+			}
+		})
+	}
+}
+
+// TestSCIMDeleteQuery checks that each deletion_policy maps onto the matching
+// Vault DELETE query param, and that an unset policy sends none. The expected
+// keys are literals, not the consts, so a drift in a const's value from what
+// Vault's API accepts fails the test.
+func TestSCIMDeleteQuery(t *testing.T) {
+	tests := map[string]struct {
+		policy string
+		want   map[string][]string
+	}{
+		"delete_child_resources": {
+			policy: consts.DeletionPolicyDeleteChildResources,
+			want:   map[string][]string{"delete-linked-resources": {"true"}},
+		},
+		"orphan_child_resources": {
+			policy: consts.DeletionPolicyOrphanChildResources,
+			want:   map[string][]string{"unlink-resources": {"true"}},
+		},
+		"unset": {policy: ""},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := scimDeleteQuery(tc.policy); !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestSCIMClientDelete_sendsQueryParam runs scimClientDelete against a fake
+// Vault server and checks the query string of the DELETE request it sends for
+// each deletion_policy. The server answers the follow up read with 404 so the
+// deletion poll ends after its first check.
+func TestSCIMClientDelete_sendsQueryParam(t *testing.T) {
+	tests := map[string]struct {
+		policy    string
+		wantQuery string
+	}{
+		"delete_child_resources": {
+			policy:    consts.DeletionPolicyDeleteChildResources,
+			wantQuery: "delete-linked-resources=true",
+		},
+		"orphan_child_resources": {
+			policy:    consts.DeletionPolicyOrphanChildResources,
+			wantQuery: "unlink-resources=true",
+		},
+		"unset": {policy: "", wantQuery: ""},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			const clientName = "test-client"
+			wantPath := "/v1/identity/scim/client/" + clientName
+
+			var mu sync.Mutex
+			var deletes []string
+			meta := testProviderMeta(t, testTokenLookupHandler(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != wantPath {
+					t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				switch r.Method {
+				case http.MethodDelete:
+					mu.Lock()
+					deletes = append(deletes, r.URL.RawQuery)
+					mu.Unlock()
+					w.WriteHeader(http.StatusNoContent)
+				case http.MethodGet:
+					w.WriteHeader(http.StatusNotFound)
+				default:
+					t.Errorf("unexpected method %s", r.Method)
+					w.WriteHeader(http.StatusMethodNotAllowed)
+				}
+			}))
+
+			raw := map[string]interface{}{}
+			if tc.policy != "" {
+				raw[consts.FieldDeletionPolicy] = tc.policy
+			}
+			d := schema.TestResourceDataRaw(t, scimClientResource().Schema, raw)
+			d.SetId(clientName)
+
+			if diags := scimClientDelete(context.Background(), d, meta); diags.HasError() {
+				t.Fatalf("scimClientDelete: %v", diags)
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			if len(deletes) != 1 {
+				t.Fatalf("expected 1 DELETE request, got %d", len(deletes))
+			}
+			if deletes[0] != tc.wantQuery {
+				t.Fatalf("DELETE query = %q, want %q", deletes[0], tc.wantQuery)
 			}
 		})
 	}

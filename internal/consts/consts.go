@@ -1121,8 +1121,8 @@ const (
 	DeletionPolicyDeleteChildResources = "delete_child_resources"
 
 	// Vault DELETE query param names deletion_policy maps onto
-	scimDeleteQueryParamUnlinkResources       = "unlink-resources"
-	scimDeleteQueryParamDeleteLinkedResources = "delete-linked-resources"
+	SCIMDeleteQueryParamUnlinkResources       = "unlink-resources"
+	SCIMDeleteQueryParamDeleteLinkedResources = "delete-linked-resources"
 
 	/*
 		Vault auth methods
