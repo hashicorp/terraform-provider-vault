@@ -105,8 +105,9 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
 
 * `client_name` - (Required) The name of the SCIM client. Must be lowercase,
-  because Vault lowercases client names when it stores them. Changing this
-  forces a new resource.
+  because Vault lowercases client names when it stores them. May contain only
+  letters, digits, `_`, `-` and `.`, and must start and end with a letter,
+  digit or `_`. Changing this forces a new resource.
 
 * `access_grant_principal` - (Required) The ID of the Vault entity authorized to
   call the SCIM protocol endpoints for this client. Each entity can be the

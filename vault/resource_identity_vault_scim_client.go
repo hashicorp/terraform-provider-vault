@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,12 +19,25 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-// validateSCIMClientName rejects names containing uppercase letters. Vault
-// lowercases client_name on write but looks it up case sensitively, so a
-// mixed case name would be created under a different name than the one
-// Terraform reads back, leaving an untracked client in Vault.
+// scimClientNameRegex mirrors the pattern Vault routes client names with
+// (framework.GenericNameRegex): word characters, '-' and '.', starting and
+// ending with a word character. Vault anchors its route patterns, and
+// validation.StringMatch does not, so the anchors are explicit here. Uppercase
+// is allowed so that validateSCIMClientName can report it with its own message.
+var scimClientNameRegex = regexp.MustCompile(`^\w([\w.-]*\w)?$`)
+
+// validateSCIMClientName rejects names Vault cannot route, which includes any
+// whitespace, and names containing uppercase letters. Vault lowercases
+// client_name on write but looks it up case sensitively, so a mixed case name
+// would be created under a different name than the one Terraform reads back,
+// leaving an untracked client in Vault.
 func validateSCIMClientName(v interface{}, k string) ([]string, []error) {
 	name := v.(string)
+	if _, errs := validation.StringMatch(scimClientNameRegex,
+		"may contain only letters, digits, '_', '-' and '.', and must start and end "+
+			"with a letter, digit or '_'")(v, k); len(errs) > 0 {
+		return nil, errs
+	}
 	if name != strings.ToLower(name) {
 		return nil, []error{fmt.Errorf(
 			"%s %q must be lowercase because Vault lowercases SCIM client names; use %q",
@@ -53,7 +67,8 @@ func scimClientResource() *schema.Resource {
 				ForceNew:     true,
 				ValidateFunc: validateSCIMClientName,
 				Description: "The name of the SCIM client. Must be lowercase, because Vault " +
-					"lowercases client names when it stores them.",
+					"lowercases client names when it stores them. May contain only letters, " +
+					"digits, '_', '-' and '.', and must start and end with a letter, digit or '_'.",
 			},
 			consts.FieldAccessGrantPrincipal: {
 				Type:        schema.TypeString,

@@ -276,6 +276,58 @@ func TestSCIMClientUpdate_skipsWriteForDeletionPolicyOnlyChange(t *testing.T) {
 	}
 }
 
+// TestValidateSCIMClientName checks the client_name validator against names
+// Vault can and cannot route, and against Vault's own route pattern
+// (framework.GenericNameRegex, which Vault anchors), so the two cannot drift.
+func TestValidateSCIMClientName(t *testing.T) {
+	vaultRoute := regexp.MustCompile(`^\w(([\w-.]+)?\w)?$`)
+
+	tests := map[string]struct {
+		name    string
+		wantErr *regexp.Regexp
+	}{
+		"single char":            {name: "a"},
+		"hyphenated":             {name: "my-client"},
+		"dots underscores":       {name: "a.b_c-1"},
+		"leading space":          {name: " foo", wantErr: regexp.MustCompile(`may contain only`)},
+		"trailing space":         {name: "foo ", wantErr: regexp.MustCompile(`may contain only`)},
+		"inner space":            {name: "my client", wantErr: regexp.MustCompile(`may contain only`)},
+		"trailing newline":       {name: "foo\n", wantErr: regexp.MustCompile(`may contain only`)},
+		"slash":                  {name: "a/b", wantErr: regexp.MustCompile(`may contain only`)},
+		"at sign":                {name: "a@b", wantErr: regexp.MustCompile(`may contain only`)},
+		"leading hyphen":         {name: "-a", wantErr: regexp.MustCompile(`may contain only`)},
+		"trailing dot":           {name: "a.", wantErr: regexp.MustCompile(`may contain only`)},
+		"empty":                  {name: "", wantErr: regexp.MustCompile(`may contain only`)},
+		"non-ascii letter":       {name: "caf\u00e9", wantErr: regexp.MustCompile(`may contain only`)},
+		"uppercase only reports": {name: "Mixed-Case", wantErr: regexp.MustCompile(`must be lowercase`)},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			_, errs := validateSCIMClientName(tc.name, consts.FieldSCIMClientName)
+
+			if tc.wantErr == nil {
+				if len(errs) > 0 {
+					t.Fatalf("expected %q to be valid, got %v", tc.name, errs)
+				}
+			} else {
+				if len(errs) != 1 {
+					t.Fatalf("expected exactly 1 error for %q, got %v", tc.name, errs)
+				}
+				if !tc.wantErr.MatchString(errs[0].Error()) {
+					t.Fatalf("error %q does not match %q", errs[0], tc.wantErr)
+				}
+			}
+
+			// Anything Vault cannot route must be rejected, and anything it
+			// can route must not fail the character check.
+			if routable := vaultRoute.MatchString(tc.name); routable != scimClientNameRegex.MatchString(tc.name) {
+				t.Fatalf("provider regex disagrees with Vault's route for %q (Vault routes it: %t)", tc.name, routable)
+			}
+		})
+	}
+}
+
 // TestSCIMDeleteQuery checks that each deletion_policy maps onto the matching
 // Vault DELETE query param, and that an unset policy sends none. The expected
 // keys are literals, not the consts, so a drift in a const's value from what
@@ -699,7 +751,11 @@ func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 			wantErr: regexp.MustCompile(`expected max_token_ttl to be at least \(0\)`),
 		},
 		// Vault lowercases client names but looks them up case-sensitively, so
-		// a mixed-case name would be created and then not found on read.
+		// a mixed case name would be created and then not found on read.
+		"client_name with whitespace": {
+			name:    "my client",
+			wantErr: regexp.MustCompile(`may contain only letters, digits`),
+		},
 		"client_name with uppercase": {
 			name:    "Mixed-Case-Client",
 			wantErr: regexp.MustCompile(`must be lowercase because Vault lowercases SCIM client names`),
