@@ -337,6 +337,8 @@ const (
 	FieldTemplate                           = "template"
 	FieldTemplates                          = "templates"
 	FieldTweakSource                        = "tweak_source"
+	FieldFpeAlgorithm                       = "fpe_algorithm"
+	FieldMaxTweakLen                        = "max_tweak_len"
 	FieldMappingMode                        = "mapping_mode"
 	FieldStores                             = "stores"
 	FieldConvergent                         = "convergent"
@@ -895,6 +897,7 @@ const (
 	FieldCreationTime                 = "creation_time"
 	FieldLastUpdatedTime              = "last_updated_time"
 	FieldOptionalAuthorizationDetails = "optional_authorization_details"
+	FieldAuthorizationDetailsClaim    = "authorization_details_claim"
 	FieldUniqueIDClaim                = "unique_id_claim"
 	FieldActorClaim                   = "actor_claim"
 
@@ -975,6 +978,10 @@ const (
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
 	FieldCertificateWO              = "certificate_wo"
 	FieldCertificateWOVersion       = "certificate_wo_version"
+
+	// Azure seamless rotation
+	FieldSeamlessRotation    = "seamless_rotation"
+	FieldRotationGracePeriod = "rotation_grace_period"
 
 	/*
 		common environment variables
