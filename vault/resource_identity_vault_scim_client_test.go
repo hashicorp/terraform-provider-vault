@@ -379,8 +379,6 @@ func TestSCIMClientDelete_sendsQueryParam(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			const clientName = "test-client"
 			wantPath := "/v1/identity/scim/client/" + clientName
 
