@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/vault/sdk/framework"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -277,10 +278,11 @@ func TestSCIMClientUpdate_skipsWriteForDeletionPolicyOnlyChange(t *testing.T) {
 }
 
 // TestValidateSCIMClientName checks the client_name validator against names
-// Vault can and cannot route, and against Vault's own route pattern
-// (framework.GenericNameRegex, which Vault anchors), so the two cannot drift.
+// Vault can and cannot route, and against the SDK's route pattern
+// (framework.GenericNameRegex, which Vault anchors), so a change to that
+// pattern in the SDK shows up here.
 func TestValidateSCIMClientName(t *testing.T) {
-	vaultRoute := regexp.MustCompile(`^\w(([\w-.]+)?\w)?$`)
+	vaultRoute := regexp.MustCompile("^" + framework.GenericNameRegex("client_name") + "$")
 
 	tests := map[string]struct {
 		name    string
@@ -748,12 +750,14 @@ func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 			attr:    `max_token_ttl = -10`,
 			wantErr: regexp.MustCompile(`expected max_token_ttl to be at least \(0\)`),
 		},
-		// Vault lowercases client names but looks them up case-sensitively, so
-		// a mixed case name would be created and then not found on read.
+		// Vault cannot route names containing whitespace; without validation
+		// this would fail at apply with an unsupported path error.
 		"client_name with whitespace": {
 			name:    "my client",
 			wantErr: regexp.MustCompile(`may contain only letters, digits`),
 		},
+		// Vault lowercases client names but looks them up case sensitively, so
+		// a mixed-case name would be created and then not found on read.
 		"client_name with uppercase": {
 			name:    "Mixed-Case-Client",
 			wantErr: regexp.MustCompile(`must be lowercase because Vault lowercases SCIM client names`),
