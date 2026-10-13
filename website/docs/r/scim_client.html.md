@@ -132,6 +132,10 @@ The following arguments are supported:
 * `allow_group_adoption` - (Optional) Whether this client may adopt existing
   Vault groups. Defaults to `false`.
 
+* `allowed_extra_alias_mount_accessors` - (Optional) Set of additional mount
+  accessors whose aliases may be managed by this client. Duplicate values are
+  ignored and ordering is not significant.
+
 * `max_active_tokens` - (Optional) Maximum number of active SCIM tokens for this
   client. Must be at least `1`. Defaults to `2`.
 

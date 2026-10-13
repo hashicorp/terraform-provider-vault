@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -200,12 +201,79 @@ func TestAccIdentityVaultSCIMClient_updateAccessGrantPrincipalInPlace(t *testing
 	})
 }
 
+// scimOptionalFieldsStep describes one step of
+// TestAccIdentityVaultSCIMClient_updateOptionalFieldsInPlace.
+type scimOptionalFieldsStep struct {
+	maxTokens, ttl        int
+	allowUser, allowGroup bool
+	accessors             []string // mount names "a" / "b"; may repeat
+	planOnly              bool
+	checks                []resource.TestCheckFunc
+}
+
 // TestAccIdentityVaultSCIMClient_updateOptionalFieldsInPlace changes
-// max_active_tokens, max_token_ttl, allow_user_adoption and allow_group_adoption
-// and checks that the new values are read back after the update.
+// max_active_tokens, max_token_ttl, the adoption flags and
+// allowed_extra_alias_mount_accessors on one client, checking that each update
+// is applied in place. The accessors are a set, so reordering is a no-op and
+// duplicates are collapsed.
 func TestAccIdentityVaultSCIMClient_updateOptionalFieldsInPlace(t *testing.T) {
 	clientName := acctest.RandomWithPrefix("tf-scim-client")
 	resourceName := "vault_scim_client.test"
+	accessorsCount := func(n string) resource.TestCheckFunc {
+		return resource.TestCheckResourceAttr(resourceName, consts.FieldAllowedExtraAliasMountAccessors+".#", n)
+	}
+	updated := func(checks ...resource.TestCheckFunc) []resource.TestCheckFunc {
+		return append([]resource.TestCheckFunc{
+			resource.TestCheckResourceAttr(resourceName, consts.FieldMaxActiveTokens, "10"),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTokenTTL, "1800"),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserAdoption, "true"),
+			resource.TestCheckResourceAttr(resourceName, consts.FieldAllowGroupAdoption, "true"),
+		}, checks...)
+	}
+
+	cases := []scimOptionalFieldsStep{
+		{ // create
+			maxTokens: 2, accessors: []string{"a", "b"},
+			checks: []resource.TestCheckFunc{
+				resource.TestCheckResourceAttr(resourceName, consts.FieldMaxActiveTokens, "2"),
+				resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserAdoption, "false"),
+				resource.TestCheckResourceAttr(resourceName, consts.FieldAllowGroupAdoption, "false"),
+				accessorsCount("2"),
+			},
+		},
+		{ // update scalar fields
+			maxTokens: 10, ttl: 1800, allowUser: true, allowGroup: true, accessors: []string{"a", "b"},
+			checks: updated(accessorsCount("2")),
+		},
+		{ // reorder: no diff
+			maxTokens: 10, ttl: 1800, allowUser: true, allowGroup: true, accessors: []string{"b", "a"},
+			planOnly: true,
+		},
+		{ // duplicates collapse
+			maxTokens: 10, ttl: 1800, allowUser: true, allowGroup: true, accessors: []string{"a", "a", "b", "b"},
+			checks: updated(accessorsCount("2")),
+		},
+		{ // shrink
+			maxTokens: 10, ttl: 1800, allowUser: true, allowGroup: true, accessors: []string{"b"},
+			checks: updated(accessorsCount("1")),
+		},
+		{ // clear
+			maxTokens: 10, ttl: 1800, allowUser: true, allowGroup: true,
+			checks: updated(accessorsCount("0")),
+		},
+	}
+
+	steps := make([]resource.TestStep, 0, len(cases))
+	for _, c := range cases {
+		step := resource.TestStep{
+			Config:   testAccIdentityVaultSCIMClientConfig_optionalFields(clientName, c),
+			PlanOnly: c.planOnly,
+		}
+		if !c.planOnly {
+			step.Check = resource.ComposeTestCheckFunc(c.checks...)
+		}
+		steps = append(steps, step)
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -214,25 +282,7 @@ func TestAccIdentityVaultSCIMClient_updateOptionalFieldsInPlace(t *testing.T) {
 		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testAccCheckIdentityVaultSCIMClientDestroy,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccIdentityVaultSCIMClientConfig_allFields(clientName, "2.2", 2, 0, false, false),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxActiveTokens, "2"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserAdoption, "false"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowGroupAdoption, "false"),
-				),
-			},
-			{
-				Config: testAccIdentityVaultSCIMClientConfig_allFields(clientName, "2.2", 10, 1800, true, true),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxActiveTokens, "10"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldMaxTokenTTL, "1800"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowUserAdoption, "true"),
-					resource.TestCheckResourceAttr(resourceName, consts.FieldAllowGroupAdoption, "true"),
-				),
-			},
-		},
+		Steps:                    steps,
 	})
 }
 
@@ -511,9 +561,6 @@ func TestAccIdentityVaultSCIMClient_import(t *testing.T) {
 	})
 }
 
-// testAccLinkGroupToSCIMClient creates a group and links it to the named SCIM
-// client through Vault's link-group endpoint, so the client owns a resource.
-// It returns the group ID.
 func testAccLinkGroupToSCIMClient(clientName string) (string, error) {
 	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
 
@@ -742,6 +789,10 @@ func TestAccIdentityVaultSCIMClient_invalidInputs(t *testing.T) {
 			attr:    `default_schema_version = "3.0"`,
 			wantErr: regexp.MustCompile(`expected default_schema_version to be one of`),
 		},
+		"empty default_schema_version": {
+			attr:    `default_schema_version = ""`,
+			wantErr: regexp.MustCompile(`expected default_schema_version to be one of`),
+		},
 		"max_active_tokens zero": {
 			attr:    `max_active_tokens = 0`,
 			wantErr: regexp.MustCompile(`expected max_active_tokens to be at least \(1\)`),
@@ -870,6 +921,49 @@ resource "vault_scim_client" "test" {
   max_token_ttl          = %d
 }
 `, name, name, name, schemaVersion, allowUser, allowGroup, maxTokens, ttl)
+}
+
+// testAccIdentityVaultSCIMClientConfig_optionalFields returns a config with a
+// userpass mount (used as alias_mount_accessor), two extra mounts "a" and "b"
+// (used for allowed_extra_alias_mount_accessors), an entity, and a
+// vault_scim_client configured from the step.
+func testAccIdentityVaultSCIMClientConfig_optionalFields(name string, c scimOptionalFieldsStep) string {
+	refs := make([]string, 0, len(c.accessors))
+	for _, m := range c.accessors {
+		refs = append(refs, fmt.Sprintf("vault_auth_backend.%s.accessor", m))
+	}
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "userpass" {
+  type = "userpass"
+  path = "userpass-%[1]s"
+}
+
+resource "vault_auth_backend" "a" {
+  type = "userpass"
+  path = "userpass-a-%[1]s"
+}
+
+resource "vault_auth_backend" "b" {
+  type = "userpass"
+  path = "userpass-b-%[1]s"
+}
+
+resource "vault_identity_entity" "principal" {
+  name = "principal-%[1]s"
+}
+
+resource "vault_scim_client" "test" {
+  client_name                         = %[1]q
+  access_grant_principal              = vault_identity_entity.principal.id
+  alias_mount_accessor                = vault_auth_backend.userpass.accessor
+  default_schema_version              = "2.2"
+  allow_user_adoption                 = %[2]t
+  allow_group_adoption                = %[3]t
+  max_active_tokens                   = %[4]d
+  max_token_ttl                       = %[5]d
+  allowed_extra_alias_mount_accessors = [%[6]s]
+}
+`, name, c.allowUser, c.allowGroup, c.maxTokens, c.ttl, strings.Join(refs, ", "))
 }
 
 // withAuthAccessor creates two distinct userpass mounts ("a" and "b") and points

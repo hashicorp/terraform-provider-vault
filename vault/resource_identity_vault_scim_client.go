@@ -86,7 +86,6 @@ func scimClientResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 				ValidateFunc: validation.StringInSlice([]string{
-					"",
 					"2.0",
 					"2.2",
 				}, false),
@@ -106,7 +105,7 @@ func scimClientResource() *schema.Resource {
 				Description: "Whether to allow adoption of existing Vault groups by SCIM-provisioned groups.",
 			},
 			consts.FieldAllowedExtraAliasMountAccessors: {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
@@ -204,7 +203,7 @@ func scimClientCreate(ctx context.Context, d *schema.ResourceData, meta interfac
 
 	for _, f := range optionalFields {
 		if v, ok := d.GetOk(f); ok {
-			data[f] = v
+			data[f] = scimFieldValue(f, v)
 		}
 	}
 
@@ -338,7 +337,7 @@ func scimClientUpdate(ctx context.Context, d *schema.ResourceData, meta interfac
 	}
 	for _, f := range updatableFields {
 		if d.HasChange(f) {
-			data[f] = d.Get(f)
+			data[f] = scimFieldValue(f, d.Get(f))
 		}
 	}
 
@@ -346,6 +345,22 @@ func scimClientUpdate(ctx context.Context, d *schema.ResourceData, meta interfac
 		return diag.Errorf("error updating SCIM client %q: %s", name, err)
 	}
 	return scimClientRead(ctx, d, meta)
+}
+
+// scimFieldValue converts set-typed fields to a plain slice for the Vault
+// request body. A set is always sent as a non-nil slice so clearing it
+// serializes as [] rather than null.
+func scimFieldValue(field string, v interface{}) interface{} {
+	if field == consts.FieldAllowedExtraAliasMountAccessors {
+		if set, ok := v.(*schema.Set); ok {
+			list := set.List()
+			if list == nil {
+				list = []interface{}{}
+			}
+			return list
+		}
+	}
+	return v
 }
 
 // scimDeleteQuery maps a deletion_policy value onto the Vault DELETE query
