@@ -94,6 +94,17 @@ func transformTransformationResource() *schema.Resource {
 			ForceNew:    true,
 			Description: `If true, multiple transformations of the same plaintext will produce the same ciphertext. Only used when type is "tokenization". Cannot be changed after creation.`,
 		},
+		consts.FieldFpeAlgorithm: {
+			Type:        schema.TypeString,
+			Computed:    true,
+			Description: `The FPE algorithm used by this transformation. Only used when type is "fpe".`,
+		},
+		consts.FieldMaxTweakLen: {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			ForceNew:    true,
+			Description: `The maximum tweak size, in bytes. Only used when type is "fpe". Cannot be changed after creation.`,
+		},
 	}
 	return &schema.Resource{
 		Create: createTransformTransformationResource,
@@ -131,6 +142,9 @@ func createTransformTransformationResource(d *schema.ResourceData, meta interfac
 	}
 	if v, ok := d.GetOkExists(consts.FieldTweakSource); ok {
 		data[consts.FieldTweakSource] = v
+	}
+	if v, ok := d.GetOk(consts.FieldMaxTweakLen); ok {
+		data[consts.FieldMaxTweakLen] = v
 	}
 	if v, ok := d.GetOkExists(consts.FieldType); ok {
 		data[consts.FieldType] = v
@@ -235,6 +249,16 @@ func readTransformTransformationResource(d *schema.ResourceData, meta interface{
 	if val, ok := resp.Data[consts.FieldConvergent]; ok {
 		if err := d.Set(consts.FieldConvergent, val); err != nil {
 			return fmt.Errorf("error setting state key %q: %s", consts.FieldConvergent, err)
+		}
+	}
+	if val, ok := resp.Data[consts.FieldFpeAlgorithm]; ok {
+		if err := d.Set(consts.FieldFpeAlgorithm, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldFpeAlgorithm, err)
+		}
+	}
+	if val, ok := resp.Data[consts.FieldMaxTweakLen]; ok {
+		if err := d.Set(consts.FieldMaxTweakLen, val); err != nil {
+			return fmt.Errorf("error setting state key %q: %s", consts.FieldMaxTweakLen, err)
 		}
 	}
 	return nil

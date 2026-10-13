@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const staticRolesAffix = "static-roles"
@@ -58,12 +59,18 @@ type AzureStaticRoleModel struct {
 	Expiration          types.String `tfsdk:"expiration"`
 	SkipImportRotation  types.Bool   `tfsdk:"skip_import_rotation"`
 	DeferInitialCreds   types.Bool   `tfsdk:"defer_initial_creds"`
+	RotationGracePeriod types.Int64  `tfsdk:"rotation_grace_period"`
+	RotationPeriod      types.Int64  `tfsdk:"rotation_period"`
+	SeamlessRotation    types.Bool   `tfsdk:"seamless_rotation"`
 }
 
 // AzureStaticRoleAPIModel describes the Vault API data model.
 type AzureStaticRoleAPIModel struct {
 	ApplicationObjectID string            `json:"application_object_id" mapstructure:"application_object_id"`
 	TTL                 any               `json:"ttl" mapstructure:"ttl"`
+	RotationPeriod      any               `json:"rotation_period,omitempty" mapstructure:"rotation_period,omitempty"`
+	RotationGracePeriod any               `json:"rotation_grace_period,omitempty" mapstructure:"rotation_grace_period,omitempty"`
+	SeamlessRotation    any               `json:"seamless_rotation,omitempty" mapstructure:"seamless_rotation,omitempty"`
 	Metadata            map[string]string `json:"metadata" mapstructure:"metadata"`
 }
 
@@ -125,6 +132,23 @@ func (r *AzureSecretsStaticRoleResource) Schema(_ context.Context, _ resource.Sc
 				MarkdownDescription: "If true, the initial creation of credentials will be deferred until first static-creds read.",
 				Optional:            true,
 			},
+			consts.FieldRotationPeriod: schema.Int64Attribute{
+				MarkdownDescription: "Timespan of 1 month or more during which the role credentials are valid.",
+				Optional:            true,
+			},
+			consts.FieldRotationGracePeriod: schema.Int64Attribute{
+				MarkdownDescription: "Amount of time (in seconds) that active and staged credentials " +
+					"are permitted to overlap when seamless rotation is enabled. Must not exceed " +
+					"(rotation_period - 1h) / 2. Set to -1 to disable overlap or 0 to use the " +
+					"default value of 5 minutes.",
+				Optional: true,
+			},
+			consts.FieldSeamlessRotation: schema.BoolAttribute{
+				MarkdownDescription: "Enable or disable seamless rotation for the role. When enabled, " +
+					"allows the plugin to pre-provision the next credential to avoid propagation " +
+					"delays.",
+				Optional: true,
+			},
 		},
 		MarkdownDescription: "Manage Azure static roles.",
 	}
@@ -161,11 +185,11 @@ func (r *AzureSecretsStaticRoleResource) Create(ctx context.Context, req resourc
 	if !data.SecretID.IsNull() && data.SecretID.ValueString() != "" {
 		// <backend>/static-roles/<role>/import
 		path = fmt.Sprintf("%s/%s/%s/import", backend, staticRolesAffix, role)
-		vaultRequest, diags = buildVaultRequestForImportCreate(ctx, &data)
+		vaultRequest, diags = r.buildVaultRequestForImportCreate(ctx, &data)
 	} else {
 		// <backend>/static-roles/<role>
 		path = fmt.Sprintf("%s/%s/%s", backend, staticRolesAffix, role)
-		vaultRequest, diags = buildVaultRequestFromModel(ctx, &data)
+		vaultRequest, diags = r.buildVaultRequestFromModel(ctx, &data)
 	}
 
 	resp.Diagnostics.Append(diags...)
@@ -234,6 +258,34 @@ func (r *AzureSecretsStaticRoleResource) Read(ctx context.Context, req resource.
 	}
 	data.TTL = types.Int64Value(ttlSeconds)
 
+	useAPIVer220Ent := provider.IsAPISupported(r.Meta(), provider.VaultVersion220) && provider.IsEnterpriseSupported(r.Meta())
+	if useAPIVer220Ent {
+
+		if apiModel.SeamlessRotation != nil {
+			data.SeamlessRotation = types.BoolValue(apiModel.SeamlessRotation.(bool))
+		}
+
+		if apiModel.RotationPeriod != nil {
+			gpSeconds, err := normalizeTTL(apiModel.RotationPeriod)
+			if err != nil {
+				resp.Diagnostics.AddError("Invalid RotationPeriod format from Vault", err.Error())
+				return
+			}
+
+			data.RotationPeriod = types.Int64Value(gpSeconds)
+		}
+
+		if apiModel.RotationGracePeriod != nil {
+			rgpSeconds, err := normalizeTTL(apiModel.RotationGracePeriod)
+			if err != nil {
+				resp.Diagnostics.AddError("Invalid RotationGracePeriod format from Vault", err.Error())
+				return
+			}
+
+			data.RotationGracePeriod = types.Int64Value(rgpSeconds)
+		}
+	}
+
 	resp.Diagnostics.Append(diags...)
 	data.Metadata = val
 	data.ID = types.StringValue(makeID(backend, role))
@@ -257,7 +309,7 @@ func (r *AzureSecretsStaticRoleResource) Update(ctx context.Context, req resourc
 	role := data.Role.ValueString()
 	path := fmt.Sprintf("%s/%s/%s", backend, staticRolesAffix, role)
 
-	vaultRequest, diags := buildVaultRequestFromModel(ctx, &data)
+	vaultRequest, diags := r.buildVaultRequestFromModel(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -272,7 +324,7 @@ func (r *AzureSecretsStaticRoleResource) Update(ctx context.Context, req resourc
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
+func (r *AzureSecretsStaticRoleResource) buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	vaultRequest := map[string]any{
@@ -301,10 +353,14 @@ func buildVaultRequestFromModel(ctx context.Context, data *AzureStaticRoleModel)
 		vaultRequest[consts.FieldDeferInitialCreds] = true
 	}
 
+	if r.handleSeamlessRotationParams(data, vaultRequest, &diags); diags.HasError() {
+		return nil, diags
+	}
+
 	return vaultRequest, diags
 }
 
-func buildVaultRequestForImportCreate(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
+func (r *AzureSecretsStaticRoleResource) buildVaultRequestForImportCreate(ctx context.Context, data *AzureStaticRoleModel) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	req := map[string]any{
@@ -333,7 +389,60 @@ func buildVaultRequestForImportCreate(ctx context.Context, data *AzureStaticRole
 		req[consts.FieldSkipImportRotation] = true
 	}
 
+	if r.handleSeamlessRotationParams(data, req, &diags); diags.HasError() {
+		return nil, diags
+	}
+
 	return req, diags
+}
+
+func (r *AzureSecretsStaticRoleResource) handleSeamlessRotationParams(
+	data *AzureStaticRoleModel,
+	req map[string]any,
+	diags *diag.Diagnostics,
+) {
+	useAPIVer220Ent := provider.IsAPISupported(r.Meta(), provider.VaultVersion220) &&
+		provider.IsEnterpriseSupported(r.Meta())
+
+	require220 := func(field string) bool {
+		if !useAPIVer220Ent {
+			diags.AddError(
+				"Requires Vault Enterprise 2.2.0 or later",
+				fmt.Sprintf("Field %q is not supported", field),
+			)
+		}
+
+		return useAPIVer220Ent
+	}
+
+	if !data.RotationPeriod.IsNull() && require220(consts.FieldRotationPeriod) {
+		rp := data.RotationPeriod.ValueInt64()
+
+		// If TTL was also set to a non-zero value, make sure that it
+		// matches rotation_period (if it is also non-zero).
+		if !data.TTL.IsNull() {
+			if ttl := data.TTL.ValueInt64(); ttl != 0 && rp != 0 && rp != ttl {
+				diags.AddError(
+					"Conflicting lifetime intervals",
+					fmt.Sprintf(
+						"Expected %[1]s and %[2]s to match when both are specified "+
+							"(got %[1]s=%[3]d, %[2]s=%[4]d)",
+						consts.FieldTTL, consts.FieldRotationPeriod, ttl, rp,
+					),
+				)
+			}
+		} else {
+			req[consts.FieldRotationPeriod] = rp
+		}
+	}
+
+	if !data.RotationGracePeriod.IsNull() && require220(consts.FieldRotationGracePeriod) {
+		req[consts.FieldRotationGracePeriod] = data.RotationGracePeriod.ValueInt64()
+	}
+
+	if !data.SeamlessRotation.IsNull() && require220(consts.FieldSeamlessRotation) {
+		req[consts.FieldSeamlessRotation] = data.SeamlessRotation.ValueBool()
+	}
 }
 
 func (r *AzureSecretsStaticRoleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
