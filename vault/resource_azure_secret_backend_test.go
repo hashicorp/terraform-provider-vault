@@ -7,6 +7,8 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -81,6 +83,14 @@ func getAzureBackendChecks(resourceName, path string, isUpdate bool) resource.Te
 		baseChecks = append(baseChecks, commonUpdateChecks...)
 	}
 
+	if supportsVaultVersion220Ent() {
+		baseChecks = append(baseChecks, resource.TestCheckResourceAttr(
+			resourceName,
+			consts.FieldSeamlessRotation,
+			strconv.FormatBool(false),
+		))
+	}
+
 	return func(state *terraform.State) error {
 		return resource.ComposeAggregateTestCheckFunc(baseChecks...)(state)
 	}
@@ -111,6 +121,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "600"),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -122,6 +133,7 @@ func TestAccAzureSecretBackend_wif(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "22222222-3333-4444-5555-444444444444"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenAudience, "wif-audience-updated"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldIdentityTokenTTL, "1800"),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
@@ -160,6 +172,7 @@ func TestAccAzureSecretBackend_MountConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.1", "header2"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "hidden"),
 					resource.TestCheckResourceAttr(resourceName, "force_no_cache", "true"),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -182,6 +195,7 @@ func TestAccAzureSecretBackend_MountConfig(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "allowed_response_headers.2", "header3"),
 					resource.TestCheckResourceAttr(resourceName, "listing_visibility", "unauth"),
 					resource.TestCheckResourceAttr(resourceName, "force_no_cache", "true"),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
@@ -206,6 +220,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, "12345678901234567890"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldEnvironment, "AzurePublicCloud"),
+		getSeamlessRotationCheckFunc(resourceName, false),
 	}
 
 	azureUpdatedCheckFuncs := []resource.TestCheckFunc{
@@ -215,6 +230,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, "12345678901234567890"),
 		resource.TestCheckResourceAttr(resourceName, consts.FieldEnvironment, "AzurePublicCloud"),
+		getSeamlessRotationCheckFunc(resourceName, false),
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -232,7 +248,7 @@ func TestAzureSecretBackend_remount(t *testing.T) {
 				Config: testAzureSecretBackend_remount(updatedPath),
 				Check:  resource.ComposeTestCheckFunc(azureUpdatedCheckFuncs...),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount, consts.FieldSeamlessRotation),
 		},
 	})
 }
@@ -260,6 +276,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -271,6 +288,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SAT"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -282,6 +300,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, ""),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "0"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "true"),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			{
@@ -297,6 +316,7 @@ func TestAccAzureSecretBackendConfig_automatedRotation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationSchedule, "*/20 * * * SUN"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationWindow, "3600"),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableAutomatedRotation, "false"),
+					getSeamlessRotationCheckFunc(resourceName, false),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldClientSecret, consts.FieldDisableRemount),
@@ -368,7 +388,6 @@ resource "vault_azure_secret_backend" "test" {
 }
 
 func testAccAzureSecretBackendConfig_MountConfig(path string, isUpdate bool) string {
-
 	if !isUpdate {
 		return fmt.Sprintf(`
 resource "vault_azure_secret_backend" "test" {
@@ -495,3 +514,151 @@ resource "vault_azure_secret_backend" "test" {
 		},
 	})
 }
+
+func TestAccAzureSecretBackend_SeamlessRotation(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	path := acctest.RandomWithPrefix("tf-test-azure")
+	resourceType := "vault_azure_secret_backend"
+	resourceName := resourceType + ".test"
+
+	commonChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldSubscriptionID, "11111111-2222-3333-4444-111111111111"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, "11111111-2222-3333-4444-222222222222"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, "12345678901234567890"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldEnvironment, "AzurePublicCloud"),
+	}
+
+	altChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr(resourceName, consts.FieldSubscriptionID, "11111111-2222-3333-4444-111111111111"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldTenantID, "11111111-2222-3333-4444-222222222222"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldClientID, "11111111-2222-3333-4444-333333333333"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldClientSecret, "12345678901234567890"),
+		resource.TestCheckResourceAttr(resourceName, consts.FieldEnvironment, "AzureChinaCloud"),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfNotEnterprise(t, testProvider.Meta())
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeAzure, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzurePublicCloud", true),
+				Check: resource.ComposeTestCheckFunc(
+					append(
+						commonChecks,
+						getSeamlessRotationCheckFunc(resourceName, true))...,
+				),
+			},
+			// omit seamless_rotation param in next check (should remain true)
+			{
+				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzurePublicCloud"),
+				Check: resource.ComposeTestCheckFunc(
+					append(
+						commonChecks,
+						getSeamlessRotationCheckFunc(resourceName, true))...,
+				),
+			},
+			{
+				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzurePublicCloud", false),
+				Check: resource.ComposeTestCheckFunc(
+					append(
+						commonChecks,
+						getSeamlessRotationCheckFunc(resourceName, false))...,
+				),
+			},
+			// omit seamless_rotation param in next check (should remain false)
+			{
+				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzurePublicCloud"),
+				Check: resource.ComposeTestCheckFunc(
+					append(
+						commonChecks,
+						getSeamlessRotationCheckFunc(resourceName, false))...,
+				),
+			},
+			// re-run with different change while retaining zero value (false)
+			// for seamless_rotation, just to make sure it doesn't get flipped
+			// to the default value (true).
+			{
+				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzureChinaCloud", false),
+				Check: resource.ComposeTestCheckFunc(
+					append(
+						altChecks,
+						getSeamlessRotationCheckFunc(resourceName, false))...,
+				),
+			},
+			// re-enable
+			{
+				Config: testAccAzureSecretBackend_SeamlessRotation(path, "AzureChinaCloud", true),
+				Check: resource.ComposeTestCheckFunc(
+					append(
+						altChecks,
+						getSeamlessRotationCheckFunc(resourceName, true))...,
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldDisableRemount,
+				consts.FieldClientSecret),
+		},
+	})
+}
+
+// testAccAzureSecretBackend_SeamlessRotation generates a new plan. If seamless
+// is not specified, then "seamless_rotation" is omitted from the config.
+func testAccAzureSecretBackend_SeamlessRotation(path string, env string, seamless ...bool) string {
+	var b strings.Builder
+	type attr struct {
+		key string
+		val string
+	}
+
+	attrs := []attr{
+		{"path", strconv.Quote(path)},
+		{"subscription_id", strconv.Quote("11111111-2222-3333-4444-111111111111")},
+		{"tenant_id", strconv.Quote("11111111-2222-3333-4444-222222222222")},
+		{"client_id", strconv.Quote("11111111-2222-3333-4444-333333333333")},
+		{"client_secret", strconv.Quote("12345678901234567890")},
+		{"environment", strconv.Quote(env)},
+		{"disable_remount", strconv.FormatBool(true)},
+	}
+
+	if len(seamless) > 0 {
+		attrs = append(attrs, attr{"seamless_rotation", strconv.FormatBool(seamless[0])})
+	}
+
+	b.WriteString(`resource "vault_azure_secret_backend" "test" {`)
+	for i := range attrs {
+		fmt.Fprintf(&b, "\n  % -20s = %s", attrs[i].key, attrs[i].val)
+	}
+
+	b.WriteString("\n}")
+	return b.String()
+}
+
+func supportsVaultVersion220Ent() bool {
+	return provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion220) &&
+		provider.IsEnterpriseSupported(testProvider.Meta())
+}
+
+// getSeamlessRotationCheckFunc returns a [resource.TestCheckFunc] that checks
+// seamless rotation. If not supported by the current provider, it returns
+// [noopTestCheckFunc].
+func getSeamlessRotationCheckFunc(resourceName string, seamlessRotationEnabled bool) resource.TestCheckFunc {
+	if supportsVaultVersion220Ent() {
+		return resource.TestCheckResourceAttr(
+			resourceName,
+			consts.FieldSeamlessRotation,
+			strconv.FormatBool(seamlessRotationEnabled),
+		)
+	}
+
+	return noopTestCheckFunc
+}
+
+// noopTestCheckFunc always succeeds and never returns an error.
+func noopTestCheckFunc(_ *terraform.State) error { return nil }
