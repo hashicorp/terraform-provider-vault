@@ -217,6 +217,9 @@ IMPROVEMENTS:
   * `google.golang.org/genproto/googleapis/rpc` v0.0.0-20260610212136 -> v0.0.0-20260618152121
   * `k8s.io/utils` v0.0.0-20260319190234 -> v0.0.0-20260617174310
 
+IMPROVEMENTS:
+* `vault_transit_secret_backend_key`: Add crypto agility support. On Vault Enterprise 2.2.0+, changing `type`, `managed_key_name` or `managed_key_id` rotates the key to a new version with the new algorithm instead of replacing the key. Adds the computed `key_usages` attribute and the `aes128-cbc` and `aes256-cbc` key types. On older versions, changing these fields still forces a new resource.
+
 ## 5.9.0 (April 22, 2026)
 
 BREAKING CHANGES:

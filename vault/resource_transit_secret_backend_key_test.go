@@ -501,6 +501,110 @@ func TestTransitSecretBackendKey_managedKey(t *testing.T) {
 		},
 	})
 }
+func TestTransitSecretBackendKey_cryptoAgility(t *testing.T) {
+	backend := acctest.RandomWithPrefix("transit")
+	name := acctest.RandomWithPrefix("key")
+	resourceName := "vault_transit_secret_backend_key.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testTransitSecretBackendKeyConfig_cryptoAgility(name, backend, "ecdsa-p256", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "ecdsa-p256"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLatestVersion, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsages+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSupportsSigning, "true"),
+				),
+			},
+			{
+				// changing the type rotates the key in place rather than replacing it
+				Config: testTransitSecretBackendKeyConfig_cryptoAgility(name, backend, "ml-dsa", `parameter_set = "65"`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "ml-dsa"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLatestVersion, "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSupportsSigning, "true"),
+				),
+			},
+			{
+				// the new type must have the same key_usages as the existing type
+				Config:      testTransitSecretBackendKeyConfig_cryptoAgility(name, backend, "aes256-gcm96", ""),
+				ExpectError: regexp.MustCompile("error changing algorithm"),
+			},
+		},
+	})
+}
+
+func TestTransitSecretBackendKey_cryptoAgilityCBC(t *testing.T) {
+	backend := acctest.RandomWithPrefix("transit")
+	name := acctest.RandomWithPrefix("key")
+	resourceName := "vault_transit_secret_backend_key.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		CheckDestroy: testTransitSecretBackendKeyCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testTransitSecretBackendKeyConfig_cryptoAgility(name, backend, "aes256-cbc", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes256-cbc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLatestVersion, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsages+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsages+".0", "symmetric-encryption"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSupportsEncryption, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSupportsDecryption, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSupportsSigning, "false"),
+				),
+			},
+			{
+				// aes256-cbc and aes128-cbc share the symmetric-encryption usage,
+				// so the key is rotated in place rather than replaced
+				Config: testTransitSecretBackendKeyConfig_cryptoAgility(name, backend, "aes128-cbc", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "aes128-cbc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldLatestVersion, "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyUsages+".0", "symmetric-encryption"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSupportsEncryption, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSupportsDecryption, "true"),
+				),
+			},
+			{
+				// aead-encryption does not match symmetric-encryption
+				Config:      testTransitSecretBackendKeyConfig_cryptoAgility(name, backend, "aes256-gcm96", ""),
+				ExpectError: regexp.MustCompile("incompatible algorithm"),
+			},
+		},
+	})
+}
+
+func testTransitSecretBackendKeyConfig_cryptoAgility(name, path, keyType, extra string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "transit" {
+  path = "%s"
+  type = "transit"
+}
+
+resource "vault_transit_secret_backend_key" "test" {
+  backend          = vault_mount.transit.path
+  name             = "%s"
+  type             = "%s"
+  deletion_allowed = true
+  %s
+}
+`, path, name, keyType, extra)
+}
 
 func testTransitSecretBackendKeyConfig_context(name, path string) string {
 	return fmt.Sprintf(`
