@@ -461,16 +461,23 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		consts.FieldAutoRotatePeriod, consts.FieldContext,
 	}
 
-	if transitCryptoAgilitySupported(meta) {
-		fields = append(fields, consts.FieldKeyUsages)
-	}
-
 	for _, f := range fields {
 		if v, ok := secret.Data[f]; ok {
 			if err := d.Set(f, v); err != nil {
 				return err
 			}
 		}
+	}
+
+	// key_usages is only returned by Vault Enterprise 2.2.0+. It is always
+	// written to state, as an empty list when absent, because a computed
+	// attribute that is never set produces a perpetual diff.
+	keyUsages, ok := secret.Data[consts.FieldKeyUsages]
+	if !ok || keyUsages == nil {
+		keyUsages = []interface{}{}
+	}
+	if err := d.Set(consts.FieldKeyUsages, keyUsages); err != nil {
+		return err
 	}
 
 	// With crypto agility, "type" is the type the key was created with, while
