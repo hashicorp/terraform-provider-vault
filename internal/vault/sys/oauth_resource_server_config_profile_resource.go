@@ -241,9 +241,16 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				MarkdownDescription: "The claim to use for RAR (Rich Authorization Requests) authorization details. Defaults to 'authorization_details'. Requires Vault 2.2.0 or later when set.",
 			},
 			consts.FieldUniqueIDClaim: schema.StringAttribute{
-				Optional:            true,
-				Computed:            true,
-				MarkdownDescription: "The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. Requires Vault 2.2.0 or later.",
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					// Keep the state value when the field is omitted so unrelated
+					// updates do not plan an unknown value and trigger a replace.
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
+				MarkdownDescription: "The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. " +
+					"This field is immutable after creation; changing it forces a new resource. Requires Vault 2.2.0 or later.",
 			},
 			consts.FieldActorClaim: schema.StringAttribute{
 				Optional:            true,
