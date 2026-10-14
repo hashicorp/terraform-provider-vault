@@ -1,4 +1,4 @@
-## 5.13.0 (Unreleased)
+## 5.13.0 (October 14, 2026)
 
 FEATURES:
 
@@ -22,6 +22,32 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * provider: Perform token self-lookup without a namespace header so Vault resolves the token's own namespace. This prevents an unrelated `VAULT_NAMESPACE` from causing provider configuration failures and allows Terraform to recover when a configured namespace has been deleted outside Terraform. The configured provider namespace is still used for resource operations. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
+
+DEPENDENCIES:
+
+  * Build with Go 1.27.2
+  * Bumped 20 Go module dependencies ([#3081](https://github.com/hashicorp/terraform-provider-vault/pull/3081), [#3080](https://github.com/hashicorp/terraform-provider-vault/pull/3080), [#3074](https://github.com/hashicorp/terraform-provider-vault/pull/3074))
+  * `cloud.google.com/go/compute/metadata` v0.9.0 → v0.10.0
+  * `cloud.google.com/go/iam` v1.13.0 → v1.14.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.1 → v1.23.3
+  * `github.com/aws/aws-sdk-go-v2` v1.47.0 → v1.47.3
+  * `github.com/aws/aws-sdk-go-v2/config` v1.33.5 → v1.33.9
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.20.5 → v1.20.9
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.20.0 → v1.20.3
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.64.0 → v1.64.4
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.51.0 → v1.51.4
+  * `github.com/aws/smithy-go` v1.28.1 → v1.28.5
+  * `github.com/hashicorp/go-secure-stdlib/awsutil/v2` v2.1.2 → v2.1.3
+  * `github.com/hashicorp/go-uuid` v1.0.3 → v1.0.4
+  * `github.com/hashicorp/vault/sdk` v0.25.1 → v0.26.0
+  * `github.com/mitchellh/mapstructure` v1.5.0 → v1.5.1-0.20231216201459-8508981c8b6c
+  * `github.com/moby/moby/client` v0.6.0 → v0.6.2
+  * `github.com/spiffe/go-spiffe/v2` v2.8.1 → v2.9.0
+  * `go.uber.org/atomic` v1.11.0 → v1.12.0
+  * `golang.org/x/crypto` v0.57.0 → v0.58.0
+  * `golang.org/x/net` v0.59.0 → v0.61.0
+  * `google.golang.org/api` v0.298.0 → v0.301.0
+
 
 ## 5.12.0 (September 17, 2026)
 
