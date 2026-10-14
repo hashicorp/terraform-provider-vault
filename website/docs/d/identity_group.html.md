@@ -52,7 +52,7 @@ The lookup criteria can be `group_name`, `group_id`, `alias_id`, or a combinatio
 
 ## Required Vault Capabilities
 
-Use of this resource requires the `create` capability on `/identity/lookup/group`.
+Use of this resource requires the `update` capability on `/identity/lookup/group`.
 
 ## Attributes Reference
 
