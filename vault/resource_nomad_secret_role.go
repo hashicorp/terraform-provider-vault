@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 )
@@ -55,6 +56,15 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 			Optional:    true,
 			Computed:    true,
 			Description: `Specifies the type of token to create when using this role. Valid values are "client" or "management".`,
+		},
+		consts.FieldMetadata: {
+			Type:     schema.TypeMap,
+			Optional: true,
+			Computed: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.0.0+.",
 		},
 	}
 	return &schema.Resource{
@@ -109,6 +119,12 @@ func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 	// Policies not supported when role type is 'management'
 	if roleType == "management" && data["policies"] != nil {
 		return fmt.Errorf("error creating role %s: policies should be empty when using management tokens", role)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+			data[consts.FieldMetadata] = v.(map[string]interface{})
+		}
 	}
 
 	log.Printf("[DEBUG] Writing %q", rolePath)
@@ -171,6 +187,14 @@ func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
+			return fmt.Errorf("error setting %s: %s", consts.FieldMetadata, err)
+		}
+	}
+
+
 	return nil
 }
 
@@ -207,6 +231,12 @@ func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 
 	if roleType == "client" && data["policies"] == "" {
 		return fmt.Errorf("error updating role %s: policies are required when role type is 'client'", roleName)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
 	}
 
 	if _, err := client.Logical().Write(rolePath, data); err != nil {
