@@ -92,6 +92,14 @@ func pkiSecretBackendIssuerResource() *schema.Resource {
 				},
 				Description: "Specifies the URL values for the CRL Distribution Points field.",
 			},
+			consts.FieldDeltaCRLDistributionPoints: {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "Specifies the URL values for the Delta CRL Distribution Points field.",
+			},
 			consts.FieldOCSPServers: {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -185,6 +193,10 @@ func pkiSecretBackendIssuerUpdate(ctx context.Context, d *schema.ResourceData, m
 	}
 	configurableFields = appendPkiCertVerifyDisableChecksFields(meta, configurableFields)
 
+	if provider.IsAPISupported(meta, provider.VaultVersion120) {
+		configurableFields = append(configurableFields, consts.FieldDeltaCRLDistributionPoints)
+	}
+
 	var patchRequired bool
 	data := map[string]interface{}{}
 	for _, k := range configurableFields {
@@ -264,6 +276,10 @@ func pkiSecretBackendIssuerRead(ctx context.Context, d *schema.ResourceData, met
 		consts.FieldIssuerID,
 	}
 	fields = appendPkiCertVerifyDisableChecksFields(meta, fields)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion120) {
+		fields = append(fields, consts.FieldDeltaCRLDistributionPoints)
+	}
 
 	for _, k := range fields {
 		if v, ok := resp.Data[k]; ok {
