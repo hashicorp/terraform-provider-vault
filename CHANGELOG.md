@@ -20,6 +20,8 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_key`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_intermediate_cert_request`, `vault_pki_secret_backend_role`: Add support for  `ml-dsa` key type and `parameter_set` field. Requires Vault 2.2.0 or later. ([#3070](https://github.com/hashicorp/terraform-provider-vault/pull/3070))
 
 BUG FIXES:
+* `vault_database_secret_backend_connection`: Updated default value of `max_open_connections` from `2` to `4` to match documentation and Vault's own default for the same feature. ([#3016](https://github.com/hashicorp/terraform-provider-vault/pull/3016))
+
 
 * provider: Perform token self-lookup without a namespace header so Vault resolves the token's own namespace. This prevents an unrelated `VAULT_NAMESPACE` from causing provider configuration failures and allows Terraform to recover when a configured namespace has been deleted outside Terraform. The configured provider namespace is still used for resource operations. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
 
