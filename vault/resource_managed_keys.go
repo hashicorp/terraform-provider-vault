@@ -425,9 +425,9 @@ func managedKeysAzureConfigSchema() schemaMap {
 		consts.FieldEncryptionMode: {
 			Type:     schema.TypeString,
 			Optional: true,
-			Default:  "envelope",
+			Computed: true,
 			Description: "The encryption mode to use for the key. `envelope` uses AES-GCM envelope encryption, " +
-				"`raw` encrypts directly with the KMS key.",
+				"`raw` encrypts directly with the KMS key. If not set, Vault defaults to envelope.",
 			ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"envelope", "raw"}),
 		},
 	}
