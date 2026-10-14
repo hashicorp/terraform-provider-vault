@@ -92,7 +92,7 @@ Terraform will perform the following actions:
     ...
 ```
 
-During `terrform apply` you will see the ephemeral resource is the final resource to be evaluated, because
+During `terraform apply` you will see the ephemeral resource is the final resource to be evaluated, because
 it depends on the two other resources, and the ephemeral resource is not reflected in the statistics
 about how many resources were created during the apply action:
 
