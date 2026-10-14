@@ -158,25 +158,37 @@ func consulSecretBackendResource() *schema.Resource {
 	return r
 }
 
-// getWriteOnlyOrLegacyValue extracts a field value from either write-only or legacy field.
-// It prioritizes write-only fields when the version field is present and has changed (or is new resource).
-// Falls back to legacy field if write-only is not being used.
-func getWriteOnlyOrLegacyValue(d *schema.ResourceData, woField, woVersionField, legacyField string, isNewOrVersionChanged bool) string {
+// getWriteOnlyOrLegacyValue extracts a field value from either the write-only
+// or the legacy field.
+//
+// It returns the write-only value whenever the corresponding *_wo_version field
+// is present in config, falling back to the legacy field otherwise.
+//
+// NOTE: previously this helper also took an `isNewOrVersionChanged` gate so
+// that the WO value was only re-sent on create or when *_wo_version changed.
+// That was incorrect: the auth/<mount>/config-style endpoints used by this
+// resource (`<backend>/config/access`) are full-replace writes — omitting a
+// field clears it server-side. Combined with the fact that the resource's
+// Update path is invoked whenever any field on the resource changes, the old
+// gate caused the WO value to silently disappear from Vault on plans that
+// touched any other field without bumping *_wo_version. The fix is to
+// re-send the WO value whenever it is configured, regardless of whether the
+// version changed. See https://github.com/hashicorp/terraform-provider-vault/issues/2900.
+func getWriteOnlyOrLegacyValue(d *schema.ResourceData, woField, woVersionField, legacyField string) string {
 	var value string
 
-	// Check if using write-only field
-	if isNewOrVersionChanged {
-		if _, ok := d.GetOk(woVersionField); ok {
-			// Using write-only field - get from raw config
-			p := cty.GetAttrPath(woField)
-			woVal, _ := d.GetRawConfigAt(p)
-			if !woVal.IsNull() {
-				value = woVal.AsString()
-			}
+	// Use the write-only field whenever it is set in config (the version field
+	// is required when the WO field is set, so its presence is a reliable
+	// signal that the user opted into the WO variant).
+	if _, ok := d.GetOk(woVersionField); ok {
+		p := cty.GetAttrPath(woField)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			value = woVal.AsString()
 		}
 	}
 
-	// Fall back to legacy field if not using write-only
+	// Fall back to the legacy field if WO is not in use.
 	if value == "" {
 		if v, ok := d.GetOk(legacyField); ok {
 			value = v.(string)
@@ -198,13 +210,11 @@ func consulSecretBackendCreate(ctx context.Context, d *schema.ResourceData, meta
 	caCert := d.Get("ca_cert").(string)
 	clientCert := d.Get("client_cert").(string)
 
-	// Handle token: legacy field or write-only field
-	// Only send the token on create or when the write-only version changes
-	token := getWriteOnlyOrLegacyValue(d, consts.FieldTokenWO, consts.FieldTokenWOVersion, consts.FieldToken, d.IsNewResource() || d.HasChange(consts.FieldTokenWOVersion))
-
-	// Handle client_key: legacy field or write-only field
-	// Only send the client_key on create or when the write-only version changes
-	clientKey := getWriteOnlyOrLegacyValue(d, consts.FieldClientKeyWO, consts.FieldClientKeyWOVersion, consts.FieldClientKey, d.IsNewResource() || d.HasChange(consts.FieldClientKeyWOVersion))
+	// Handle token and client_key: prefer the write-only field when configured,
+	// fall back to the legacy field. The values are always re-sent because the
+	// `<backend>/config/access` endpoint is full-replace.
+	token := getWriteOnlyOrLegacyValue(d, consts.FieldTokenWO, consts.FieldTokenWOVersion, consts.FieldToken)
+	clientKey := getWriteOnlyOrLegacyValue(d, consts.FieldClientKeyWO, consts.FieldClientKeyWOVersion, consts.FieldClientKey)
 
 	configPath := consulSecretBackendConfigPath(path)
 
@@ -308,9 +318,11 @@ func consulSecretBackendUpdate(ctx context.Context, d *schema.ResourceData, meta
 		d.HasChange("client_key") || d.HasChange(consts.FieldClientKeyWOVersion) {
 		log.Printf("[DEBUG] Updating Consul configuration at %q", configPath)
 
-		token := getWriteOnlyOrLegacyValue(d, consts.FieldTokenWO, consts.FieldTokenWOVersion, consts.FieldToken, d.HasChange(consts.FieldTokenWOVersion))
-
-		clientKey := getWriteOnlyOrLegacyValue(d, consts.FieldClientKeyWO, consts.FieldClientKeyWOVersion, consts.FieldClientKey, d.HasChange(consts.FieldClientKeyWOVersion))
+		// Always re-resolve token and client_key on update so the WO value is
+		// re-sent even when *_wo_version did not change. The endpoint is
+		// full-replace, so omitting these fields would clear them in Vault.
+		token := getWriteOnlyOrLegacyValue(d, consts.FieldTokenWO, consts.FieldTokenWOVersion, consts.FieldToken)
+		clientKey := getWriteOnlyOrLegacyValue(d, consts.FieldClientKeyWO, consts.FieldClientKeyWOVersion, consts.FieldClientKey)
 
 		data := map[string]interface{}{
 			"address":     d.Get("address").(string),
