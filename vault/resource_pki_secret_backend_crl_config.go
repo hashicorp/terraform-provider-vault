@@ -44,6 +44,7 @@ func pkiSecretBackendCrlConfigResource() *schema.Resource {
 			"expiry": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 				Description: "Specifies the time until expiration.",
 			},
 			"disable": {

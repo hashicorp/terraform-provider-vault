@@ -143,6 +143,49 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 		)
 	})
 
+	// Regression test: expiry must be persisted to state even when not
+	// explicitly set in the config (server default). Without Computed: true
+	// on the expiry schema attribute, this field was lost from state,
+	// causing updates to fail with "CRL auto-rebuilding grace period must
+	// be strictly shorter than CRL expiry ()".
+	// See: https://github.com/hashicorp/terraform-provider-vault/issues/2869
+	t.Run("testExpiryComputedDefault", func(t *testing.T) {
+		rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
+		resourceName := "vault_pki_secret_backend_crl_config.test"
+
+		steps := []resource.TestStep{
+			{
+				// Step 1: Create without setting expiry; server defaults to 72h.
+				Config: testPkiSecretBackendCrlConfigConfig_noExpiry(rootPath, false),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "expiry", "72h"),
+					resource.TestCheckResourceAttr(resourceName, "disable", "false"),
+					resource.TestCheckResourceAttr(resourceName, "auto_rebuild", "true"),
+				),
+			},
+			{
+				// Step 2: Update another field (disable) without setting expiry.
+				// Before the fix, this would fail because expiry was not in
+				// state and the provider would send an empty value.
+				Config: testPkiSecretBackendCrlConfigConfig_noExpiry(rootPath, true),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "expiry", "72h"),
+					resource.TestCheckResourceAttr(resourceName, "disable", "true"),
+					resource.TestCheckResourceAttr(resourceName, "auto_rebuild", "true"),
+				),
+			},
+		}
+		resource.Test(t, resource.TestCase{
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			PreCheck: func() {
+				testutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion112)
+			},
+			CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+			Steps:        steps,
+		})
+	})
+
 	t.Run("testCrlZeroValues", func(t *testing.T) {
 		rootPath := "pki-root-" + strconv.Itoa(acctest.RandInt())
 		resourceName := "vault_pki_secret_backend_crl_config.test"
@@ -290,6 +333,21 @@ resource "vault_pki_secret_backend_crl_config" "test" {
   max_crl_entries				= "100" // max_crl_entries does not accept 0 as a value
 }
 `, testPkiSecretBackendCrlConfigConfig_base(rootPath), zeroBool, zeroDur)
+}
+
+// testPkiSecretBackendCrlConfigConfig_noExpiry creates a CRL config without
+// setting the expiry field, relying on the server default.
+func testPkiSecretBackendCrlConfigConfig_noExpiry(rootPath string, disable bool) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_pki_secret_backend_crl_config" "test" {
+  backend      = vault_pki_secret_backend_root_cert.test-ca.backend
+  disable      = %t
+  auto_rebuild = true
+  enable_delta = true
+}
+`, testPkiSecretBackendCrlConfigConfig_base(rootPath), disable)
 }
 
 func getCRLConfigZeroChecks(resourceName string, isZeroVal bool) resource.TestCheckFunc {
