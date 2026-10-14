@@ -940,3 +940,33 @@ func TestInt64ValueOrNull(t *testing.T) {
 		})
 	}
 }
+
+func TestDurationDiffSuppress(t *testing.T) {
+	tests := []struct {
+		name string
+		old  string
+		new  string
+		want bool
+	}{
+		{"seconds-vs-duration", "3600", "1h", true},
+		{"duration-vs-seconds", "1h", "3600", true},
+		{"equal-seconds", "700", "700", true},
+		{"compound-duration", "5400", "1h30m", true},
+		{"different", "3600", "2h", false},
+		{"empty-old", "", "1h", false},
+		{"empty-new", "3600", "", false},
+		{"invalid-new", "3600", "an-hour", false},
+		{"zero-components", "1", "0h0m1s", true},
+		{"sub-second-vs-seconds", "1", "1500ms", false},
+		{"duration-strings", "1h", "60m", true},
+		{"sub-second-durations", "100ms", "0.1s", true},
+		{"different-sub-second-durations", "100ms", "200ms", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := DurationDiffSuppress("ttl", tt.old, tt.new, nil); got != tt.want {
+				t.Errorf("DurationDiffSuppress(%q, %q) = %v, want %v", tt.old, tt.new, got, tt.want)
+			}
+		})
+	}
+}

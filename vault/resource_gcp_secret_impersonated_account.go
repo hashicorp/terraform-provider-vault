@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -69,10 +70,12 @@ func gcpSecretImpersonatedAccountResource() *schema.Resource {
 				Description: "Project of the GCP Service Account managed by this impersonated account",
 			},
 			consts.FieldTTL: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Time to live.",
-				Computed:    true,
+				Type:                  schema.TypeString,
+				Optional:              true,
+				Description:           "Time to live.",
+				Computed:              true,
+				DiffSuppressFunc:      util.DurationDiffSuppress,
+				DiffSuppressOnRefresh: true,
 			},
 		},
 	}

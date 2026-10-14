@@ -9,12 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"log"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func pkiSecretBackendConfigAutoTidyResource() *schema.Resource {
@@ -104,35 +103,11 @@ func pkiSecretBackendConfigAutoTidySchema() map[string]*schema.Schema {
 			Computed:              true,
 			Description:           desc,
 			ValidateFunc:          provider.ValidateDuration,
-			DiffSuppressFunc:      pkiSecretBackendConfigAutoTidySuppressDurationDiff,
+			DiffSuppressFunc:      util.DurationDiffSuppress,
 			DiffSuppressOnRefresh: true,
 		}
 	}
 	return ret
-}
-
-// pkiSecretBackendConfigAutoTidySuppressDurationDiff takes care of adjusting for auto-tidy's bad
-// behaviour regarding duration fields. Although the fields can be specified with duration
-// strings (e.g. "1h2m3s"), the value is always returned as the number of seconds. There is
-// one exception: pause_duration.
-func pkiSecretBackendConfigAutoTidySuppressDurationDiff(key, oldValue, newValue string, _ *schema.ResourceData) bool {
-	if _, isDuration := pkiSecretBackendConfigAutoTidyDurationFields[key]; !isDuration {
-		return false
-	}
-	// The old value is what is returned by auto-tidy config. It will be either the empty
-	// string or the number of seconds. In the case of pause_duration which does return
-	// a duration string, Atoi() will fail making this function return false, which is
-	// the correct thing to do since we don't want to suppress the diff in that case.
-	seconds, err := strconv.Atoi(oldValue)
-	if err != nil {
-		return false
-	}
-	// The new value is what we have in the state, which will be a duration string.
-	duration, err := time.ParseDuration(newValue)
-	if err != nil {
-		return false
-	}
-	return seconds == int(duration.Seconds())
 }
 
 func pkiSecretBackendConfigAutoTidyCreateUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
