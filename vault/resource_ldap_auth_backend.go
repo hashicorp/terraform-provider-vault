@@ -321,12 +321,35 @@ func ldapAuthBackendConfigPath(path string) string {
 // approximated by 1.19.16+. That wrongly includes Enterprise 1.20.0-1.20.9 and
 // 1.21.0-1.21.4, where Vault ignores the field with a warning instead.
 func ldapAuthBackendSupportsSchema(meta interface{}) bool {
-	if provider.IsAPISupported(meta, provider.VaultVersion200) {
-		return true
+	p, ok := meta.(*provider.ProviderMeta)
+	if !ok {
+		return false
+	}
+	ver := p.GetVaultVersion()
+	if ver == nil {
+		return false
 	}
 
-	return provider.IsEnterpriseSupported(meta) &&
-		provider.IsAPISupported(meta, provider.VaultVersion11916)
+	// CE and Enterprise.
+	if ver.GreaterThanOrEqual(provider.VaultVersion200) {
+		return true
+	}
+	if !p.IsEnterpriseSupported() {
+		return false
+	}
+
+	// Enterprise backports: 1.19.16+, 1.20.10+, 1.21.5+.
+	// 2.0.0+ already returned above, so >= 1.21.5 covers 1.21.5 through 1.21.x.
+	switch {
+	case ver.GreaterThanOrEqual(provider.VaultVersion1215):
+		return true
+	case ver.GreaterThanOrEqual(provider.VaultVersion12010) && ver.LessThan(provider.VaultVersion121):
+		return true
+	case ver.GreaterThanOrEqual(provider.VaultVersion11916) && ver.LessThan(provider.VaultVersion120):
+		return true
+	default:
+		return false
+	}
 }
 
 func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
