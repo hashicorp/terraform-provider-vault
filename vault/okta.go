@@ -53,11 +53,35 @@ func readOktaUser(client *api.Client, path string, username string) (*oktaUser, 
 	if err != nil {
 		return nil, err
 	}
+	if secret == nil || secret.Data == nil {
+		return nil, fmt.Errorf("okta user not found or data is nil for username: %s", username)
+	}
+
+	var groups []string
+	var policies []string
+
+	if v, ok := secret.Data["groups"]; ok && v != nil {
+		if arr, ok := v.([]interface{}); ok {
+			groups = util.ToStringArray(arr)
+		} else if s, ok := v.(string); ok && s != "" {
+			// Handle case where groups is a comma-separated string
+			groups = strings.Split(s, ",")
+		}
+	}
+
+	if v, ok := secret.Data["policies"]; ok && v != nil {
+		if arr, ok := v.([]interface{}); ok {
+			policies = util.ToStringArray(arr)
+		} else if s, ok := v.(string); ok && s != "" {
+			// Handle case where policies is a comma-separated string
+			policies = strings.Split(s, ",")
+		}
+	}
 
 	return &oktaUser{
 		Username: username,
-		Groups:   util.ToStringArray(secret.Data["groups"].([]interface{})),
-		Policies: util.ToStringArray(secret.Data["policies"].([]interface{})),
+		Groups:   groups,
+		Policies: policies,
 	}, nil
 }
 
