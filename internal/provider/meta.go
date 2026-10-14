@@ -51,6 +51,7 @@ var (
 	VaultVersion1192  = version.Must(version.NewSemver(consts.VaultVersion1192))
 	VaultVersion1194  = version.Must(version.NewSemver(consts.VaultVersion1194))
 	VaultVersion11916 = version.Must(version.NewSemver(consts.VaultVersion11916))
+	VaultVersion12010 = version.Must(version.NewSemver(consts.VaultVersion12010))
 	VaultVersion120   = version.Must(version.NewSemver(consts.VaultVersion120))
 	VaultVersion121   = version.Must(version.NewSemver(consts.VaultVersion121))
 	VaultVersion1215  = version.Must(version.NewSemver(consts.VaultVersion1215))
