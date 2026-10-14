@@ -40,6 +40,12 @@ func versionedSecret(requestedVersion int, path string, client *api.Client) (*ap
 	}
 
 	if v2 && secret != nil {
+		// v2 secret can be deleted
+		if metadata, ok := secret.Data["metadata"].(map[string]interface{}); ok && metadata != nil {
+			if _, deleted := metadata["deletion_time"]; deleted {
+				return nil, nil
+			}
+		}
 		// This is a v2, grab the data field
 		if data, ok := secret.Data["data"]; ok && data != nil {
 			if dataMap, ok := data.(map[string]interface{}); ok {
