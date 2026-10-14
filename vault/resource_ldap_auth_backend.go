@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -22,6 +23,12 @@ import (
 )
 
 const ldapAuthType string = "ldap"
+
+// Supported values for the `schema` field, mirroring ldaputil.SupportedSchemas().
+const (
+	ldapAuthSchemaOpenLDAP = "openldap"
+	ldapAuthSchemaAD       = "ad"
+)
 
 var ldapAuthBackendFields = []string{
 	consts.FieldURL,
@@ -242,6 +249,20 @@ func ldapAuthBackendResource() *schema.Resource {
 			Computed:    true,
 			Description: "Allows anonymous group searches.",
 		},
+		consts.FieldSchema: {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Description: "The LDAP schema to use when storing entry passwords. Valid schemas include openldap and ad.",
+			// Vault stores any value here verbatim, without validating it.
+			ValidateFunc: validation.StringInSlice([]string{
+				ldapAuthSchemaOpenLDAP,
+				ldapAuthSchemaAD,
+			}, true),
+			StateFunc: func(v interface{}) string {
+				return strings.ToLower(strings.TrimSpace(v.(string)))
+			},
+		},
 	}
 
 	addTokenFields(fields, &addTokenFieldsConfig{})
@@ -288,6 +309,43 @@ func ldapAuthBackendResource() *schema.Resource {
 
 func ldapAuthBackendConfigPath(path string) string {
 	return "auth/" + strings.Trim(path, "/") + "/config"
+}
+
+// ldapAuthBackendSupportsSchema reports whether the target Vault exposes the
+// `schema` field on the LDAP auth config:
+//
+//	CE          2.0.0+ only, it never shipped in a 1.x CE release
+//	Enterprise  1.19.16+, 1.20.10+, 1.21.5+, 2.0.0+
+func ldapAuthBackendSupportsSchema(meta interface{}) bool {
+	p, ok := meta.(*provider.ProviderMeta)
+	if !ok {
+		return false
+	}
+	ver := p.GetVaultVersion()
+	if ver == nil {
+		return false
+	}
+
+	// CE and Enterprise.
+	if ver.GreaterThanOrEqual(provider.VaultVersion200) {
+		return true
+	}
+	if !p.IsEnterpriseSupported() {
+		return false
+	}
+
+	// Enterprise backports: 1.19.16+, 1.20.10+, 1.21.5+.
+	// 2.0.0+ already returned above, so >= 1.21.5 covers 1.21.5 through 1.21.x.
+	switch {
+	case ver.GreaterThanOrEqual(provider.VaultVersion1215):
+		return true
+	case ver.GreaterThanOrEqual(provider.VaultVersion12010) && ver.LessThan(provider.VaultVersion121):
+		return true
+	case ver.GreaterThanOrEqual(provider.VaultVersion11916) && ver.LessThan(provider.VaultVersion120):
+		return true
+	default:
+		return false
+	}
 }
 
 func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -356,6 +414,12 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	if useAPIVer119 {
 		if v, ok := d.GetOk(consts.FieldEnableSamaccountnameLogin); ok {
 			data[consts.FieldEnableSamaccountnameLogin] = v
+		}
+	}
+
+	if ldapAuthBackendSupportsSchema(meta) {
+		if v, ok := d.GetOk(consts.FieldSchema); ok {
+			data[consts.FieldSchema] = v
 		}
 	}
 
@@ -509,6 +573,15 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldEnableSamaccountnameLogin, path, err)
 		}
 	}
+
+	if ldapAuthBackendSupportsSchema(meta) {
+		if v, ok := resp.Data[consts.FieldSchema]; ok {
+			if err := d.Set(consts.FieldSchema, v); err != nil {
+				return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldSchema, path, err)
+			}
+		}
+	}
+
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)
 	if useAPIVer119Ent {
 		if err := automatedrotationutil.PopulateAutomatedRotationFields(d, resp, d.Id()); err != nil {
