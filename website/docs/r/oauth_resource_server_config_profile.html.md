@@ -204,6 +204,11 @@ The following arguments are supported:
 
 * `local` - (Optional) When `false`, the profile is written to replicated storage and propagated to all performance secondaries. When set to `true`, the profile remains local to the current cluster and is not replicated. The `local` field cannot be updated on a profile. Requires Vault 2.2.0 or later.
 
+* `unique_id_claim` - (Optional) The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. The `unique_id_claim` field cannot be updated on a profile; changing it forces a new resource. Requires Vault 2.2.0 or later.
+
+* `actor_claim` - (Optional) The JWT claim to use as the actor identifier for delegation and chained-token scenarios (RFC 8693 `act` claim). Requires Vault 2.2.0 or later.
+
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
@@ -235,7 +240,7 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_reso
 
 * **Issuer Uniqueness**: Each issuer ID must be unique within a locality (globally replicated or local to the cluster) and a namespace. You cannot have multiple profiles with the same issuer ID and locality in the same namespace.
 
-* **Field Immutability**: The `profile_name`, `issuer_id`, and `local` cannot be changed after creation. Changing these fields will force a new resource to be created.
+* **Field Immutability**: The `profile_name`, `issuer_id`, `unique_id_claim`, and `local` cannot be changed after creation. Changing these fields will force a new resource to be created.
 
 * **Key ID Uniqueness**: Within a profile, all key IDs must be unique. This applies to both JWKS keys and static PEM keys.
 
