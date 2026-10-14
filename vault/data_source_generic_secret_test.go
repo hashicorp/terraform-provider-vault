@@ -52,6 +52,25 @@ func TestDataSourceGenericSecret_v2(t *testing.T) {
 	})
 }
 
+func TestDataSourceGenericSecret_v2ExplicitPrefix(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-acctest-kv")
+	path := acctest.RandomWithPrefix("foo")
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testDataSourceV2SecretExplicitPrefix_config(mount, path),
+				Check: resource.ComposeTestCheckFunc(
+					testDataSourceGenericSecret_check,
+					resource.TestCheckResourceAttr("data.vault_generic_secret.metadata", "data.current_version", "1"),
+					resource.TestCheckResourceAttrSet("data.vault_generic_secret.metadata", "data.created_time"),
+				),
+			},
+		},
+	})
+}
+
 func testDataSourceV2Secret_config(mount, path string) string {
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
@@ -131,6 +150,37 @@ data "vault_generic_secret" "test" {
     version = 0
 }
 `, mount, path)
+}
+
+func testDataSourceV2SecretExplicitPrefix_config(mount, path string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = "%s"
+  type = "kv"
+  options = {
+    "version" = "2"
+  }
+}
+
+resource "vault_generic_secret" "test" {
+    path = "${vault_mount.test.path}/%s"
+    data_json = <<EOT
+{
+    "zip": "zap"
+}
+EOT
+}
+
+data "vault_generic_secret" "test" {
+    path       = "${vault_mount.test.path}/data/%s"
+    depends_on = [vault_generic_secret.test]
+}
+
+data "vault_generic_secret" "metadata" {
+    path       = "${vault_mount.test.path}/metadata/%s"
+    depends_on = [vault_generic_secret.test]
+}
+`, mount, path, path, path)
 }
 
 var testDataSourceGenericSecret_config = `
