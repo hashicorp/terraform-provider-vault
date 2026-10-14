@@ -51,6 +51,32 @@ func TestAccKVSecretBackendV2(t *testing.T) {
 	})
 }
 
+// Regression test for #3037: the mount name ends in characters that are
+// part of the "/config" suffix, which used to be trimmed as a character set.
+func TestAccKVSecretBackendV2_ImportMountWithConfigChars(t *testing.T) {
+	t.Parallel()
+	resourceName := "vault_kv_secret_backend_v2.test"
+	mount := acctest.RandomWithPrefix("tf-kvv2") + "-acc"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKVSecretBackendV2Config(mount, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestKVV2SecretNameFromPath(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
