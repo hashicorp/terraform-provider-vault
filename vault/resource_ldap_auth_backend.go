@@ -316,10 +316,6 @@ func ldapAuthBackendConfigPath(path string) string {
 //
 //	CE          2.0.0+ only, it never shipped in a 1.x CE release
 //	Enterprise  1.19.16+, 1.20.10+, 1.21.5+, 2.0.0+
-//
-// The Enterprise backports do not fit a single semver range, so they are
-// approximated by 1.19.16+. That wrongly includes Enterprise 1.20.0-1.20.9 and
-// 1.21.0-1.21.4, where Vault ignores the field with a warning instead.
 func ldapAuthBackendSupportsSchema(meta interface{}) bool {
 	p, ok := meta.(*provider.ProviderMeta)
 	if !ok {

@@ -1,3 +1,9 @@
+## 5.14.0 (Unreleased)
+
+FEATURES:
+
+* `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
+
 ## 5.13.0 (October 14, 2026)
 
 FEATURES:
@@ -18,10 +24,6 @@ IMPROVEMENTS:
 * `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
 * `vault_oauth_resource_server_config_profile`: Add support for `authorization_details_claim` field. Requires Vault 2.2.0 or later. ([#3058](https://github.com/hashicorp/terraform-provider-vault/pull/3058))
 * `vault_pki_secret_backend_key`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_intermediate_cert_request`, `vault_pki_secret_backend_role`: Add support for  `ml-dsa` key type and `parameter_set` field. Requires Vault 2.2.0 or later. ([#3070](https://github.com/hashicorp/terraform-provider-vault/pull/3070))
-
-FEATURES:
-
-* `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
 
 BUG FIXES:
 

@@ -219,7 +219,7 @@ func TestLDAPAuthBackend_schema(t *testing.T) {
 		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			if !ldapAuthBackendSupportsSchema(testProvider.Meta()) {
-				t.Skipf("schema requires Vault 2.0.0+, or Vault Enterprise %s+", consts.VaultVersion11916)
+				t.Skip("schema requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+")
 			}
 		},
 		CheckDestroy: testLDAPAuthBackendDestroy,
