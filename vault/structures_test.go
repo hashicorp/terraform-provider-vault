@@ -78,6 +78,32 @@ func TestFlattenAuthMethodTune(t *testing.T) {
 	}
 }
 
+// TestFlattenAuthMethodTune_ZeroTTL tests that FlattenVaultDuration returns ""
+// for zero TTL values, not "0s".
+func TestFlattenAuthMethodTune_ZeroTTL(t *testing.T) {
+	expanded := &api.MountConfigOutput{
+		DefaultLeaseTTL: 0,
+		MaxLeaseTTL:     0,
+		TokenType:       "default-service",
+	}
+
+	actual := flattenAuthMethodTune(expanded)
+
+	expected := map[string]interface{}{
+		"default_lease_ttl":  "",
+		"max_lease_ttl":      "",
+		"listing_visibility": "",
+		"token_type":         "default-service",
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf(
+			"Got:\n\n%#v\n\nExpected:\n\n%#v\n",
+			actual,
+			expected)
+	}
+}
+
 func TestMergeAuthMethodTune(t *testing.T) {
 	type args struct {
 		rawTune map[string]interface{}
