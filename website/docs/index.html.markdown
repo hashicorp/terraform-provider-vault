@@ -304,6 +304,9 @@ The `auth_login_aws` configuration block accepts the following arguments:
 
 * `aws_role_arn` - (Optional) The ARN of the AWS Role to assume. *Used during STS AssumeRole*  
   *Can be specified with the `AWS_ROLE_ARN` environment variable.*
+  For non-web-identity credentials, the provider assumes this role once and uses the
+  returned credentials to sign the Vault login request. The source credentials must
+  be permitted to assume the target role; the target role does not need to trust itself.
 
 * `aws_role_session_name` - (Optional) Specifies the name to attach to the AWS role session. *Used during STS AssumeRole*  
   *Can be specified with the `AWS_ROLE_SESSION_NAME` environment variable.*
