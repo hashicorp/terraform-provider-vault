@@ -10,15 +10,21 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/require"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 )
@@ -236,6 +242,141 @@ func TestAuthLoginAWS_ManualAssumeRoleARN(t *testing.T) {
 			if gotRoleARN != tt.expectManualAssumeRole {
 				t.Fatalf("manualAssumeRoleARN() role ARN = %q, want %q", gotRoleARN, tt.expectManualAssumeRole)
 			}
+		})
+	}
+}
+
+func TestAuthLoginAWS_GetLoginData_AssumeRole(t *testing.T) {
+	const roleARN = "arn:aws:iam::123456789012:role/vault-role"
+	tests := []struct {
+		name        string
+		roleFromEnv bool
+		webIdentity bool
+		noRole      bool
+		denyAssume  bool
+		sessionName string
+	}{
+		{name: "configured-role"},
+		{name: "environment-role", roleFromEnv: true, sessionName: "custom-session"},
+		{name: "web-identity", roleFromEnv: true, webIdentity: true, sessionName: "web-session"},
+		{name: "no-role", noRole: true},
+		{name: "assume-role-denied", denyAssume: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, key := range []string{
+				envVarAWSRoleARN, envVarAWSRoleSessionName, envVarAWSWebIdentityTokenFile,
+				envVarAWSProfile, "AWS_DEFAULT_PROFILE", "AWS_ENDPOINT_URL", "AWS_ENDPOINT_URL_STS", "AWS_CA_BUNDLE",
+			} {
+				t.Setenv(key, "")
+			}
+			dir := t.TempDir()
+			t.Setenv("AWS_CONFIG_FILE", filepath.Join(dir, "config"))
+			t.Setenv(envVarAWSSharedCredentialsFile, filepath.Join(dir, "credentials"))
+			t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
+			t.Setenv(envVarAWSAccessKeyID, "source-access-key")
+			t.Setenv(envVarAWSSecretAccessKey, "source-secret-key")
+			t.Setenv(envVarAWSSessionToken, "source-session-token")
+
+			action := "AssumeRole"
+			sessionName := tt.sessionName
+			if sessionName == "" {
+				sessionName = "vault-provider-session"
+			}
+			if tt.webIdentity {
+				action = "AssumeRoleWithWebIdentity"
+				for _, key := range []string{envVarAWSAccessKeyID, envVarAWSSecretAccessKey, envVarAWSSessionToken} {
+					t.Setenv(key, "")
+				}
+				tokenFile := filepath.Join(dir, "token")
+				require.NoError(t, os.WriteFile(tokenFile, []byte("test-web-identity-token"), 0600))
+				t.Setenv(envVarAWSWebIdentityTokenFile, tokenFile)
+			}
+
+			var calls atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				call := calls.Add(1)
+				if err := r.ParseForm(); err != nil {
+					t.Errorf("parse STS request: %v", err)
+					http.Error(w, "invalid request", http.StatusBadRequest)
+					return
+				}
+				for key, want := range map[string]string{
+					"Action": action, "RoleArn": roleARN, "RoleSessionName": sessionName,
+				} {
+					if got := r.Form.Get(key); got != want {
+						t.Errorf("STS %s = %q, want %q", key, got, want)
+					}
+				}
+				if tt.webIdentity {
+					if got := r.Form.Get("WebIdentityToken"); got != "test-web-identity-token" {
+						t.Errorf("WebIdentityToken = %q", got)
+					}
+				} else if !strings.Contains(r.Header.Get("Authorization"), "Credential=source-access-key/") {
+					t.Errorf("STS request was not signed with source credentials: %s", r.Header.Get("Authorization"))
+				}
+				w.Header().Set("Content-Type", "text/xml")
+				// Reject a second assumption, just as a role without self-trust does.
+				if call > 1 || tt.denyAssume {
+					w.WriteHeader(http.StatusForbidden)
+					fmt.Fprint(w, `<ErrorResponse><Error><Code>AccessDenied</Code><Message>role assumption denied</Message></Error></ErrorResponse>`)
+					return
+				}
+				fmt.Fprintf(w, `<%[1]sResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/"><%[1]sResult><Credentials><AccessKeyId>assumed-access-key</AccessKeyId><SecretAccessKey>assumed-secret-key</SecretAccessKey><SessionToken>assumed-session-token</SessionToken><Expiration>%[2]s</Expiration></Credentials></%[1]sResult></%[1]sResponse>`, action, time.Now().Add(time.Hour).UTC().Format(time.RFC3339))
+			}))
+			defer server.Close()
+
+			params := map[string]interface{}{
+				consts.FieldRole:           "test-role",
+				consts.FieldAWSRegion:      "eu-central-1",
+				consts.FieldAWSSTSEndpoint: server.URL,
+				consts.FieldHeaderValue:    "vault.example.com",
+			}
+			if tt.roleFromEnv {
+				t.Setenv(envVarAWSRoleARN, roleARN)
+			} else if !tt.noRole {
+				params[consts.FieldAWSRoleARN] = roleARN
+			}
+			if tt.sessionName != "" {
+				params[consts.FieldAWSRoleSessionName] = tt.sessionName
+			}
+			if tt.webIdentity {
+				// The SDK's web identity provider constructs its own STS client.
+				t.Setenv("AWS_ENDPOINT_URL_STS", server.URL)
+			}
+			d := schema.TestResourceDataRaw(t, map[string]*schema.Schema{
+				consts.FieldAuthLoginAWS: GetAWSLoginSchema(consts.FieldAuthLoginAWS),
+			}, map[string]interface{}{
+				consts.FieldAuthLoginAWS: []interface{}{params},
+			})
+			login := &AuthLoginAWS{}
+			_, err := login.Init(d, consts.FieldAuthLoginAWS)
+			require.NoError(t, err)
+
+			data, err := login.getLoginData(context.Background(), hclog.NewNullLogger())
+			if tt.denyAssume {
+				require.ErrorContains(t, err, "AccessDenied")
+				require.Nil(t, data)
+				require.Equal(t, int32(1), calls.Load())
+				return
+			}
+			require.NoError(t, err)
+			wantCalls := int32(1)
+			accessKey, sessionToken := "assumed-access-key", "assumed-session-token"
+			if tt.noRole {
+				wantCalls = 0
+				accessKey, sessionToken = "source-access-key", "source-session-token"
+			}
+			require.Equal(t, wantCalls, calls.Load())
+			headers := decodeAWSLoginHeaders(t, data)
+			require.Contains(t, headers.Get("Authorization"), "Credential="+accessKey+"/")
+			require.Contains(t, headers.Get("Authorization"), "/eu-central-1/sts/aws4_request")
+			require.Equal(t, sessionToken, headers.Get("X-Amz-Security-Token"))
+			require.Equal(t, "vault.example.com", headers.Get("X-Vault-AWS-IAM-Server-ID"))
+			requestURL, err := base64.StdEncoding.DecodeString(data[consts.FieldIAMRequestURL].(string))
+			require.NoError(t, err)
+			require.Equal(t, server.URL, string(requestURL))
 		})
 	}
 }

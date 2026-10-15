@@ -1,3 +1,9 @@
+## Unreleased
+
+BUG FIXES:
+
+* provider: Fix `auth_login_aws` attempting to assume the same IAM role twice when `aws_role_arn` is configured or supplied through `AWS_ROLE_ARN` with non-web-identity credentials. ([#3085](https://github.com/hashicorp/terraform-provider-vault/issues/3085))
+
 ## 5.13.0 (October 14, 2026)
 
 FEATURES:

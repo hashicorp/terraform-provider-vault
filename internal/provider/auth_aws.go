@@ -361,19 +361,20 @@ func (l *AuthLoginAWS) getLoginData(ctx context.Context, logger hclog.Logger) (m
 		return nil, err
 	}
 
+	roleARN, assumeRole := l.manualAssumeRoleARN()
+	if assumeRole {
+		// awsutil also assumes RoleARN when resolving credentials. Resolve only
+		// the source credentials here so the explicit AssumeRole below runs once.
+		// Keep RoleARN for web identity flows, which the credential chain handles.
+		config.RoleARN = ""
+	}
+
 	awsConfig, err := config.GenerateCredentialChain(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if we need to assume a role
-	var roleARN string
-	if manualAssumeRoleARN, ok := l.manualAssumeRoleARN(); ok {
-		// The credential chain can already resolve web identity and other ambient
-		// credentials. We only do a second, explicit AssumeRole when the helper
-		// above determines it is safe and intended.
-		roleARN = manualAssumeRoleARN
-
+	if assumeRole {
 		// Create STS client with base credentials and custom endpoint if configured
 		var stsOpts []func(*sts.Options)
 		if v, ok := l.params[consts.FieldAWSSTSEndpoint].(string); ok && v != "" {
