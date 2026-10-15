@@ -147,6 +147,8 @@ The following arguments are supported:
 
 * `namespace_in_state` - (Optional) Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the OIDC provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs
 
+* `unsupported_critical_cert_extensions` - (Optional) A list of ASN1 OIDs of certificate extensions marked Critical that are unsupported by Vault and should be ignored. This option should very rarely be needed except in specialized PKI environments.
+
 * tune - (Optional) Extra configuration block. Structure is documented below.
 
 The `tune` block is used to tune the auth backend:

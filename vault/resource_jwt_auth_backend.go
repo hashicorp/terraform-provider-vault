@@ -192,6 +192,13 @@ func jwtAuthBackendResource() *schema.Resource {
 				Description: "Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the OIDC provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs.",
 			},
 
+			consts.FieldUnsupportedCriticalCertExtensions: {
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
+				Description: "A list of ASN1 OIDs of certificate extensions marked Critical that are unsupported by Vault and should be ignored. This option should very rarely be needed except in specialized PKI environments.",
+			},
+
 			"tune": authMountTuneSchema(),
 		},
 	}, false)
@@ -239,6 +246,7 @@ var matchingJwtMountConfigOptions = []string{
 	consts.FieldDefaultRole,
 	consts.FieldProviderConfig,
 	consts.FieldNamespaceInState,
+	consts.FieldUnsupportedCriticalCertExtensions,
 }
 
 func jwtAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
