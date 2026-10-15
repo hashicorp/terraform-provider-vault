@@ -5,12 +5,14 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -164,6 +166,16 @@ func ldapAuthBackendResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 		},
+		consts.FieldSchema: {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Computed:     true,
+			ValidateFunc: validation.StringInSlice([]string{"openldap", "ad"}, true),
+			StateFunc: func(v interface{}) string {
+				return strings.ToLower(strings.TrimSpace(v.(string)))
+			},
+			Description: "The LDAP schema to use when storing entry passwords. Valid values are 'openldap' and 'ad'. Requires Vault Enterprise 1.19.16+, 1.20.10+, 1.21.5+, or Vault 2.0.0+.",
+		},
 		consts.FieldUsernameAsAlias: {
 			Type:        schema.TypeBool,
 			Optional:    true,
@@ -264,6 +276,12 @@ func ldapAuthBackendResource() *schema.Resource {
 			StateContext: schema.ImportStatePassthroughContext,
 		},
 		CustomizeDiff: schema.CustomizeDiffFunc(func(ctx context.Context, diff *schema.ResourceDiff, meta interface{}) error {
+			// Vault silently ignores schema on versions that do not support it.
+			schemaValue := diff.GetRawConfig().GetAttr(consts.FieldSchema)
+			if schemaValue.IsKnown() && !schemaValue.IsNull() && !ldapAuthBackendSupportsSchema(meta) {
+				return fmt.Errorf("the %q argument requires Vault Enterprise 1.19.16+, 1.20.10+, 1.21.5+, or Vault 2.0.0+", consts.FieldSchema)
+			}
+
 			// Handle deny_null_bind default behavior
 			rawConfig := diff.GetRawConfig()
 			configValue := rawConfig.GetAttr(consts.FieldDenyNullBind)
@@ -288,6 +306,19 @@ func ldapAuthBackendResource() *schema.Resource {
 
 func ldapAuthBackendConfigPath(path string) string {
 	return "auth/" + strings.Trim(path, "/") + "/config"
+}
+
+func ldapAuthBackendSupportsSchema(meta interface{}) bool {
+	if provider.IsAPISupported(meta, provider.VaultVersion200) {
+		return true
+	}
+	if !provider.IsEnterpriseSupported(meta) {
+		return false
+	}
+
+	return (provider.IsAPISupported(meta, provider.VaultVersion11916) && !provider.IsAPISupported(meta, provider.VaultVersion120)) ||
+		(provider.IsAPISupported(meta, provider.VaultVersion12010) && !provider.IsAPISupported(meta, provider.VaultVersion121)) ||
+		provider.IsAPISupported(meta, provider.VaultVersion1215)
 }
 
 func ldapAuthBackendWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -356,6 +387,12 @@ func ldapAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta int
 	if useAPIVer119 {
 		if v, ok := d.GetOk(consts.FieldEnableSamaccountnameLogin); ok {
 			data[consts.FieldEnableSamaccountnameLogin] = v
+		}
+	}
+
+	if ldapAuthBackendSupportsSchema(meta) {
+		if v, ok := d.GetOk(consts.FieldSchema); ok {
+			data[consts.FieldSchema] = v.(string)
 		}
 	}
 
@@ -489,6 +526,13 @@ func ldapAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	if useAPIVer119 {
 		if err := d.Set(consts.FieldEnableSamaccountnameLogin, resp.Data[consts.FieldEnableSamaccountnameLogin]); err != nil {
 			return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldEnableSamaccountnameLogin, path, err)
+		}
+	}
+	if ldapAuthBackendSupportsSchema(meta) {
+		if v, ok := resp.Data[consts.FieldSchema]; ok {
+			if err := d.Set(consts.FieldSchema, v); err != nil {
+				return diag.Errorf("error reading %s for LDAP Auth Backend %q: %q", consts.FieldSchema, path, err)
+			}
 		}
 	}
 	useAPIVer119Ent := provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta)

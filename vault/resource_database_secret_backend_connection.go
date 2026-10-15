@@ -1116,7 +1116,9 @@ func getDatabaseAPIDataForEngine(engine *dbEngine, idx int, d *schema.ResourceDa
 	case dbEngineOracle:
 		setOracleDatabaseConnectionData(d, prefix, data)
 	case dbEnginePostgres:
-		setPostgresDatabaseConnectionData(d, prefix, data, meta)
+		if err := setPostgresDatabaseConnectionData(d, prefix, data, meta); err != nil {
+			return nil, err
+		}
 	case dbEngineElasticSearch:
 		setElasticsearchDatabaseConnectionData(d, prefix, data)
 	case dbEngineRedis:
@@ -1769,7 +1771,7 @@ func setMongoDBDatabaseConnectionData(d *schema.ResourceData, prefix string, dat
 	}
 }
 
-func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) {
+func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}, meta interface{}) error {
 	setDatabaseConnectionDataWithDisableEscaping(d, prefix, data)
 	setCloudDatabaseConnectionData(d, prefix, data, meta)
 
@@ -1793,9 +1795,20 @@ func setPostgresDatabaseConnectionData(d *schema.ResourceData, prefix string, da
 
 	if provider.IsAPISupported(meta, provider.VaultVersion118) && provider.IsEnterpriseSupported(meta) {
 		if v, ok := d.GetOk(prefix + "self_managed"); ok {
-			data["self_managed"] = v.(bool)
+			// originally we assumed a bool, but older versions of the API have
+			// occasionally returned a string value which would cause a panic
+			// when asserting with v.(bool).  Convert defensively and return an
+			// error rather than panicking so callers can propagate failure.
+			switch val := v.(type) {
+			case bool:
+				data["self_managed"] = val
+			default:
+				return fmt.Errorf("unexpected type for %sself_managed: %T", prefix, v)
+			}
 		}
 	}
+
+	return nil
 }
 
 func setRedisDatabaseConnectionData(d *schema.ResourceData, prefix string, data map[string]interface{}) {

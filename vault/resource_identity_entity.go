@@ -129,21 +129,37 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 	if err != nil {
 		return fmt.Errorf("error writing IdentityEntity to %q: %s", name, err)
 	}
+	log.Printf("[DEBUG] Wrote IdentityEntity %q", name)
 
-	if resp == nil {
-		path := identityEntityNamePath(name)
-		entityMsg := "Unable to determine entity id."
-
-		if entity, err := client.Logical().Read(path); err == nil {
-			entityMsg = fmt.Sprintf("Entity resource ID %q may be imported.", entity.Data["id"])
+	// Safe extraction of the entity ID from the response.
+	// Vault returns resp.Data == nil when the entity already existed (upsert
+	// path), so a direct type assertion would panic.
+	var entityID string
+	if resp != nil && resp.Data != nil {
+		if id, ok := resp.Data["id"].(string); ok {
+			entityID = id
 		}
-
-		return fmt.Errorf("Identity Entity %q already exists. %s", name, entityMsg)
-	} else {
-		log.Printf("[DEBUG] Wrote IdentityEntity %q", name)
 	}
 
-	d.SetId(resp.Data["id"].(string))
+	if entityID == "" {
+		// Entity already existed; Vault returned an empty update response.
+		// Look it up by name to obtain the canonical ID.
+		namePath := identityEntityNamePath(name)
+		entitySecret, err := client.Logical().Read(namePath)
+		if err != nil {
+			return fmt.Errorf("error reading IdentityEntity %q after creation: %s", name, err)
+		}
+		if entitySecret == nil || entitySecret.Data == nil {
+			return fmt.Errorf("unable to retrieve entity ID for %q after creation", name)
+		}
+		id, ok := entitySecret.Data["id"].(string)
+		if !ok || id == "" {
+			return fmt.Errorf("unexpected entity ID type for %q", name)
+		}
+		entityID = id
+	}
+
+	d.SetId(entityID)
 
 	return identityEntityRead(d, meta)
 }
