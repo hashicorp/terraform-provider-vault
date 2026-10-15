@@ -4,7 +4,6 @@
 package vault
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -100,26 +99,8 @@ func transitSecretBackendKeyVersionDataSourceRead(d *schema.ResourceData, meta i
 	name := d.Get(consts.FieldName).(string)
 	version := d.Get(consts.FieldVersion).(int)
 
-	keyPath := transitSecretBackendKeyPath(backend, name)
-
-	// The server does not return the latest version for version 0, so look the
-	// latest version up from the key itself.
-	if version == 0 {
-		key, err := client.Logical().Read(keyPath)
-		if err != nil {
-			return fmt.Errorf("error reading transit key %q: %w", keyPath, err)
-		}
-		if key == nil || key.Data == nil {
-			return fmt.Errorf("no transit key found at %q", keyPath)
-		}
-		latest, err := key.Data[consts.FieldLatestVersion].(json.Number).Int64()
-		if err != nil {
-			return fmt.Errorf("expected %s %q to be a number, and it isn't", consts.FieldLatestVersion, key.Data[consts.FieldLatestVersion])
-		}
-		version = int(latest)
-	}
-
-	path := fmt.Sprintf("%s/versions/%d", keyPath, version)
+	// The server reads the latest version when the version is 0.
+	path := fmt.Sprintf("%s/versions/%d", transitSecretBackendKeyPath(backend, name), version)
 
 	log.Printf("[DEBUG] Reading transit key version from %q", path)
 	secret, err := client.Logical().Read(path)

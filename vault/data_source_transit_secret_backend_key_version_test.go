@@ -173,7 +173,7 @@ data "vault_transit_secret_backend_key_version" "nokey" {
   depends_on = [vault_mount.transit]
 }
 `, backend, name),
-				ExpectError: regexp.MustCompile("no transit key found"),
+				ExpectError: regexp.MustCompile("no transit key version found"),
 			},
 		},
 	})
@@ -204,7 +204,8 @@ data "vault_transit_secret_backend_key_version" "v%[1]d" {
 }
 
 // fakeTransitKeyVersionServer records the requests made to a fake Vault that
-// serves a transit key with the given latest version.
+// serves a transit key with the given latest version. Like Vault, it serves the
+// latest version when version 0 is requested.
 type fakeTransitKeyVersionServer struct {
 	mu       sync.Mutex
 	requests []string
@@ -236,15 +237,14 @@ func newFakeTransitKeyVersionMeta(t *testing.T, latest int, vaultVersion string)
 
 		const keyPath = "/v1/transit/keys/my-key"
 		switch {
-		case r.URL.Path == keyPath:
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"data": map[string]interface{}{"name": "my-key", "latest_version": latest},
-			})
 		case strings.HasPrefix(r.URL.Path, keyPath+"/versions/"):
 			var v int
-			if _, err := fmt.Sscanf(strings.TrimPrefix(r.URL.Path, keyPath+"/versions/"), "%d", &v); err != nil || v < 1 || v > latest {
+			if _, err := fmt.Sscanf(strings.TrimPrefix(r.URL.Path, keyPath+"/versions/"), "%d", &v); err != nil || v < 0 || v > latest {
 				notFound()
 				return
+			}
+			if v == 0 {
+				v = latest
 			}
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"data": map[string]interface{}{
@@ -313,9 +313,8 @@ func versionRequests(paths []string) []string {
 	return out
 }
 
-// With no version set, the server cannot be asked for the "latest" version
-// (it treats version 0 as version 1), so the data source must look up
-// latest_version on the key and then read that version.
+// With no version set, version 0 is requested and the server returns the latest
+// version.
 func TestTransitSecretBackendKeyVersionRead_unsetVersionReadsLatest(t *testing.T) {
 	meta, fake := newFakeTransitKeyVersionMeta(t, 3, "2.2.0+ent")
 
@@ -330,13 +329,12 @@ func TestTransitSecretBackendKeyVersionRead_unsetVersionReadsLatest(t *testing.T
 	if got := d.Get(consts.FieldType).(string); got != "type-3" {
 		t.Errorf("expected type %q, got %q", "type-3", got)
 	}
-	if want := "transit/keys/my-key/versions/3"; d.Id() != want {
+	if want := "transit/keys/my-key/versions/0"; d.Id() != want {
 		t.Errorf("expected id %q, got %q", want, d.Id())
 	}
 
-	// the key is read first to find the latest version, then that version
 	got := versionRequests(fake.paths())
-	want := []string{"", "/versions/3"}
+	want := []string{"/versions/0"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("expected requests %q, got %q", want, got)
 	}
@@ -354,13 +352,12 @@ func TestTransitSecretBackendKeyVersionRead_zeroVersionReadsLatest(t *testing.T)
 	if got := d.Get(consts.FieldVersion).(int); got != 4 {
 		t.Errorf("expected version 4, got %d", got)
 	}
-	if got := versionRequests(fake.paths()); strings.Join(got, ",") != ",/versions/4" {
-		t.Errorf("expected the key and then version 4 to be read, got %q", got)
+	if got := versionRequests(fake.paths()); strings.Join(got, ",") != "/versions/0" {
+		t.Errorf("expected only version 0 to be requested, got %q", got)
 	}
 }
 
-// An explicit version must be read as is, without looking up the latest
-// version, including when it is not the latest.
+// An explicit version must be read as is, including when it is not the latest.
 func TestTransitSecretBackendKeyVersionRead_explicitVersion(t *testing.T) {
 	meta, fake := newFakeTransitKeyVersionMeta(t, 3, "2.2.0+ent")
 
@@ -392,21 +389,15 @@ func TestTransitSecretBackendKeyVersionRead_versionNotFound(t *testing.T) {
 }
 
 func TestTransitSecretBackendKeyVersionRead_keyNotFound(t *testing.T) {
-	meta, fake := newFakeTransitKeyVersionMeta(t, 2, "2.2.0+ent")
+	meta, _ := newFakeTransitKeyVersionMeta(t, 2, "2.2.0+ent")
 
 	d := transitSecretBackendKeyVersionDataSource().TestResourceData()
 	_ = d.Set(consts.FieldBackend, "transit")
 	_ = d.Set(consts.FieldName, "other-key")
 
 	err := transitSecretBackendKeyVersionDataSourceRead(d, meta)
-	if err == nil || !strings.Contains(err.Error(), "no transit key found") {
-		t.Fatalf("expected a key not found error, got: %v", err)
-	}
-	// the latest version cannot be determined, so no version is requested
-	for _, p := range fake.paths() {
-		if strings.Contains(p, "/versions/") {
-			t.Errorf("expected no version to be requested, got %q", p)
-		}
+	if err == nil || !strings.Contains(err.Error(), "no transit key version found") {
+		t.Fatalf("expected a not found error, got: %v", err)
 	}
 }
 
