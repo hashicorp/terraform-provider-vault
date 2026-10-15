@@ -42,6 +42,43 @@ const testDefaultDatabaseSecretBackendResource = "vault_database_secret_backend_
 // Currently we have to configure the Vault server with a plugin_directory,
 // copy/build a db plugin and install it with a unique name, then register it in vault.
 
+func Test_setPostgresDatabaseConnectionData_stringSelfManaged(t *testing.T) {
+	// The helper should return an error rather than panic when the value for
+	// "self_managed" is unexpectedly a string.  This mirrors a bug where
+	// earlier Vault versions returned string values from the API.
+	resourceSchema := &schema.Resource{
+		Schema: map[string]*schema.Schema{
+			"postgresql": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"self_managed": {
+							Type:     schema.TypeBool,
+							Optional: true,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	raw := map[string]interface{}{
+		"postgresql": []interface{}{
+			map[string]interface{}{
+				"self_managed": "true", // wrong type
+			},
+		},
+	}
+	d := schema.TestResourceDataRaw(t, resourceSchema, raw)
+	data := make(map[string]interface{})
+	err := setPostgresDatabaseConnectionData(d, "postgresql.0.", data, nil)
+	if err == nil {
+		t.Fatalf("expected error when self_managed is string")
+	}
+}
+
+
 func TestAccDatabaseSecretBackendConnection_postgresql_import(t *testing.T) {
 	MaybeSkipDBTests(t, dbEnginePostgres)
 
@@ -1240,6 +1277,45 @@ func TestAccDatabaseSecretBackendConnection_postgresql_rootlessConfig(t *testing
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, ""),
+		},
+	})
+}
+
+// Validate that a string value for self_managed leads to a sensible error
+// instead of a panic. We supply the value via interpolation so that Terraform
+// treats it as a string.
+func TestAccDatabaseSecretBackendConnection_postgresql_selfManagedStringType(t *testing.T) {
+	resourceName := "vault_database_secret_backend_connection.test"
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+
+  postgresql {
+    connection_url = "postgresql://{{username}}:{{password}}@localhost:5432/postgres?sslmode=verify-full"
+    self_managed   = "${true}"
+  }
+}
+`, backend, name),
+				ExpectError: regexp.MustCompile(`unexpected type.*self_managed`),
+			},
 		},
 	})
 }

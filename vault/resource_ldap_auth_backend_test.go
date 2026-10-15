@@ -67,6 +67,9 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 					if provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
 						checks = append(checks, resource.TestCheckResourceAttr(resourceName, "enable_samaccountname_login", "false"))
 					}
+					if ldapAuthBackendSupportsSchema(testProvider.Meta()) {
+						checks = append(checks, resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "openldap"))
+					}
 
 					return resource.ComposeTestCheckFunc(checks...)(s)
 				},
@@ -106,6 +109,51 @@ func TestLDAPAuthBackend_basic(t *testing.T) {
 			testutil.GetImportTestStep(resourceName, false, nil, "bindpass", "disable_remount", "enable_samaccountname_login"),
 		},
 	})
+}
+
+func TestLDAPAuthBackend_schema(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-ldap-schema")
+	resourceName := "vault_ldap_auth_backend.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testLDAPAuthBackendDestroy,
+		Steps: []resource.TestStep{
+			{
+				SkipFunc: func() (bool, error) {
+					return !ldapAuthBackendSupportsSchema(testProvider.Meta()), nil
+				},
+				Config: fmt.Sprintf(`
+resource "vault_ldap_auth_backend" "test" {
+	path   = %q
+	url    = "ldaps://ldap.example.com"
+	schema = "AD"
+}
+`, path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "ad"),
+					testLDAPAuthBackendCheck_attrs(resourceName, path),
+				),
+			},
+		},
+	})
+}
+
+func TestLDAPAuthBackendSchemaValidation(t *testing.T) {
+	field := ldapAuthBackendResource().Schema[consts.FieldSchema]
+	for _, value := range []string{"openldap", "ad", "AD"} {
+		if _, errors := field.ValidateFunc(value, consts.FieldSchema); len(errors) > 0 {
+			t.Errorf("schema %q should be valid: %v", value, errors)
+		}
+	}
+	if _, errors := field.ValidateFunc("invalid", consts.FieldSchema); len(errors) == 0 {
+		t.Error("invalid schema should fail validation")
+	}
+	if got := field.StateFunc("AD"); got != "ad" {
+		t.Errorf("schema StateFunc() = %q, want %q", got, "ad")
+	}
 }
 
 func TestLDAPAuthBackend_tls(t *testing.T) {
@@ -587,6 +635,9 @@ func testLDAPAuthBackendCheck_attrs(resourceName string, name string) resource.T
 		isVaultVersion119 := provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119)
 		if isVaultVersion119 {
 			attrs["enable_samaccountname_login"] = "enable_samaccountname_login"
+		}
+		if ldapAuthBackendSupportsSchema(testProvider.Meta()) {
+			attrs[consts.FieldSchema] = consts.FieldSchema
 		}
 
 		if provider.IsEnterpriseSupported(testProvider.Meta()) && provider.IsAPISupported(testProvider.Meta(), provider.VaultVersion119) {
