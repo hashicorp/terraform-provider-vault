@@ -22,6 +22,7 @@ resource "vault_ldap_auth_backend" "ldap" {
     discoverdn        = false
     groupdn           = "OU=Groups,DC=example,DC=org"
     groupfilter       = "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
+    schema            = "ad"
     rotation_schedule = "0 * * * SAT"
     rotation_window   = 3600
     request_timeout               = 30
@@ -84,6 +85,8 @@ The following arguments are supported:
 * `groupdn` - (Optional) Base DN under which to perform group search
 
 * `groupattr` - (Optional) LDAP attribute to follow on objects returned by groupfilter
+
+* `schema` - (Optional) LDAP schema used when storing entry passwords. Valid values are `openldap` (the Vault default) and `ad`. Set this to `ad` when using Active Directory; it also selects the password format used by `rotate-root`. Requires Vault Enterprise 1.19.16+, 1.20.10+, 1.21.5+, or Vault 2.0.0+.
 
 * `username_as_alias` - (Optional) Force the auth method to use the username passed by the user as the alias name.
 
