@@ -94,6 +94,21 @@ resource "vault_jwt_auth_backend" "okta" {
 }
 ```
 
+Configuring the auth backend with custom/unsupported critical certificate extensions:
+
+```hcl
+resource "vault_jwt_auth_backend" "example" {
+    description                          = "OIDC backend in custom PKI environment"
+    path                                 = "oidc"
+    type                                 = "oidc"
+    oidc_discovery_url                   = "https://custom-idp.example.com"
+    oidc_client_id                       = "1234567890"
+    oidc_client_secret                   = "secret123456"
+    bound_issuer                         = "https://custom-idp.example.com"
+    unsupported_critical_cert_extensions = ["1.3.6.1.4.1.55813.1.2.1", "2.5.29.15"]
+}
+```
+
 
 ## Argument Reference
 
