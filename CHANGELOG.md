@@ -1,3 +1,9 @@
+## Unreleased
+
+FEATURES:
+
+* **New Resource**: `vault_auth_tune` manages tune settings on an existing auth mount, including `listing_visibility` and `user_lockout_config`, without a `tune` block on the auth method resource. ([#3089](https://github.com/hashicorp/terraform-provider-vault/pull/3089))
+
 ## 5.13.0 (October 14, 2026)
 
 FEATURES:
