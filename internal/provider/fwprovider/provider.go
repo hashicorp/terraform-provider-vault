@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
 	tpmauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/tpm"
+	authtune "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/tune"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
 	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/identity"
@@ -251,6 +252,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		cloudfoundry.NewCFAuthBackendConfigResource,
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		userpass.NewUserpassAuthUserResource,
+		authtune.NewAuthTuneResource,
 		spiffesec.NewSpiffeSecretBackendConfigResource,
 		spiffesec.NewSpiffeSecretBackendRoleResource,
 		radius.NewRadiusAuthBackendConfigResource,
