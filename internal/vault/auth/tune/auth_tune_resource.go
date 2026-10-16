@@ -128,11 +128,9 @@ func (r *authTuneResource) Metadata(_ context.Context, req resource.MetadataRequ
 
 func (r *authTuneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Tunes an existing auth mount without managing the mount itself. " +
-			"Create this resource only when a tune setting is needed. Arguments left unset are not sent to Vault and are not stored from the tune API, so Vault defaults do not appear in plans. " +
-			"Removing an argument clears that setting. Destroying the resource clears every setting it managed. " +
-			"Changing `path` replaces this resource and does not move the auth mount. " +
-			"Do not combine this resource with a `tune` block on the auth method resource that manages the same mount.",
+		MarkdownDescription: "Manages tune settings on an existing auth mount. " +
+			"Removing an argument resets that setting to Vault's default, and destroying the resource resets every setting it manages. " +
+			"Do not use with a `tune` block on the auth method resource for the same mount.",
 		Attributes: map[string]schema.Attribute{
 			consts.FieldPath: schema.StringAttribute{
 				Required: true,
@@ -169,7 +167,7 @@ func (r *authTuneResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.String{
 					stringvalidator.OneOf("unauth", "hidden"),
 				},
-				MarkdownDescription: "Whether to show this mount in the UI listing endpoint. Valid values are `unauth` and `hidden`.",
+				MarkdownDescription: "Whether to show this mount in the UI listing endpoint. `unauth` shows the method on the UI login page; `hidden` hides it.",
 			},
 			consts.FieldPassthroughRequestHeaders: schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -195,12 +193,11 @@ func (r *authTuneResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 		},
 		Blocks: map[string]schema.Block{
 			consts.FieldUserLockoutConfig: schema.SingleNestedBlock{
-				MarkdownDescription: "User lockout configuration. Supported on `approle`, `ldap`, and `userpass` auth mounts, and requires Vault 1.13.0 or later. " +
-					"Other auth methods reject this block.",
+				MarkdownDescription: "User lockout configuration. Supported on `approle`, `ldap`, and `userpass` auth mounts, and requires Vault 1.13.0 or later.",
 				Attributes: map[string]schema.Attribute{
 					consts.FieldLockoutThreshold: schema.StringAttribute{
 						Optional:            true,
-						MarkdownDescription: "Number of failed login attempts after which the user is locked out, as a string such as `15`.",
+						MarkdownDescription: "Number of failed login attempts after which the user is locked out, for example `15`.",
 					},
 					consts.FieldLockoutDuration: schema.StringAttribute{
 						Optional:            true,
@@ -703,8 +700,7 @@ func lockoutPtr(plan, prior *userLockoutModel, clearing bool) *api.TuneUserLocko
 	if prior != nil {
 		priorModel = *prior
 	}
-	// A removed block is nil. Fields removed from a block are null.
-	// Neither is a known value, so each previously set field is cleared.
+	// A removed block or field resets each value that was previously set.
 	planModel := userLockoutModel{}
 	if plan != nil {
 		planModel = *plan

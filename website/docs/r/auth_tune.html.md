@@ -8,27 +8,18 @@ description: |-
 
 # vault\_auth\_tune
 
-Tunes an auth mount that already exists. The auth method itself stays on
-`vault_auth_backend` or a dedicated auth resource. Add `vault_auth_tune` when
-a mount needs tuning, and leave it out until then. The auth mount is not
-recreated.
+Manages tune settings on an auth mount created by `vault_auth_backend` or another auth method resource.
 
-Unset arguments are not written to Vault and are not stored from Vault's tune
-response. A plan does not fill in server defaults such as `token_type` for
-arguments you left out. Removing an argument clears that setting. Destroying
-the resource clears every setting it managed.
+Terraform manages only the arguments you set; other settings keep their current value. Removing an argument resets it to Vault's default, and destroying the resource resets everything it managed.
 
 ~> **Important** Do not combine this resource with a `tune` block on the auth
-resource for the same mount. Both write to the mount tune API.
+resource for the same mount. They overwrite each other's settings.
 
-The `tune` block on an auth method resource is optional and computed. Removing
-it does not recreate the mount, and the mount keeps its current tune. Add
-`vault_auth_tune` for the settings Terraform should manage. The same pattern
-works for Okta and SAML mounts that need `listing_visibility = "unauth"`.
-
-Changing `path` replaces this resource only. It does not move the auth mount.
+To migrate, delete the `tune` block and add `vault_auth_tune` with the same values. Deleting the block doesn't recreate the mount or change its settings.
 
 ## Example Usage
+
+Set lease TTLs, token type, and user lockout on a userpass mount:
 
 ```hcl
 resource "vault_auth_backend" "userpass" {
@@ -50,6 +41,8 @@ resource "vault_auth_tune" "userpass" {
   }
 }
 ```
+
+Show Okta on the UI login page:
 
 ```hcl
 resource "vault_okta_auth_backend" "example" {
@@ -85,7 +78,7 @@ resource "vault_auth_tune" "okta" {
 * `audit_non_hmac_response_keys` - (Optional) Keys that will not be HMAC'd by audit devices in the response data.
 
 * `listing_visibility` - (Optional) Whether to show this mount in the UI listing endpoint.
-  Valid values are `unauth` and `hidden`.
+  `unauth` shows the method on the UI login page; `hidden` hides it.
 
 * `passthrough_request_headers` - (Optional) Headers to pass from the request to the auth method.
 
@@ -102,7 +95,7 @@ resource "vault_auth_tune" "okta" {
 
 ### User lockout options
 
-* `lockout_threshold` - (Optional) Failed login attempts before lockout, as a string such as `15`.
+* `lockout_threshold` - (Optional) Failed login attempts before lockout, for example `15`.
 
 * `lockout_duration` - (Optional) How long a user stays locked out, as a duration such as `15m`.
 
@@ -122,7 +115,4 @@ Import using the auth mount path.
 $ terraform import vault_auth_tune.userpass userpass
 ```
 
-Import reads the mount tune. Non-empty values are stored, including lease TTLs,
-`listing_visibility`, and `token_type`. Lockout fields are stored when they
-differ from Vault's defaults. Copy the imported values into configuration
-before the next apply. Arguments left out of configuration are cleared.
+Import reads the mount's current non-default settings. Add each one to your configuration before the next apply, or it will be reset to Vault's default.
