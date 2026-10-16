@@ -811,7 +811,7 @@ const (
 	FieldAllowRotation                        = "allow_rotation"
 	FieldImportedKeyAllowRotation             = "imported_key_allow_rotation"
 	FieldLatestVersionType                    = "latest_version_type"
-	FieldImported                             = "imported"
+	FieldImportedKey                          = "imported_key"
 	FieldLengths                              = "lengths"
 	FieldExcludeCIDRList                      = "exclude_cidr_list"
 	FieldPort                                 = "port"
