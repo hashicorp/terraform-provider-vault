@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -37,15 +36,18 @@ import (
 )
 
 const (
+	// ttlSystemDefault is the Vault tune sentinel that resets a lease TTL.
+	// An empty string leaves the stored TTL unchanged.
+	ttlSystemDefault     = "system"
 	lockoutThresholdZero = "0"
 	lockoutDurationZero  = "0s"
 )
 
 // lockoutAuthTypes are the auth methods that accept user lockout tuning.
 var lockoutAuthTypes = map[string]struct{}{
-	"approle":  {},
-	"ldap":     {},
-	"userpass": {},
+	consts.MountTypeApprole:  {},
+	consts.MountTypeLDAP:     {},
+	consts.MountTypeUserpass: {},
 }
 
 var (
@@ -145,12 +147,12 @@ func (r *authTuneResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			consts.FieldDefaultLeaseTTL: schema.StringAttribute{
 				Optional:            true,
 				Validators:          []validator.String{validators.DurationValidator()},
-				MarkdownDescription: "Default lease TTL for the mount. A value of `0s` uses the system default.",
+				MarkdownDescription: "Default lease TTL for the mount. Remove this argument to reset the mount to the system default.",
 			},
 			consts.FieldMaxLeaseTTL: schema.StringAttribute{
 				Optional:            true,
 				Validators:          []validator.String{validators.DurationValidator()},
-				MarkdownDescription: "Maximum lease TTL for the mount. A value of `0s` uses the system default.",
+				MarkdownDescription: "Maximum lease TTL for the mount. Remove this argument to reset the mount to the system default.",
 			},
 			consts.FieldAuditNonHMACRequestKeys: schema.ListAttribute{
 				ElementType:         types.StringType,
@@ -192,25 +194,25 @@ func (r *authTuneResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 		},
 		Blocks: map[string]schema.Block{
-			"user_lockout_config": schema.SingleNestedBlock{
+			consts.FieldUserLockoutConfig: schema.SingleNestedBlock{
 				MarkdownDescription: "User lockout configuration. Supported on `approle`, `ldap`, and `userpass` auth mounts, and requires Vault 1.13.0 or later. " +
 					"Other auth methods reject this block.",
 				Attributes: map[string]schema.Attribute{
-					"lockout_threshold": schema.StringAttribute{
+					consts.FieldLockoutThreshold: schema.StringAttribute{
 						Optional:            true,
 						MarkdownDescription: "Number of failed login attempts after which the user is locked out, as a string such as `15`.",
 					},
-					"lockout_duration": schema.StringAttribute{
+					consts.FieldLockoutDuration: schema.StringAttribute{
 						Optional:            true,
 						Validators:          []validator.String{validators.DurationValidator()},
 						MarkdownDescription: "How long a user stays locked out, as a duration such as `5m`.",
 					},
-					"lockout_counter_reset": schema.StringAttribute{
+					consts.FieldLockoutCounterReset: schema.StringAttribute{
 						Optional:            true,
 						Validators:          []validator.String{validators.DurationValidator()},
 						MarkdownDescription: "How long with no failed attempts before the lockout counter resets, as a duration such as `5m`.",
 					},
-					"lockout_disable": schema.BoolAttribute{
+					consts.FieldLockoutDisable: schema.BoolAttribute{
 						Optional:            true,
 						MarkdownDescription: "Disables user lockout for this mount when true.",
 					},
@@ -244,7 +246,7 @@ func (r *authTuneResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), namespaceOf(data.Namespace))
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
@@ -288,7 +290,7 @@ func (r *authTuneResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), namespaceOf(data.Namespace))
+	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
 		return
@@ -318,20 +320,47 @@ func (r *authTuneResource) Delete(ctx context.Context, req resource.DeleteReques
 }
 
 func (r *authTuneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	mountPath := strings.Trim(req.ID, "/")
-	mountPath = strings.TrimPrefix(mountPath, "auth/")
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldPath), mountPath)...)
+	mountPath, err := authTuneImportPath(req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid import identifier", err.Error())
+		return
+	}
 
 	ns := os.Getenv(consts.EnvVarVaultNamespaceImport)
-	if ns != "" {
-		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	vaultClient, err := client.GetClient(ctx, r.Meta(), ns)
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
 	}
+
+	snap, missing, diags := readTune(ctx, vaultClient, mountPath)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if missing {
+		resp.Diagnostics.AddError("Auth mount not found", fmt.Sprintf("No auth method is mounted at %q.", mountPath))
+		return
+	}
+
+	model := snap.importedModel(mountPath, ns)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &model)...)
+}
+
+func authTuneImportPath(id string) (string, error) {
+	mountPath := strings.TrimSpace(id)
+	mountPath = strings.TrimPrefix(mountPath, "auth/")
+	mountPath = strings.Trim(mountPath, "/")
+	if mountPath == "" {
+		return "", fmt.Errorf("import identifier cannot be empty")
+	}
+	return mountPath, nil
 }
 
 func (r *authTuneResource) apply(ctx context.Context, plan, prior *authTuneModel, vaultErr func(error) (string, string)) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	vaultClient, err := client.GetClient(ctx, r.Meta(), namespaceOf(plan.Namespace))
+	vaultClient, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		diags.AddError(errutil.ClientConfigureErr(err))
 		return diags
@@ -386,7 +415,7 @@ func (r *authTuneResource) apply(ctx context.Context, plan, prior *authTuneModel
 
 func (r *authTuneResource) validateLockout(mountType string) diag.Diagnostics {
 	var diags diag.Diagnostics
-	if !r.Meta().IsAPISupported(provider.VaultVersion113) {
+	if r.Meta() == nil || !r.Meta().IsAPISupported(provider.VaultVersion113) {
 		diags.AddError(
 			"User lockout is not supported",
 			fmt.Sprintf("user_lockout_config requires Vault %s or later.", provider.VaultVersion113),
@@ -404,13 +433,6 @@ func (r *authTuneResource) validateLockout(mountType string) diag.Diagnostics {
 
 func authTuneAPIPath(mountPath string) string {
 	return "auth/" + strings.Trim(mountPath, "/")
-}
-
-func namespaceOf(ns types.String) string {
-	if ns.IsNull() || ns.IsUnknown() {
-		return ""
-	}
-	return ns.ValueString()
 }
 
 func readTune(ctx context.Context, vaultClient *api.Client, mountPath string) (tuneSnapshot, bool, diag.Diagnostics) {
@@ -440,15 +462,15 @@ func readTune(ctx context.Context, vaultClient *api.Client, mountPath string) (t
 
 func parseTune(data map[string]interface{}) tuneSnapshot {
 	var snap tuneSnapshot
-	snap.defaultLeaseTTL, snap.defaultLeaseTTLPresent = durationField(data, "default_lease_ttl")
-	snap.maxLeaseTTL, snap.maxLeaseTTLPresent = durationField(data, "max_lease_ttl")
-	snap.listingVisibility, snap.listingVisibilityPresent = stringFieldFromMap(data, "listing_visibility")
-	snap.tokenType, snap.tokenTypePresent = stringFieldFromMap(data, "token_type")
-	snap.pluginVersion, snap.pluginVersionPresent = stringFieldFromMap(data, "plugin_version")
-	snap.auditNonHMACRequestKeys, snap.auditRequestKeysPresent = listFieldFromMap(data, "audit_non_hmac_request_keys")
-	snap.auditNonHMACResponseKeys, snap.auditResponseKeysPresent = listFieldFromMap(data, "audit_non_hmac_response_keys")
-	snap.passthroughRequestHeaders, snap.passthroughHeadersPresent = listFieldFromMap(data, "passthrough_request_headers")
-	snap.allowedResponseHeaders, snap.allowedHeadersPresent = listFieldFromMap(data, "allowed_response_headers")
+	snap.defaultLeaseTTL, snap.defaultLeaseTTLPresent = durationField(data, consts.FieldDefaultLeaseTTL)
+	snap.maxLeaseTTL, snap.maxLeaseTTLPresent = durationField(data, consts.FieldMaxLeaseTTL)
+	snap.listingVisibility, snap.listingVisibilityPresent = stringFieldFromMap(data, consts.FieldListingVisibility)
+	snap.tokenType, snap.tokenTypePresent = stringFieldFromMap(data, consts.FieldTokenType)
+	snap.pluginVersion, snap.pluginVersionPresent = stringFieldFromMap(data, consts.FieldPluginVersion)
+	snap.auditNonHMACRequestKeys, snap.auditRequestKeysPresent = listFieldFromMap(data, consts.FieldAuditNonHMACRequestKeys)
+	snap.auditNonHMACResponseKeys, snap.auditResponseKeysPresent = listFieldFromMap(data, consts.FieldAuditNonHMACResponseKeys)
+	snap.passthroughRequestHeaders, snap.passthroughHeadersPresent = listFieldFromMap(data, consts.FieldPassthroughRequestHeaders)
+	snap.allowedResponseHeaders, snap.allowedHeadersPresent = listFieldFromMap(data, consts.FieldAllowedResponseHeaders)
 	snap.lockout, snap.lockoutPresent = parseLockout(data)
 	return snap
 }
@@ -456,7 +478,7 @@ func parseTune(data map[string]interface{}) tuneSnapshot {
 func parseLockout(data map[string]interface{}) (lockoutSnapshot, bool) {
 	source := data
 	present := false
-	if nested, ok := data["user_lockout_config"].(map[string]interface{}); ok {
+	if nested, ok := data[consts.FieldUserLockoutConfig].(map[string]interface{}); ok {
 		source = nested
 		present = true
 	}
@@ -484,6 +506,99 @@ func parseLockout(data map[string]interface{}) (lockoutSnapshot, bool) {
 	return snap, present
 }
 
+func (snap tuneSnapshot) importedModel(mountPath, namespace string) authTuneModel {
+	model := emptyAuthTuneModel()
+	model.Path = types.StringValue(mountPath)
+	if namespace != "" {
+		model.Namespace = types.StringValue(namespace)
+	}
+	model.DefaultLeaseTTL = importedString(snap.defaultLeaseTTL, snap.defaultLeaseTTLPresent)
+	model.MaxLeaseTTL = importedString(snap.maxLeaseTTL, snap.maxLeaseTTLPresent)
+	model.ListingVisibility = importedString(snap.listingVisibility, snap.listingVisibilityPresent)
+	model.TokenType = importedString(snap.tokenType, snap.tokenTypePresent)
+	model.PluginVersion = importedString(snap.pluginVersion, snap.pluginVersionPresent)
+	model.AuditNonHMACRequestKeys = importedList(snap.auditNonHMACRequestKeys, snap.auditRequestKeysPresent)
+	model.AuditNonHMACResponseKeys = importedList(snap.auditNonHMACResponseKeys, snap.auditResponseKeysPresent)
+	model.PassthroughRequestHeaders = importedList(snap.passthroughRequestHeaders, snap.passthroughHeadersPresent)
+	model.AllowedResponseHeaders = importedList(snap.allowedResponseHeaders, snap.allowedHeadersPresent)
+	model.UserLockoutConfig = snap.lockout.imported(snap.lockoutPresent)
+	return model
+}
+
+func emptyAuthTuneModel() authTuneModel {
+	return authTuneModel{
+		BaseModel: base.BaseModel{
+			Namespace: types.StringNull(),
+		},
+		DefaultLeaseTTL:           types.StringNull(),
+		MaxLeaseTTL:               types.StringNull(),
+		ListingVisibility:         types.StringNull(),
+		TokenType:                 types.StringNull(),
+		PluginVersion:             types.StringNull(),
+		AuditNonHMACRequestKeys:   types.ListNull(types.StringType),
+		AuditNonHMACResponseKeys:  types.ListNull(types.StringType),
+		PassthroughRequestHeaders: types.ListNull(types.StringType),
+		AllowedResponseHeaders:    types.ListNull(types.StringType),
+	}
+}
+
+func importedString(value string, present bool) types.String {
+	if !present || value == "" {
+		return types.StringNull()
+	}
+	return types.StringValue(value)
+}
+
+func importedList(values []string, present bool) types.List {
+	values = normalizeList(values)
+	if !present || len(values) == 0 {
+		return types.ListNull(types.StringType)
+	}
+	return stringList(values)
+}
+
+func (snap lockoutSnapshot) imported(present bool) *userLockoutModel {
+	if !present {
+		return nil
+	}
+	threshold := ""
+	if snap.thresholdPresent && snap.threshold != "" && snap.threshold != lockoutThresholdZero {
+		threshold = snap.threshold
+	}
+	duration := ""
+	if snap.durationPresent && snap.duration != "" && snap.duration != lockoutDurationZero {
+		duration = snap.duration
+	}
+	counterReset := ""
+	if snap.counterResetPresent && snap.counterReset != "" && snap.counterReset != lockoutDurationZero {
+		counterReset = snap.counterReset
+	}
+	disable := snap.disablePresent && snap.disable
+	if threshold == "" && duration == "" && counterReset == "" && !disable {
+		return nil
+	}
+
+	model := &userLockoutModel{
+		LockoutThreshold:    types.StringNull(),
+		LockoutDuration:     types.StringNull(),
+		LockoutCounterReset: types.StringNull(),
+		LockoutDisable:      types.BoolNull(),
+	}
+	if threshold != "" {
+		model.LockoutThreshold = types.StringValue(threshold)
+	}
+	if duration != "" {
+		model.LockoutDuration = types.StringValue(duration)
+	}
+	if counterReset != "" {
+		model.LockoutCounterReset = types.StringValue(counterReset)
+	}
+	if disable {
+		model.LockoutDisable = types.BoolValue(true)
+	}
+	return model
+}
+
 func (m *authTuneModel) refresh(ctx context.Context, snap tuneSnapshot) {
 	m.DefaultLeaseTTL = refreshDuration(m.DefaultLeaseTTL, snap.defaultLeaseTTL, snap.defaultLeaseTTLPresent)
 	m.MaxLeaseTTL = refreshDuration(m.MaxLeaseTTL, snap.maxLeaseTTL, snap.maxLeaseTTLPresent)
@@ -507,8 +622,8 @@ func tuneConfig(ctx context.Context, plan, prior *authTuneModel, clearing bool) 
 	var diags diag.Diagnostics
 	cfg := api.TuneMountConfigInput{}
 
-	cfg.DefaultLeaseTTL = stringPtr(plan.DefaultLeaseTTL, prior.DefaultLeaseTTL, clearing, "")
-	cfg.MaxLeaseTTL = stringPtr(plan.MaxLeaseTTL, prior.MaxLeaseTTL, clearing, "")
+	cfg.DefaultLeaseTTL = stringPtr(plan.DefaultLeaseTTL, prior.DefaultLeaseTTL, clearing, ttlSystemDefault)
+	cfg.MaxLeaseTTL = stringPtr(plan.MaxLeaseTTL, prior.MaxLeaseTTL, clearing, ttlSystemDefault)
 	cfg.ListingVisibility = stringPtr(plan.ListingVisibility, prior.ListingVisibility, clearing, "")
 	cfg.TokenType = stringPtr(plan.TokenType, prior.TokenType, clearing, "")
 	cfg.PluginVersion = stringPtr(plan.PluginVersion, prior.PluginVersion, clearing, "")
@@ -588,7 +703,8 @@ func lockoutPtr(plan, prior *userLockoutModel, clearing bool) *api.TuneUserLocko
 	if prior != nil {
 		priorModel = *prior
 	}
-	// A removed block leaves plan fields unknown so each previously set field is cleared.
+	// A removed block is nil. Fields removed from a block are null.
+	// Neither is a known value, so each previously set field is cleared.
 	planModel := userLockoutModel{}
 	if plan != nil {
 		planModel = *plan
@@ -622,10 +738,10 @@ func refreshString(state types.String, apiValue string, present bool) types.Stri
 	if !present || state.IsNull() || state.IsUnknown() {
 		return state
 	}
-	if state.ValueString() == apiValue {
-		return state
-	}
 	if apiValue == "" {
+		return types.StringNull()
+	}
+	if state.ValueString() == apiValue {
 		return state
 	}
 	return types.StringValue(apiValue)
@@ -635,10 +751,10 @@ func refreshDuration(state types.String, apiValue string, present bool) types.St
 	if !present || state.IsNull() || state.IsUnknown() {
 		return state
 	}
-	if durationsEqual(state.ValueString(), apiValue) {
-		return state
-	}
 	if apiValue == "" {
+		return types.StringNull()
+	}
+	if durationsEqual(state.ValueString(), apiValue) {
 		return state
 	}
 	return types.StringValue(apiValue)

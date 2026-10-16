@@ -21,6 +21,11 @@ the resource clears every setting it managed.
 ~> **Important** Do not combine this resource with a `tune` block on the auth
 resource for the same mount. Both write to the mount tune API.
 
+The `tune` block on an auth method resource is optional and computed. Removing
+it does not recreate the mount, and the mount keeps its current tune. Add
+`vault_auth_tune` for the settings Terraform should manage. The same pattern
+works for Okta and SAML mounts that need `listing_visibility = "unauth"`.
+
 Changing `path` replaces this resource only. It does not move the auth mount.
 
 ## Example Usage
@@ -41,7 +46,19 @@ resource "vault_auth_tune" "userpass" {
     lockout_threshold     = "5"
     lockout_duration      = "15m"
     lockout_counter_reset = "15m"
+    lockout_disable       = true
   }
+}
+```
+
+```hcl
+resource "vault_okta_auth_backend" "example" {
+  org_name = "example"
+}
+
+resource "vault_auth_tune" "okta" {
+  path               = vault_okta_auth_backend.example.path
+  listing_visibility = "unauth"
 }
 ```
 
@@ -57,11 +74,11 @@ resource "vault_auth_tune" "userpass" {
 
 * `default_lease_ttl` - (Optional) Default time-to-live for the mount.
   Must be a valid [duration string](https://pkg.go.dev/time#ParseDuration).
-  `0s` uses the system default.
+  Remove this argument to reset the mount to the system default.
 
 * `max_lease_ttl` - (Optional) Maximum time-to-live for the mount.
   Must be a valid [duration string](https://pkg.go.dev/time#ParseDuration).
-  `0s` uses the system default.
+  Remove this argument to reset the mount to the system default.
 
 * `audit_non_hmac_request_keys` - (Optional) Keys that will not be HMAC'd by audit devices in the request data.
 
@@ -80,7 +97,7 @@ resource "vault_auth_tune" "userpass" {
 * `plugin_version` - (Optional) Semantic version of the plugin to use, for example `v1.0.0`.
   A change does not take effect until the plugin is reloaded.
 
-* `user_lockout_config` - (Optional) User lockout configuration.
+* `user_lockout_config` - (Optional) A block that configures user lockout.
   Supported for `approle`, `ldap`, and `userpass`. Requires Vault 1.13.0 or later.
 
 ### User lockout options
@@ -93,6 +110,10 @@ resource "vault_auth_tune" "userpass" {
 
 * `lockout_disable` - (Optional) Disables user lockout for this mount when true.
 
+## Attributes Reference
+
+No additional attributes are exported.
+
 ## Import
 
 Import using the auth mount path.
@@ -101,5 +122,7 @@ Import using the auth mount path.
 $ terraform import vault_auth_tune.userpass userpass
 ```
 
-Import records the path. Tune arguments are applied from configuration on the
-next plan. Arguments absent from configuration stay unmanaged.
+Import reads the mount tune. Non-empty values are stored, including lease TTLs,
+`listing_visibility`, and `token_type`. Lockout fields are stored when they
+differ from Vault's defaults. Copy the imported values into configuration
+before the next apply. Arguments left out of configuration are cleared.

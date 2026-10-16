@@ -2,7 +2,7 @@
 
 FEATURES:
 
-* **New Resource**: `vault_auth_tune` tunes an auth mount separately from the auth method resource. Arguments left unset are not written and are not read back from Vault, so a module can add tuning later without recreating the mount.
+* **New Resource**: `vault_auth_tune` tunes an auth mount separately from the auth method resource. Arguments left unset are not written and are not read back from Vault, so a module can add tuning later without recreating the mount. ([#3089](https://github.com/hashicorp/terraform-provider-vault/pull/3089))
 
 ## 5.13.0 (October 14, 2026)
 

@@ -65,6 +65,45 @@ func TestTuneConfigClearsRemovedFields(t *testing.T) {
 	}
 }
 
+func TestTuneConfigResetsRemovedTTLs(t *testing.T) {
+	t.Parallel()
+
+	prior := configuredModel()
+	prior.DefaultLeaseTTL = types.StringValue("12h")
+	prior.MaxLeaseTTL = types.StringValue("24h")
+	plan := configuredModel()
+
+	cfg, diags := tuneConfig(context.Background(), &plan, &prior, true)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if cfg.DefaultLeaseTTL == nil || *cfg.DefaultLeaseTTL != "system" {
+		t.Fatalf("default_lease_ttl = %v, want system", cfg.DefaultLeaseTTL)
+	}
+	if cfg.MaxLeaseTTL == nil || *cfg.MaxLeaseTTL != "system" {
+		t.Fatalf("max_lease_ttl = %v, want system", cfg.MaxLeaseTTL)
+	}
+}
+
+func TestTuneConfigDestroyResetsTTLs(t *testing.T) {
+	t.Parallel()
+
+	prior := configuredModel()
+	prior.DefaultLeaseTTL = types.StringValue("12h")
+	prior.MaxLeaseTTL = types.StringValue("24h")
+
+	cfg, diags := tuneConfig(context.Background(), &authTuneModel{}, &prior, true)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if cfg.DefaultLeaseTTL == nil || *cfg.DefaultLeaseTTL != "system" {
+		t.Fatalf("default_lease_ttl = %v, want system", cfg.DefaultLeaseTTL)
+	}
+	if cfg.MaxLeaseTTL == nil || *cfg.MaxLeaseTTL != "system" {
+		t.Fatalf("max_lease_ttl = %v, want system", cfg.MaxLeaseTTL)
+	}
+}
+
 func TestTuneConfigResetsRemovedLockout(t *testing.T) {
 	t.Parallel()
 
@@ -168,6 +207,112 @@ func TestParseTuneDurationAndLockout(t *testing.T) {
 	}
 	if len(normalizeList(snap.auditNonHMACRequestKeys)) != 1 || snap.auditNonHMACRequestKeys[0] != "key1" {
 		t.Fatalf("audit keys = %#v", snap.auditNonHMACRequestKeys)
+	}
+}
+
+func TestTuneConfigSendsPluginVersion(t *testing.T) {
+	t.Parallel()
+
+	plan := configuredModel()
+	plan.PluginVersion = types.StringValue("v1.2.3")
+
+	cfg, diags := tuneConfig(context.Background(), &plan, &authTuneModel{}, false)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	if cfg.PluginVersion == nil || *cfg.PluginVersion != "v1.2.3" {
+		t.Fatalf("plugin_version = %v, want v1.2.3", cfg.PluginVersion)
+	}
+}
+
+func TestRefreshRecordsExternalClear(t *testing.T) {
+	t.Parallel()
+
+	model := configuredModel()
+	model.ListingVisibility = types.StringValue("unauth")
+	model.DefaultLeaseTTL = types.StringValue("12h")
+	model.refresh(context.Background(), tuneSnapshot{
+		listingVisibility:        "",
+		listingVisibilityPresent: true,
+		defaultLeaseTTL:          "",
+		defaultLeaseTTLPresent:   true,
+	})
+
+	if !model.ListingVisibility.IsNull() {
+		t.Fatalf("listing_visibility = %#v, want null", model.ListingVisibility)
+	}
+	if !model.DefaultLeaseTTL.IsNull() {
+		t.Fatalf("default_lease_ttl = %#v, want null", model.DefaultLeaseTTL)
+	}
+}
+
+func TestImportedModelReadsNonDefaultTune(t *testing.T) {
+	t.Parallel()
+
+	snap := parseTune(map[string]interface{}{
+		"default_lease_ttl":                   json.Number("600"),
+		"max_lease_ttl":                       json.Number("1200"),
+		"token_type":                          "batch",
+		"listing_visibility":                  "unauth",
+		"audit_non_hmac_request_keys":         []interface{}{"request-key"},
+		"user_lockout_threshold":              json.Number("5"),
+		"user_lockout_duration":               json.Number("600"),
+		"user_lockout_counter_reset_duration": json.Number("900"),
+		"user_lockout_disable":                true,
+	})
+	model := snap.importedModel("userpass", "")
+
+	if model.Path.ValueString() != "userpass" || !model.Namespace.IsNull() {
+		t.Fatalf("identity = path %q namespace null %v", model.Path.ValueString(), model.Namespace.IsNull())
+	}
+	if model.DefaultLeaseTTL.ValueString() != "10m" || model.MaxLeaseTTL.ValueString() != "20m" {
+		t.Fatalf("ttls = %s %s", model.DefaultLeaseTTL.ValueString(), model.MaxLeaseTTL.ValueString())
+	}
+	if model.TokenType.ValueString() != "batch" || model.ListingVisibility.ValueString() != "unauth" {
+		t.Fatalf("token_type = %s listing = %s", model.TokenType.ValueString(), model.ListingVisibility.ValueString())
+	}
+	if model.UserLockoutConfig == nil || !model.UserLockoutConfig.LockoutDisable.ValueBool() {
+		t.Fatal("expected lockout disable")
+	}
+	if model.UserLockoutConfig.LockoutThreshold.ValueString() != "5" || model.UserLockoutConfig.LockoutDuration.ValueString() != "10m" || model.UserLockoutConfig.LockoutCounterReset.ValueString() != "15m" {
+		t.Fatalf("lockout = %#v", model.UserLockoutConfig)
+	}
+	if !model.PluginVersion.IsNull() {
+		t.Fatal("empty plugin_version should stay unset")
+	}
+}
+
+func TestImportedModelOmitsDefaultLockout(t *testing.T) {
+	t.Parallel()
+
+	snap := tuneSnapshot{
+		lockoutPresent: true,
+		lockout: lockoutSnapshot{
+			threshold:        "0",
+			thresholdPresent: true,
+			duration:         "0s",
+			durationPresent:  true,
+			disable:          false,
+			disablePresent:   true,
+		},
+	}
+	if snap.importedModel("userpass", "admin").UserLockoutConfig != nil {
+		t.Fatal("default lockout should stay unset")
+	}
+}
+
+func TestAuthTuneImportPath(t *testing.T) {
+	t.Parallel()
+
+	path, err := authTuneImportPath("auth/userpass/")
+	if err != nil || path != "userpass" {
+		t.Fatalf("path = %q err = %v", path, err)
+	}
+	if _, err := authTuneImportPath("  "); err == nil {
+		t.Fatal("expected empty identifier error")
+	}
+	if _, err := authTuneImportPath("auth/"); err == nil {
+		t.Fatal("expected empty identifier error")
 	}
 }
 
