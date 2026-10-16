@@ -190,8 +190,9 @@ func (r *authTuneResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:            true,
 				MarkdownDescription: "Semantic version of the plugin to use, for example `v1.0.0`. A change does not take effect until the plugin is reloaded.",
 			},
-			"user_lockout_config": schema.SingleNestedAttribute{
-				Optional: true,
+		},
+		Blocks: map[string]schema.Block{
+			"user_lockout_config": schema.SingleNestedBlock{
 				MarkdownDescription: "User lockout configuration. Supported on `approle`, `ldap`, and `userpass` auth mounts, and requires Vault 1.13.0 or later. " +
 					"Other auth methods reject this block.",
 				Attributes: map[string]schema.Attribute{
