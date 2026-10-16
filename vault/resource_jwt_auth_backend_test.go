@@ -1062,7 +1062,10 @@ func TestAccJWTAuthBackend_UnsupportedCriticalCertExtensions(t *testing.T) {
 	resourceName := resourceType + ".test"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
 		Steps: []resource.TestStep{
