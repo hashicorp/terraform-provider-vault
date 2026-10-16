@@ -56,11 +56,12 @@ func TestAccAuthTune(t *testing.T) {
 				},
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateIdFunc:       testAccAuthTuneImportID(resourceName),
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"default_lease_ttl", "max_lease_ttl"},
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccAuthTuneImportID(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "path",
+				ImportStateVerifyIgnore:              []string{"default_lease_ttl", "max_lease_ttl"},
 			},
 		},
 	})
