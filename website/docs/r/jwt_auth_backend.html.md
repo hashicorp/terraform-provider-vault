@@ -105,7 +105,7 @@ resource "vault_jwt_auth_backend" "example" {
     oidc_client_id                       = "1234567890"
     oidc_client_secret                   = "secret123456"
     bound_issuer                         = "https://custom-idp.example.com"
-    unsupported_critical_cert_extensions = ["1.3.6.1.4.1.55813.1.2.1", "2.5.29.15"]
+    unsupported_critical_cert_extensions = ["1.3.6.1.4.1.55813.1.2.1", "2.5.29.14"]
 }
 ```
 
