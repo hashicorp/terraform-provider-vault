@@ -807,6 +807,8 @@ const (
 	FieldSupportsDecryption                   = "supports_decryption"
 	FieldSupportsDerivation                   = "supports_derivation"
 	FieldSupportsSigning                      = "supports_signing"
+	FieldKeyUsages                            = "key_usages"
+	FieldLatestVersionType                    = "latest_version_type"
 	FieldLengths                              = "lengths"
 	FieldExcludeCIDRList                      = "exclude_cidr_list"
 	FieldPort                                 = "port"

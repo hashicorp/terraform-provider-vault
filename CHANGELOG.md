@@ -3,6 +3,7 @@
 FEATURES:
 
 * **New Resource**: `vault_scim_client` for managing Vault Enterprise SCIM 2.0 clients. Supports a `deletion_policy` argument to control cleanup of linked entities and groups on destroy. Requires Vault Enterprise 2.2.0 or later. ([#3073](https://github.com/hashicorp/terraform-provider-vault/pull/3073))
+* **New Data Source**: `vault_transit_secret_backend_key_version` reads information about a specific version of a Transit key, such as its type and public key. Requires Vault Enterprise 2.2.0 or later. ([#3082](https://github.com/hashicorp/terraform-provider-vault/pull/3082))
 * **New Resources**: Add support for PKI BYOK CA migration with `vault_pki_secret_backend_export_key` and `vault_pki_secret_backend_wrapped_key_import` resources, and `vault_pki_secret_backend_ca_key_export` ephemeral resource. Requires Vault Enterprise 2.2.0 or later. ([#3075](https://github.com/hashicorp/terraform-provider-vault/pull/3075))
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
@@ -10,6 +11,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_transit_secret_backend_key`: Add crypto agility support. On Vault Enterprise 2.2.0 or later, changing `type`, `managed_key_name` or `managed_key_id` rotates the key to a new version with the new algorithm instead of replacing the key. Adds the computed `key_usages` attribute and the `aes128-cbc` and `aes256-cbc` key types. On older versions, changing these fields still forces a new resource. ([#3082](https://github.com/hashicorp/terraform-provider-vault/pull/3082))
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
 * `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
 * `vault_oauth_resource_server_config_profile`: Add `unique_id_claim` and `actor_claim` parameters to support configuring the JWT claim used as the token unique identifier and the actor claim for delegation scenarios. Requires Vault 2.2.0 or later. ([#3060](https://github.com/hashicorp/terraform-provider-vault/pull/3060))
