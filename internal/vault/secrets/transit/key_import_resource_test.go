@@ -179,6 +179,7 @@ func TestAccTransitKeyImport_publicKey(t *testing.T) {
 //   - Step 2: Modify ciphertext -> verify resource replacement (destroy + recreate)
 //   - Step 3: Import state verification
 func TestAccTransitKeyImport_wrappedKey(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
 	acctestutil.TestAccPreCheck(t)
 
 	mount := acctest.RandomWithPrefix("transit-mount")

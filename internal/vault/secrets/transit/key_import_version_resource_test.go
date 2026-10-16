@@ -173,6 +173,7 @@ type transitKeyImportVersionWrappedFields struct {
 //   - Step 3: In-place update to import key version 3 with new ciphertext_wo + incremented ciphertext_wo_version + hash_function = "SHA384"
 //   - Step 4: Import state verification
 func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
 	acctestutil.TestAccPreCheck(t)
 
 	mount := acctest.RandomWithPrefix("transit-mount")
