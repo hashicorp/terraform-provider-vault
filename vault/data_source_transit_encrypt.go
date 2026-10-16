@@ -47,7 +47,6 @@ func transitEncryptDataSource() *schema.Resource {
 			consts.FieldHashAlgorithm: {
 				Type:     schema.TypeString,
 				Optional: true,
-				Computed: true,
 				Description: "Specifies the hash algorithm to use for RSA key encryption. " +
 					"Only applies to RSA key types; ignored for all other key types. " +
 					"Supported values are: sha1, sha2-224, sha2-256, sha2-384, sha2-512, sha3-224, sha3-256, sha3-384, sha3-512. " +
@@ -57,7 +56,6 @@ func transitEncryptDataSource() *schema.Resource {
 			consts.FieldPaddingScheme: {
 				Type:             schema.TypeString,
 				Optional:         true,
-				Computed:         true,
 				Description:      "Specifies the RSA padding scheme to use for encryption. Only applies to RSA key types; ignored for all other key types. Supported values are: oaep, pkcs1v15. If not set, Vault defaults to oaep for RSA keys.",
 				ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"oaep", "pkcs1v15"}),
 			},
@@ -89,9 +87,15 @@ func transitEncryptDataSourceRead(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	if v, ok := d.GetOk(consts.FieldHashAlgorithm); ok {
+		if !provider.IsAPISupported(meta, provider.VaultVersion220) {
+			return fmt.Errorf("%s is only supported in Vault %s and later", consts.FieldHashAlgorithm, consts.VaultVersion220)
+		}
 		payload[consts.FieldHashAlgorithm] = v.(string)
 	}
 	if v, ok := d.GetOk(consts.FieldPaddingScheme); ok {
+		if !provider.IsAPISupported(meta, provider.VaultVersion220) {
+			return fmt.Errorf("%s is only supported in Vault %s and later", consts.FieldPaddingScheme, consts.VaultVersion220)
+		}
 		payload[consts.FieldPaddingScheme] = v.(string)
 	}
 
