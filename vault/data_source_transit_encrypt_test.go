@@ -34,7 +34,7 @@ func TestDataSourceTransitEncrypt(t *testing.T) {
 func TestDataSourceTransitEncryptRSA_Defaults(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-			PreCheck: func() {
+		PreCheck: func() {
 			acctestutil.TestAccPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
 		},
