@@ -35,7 +35,10 @@ func TestDataSourceTransitDecrypt(t *testing.T) {
 func TestDataSourceTransitDecryptRSA_Defaults(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceTransitDecryptRSA_defaults_config,
@@ -56,7 +59,7 @@ func TestDataSourceTransitDecryptRSA_OAEP(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
 		},
 		Steps: []resource.TestStep{
@@ -79,7 +82,7 @@ func TestDataSourceTransitDecryptRSA_PKCS1v15(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
-			testutil.TestAccPreCheck(t)
+			acctestutil.TestAccPreCheck(t)
 			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
 		},
 		Steps: []resource.TestStep{

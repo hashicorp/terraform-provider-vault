@@ -11,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -32,7 +34,10 @@ func TestDataSourceTransitEncrypt(t *testing.T) {
 func TestDataSourceTransitEncryptRSA_Defaults(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+			PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceTransitEncryptRSA_defaults_config,
@@ -51,7 +56,10 @@ func TestDataSourceTransitEncryptRSA_Defaults(t *testing.T) {
 func TestDataSourceTransitEncryptRSA_OAEP(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceTransitEncryptRSA_oaep_config,
@@ -70,7 +78,10 @@ func TestDataSourceTransitEncryptRSA_OAEP(t *testing.T) {
 func TestDataSourceTransitEncryptRSA_PKCS1v15(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
-		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
 		Steps: []resource.TestStep{
 			{
 				Config: testDataSourceTransitEncryptRSA_pkcs1v15_config,
