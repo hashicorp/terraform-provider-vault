@@ -1,3 +1,19 @@
+## 5.14.0 (Unreleased)
+
+FEATURES:
+
+IMPROVEMENTS:
+
+* `vault_transit_encrypt`: Add `hash_algorithm` and `padding_scheme` fields to support RSA key encryption with configurable hash algorithm and OAEP/PKCS1v15 padding. Requires Vault 2.2.0 or later.
+* `vault_transit_decrypt`: Add `hash_algorithm` and `padding_scheme` fields to support RSA key decryption with configurable hash algorithm and OAEP/PKCS1v15 padding. Requires Vault 2.2.0 or later.
+* `vault_managed_keys`: Add `rsa_oaep_hash` field to PKCS configuration block to specify the hash algorithm for RSA-OAEP encryption with `CKM_RSA_PKCS_OAEP`. Requires Vault 2.2.0 or later.
+* `vault_managed_keys`: Add `encryption_mode` field to Azure configuration block to control AES-GCM envelope vs. direct KMS encryption. Requires Vault 2.2.0 or later.
+
+BUG FIXES:
+
+DEPENDENCIES:
+
+
 ## 5.13.0 (October 14, 2026)
 
 FEATURES:
