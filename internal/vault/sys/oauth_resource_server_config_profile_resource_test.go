@@ -442,6 +442,85 @@ func TestAccOAuthResourceServerConfigProfile_authorizationDetailsClaim(t *testin
 	})
 }
 
+// TestAccOAuthResourceServerConfigProfile_claimsConfig tests unique_id_claim and actor_claim fields
+func TestAccOAuthResourceServerConfigProfile_claimsConfig(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_claimsConfig(profileName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUniqueIDClaim, "jti"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldActorClaim, "act"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateIdFunc: testAccOAuthResourceServerConfigProfileImportStateIdFunc(resourceName),
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+// TestAccOAuthResourceServerConfigProfile_uniqueIDClaimRequiresReplace tests that
+// changing unique_id_claim forces replacement (it is immutable in Vault), and that
+// an unrelated update does not trigger a replacement.
+func TestAccOAuthResourceServerConfigProfile_uniqueIDClaimRequiresReplace(t *testing.T) {
+	profileName := acctest.RandomWithPrefix("test-profile")
+	resourceName := "vault_oauth_resource_server_config_profile.test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			testAccOAuthResourceServerConfigProfilePreCheck(t, provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccOAuthResourceServerConfigProfileConfig_uniqueIDClaim(profileName, "jti", false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUniqueIDClaim, "jti"),
+				),
+			},
+			{
+				// Changing unique_id_claim must replace the resource.
+				Config: testAccOAuthResourceServerConfigProfileConfig_uniqueIDClaim(profileName, "custom_id", false),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionReplace),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldProfileName, profileName),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUniqueIDClaim, "custom_id"),
+				),
+			},
+			{
+				// An unrelated change must update in place and keep unique_id_claim.
+				Config: testAccOAuthResourceServerConfigProfileConfig_uniqueIDClaim(profileName, "custom_id", true),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUniqueIDClaim, "custom_id"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldNoDefaultPolicy, "true"),
+				),
+			},
+		},
+	})
+}
+
 // TestAccOAuthResourceServerConfigProfile_local tests that the local flag is
 // persisted and read back correctly. A local profile is cluster-scoped and
 // never replicated to performance secondaries.
@@ -746,6 +825,36 @@ resource "vault_oauth_resource_server_config_profile" "test" {
 }
 `, flagBlock, claim, dependsOn, profileName)
 }
+
+func testAccOAuthResourceServerConfigProfileConfig_claimsConfig(profileName string) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
+	return fmt.Sprintf(`
+%s
+resource "vault_oauth_resource_server_config_profile" "test" {
+%s  profile_name    = "%s"
+  issuer_id       = "https://example.com"
+  use_jwks        = true
+  jwks_uri        = "https://example.com/.well-known/jwks.json"
+  unique_id_claim = "jti"
+  actor_claim     = "act"
+}
+`, flagBlock, dependsOn, profileName)
+}
+func testAccOAuthResourceServerConfigProfileConfig_uniqueIDClaim(profileName, uniqueIDClaim string, noDefaultPolicy bool) string {
+	flagBlock, dependsOn := oauthActivationFlagHCL()
+	return fmt.Sprintf(`
+%s
+resource "vault_oauth_resource_server_config_profile" "test" {
+%s  profile_name       = "%s"
+  issuer_id          = "https://example.com"
+  use_jwks           = true
+  jwks_uri           = "https://example.com/.well-known/jwks.json"
+  unique_id_claim    = "%s"
+  no_default_policy  = %t
+}
+`, flagBlock, dependsOn, profileName, uniqueIDClaim, noDefaultPolicy)
+}
+
 func testAccOAuthResourceServerConfigProfileConfig_local(profileName string, local bool) string {
 	flagBlock, dependsOn := oauthActivationFlagHCL()
 	return fmt.Sprintf(`

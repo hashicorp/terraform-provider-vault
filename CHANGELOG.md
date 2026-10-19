@@ -1,7 +1,8 @@
-## 5.13.0 (Unreleased)
+## 5.13.0 (October 14, 2026)
 
 FEATURES:
 
+* **New Resource**: `vault_scim_client` for managing Vault Enterprise SCIM 2.0 clients. Supports a `deletion_policy` argument to control cleanup of linked entities and groups on destroy. Requires Vault Enterprise 2.2.0 or later. ([#3073](https://github.com/hashicorp/terraform-provider-vault/pull/3073))
 * **New Resources**: Add support for PKI BYOK CA migration with `vault_pki_secret_backend_export_key` and `vault_pki_secret_backend_wrapped_key_import` resources, and `vault_pki_secret_backend_ca_key_export` ephemeral resource. Requires Vault Enterprise 2.2.0 or later. ([#3075](https://github.com/hashicorp/terraform-provider-vault/pull/3075))
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
@@ -11,6 +12,7 @@ IMPROVEMENTS:
 
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
 * `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
+* `vault_oauth_resource_server_config_profile`: Add `unique_id_claim` and `actor_claim` parameters to support configuring the JWT claim used as the token unique identifier and the actor claim for delegation scenarios. Requires Vault 2.2.0 or later. ([#3060](https://github.com/hashicorp/terraform-provider-vault/pull/3060))
 * `vault_pki_external_ca_secret_backend_acme_account`: Remove redundant `Sensitive` attribute from write-only fields `eab_kid` and `eab_key`, and add mutual-requirement validation so both fields must be specified together. ([#3038](https://github.com/hashicorp/terraform-provider-vault/pull/3038))
 * `vault_plugin`: Add `download` field to let Vault Enterprise (1.20+) automatically download official enterprise plugin artifacts from releases.hashicorp.com during registration, instead of requiring the artifact to be pre-staged in the server's `plugin_directory`. ([#3022](https://github.com/hashicorp/terraform-provider-vault/pull/3022))
 * `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
@@ -24,6 +26,32 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * provider: Perform token self-lookup without a namespace header so Vault resolves the token's own namespace. This prevents an unrelated `VAULT_NAMESPACE` from causing provider configuration failures and allows Terraform to recover when a configured namespace has been deleted outside Terraform. The configured provider namespace is still used for resource operations. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
+
+DEPENDENCIES:
+
+  * Build with Go 1.27.2
+  * Bumped 20 Go module dependencies ([#3081](https://github.com/hashicorp/terraform-provider-vault/pull/3081), [#3080](https://github.com/hashicorp/terraform-provider-vault/pull/3080), [#3074](https://github.com/hashicorp/terraform-provider-vault/pull/3074))
+  * `cloud.google.com/go/compute/metadata` v0.9.0 → v0.10.0
+  * `cloud.google.com/go/iam` v1.13.0 → v1.14.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.1 → v1.23.3
+  * `github.com/aws/aws-sdk-go-v2` v1.47.0 → v1.47.3
+  * `github.com/aws/aws-sdk-go-v2/config` v1.33.5 → v1.33.9
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.20.5 → v1.20.9
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.20.0 → v1.20.3
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.64.0 → v1.64.4
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.51.0 → v1.51.4
+  * `github.com/aws/smithy-go` v1.28.1 → v1.28.5
+  * `github.com/hashicorp/go-secure-stdlib/awsutil/v2` v2.1.2 → v2.1.3
+  * `github.com/hashicorp/go-uuid` v1.0.3 → v1.0.4
+  * `github.com/hashicorp/vault/sdk` v0.25.1 → v0.26.0
+  * `github.com/mitchellh/mapstructure` v1.5.0 → v1.5.1-0.20231216201459-8508981c8b6c
+  * `github.com/moby/moby/client` v0.6.0 → v0.6.2
+  * `github.com/spiffe/go-spiffe/v2` v2.8.1 → v2.9.0
+  * `go.uber.org/atomic` v1.11.0 → v1.12.0
+  * `golang.org/x/crypto` v0.57.0 → v0.58.0
+  * `golang.org/x/net` v0.59.0 → v0.61.0
+  * `google.golang.org/api` v0.298.0 → v0.301.0
+
 
 ## 5.12.0 (September 17, 2026)
 
