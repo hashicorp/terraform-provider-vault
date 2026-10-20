@@ -5,7 +5,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
-* `vault_jwt_auth_backend`: Add `unsupported_critical_cert_extensions` field to support whitelisting unsupported critical X.509 certificate extensions during OIDC discovery TLS handshakes. Requires Vault 1.18+.
+* `vault_jwt_auth_backend`: Add `unsupported_critical_cert_extensions` field to support whitelisting unsupported critical X.509 certificate extensions during OIDC discovery TLS handshakes. ([#3088](https://github.com/hashicorp/terraform-provider-vault/pull/3088))
 
 BUG FIXES:
 
