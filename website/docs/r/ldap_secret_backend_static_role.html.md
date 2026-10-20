@@ -99,6 +99,8 @@ The following arguments are supported:
 * `password_wo_version` - (Optional) The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
   Requires Vault Enterprise 2.0+.
 
+* `metadata` - (Optional) A map of string key-value pairs to associate with the role. Supplying the map replaces all existing metadata, omitting it preserves the metadata already stored in Vault, and setting `metadata = {}` clears it. A maximum of 64 keys is allowed; keys must be 1-128 bytes and values 1-512 bytes. The stored map is exported in state. Requires Vault Enterprise 2.0+.
+
 ## Ephemeral Attributes Reference
 * `password_wo` - (Optional) The password for the user. Can be updated.
   **Note**: This property is write-only and will not be read from the API.

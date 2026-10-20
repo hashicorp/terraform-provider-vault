@@ -115,6 +115,8 @@ The following arguments are supported:
 
 * `replica_regions` - (Optional, Forces new resource) Specifies the regions in which the key should be replicated. Supported only for AWS KMS.
 
+* `metadata` - (Optional) A map of string key-value pairs to associate with the key. Supplying the map replaces all existing metadata, omitting it preserves the metadata already stored in Vault, and setting `metadata = {}` clears it. A maximum of 64 keys is allowed; keys must be 1-128 bytes and values 1-512 bytes. The stored map is exported in state. Requires Vault Enterprise 2.0+.
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
