@@ -25,12 +25,13 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 
 	issuingCertificates := "http://127.0.0.1:8200/v1/pki/ca"
 	crlDistributionPoints := "http://127.0.0.1:8200/v1/pki/crl"
+	deltaCrlDistributionPoints := "http://127.0.0.1:8200/v1/pki/crl/delta"
 	ocspServers := "http://127.0.0.1:8200/v1/pki/oscp"
 	enableTemplating := false
 
 	resourceType := "vault_pki_secret_backend_config_urls"
 	resourceName := resourceType + ".test"
-	getChecks := func(i, c, o string, e bool) resource.TestCheckFunc {
+	getChecks := func(i, c, d, o string, e bool) resource.TestCheckFunc {
 		baseChecks := []resource.TestCheckFunc{
 			resource.TestCheckResourceAttr(
 				resourceName, "issuing_certificates.#", "1"),
@@ -45,6 +46,17 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			resource.TestCheckResourceAttr(
 				resourceName, "ocsp_servers.0", o),
 		}
+
+		v120Checks := []resource.TestCheckFunc{}
+		if d != "" {
+			v120Checks = append(v120Checks,
+				resource.TestCheckResourceAttr(
+					resourceName, "delta_crl_distribution_points.#", "1"),
+				resource.TestCheckResourceAttr(
+					resourceName, "delta_crl_distribution_points.0", d),
+			)
+		}
+
 		v113Checks := []resource.TestCheckFunc{
 			resource.TestCheckResourceAttr(
 				resourceName, "enable_templating", strconv.FormatBool(e)),
@@ -54,6 +66,9 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 			var checks []resource.TestCheckFunc
 			meta := testProvider.Meta().(*provider.ProviderMeta)
 			checks = append(checks, baseChecks...)
+			if provider.IsAPISupported(meta, provider.VaultVersion120) {
+				checks = append(checks, v120Checks...)
+			}
 			if provider.IsAPISupported(meta, provider.VaultVersion113) {
 				checks = append(checks, v113Checks...)
 			}
@@ -76,7 +91,7 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 				Config: testPkiSecretBackendCertConfigUrlsConfig(
 					rootPath, issuingCertificates, crlDistributionPoints, ocspServers),
 				Check: getChecks(
-					issuingCertificates, crlDistributionPoints, ocspServers, enableTemplating),
+					issuingCertificates, crlDistributionPoints, "", ocspServers, enableTemplating),
 			},
 			{
 				SkipFunc: func() (bool, error) {
@@ -104,7 +119,24 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 				Config: testPkiSecretBackendCertConfigUrlsConfig113(
 					rootPath, issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new", !enableTemplating),
 				Check: getChecks(
-					issuingCertificates+"/new", crlDistributionPoints+"/new", ocspServers+"/new", !enableTemplating),
+					issuingCertificates+"/new", crlDistributionPoints+"/new", "", ocspServers+"/new", !enableTemplating),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !provider.IsAPISupported(meta, provider.VaultVersion120), nil
+				},
+				Config: testPkiSecretBackendCertConfigUrlsConfig120(
+					rootPath, issuingCertificates, crlDistributionPoints, deltaCrlDistributionPoints, ocspServers, !enableTemplating),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testPkiSecretBackendCertConfigUrlsConfig120(
+					rootPath, issuingCertificates+"/new", crlDistributionPoints+"/new", deltaCrlDistributionPoints+"/new", ocspServers+"/new", !enableTemplating),
+				Check: getChecks(
+					issuingCertificates+"/new", crlDistributionPoints+"/new", deltaCrlDistributionPoints+"/new", ocspServers+"/new", !enableTemplating),
 			},
 		},
 	})
@@ -192,4 +224,21 @@ resource "vault_pki_secret_backend_config_urls" "test" {
 `,
 		testPkiSecretBackendCertConfigUrlsMountConfig(rootPath),
 		issuingCertificates, crlDistributionPoints, ocspServers, enableTemplating)
+}
+
+func testPkiSecretBackendCertConfigUrlsConfig120(rootPath string, issuingCertificates string, crlDistributionPoints string, deltaCrlDistributionPoints string, ocspServers string, enableTemplating bool) string {
+	return fmt.Sprintf(`
+%s
+
+resource "vault_pki_secret_backend_config_urls" "test" {
+  backend                       = vault_mount.test-root.path
+  issuing_certificates          = ["%s"]
+  crl_distribution_points       = ["%s"]
+  delta_crl_distribution_points = ["%s"]
+  ocsp_servers                  = ["%s"]
+  enable_templating             = %t
+}
+`,
+		testPkiSecretBackendCertConfigUrlsMountConfig(rootPath),
+		issuingCertificates, crlDistributionPoints, deltaCrlDistributionPoints, ocspServers, enableTemplating)
 }

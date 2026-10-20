@@ -24,6 +24,11 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 
 	issuerName := acctest.RandomWithPrefix("tf-pki-issuer")
 
+	issuingCertificates := "http://127.0.0.1:8200/v1/pki/ca"
+	crlDistributionPoints := "http://127.0.0.1:8200/v1/pki/crl"
+	deltaCrlDistributionPoints := "http://127.0.0.1:8200/v1/pki/crl/delta"
+	ocspServers := "http://127.0.0.1:8200/v1/pki/oscp"
+
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
 		PreCheck: func() {
@@ -78,6 +83,61 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 			// Import returns "crl-signing,read-only,issuing-certificates"
 			// TF state returns "read-only,issuing-certificates,crl-signing"
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldUsage),
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !provider.IsAPISupported(meta, provider.VaultVersion120), nil
+				},
+				Config: testAccPKISecretBackendIssuer_basic(backend, fmt.Sprintf(`
+                    issuer_name                   = "%[1]s"
+                    issuing_certificates          = ["%[2]s"]
+                    crl_distribution_points       = ["%[3]s"]
+                    delta_crl_distribution_points = ["%[4]s"]
+                    ocsp_servers                  = ["%[5]s"]`,
+					issuerName,
+					issuingCertificates,
+					crlDistributionPoints,
+					deltaCrlDistributionPoints,
+					ocspServers,
+				)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
+					resource.TestCheckResourceAttr(resourceName, "issuing_certificates.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "issuing_certificates.0", issuingCertificates),
+					resource.TestCheckResourceAttr(resourceName, "crl_distribution_points.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "crl_distribution_points.0", crlDistributionPoints),
+					resource.TestCheckResourceAttr(resourceName, "delta_crl_distribution_points.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "delta_crl_distribution_points.0", deltaCrlDistributionPoints),
+					resource.TestCheckResourceAttr(resourceName, "ocsp_servers.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "ocsp_servers.0", ocspServers),
+				),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccPKISecretBackendIssuer_basic(backend, fmt.Sprintf(`
+                    issuer_name                   = "%[1]s"
+                    issuing_certificates          = ["%[2]s"]
+                    crl_distribution_points       = ["%[3]s"]
+                    delta_crl_distribution_points = ["%[4]s"]
+                    ocsp_servers                  = ["%[5]s"]`,
+					issuerName,
+					issuingCertificates+"/new",
+					crlDistributionPoints+"/new",
+					deltaCrlDistributionPoints+"/new",
+					ocspServers+"/new",
+				)),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIssuerName, issuerName),
+					resource.TestCheckResourceAttr(resourceName, "issuing_certificates.0", issuingCertificates+"/new"),
+					resource.TestCheckResourceAttr(resourceName, "crl_distribution_points.0", crlDistributionPoints+"/new"),
+					resource.TestCheckResourceAttr(resourceName, "delta_crl_distribution_points.0", deltaCrlDistributionPoints+"/new"),
+					resource.TestCheckResourceAttr(resourceName, "ocsp_servers.0", ocspServers+"/new"),
+				),
+			},
 		},
 	})
 }

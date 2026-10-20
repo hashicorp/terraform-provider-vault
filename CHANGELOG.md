@@ -1,3 +1,19 @@
+## 5.14.0 (Unreleased)
+
+FEATURES:
+
+
+IMPROVEMENTS:
+
+* `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#2761](https://github.com/hashicorp/terraform-provider-vault/pull/2761))
+
+BUG FIXES:
+
+
+DEPENDENCIES:
+
+
+
 ## 5.13.0 (October 14, 2026)
 
 FEATURES:
@@ -7,6 +23,7 @@ FEATURES:
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
 * **New Resource for transform rewrapping**: Add new resource `vault_transform_rewrap` to support rewrapping FPE transformations. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
+
 
 IMPROVEMENTS:
 
