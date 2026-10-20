@@ -158,7 +158,7 @@ func (r *AliCloudSecretBackendRoleResource) Schema(_ context.Context, _ resource
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.0.0+.",
+				MarkdownDescription: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
 			},
 		},
 		// SetNestedBlock is used (instead of flat Set(String) attributes) because:
@@ -264,7 +264,7 @@ func (r *AliCloudSecretBackendRoleResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	if r.Meta().IsAPISupported(provider.VaultVersion200) && r.Meta().IsEnterpriseSupported() {
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
 		if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
 			var metadata map[string]string
 			resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
@@ -360,7 +360,7 @@ func (r *AliCloudSecretBackendRoleResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	if r.Meta().IsAPISupported(provider.VaultVersion200) && r.Meta().IsEnterpriseSupported() {
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
 		if !data.Metadata.Equal(state.Metadata) {
 			if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
 				var metadata map[string]string

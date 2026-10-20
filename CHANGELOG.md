@@ -2,7 +2,7 @@
 
 IMPROVEMENTS:
 
-* **Custom metadata for secrets engine objects**: Add an optional, computed `metadata` map to `vault_aws_secret_backend_role`, `vault_aws_secret_backend_static_role`, `vault_database_secret_backend_role`, `vault_database_secret_backend_static_role`, `vault_database_secret_backend_connection`, `vault_ldap_secret_backend_dynamic_role`, `vault_ldap_secret_backend_static_role`, `vault_gcp_secret_roleset`, `vault_gcp_secret_static_account`, `vault_keymgmt_key`, `vault_alicloud_secret_backend_role`, `vault_consul_secret_backend_role`, `vault_terraform_cloud_secret_role`, `vault_kubernetes_secret_backend_role`, `vault_mongodbatlas_secret_role`, `vault_nomad_secret_role` and `vault_rabbitmq_secret_backend_role`. Requires Vault Enterprise 2.0+. ([#3003](https://github.com/hashicorp/terraform-provider-vault/pull/3003))
+* **Custom metadata for secrets engine objects**: Add an optional, computed `metadata` map to `vault_aws_secret_backend_role`, `vault_aws_secret_backend_static_role`, `vault_database_secret_backend_role`, `vault_database_secret_backend_static_role`, `vault_database_secret_backend_connection`, `vault_ldap_secret_backend_dynamic_role`, `vault_ldap_secret_backend_static_role`, `vault_gcp_secret_roleset`, `vault_gcp_secret_static_account`, `vault_keymgmt_key`, `vault_alicloud_secret_backend_role`, `vault_consul_secret_backend_role`, `vault_terraform_cloud_secret_role`, `vault_kubernetes_secret_backend_role`, `vault_mongodbatlas_secret_role`, `vault_nomad_secret_role` and `vault_rabbitmq_secret_backend_role`. Requires Vault Enterprise 2.3.0+. ([#3003](https://github.com/hashicorp/terraform-provider-vault/pull/3003))
 
 ## 5.13.0 (October 14, 2026)
 

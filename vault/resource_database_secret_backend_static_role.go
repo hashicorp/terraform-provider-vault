@@ -142,7 +142,7 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.0.0+.",
+				Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
 			},
 		},
 	}
@@ -217,7 +217,7 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
 		if d.IsNewResource() {
 			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
 				data[consts.FieldMetadata] = v.(map[string]interface{})
@@ -321,7 +321,7 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
 		if err := d.Set(consts.FieldMetadata, role.Data[consts.FieldMetadata]); err != nil {
 			return diag.FromErr(err)
 		}

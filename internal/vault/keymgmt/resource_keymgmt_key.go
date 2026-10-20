@@ -120,7 +120,7 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "A map of string key-value pairs to associate with the key. Requires Vault Enterprise 2.0.0+.",
+				MarkdownDescription: "A map of string key-value pairs to associate with the key. Requires Vault Enterprise 2.3.0+.",
 			},
 		},
 	}
@@ -157,7 +157,7 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 	}
 
-	if r.Meta().IsAPISupported(provider.VaultVersion200) && r.Meta().IsEnterpriseSupported() {
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
 		if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
 			var metadata map[string]string
 			resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
@@ -258,7 +258,7 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		writeData[consts.FieldMinEnabledVersion] = plan.MinEnabledVersion.ValueInt64()
 	}
 
-	if r.Meta().IsAPISupported(provider.VaultVersion200) && r.Meta().IsEnterpriseSupported() {
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
 		if !plan.Metadata.Equal(state.Metadata) {
 			if !plan.Metadata.IsNull() && !plan.Metadata.IsUnknown() {
 				var metadata map[string]string
