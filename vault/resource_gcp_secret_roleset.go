@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
@@ -97,6 +98,15 @@ func gcpSecretRolesetResource() *schema.Resource {
 				Computed:    true,
 				Description: "Email of the service account created by Vault for this Roleset",
 			},
+			consts.FieldMetadata: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of string key-value pairs to associate with the roleset. Requires Vault Enterprise 2.0.0+.",
+			},
 		},
 
 		CustomizeDiff: customdiff.ComputedIf("service_account_email", func(_ context.Context, d *schema.ResourceDiff, meta interface{}) bool {
@@ -127,6 +137,13 @@ func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 	gcpSecretRolesetUpdateFields(d, data)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+			data[consts.FieldMetadata] = v.(map[string]interface{})
+		}
+	}
+
 	d.SetId(path)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -199,6 +216,12 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error reading %s for GCP Secrets backend roleset %q", "binding", path)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
+			return fmt.Errorf("error setting %s: %s", consts.FieldMetadata, err)
+		}
+	}
+
 	return nil
 }
 
@@ -212,6 +235,12 @@ func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	data := map[string]interface{}{}
 	gcpSecretRolesetUpdateFields(d, data)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
+		if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
 
 	log.Printf("[DEBUG] Updating GCP Secrets backend roleset %q", path)
 

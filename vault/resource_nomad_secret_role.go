@@ -187,13 +187,11 @@ func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-
 	if provider.IsAPISupported(meta, provider.VaultVersion200) && provider.IsEnterpriseSupported(meta) {
 		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
 			return fmt.Errorf("error setting %s: %s", consts.FieldMetadata, err)
 		}
 	}
-
 
 	return nil
 }

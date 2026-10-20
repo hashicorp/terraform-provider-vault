@@ -137,7 +137,7 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 			},
 		},
 	}
-	}
+}
 
 func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	client, e := provider.GetClient(d, meta)

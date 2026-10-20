@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 var _ resource.Resource = &KeyResource{}
@@ -45,6 +46,7 @@ type KeyResourceModel struct {
 	ReplicaRegions    types.Set    `tfsdk:"replica_regions"`
 	LatestVersion     types.Int64  `tfsdk:"latest_version"`
 	MinEnabledVersion types.Int64  `tfsdk:"min_enabled_version"`
+	Metadata          types.Map    `tfsdk:"metadata"`
 }
 
 func NewKeyResource() resource.Resource {
@@ -114,6 +116,12 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 					int64planmodifier.UseStateForUnknown(),
 				},
 			},
+			consts.FieldMetadata: schema.MapAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "A map of string key-value pairs to associate with the key. Requires Vault Enterprise 2.0.0+.",
+			},
 		},
 	}
 	base.MustAddBaseSchema(&resp.Schema)
@@ -146,6 +154,19 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 		if len(regions) > 0 {
 			writeData[consts.FieldReplicaRegions] = regions
+		}
+	}
+
+	if r.Meta().IsAPISupported(provider.VaultVersion200) && r.Meta().IsEnterpriseSupported() {
+		if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+			var metadata map[string]string
+			resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			if len(metadata) > 0 {
+				writeData[consts.FieldMetadata] = metadata
+			}
 		}
 	}
 
@@ -235,6 +256,19 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if !plan.MinEnabledVersion.Equal(state.MinEnabledVersion) {
 		writeData[consts.FieldMinEnabledVersion] = plan.MinEnabledVersion.ValueInt64()
+	}
+
+	if r.Meta().IsAPISupported(provider.VaultVersion200) && r.Meta().IsEnterpriseSupported() {
+		if !plan.Metadata.Equal(state.Metadata) {
+			if !plan.Metadata.IsNull() && !plan.Metadata.IsUnknown() {
+				var metadata map[string]string
+				resp.Diagnostics.Append(plan.Metadata.ElementsAs(ctx, &metadata, false)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				writeData[consts.FieldMetadata] = metadata
+			}
+		}
 	}
 
 	if len(writeData) > 0 {
@@ -371,5 +405,14 @@ func (data *KeyResourceModel) parseKeyResponse(ctx context.Context, responseData
 		if !diagsResult.HasError() {
 			data.ReplicaRegions = setValue
 		}
+	}
+
+	if v, ok := responseData[consts.FieldMetadata].(map[string]interface{}); ok {
+		mapVal, diagsResult := types.MapValueFrom(ctx, types.StringType, v)
+		if !diagsResult.HasError() {
+			data.Metadata = mapVal
+		}
+	} else if data.Metadata.IsUnknown() {
+		data.Metadata = types.MapNull(types.StringType)
 	}
 }
