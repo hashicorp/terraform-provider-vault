@@ -361,7 +361,8 @@ func (r *TransitKeyImportResource) Create(ctx context.Context, req resource.Crea
 		}
 	}
 
-	found := r.readFromVault(ctx, cli, &plan, &resp.Diagnostics)
+	found, d := r.readFromVault(ctx, cli, &plan)
+	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -386,7 +387,8 @@ func (r *TransitKeyImportResource) Read(ctx context.Context, req resource.ReadRe
 		return
 	}
 
-	found := r.readFromVault(ctx, cli, &state, &resp.Diagnostics)
+	found, d := r.readFromVault(ctx, cli, &state)
+	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -471,7 +473,8 @@ func (r *TransitKeyImportResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	found := r.readFromVault(ctx, cli, &plan, &resp.Diagnostics)
+	found, d := r.readFromVault(ctx, cli, &plan)
+	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -523,7 +526,8 @@ func (r *TransitKeyImportResource) ImportState(ctx context.Context, req resource
 		return
 	}
 
-	found := r.readFromVault(ctx, cli, &data, &resp.Diagnostics)
+	found, d := r.readFromVault(ctx, cli, &data)
+	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -548,18 +552,20 @@ func (r *TransitKeyImportResource) ImportState(ctx context.Context, req resource
 }
 
 // readFromVault populates data from Vault. It returns false if the key does not
-// exist (or on error, in which case diags contains the error).
-func (r *TransitKeyImportResource) readFromVault(ctx context.Context, cli *vaultclient.Client, data *TransitKeyImportModel, diags *diag.Diagnostics) bool {
+// exist (or on error, in which case the returned diag.Diagnostics contains the error).
+func (r *TransitKeyImportResource) readFromVault(ctx context.Context, cli *vaultclient.Client, data *TransitKeyImportModel) (bool, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
 	mount := data.Mount.ValueString()
 	name := data.Name.ValueString()
 
 	secret, err := cli.Logical().ReadWithContext(ctx, keyPath(mount, name))
 	if err != nil {
 		diags.AddError(errutil.VaultReadErr(err))
-		return false
+		return false, diags
 	}
 	if secret == nil || secret.Data == nil {
-		return false
+		return false, diags
 	}
 
 	if v, ok := secret.Data[consts.FieldType].(string); ok {
@@ -686,5 +692,5 @@ func (r *TransitKeyImportResource) readFromVault(ctx context.Context, cli *vault
 		data.Keys = types.MapNull(types.StringType)
 	}
 
-	return true
+	return true, diags
 }
