@@ -33,10 +33,14 @@ type transitKeyImportFields struct {
 	allowRotation        bool
 	exportable           bool
 	allowPlaintextBackup bool
-	autoRotatePeriod     int64
+	autoRotatePeriod     *int64
 	minDecryptionVersion int64
 	minEncryptionVersion int64
 	deletionAllowed      bool
+}
+
+func int64Ptr(v int64) *int64 {
+	return &v
 }
 
 // TestAccTransitKeyImport_publicKey validates the lifecycle of importing a public key:
@@ -95,7 +99,7 @@ func TestAccTransitKeyImport_publicKey(t *testing.T) {
 					name:                 keyName,
 					keyType:              "ecdsa-p256",
 					publicKey:            pubKey,
-					autoRotatePeriod:     3600,
+					autoRotatePeriod:     int64Ptr(3600),
 					minDecryptionVersion: 1,
 					minEncryptionVersion: 1,
 					deletionAllowed:      true,
@@ -331,11 +335,19 @@ func TestAccTransitKeyImport_optionalFields(t *testing.T) {
 					allowPlaintextBackup: true,
 					allowRotation:        true,
 					hashFunction:         "SHA384",
-					autoRotatePeriod:     3600,
+					autoRotatePeriod:     int64Ptr(3600),
 					minDecryptionVersion: 1,
 					minEncryptionVersion: 1,
 					deletionAllowed:      true,
 				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
 					resource.TestCheckResourceAttr(resourceAddress, "name", keyName),
@@ -346,13 +358,43 @@ func TestAccTransitKeyImport_optionalFields(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, "exportable", "true"),
 					resource.TestCheckResourceAttr(resourceAddress, "allow_plaintext_backup", "true"),
 				),
+			},
+			// Step 3: In-place update auto_rotate_period back to 0
+			{
+				Config: testAccTransitKeyImportConfig(transitKeyImportFields{
+					mount:                mount,
+					name:                 keyName,
+					keyType:              "rsa-2048",
+					publicKey:            pubKey,
+					exportable:           true,
+					allowPlaintextBackup: true,
+					allowRotation:        true,
+					hashFunction:         "SHA384",
+					autoRotatePeriod:     int64Ptr(0),
+					minDecryptionVersion: 1,
+					minEncryptionVersion: 1,
+					deletionAllowed:      true,
+				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
+					resource.TestCheckResourceAttr(resourceAddress, "name", keyName),
+					resource.TestCheckResourceAttr(resourceAddress, "auto_rotate_period", "0"),
+					resource.TestCheckResourceAttr(resourceAddress, "min_decryption_version", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, "min_encryption_version", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(resourceAddress, "exportable", "true"),
+					resource.TestCheckResourceAttr(resourceAddress, "allow_plaintext_backup", "true"),
+				),
 			},
-			// Step 3: Import state verification
+			// Step 4: Import state verification
 			{
 				ResourceName:                         resourceAddress,
 				ImportState:                          true,
@@ -560,8 +602,8 @@ func testAccTransitKeyImportConfig(f transitKeyImportFields) string {
 	if f.allowPlaintextBackup {
 		optionalArgs += fmt.Sprintf("  allow_plaintext_backup = %t\n", f.allowPlaintextBackup)
 	}
-	if f.autoRotatePeriod > 0 {
-		optionalArgs += fmt.Sprintf("  auto_rotate_period = %d\n", f.autoRotatePeriod)
+	if f.autoRotatePeriod != nil {
+		optionalArgs += fmt.Sprintf("  auto_rotate_period = %d\n", *f.autoRotatePeriod)
 	}
 	if f.minDecryptionVersion > 0 {
 		optionalArgs += fmt.Sprintf("  min_decryption_version = %d\n", f.minDecryptionVersion)
@@ -614,8 +656,8 @@ func testAccTransitKeyImportConfigDirectMount(f transitKeyImportFields) string {
 	if f.allowPlaintextBackup {
 		optionalArgs += fmt.Sprintf("  allow_plaintext_backup = %t\n", f.allowPlaintextBackup)
 	}
-	if f.autoRotatePeriod > 0 {
-		optionalArgs += fmt.Sprintf("  auto_rotate_period = %d\n", f.autoRotatePeriod)
+	if f.autoRotatePeriod != nil {
+		optionalArgs += fmt.Sprintf("  auto_rotate_period = %d\n", *f.autoRotatePeriod)
 	}
 	if f.minDecryptionVersion > 0 {
 		optionalArgs += fmt.Sprintf("  min_decryption_version = %d\n", f.minDecryptionVersion)

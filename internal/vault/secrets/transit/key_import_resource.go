@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -202,6 +203,9 @@ func (r *TransitKeyImportResource) Schema(_ context.Context, _ resource.SchemaRe
 				MarkdownDescription: "The period in seconds at which this key should be rotated automatically. Set to 0 to disable.",
 				Optional:            true,
 				Computed:            true,
+				Validators: []validator.Int64{
+					int64validator.AtLeast(0),
+				},
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
@@ -327,7 +331,7 @@ func (r *TransitKeyImportResource) Create(ctx context.Context, req resource.Crea
 	if !plan.AllowPlaintextBackup.IsNull() && !plan.AllowPlaintextBackup.IsUnknown() {
 		body["allow_plaintext_backup"] = plan.AllowPlaintextBackup.ValueBool()
 	}
-	if !plan.AutoRotatePeriod.IsNull() && !plan.AutoRotatePeriod.IsUnknown() && plan.AutoRotatePeriod.ValueInt64() > 0 {
+	if !plan.AutoRotatePeriod.IsNull() && !plan.AutoRotatePeriod.IsUnknown() {
 		body["auto_rotate_period"] = plan.AutoRotatePeriod.ValueInt64()
 	}
 
