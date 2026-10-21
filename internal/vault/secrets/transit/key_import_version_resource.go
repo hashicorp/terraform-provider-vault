@@ -286,16 +286,16 @@ func (r *TransitKeyImportVersionResource) Delete(_ context.Context, _ resource.D
 }
 
 func (r *TransitKeyImportVersionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	mount, keyName, version, err := parseTransitKeyVersionID(req.ID)
+	parsed, err := parseTransitKeyVersionID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid import ID", err.Error())
 		return
 	}
 
 	var data TransitKeyImportVersionModel
-	data.Mount = types.StringValue(mount)
-	data.KeyName = types.StringValue(keyName)
-	data.Version = types.Int64Value(version)
+	data.Mount = types.StringValue(parsed.Mount)
+	data.KeyName = types.StringValue(parsed.Name)
+	data.Version = types.Int64Value(parsed.Version)
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -303,13 +303,13 @@ func (r *TransitKeyImportVersionResource) ImportState(ctx context.Context, req r
 		return
 	}
 
-	secret, err := cli.Logical().ReadWithContext(ctx, keyPath(mount, keyName))
+	secret, err := cli.Logical().ReadWithContext(ctx, keyPath(parsed.Mount, parsed.Name))
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
 		return
 	}
 	if secret == nil || secret.Data == nil {
-		resp.Diagnostics.AddError("Resource not found", fmt.Sprintf("Transit key %q not found on mount %q", keyName, mount))
+		resp.Diagnostics.AddError("Resource not found", fmt.Sprintf("Transit key %q not found on mount %q", parsed.Name, parsed.Mount))
 		return
 	}
 

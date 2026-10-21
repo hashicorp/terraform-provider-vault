@@ -503,15 +503,15 @@ func (r *TransitKeyImportResource) Delete(ctx context.Context, req resource.Dele
 }
 
 func (r *TransitKeyImportResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	mount, name, err := parseTransitKeyID(req.ID)
+	parsed, err := parseTransitKeyID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid import ID", err.Error())
 		return
 	}
 
 	var data TransitKeyImportModel
-	data.Mount = types.StringValue(mount)
-	data.Name = types.StringValue(name)
+	data.Mount = types.StringValue(parsed.Mount)
+	data.Name = types.StringValue(parsed.Name)
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
@@ -525,7 +525,7 @@ func (r *TransitKeyImportResource) ImportState(ctx context.Context, req resource
 	}
 
 	if !found {
-		resp.Diagnostics.AddError("Resource not found", fmt.Sprintf("Transit key %q not found on mount %q", name, mount))
+		resp.Diagnostics.AddError("Resource not found", fmt.Sprintf("Transit key %q not found on mount %q", parsed.Name, parsed.Mount))
 		return
 	}
 
@@ -535,7 +535,7 @@ func (r *TransitKeyImportResource) ImportState(ctx context.Context, req resource
 		resp.Diagnostics.AddError(
 			"Key was not imported into Vault",
 			fmt.Sprintf("Transit key %q on mount %q was created by Vault (imported_key is false) and cannot be managed by "+
-				"vault_transit_secret_backend_key_import. Use the vault_transit_secret_backend_key resource instead.", name, mount),
+				"vault_transit_secret_backend_key_import. Use the vault_transit_secret_backend_key resource instead.", parsed.Name, parsed.Mount),
 		)
 		return
 	}

@@ -7,70 +7,59 @@ import (
 	"testing"
 )
 
-type transitKeyIDResult struct {
-	mount string
-	name  string
-}
-
-type transitKeyVersionIDResult struct {
-	mount   string
-	name    string
-	version int64
-}
-
 func TestParseTransitKeyID(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name    string
 		id      string
-		want    transitKeyIDResult
+		want    parsedKeyID
 		wantErr bool
 	}{
 		{
 			name: "valid canonical path",
 			id:   "transit/keys/my-key",
-			want: transitKeyIDResult{mount: "transit", name: "my-key"},
+			want: parsedKeyID{Mount: "transit", Name: "my-key"},
 		},
 		{
 			name: "valid shorthand path",
 			id:   "transit/my-key",
-			want: transitKeyIDResult{mount: "transit", name: "my-key"},
+			want: parsedKeyID{Mount: "transit", Name: "my-key"},
 		},
 		{
 			name: "valid canonical nested mount",
 			id:   "ns/sub/transit/keys/my-key",
-			want: transitKeyIDResult{mount: "ns/sub/transit", name: "my-key"},
+			want: parsedKeyID{Mount: "ns/sub/transit", Name: "my-key"},
 		},
 		{
 			name: "valid shorthand nested mount",
 			id:   "ns/sub/transit/my-key",
-			want: transitKeyIDResult{mount: "ns/sub/transit", name: "my-key"},
+			want: parsedKeyID{Mount: "ns/sub/transit", Name: "my-key"},
 		},
 		{
 			name: "valid canonical with leading and trailing slashes",
 			id:   "/transit/keys/my-key/",
-			want: transitKeyIDResult{mount: "transit", name: "my-key"},
+			want: parsedKeyID{Mount: "transit", Name: "my-key"},
 		},
 		{
 			name: "valid shorthand with leading and trailing slashes",
 			id:   "/transit/my-key/",
-			want: transitKeyIDResult{mount: "transit", name: "my-key"},
+			want: parsedKeyID{Mount: "transit", Name: "my-key"},
 		},
 		{
 			name: "valid key with special characters",
 			id:   "transit/keys/key_name-01.test",
-			want: transitKeyIDResult{mount: "transit", name: "key_name-01.test"},
+			want: parsedKeyID{Mount: "transit", Name: "key_name-01.test"},
 		},
 		{
 			name: "valid shorthand where key is named keys",
 			id:   "transit/keys",
-			want: transitKeyIDResult{mount: "transit", name: "keys"},
+			want: parsedKeyID{Mount: "transit", Name: "keys"},
 		},
 		{
 			name: "valid canonical where key is named keys",
 			id:   "transit/keys/keys",
-			want: transitKeyIDResult{mount: "transit", name: "keys"},
+			want: parsedKeyID{Mount: "transit", Name: "keys"},
 		},
 		{
 			name:    "incomplete canonical path ending in /keys/",
@@ -108,16 +97,13 @@ func TestParseTransitKeyID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			gotMount, gotName, err := parseTransitKeyID(tt.id)
+			got, err := parseTransitKeyID(tt.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseTransitKeyID(%q) error = %v, wantErr %v", tt.id, err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr {
-				got := transitKeyIDResult{mount: gotMount, name: gotName}
-				if got != tt.want {
-					t.Errorf("parseTransitKeyID(%q) = %+v, want %+v", tt.id, got, tt.want)
-				}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("parseTransitKeyID(%q) = %+v, want %+v", tt.id, got, tt.want)
 			}
 		})
 	}
@@ -129,48 +115,48 @@ func TestParseTransitKeyVersionID(t *testing.T) {
 	tests := []struct {
 		name    string
 		id      string
-		want    transitKeyVersionIDResult
+		want    parsedKeyVersionID
 		wantErr bool
 	}{
 		{
 			name: "valid canonical path",
 			id:   "transit/keys/my-key/version/1",
-			want: transitKeyVersionIDResult{mount: "transit", name: "my-key", version: 1},
+			want: parsedKeyVersionID{Mount: "transit", Name: "my-key", Version: 1},
 		},
 		{
 			name: "valid shorthand path",
 			id:   "transit/my-key/1",
-			want: transitKeyVersionIDResult{mount: "transit", name: "my-key", version: 1},
+			want: parsedKeyVersionID{Mount: "transit", Name: "my-key", Version: 1},
 		},
 		{
 			name: "valid canonical multi-digit version",
 			id:   "transit/keys/my-key/version/42",
-			want: transitKeyVersionIDResult{mount: "transit", name: "my-key", version: 42},
+			want: parsedKeyVersionID{Mount: "transit", Name: "my-key", Version: 42},
 		},
 		{
 			name: "valid shorthand multi-digit version",
 			id:   "transit/my-key/42",
-			want: transitKeyVersionIDResult{mount: "transit", name: "my-key", version: 42},
+			want: parsedKeyVersionID{Mount: "transit", Name: "my-key", Version: 42},
 		},
 		{
 			name: "valid canonical nested mount",
 			id:   "ns/sub/transit/keys/my-key/version/2",
-			want: transitKeyVersionIDResult{mount: "ns/sub/transit", name: "my-key", version: 2},
+			want: parsedKeyVersionID{Mount: "ns/sub/transit", Name: "my-key", Version: 2},
 		},
 		{
 			name: "valid shorthand nested mount",
 			id:   "ns/sub/transit/my-key/2",
-			want: transitKeyVersionIDResult{mount: "ns/sub/transit", name: "my-key", version: 2},
+			want: parsedKeyVersionID{Mount: "ns/sub/transit", Name: "my-key", Version: 2},
 		},
 		{
 			name: "valid canonical with leading and trailing slashes",
 			id:   "/transit/keys/my-key/version/3/",
-			want: transitKeyVersionIDResult{mount: "transit", name: "my-key", version: 3},
+			want: parsedKeyVersionID{Mount: "transit", Name: "my-key", Version: 3},
 		},
 		{
 			name: "valid shorthand with leading and trailing slashes",
 			id:   "/transit/my-key/3/",
-			want: transitKeyVersionIDResult{mount: "transit", name: "my-key", version: 3},
+			want: parsedKeyVersionID{Mount: "transit", Name: "my-key", Version: 3},
 		},
 		{
 			name:    "empty string",
@@ -218,16 +204,13 @@ func TestParseTransitKeyVersionID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			gotMount, gotName, gotVersion, err := parseTransitKeyVersionID(tt.id)
+			got, err := parseTransitKeyVersionID(tt.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseTransitKeyVersionID(%q) error = %v, wantErr %v", tt.id, err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr {
-				got := transitKeyVersionIDResult{mount: gotMount, name: gotName, version: gotVersion}
-				if got != tt.want {
-					t.Errorf("parseTransitKeyVersionID(%q) = %+v, want %+v", tt.id, got, tt.want)
-				}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("parseTransitKeyVersionID(%q) = %+v, want %+v", tt.id, got, tt.want)
 			}
 		})
 	}
