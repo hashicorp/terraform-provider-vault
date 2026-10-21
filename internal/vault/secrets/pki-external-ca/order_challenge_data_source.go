@@ -10,6 +10,7 @@ import (
 	"time"
 
 	datasourcetimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -193,6 +194,14 @@ func pollOrderStatus(ctx context.Context, cli *api.Client, mount, roleName, orde
 			return err
 		}
 		lastStatus = status
+
+		tflog.Debug(ctx, "Polling order status", map[string]any{
+			"mount":     mount,
+			"role_name": roleName,
+			"order_id":  orderID,
+			"status":    status,
+			"desired":   desired,
+		})
 
 		if strutil.StrListContains(desired, status) {
 			return nil
