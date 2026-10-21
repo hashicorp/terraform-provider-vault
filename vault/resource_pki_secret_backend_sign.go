@@ -120,7 +120,6 @@ func pkiSecretBackendSignResource() *schema.Resource {
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 				ForceNew: true,
-				Default:  "changeit",
 			},
 			consts.FieldPKCS12Encoder: {
 				Type:     schema.TypeString,
@@ -130,7 +129,6 @@ format is set to "pkcs12_bundle". Valid values are "modern2026" and
 "modern2023". Defaults to "modern2026", which uses the newer PKCS#12 
 integrity format (PBMAC1).`,
 				ForceNew:     true,
-				Default:      "modern2026",
 				ValidateFunc: validation.StringInSlice([]string{"modern2026", "modern2023"}, false),
 			},
 			consts.FieldJKSPassword: {
@@ -141,7 +139,6 @@ integrity format (PBMAC1).`,
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 				ForceNew: true,
-				Default:  "changeit",
 			},
 			consts.FieldExcludeCNFromSans: {
 				Type:        schema.TypeBool,

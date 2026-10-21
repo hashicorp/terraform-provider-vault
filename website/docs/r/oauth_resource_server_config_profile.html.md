@@ -8,34 +8,15 @@ description: |-
 
 # vault\_oauth\_resource\_server\_config\_profile
 
-~>  **Preview feature:** This feature is currently available as a preview and is possibly incomplete and subject to change. **We strongly discourage using preview or beta features with production workflows.**
-
-
 Manages OAuth Resource Server Configuration profiles in Vault Enterprise. These profiles define how Vault validates JWT tokens from OAuth 2.0 resource servers, enabling JWT-based authentication for API requests.
 
-~> **Important** This resource is only available in Vault Enterprise and requires Vault 2.0.1 or later.
+~> **Important** This resource is available only in Vault Enterprise and requires Vault 2.1.0 or later.
 
 ### Relationship to Agent Registry 
 
 These two features work together. You may want to refer to [Agent Registry Terraform Resource](agent_registration.html.md).
 
 ## Example Usage
-
-### Enable the Feature
-
-```hcl
-resource "vault_activation_flags" "oauth" {
-  feature = "oauth-resource-server"
-}
-
-resource "vault_oauth_resource_server_config_profile" "example" {
-  depends_on   = [vault_activation_flags.oauth]
-  profile_name = "example-profile"
-  issuer_id    = "https://example.com"
-  use_jwks     = true
-  jwks_uri     = "https://example.com/.well-known/jwks.json"
-}
-```
 
 ### JWKS-Based Profile
 
@@ -115,6 +96,40 @@ resource "vault_oauth_resource_server_config_profile" "advanced" {
 }
 ```
 
+### Profile with RAR (Rich Authorization Requests) Support
+
+```hcl
+resource "vault_oauth_resource_server_config_profile" "rar_optional" {
+  profile_name                     = "rar-optional-profile"
+  issuer_id                        = "https://auth.example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://auth.example.com/.well-known/jwks.json"
+  
+  # Make authorization_details optional in JWT tokens
+  optional_authorization_details   = true
+}
+
+resource "vault_oauth_resource_server_config_profile" "rar_mandatory" {
+  profile_name                     = "rar-mandatory-profile"
+  issuer_id                        = "https://auth.example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://auth.example.com/.well-known/jwks.json"
+  
+  # Require authorization_details in JWT tokens (default behavior)
+  optional_authorization_details   = false
+}
+
+resource "vault_oauth_resource_server_config_profile" "rar_custom_claim" {
+  profile_name                     = "rar-custom-claim-profile"
+  issuer_id                        = "https://auth.example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://auth.example.com/.well-known/jwks.json"
+
+  # Use a custom claim name for authorization details
+  authorization_details_claim      = "rar_details"
+}
+```
+
 ### Profile in a Namespace
 
 ```hcl
@@ -183,6 +198,17 @@ The following arguments are supported:
 
 * `enabled` - (Optional) Whether this profile is enabled for JWT validation. Disabled profiles are ignored during JWT authentication. Defaults to `true`.
 
+* `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional. Defaults to `false`. Requires Vault 2.0.3 or later.
+
+* `authorization_details_claim` - (Optional) The string name of the JWT claim that contains RAR (Rich Authorization Requests) authorization details. Requires Vault 2.2.0 or later when set. If omitted, Vault 2.2.0 and later use `authorization_details`.
+
+* `local` - (Optional) When `false`, the profile is written to replicated storage and propagated to all performance secondaries. When set to `true`, the profile remains local to the current cluster and is not replicated. The `local` field cannot be updated on a profile. Requires Vault 2.2.0 or later.
+
+* `unique_id_claim` - (Optional) The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. The `unique_id_claim` field cannot be updated on a profile; changing it forces a new resource. Requires Vault 2.2.0 or later.
+
+* `actor_claim` - (Optional) The JWT claim to use as the actor identifier for delegation and chained-token scenarios (RFC 8693 `act` claim). Requires Vault 2.2.0 or later.
+
+
 ## Attributes Reference
 
 In addition to the arguments above, the following attributes are exported:
@@ -212,9 +238,9 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_reso
   * When `use_jwks=true`: You must provide `jwks_uri` and cannot provide `public_keys`
   * When `use_jwks=false`: You must provide `public_keys` and cannot provide `jwks_uri`
 
-* **Issuer Uniqueness**: Each issuer ID must be unique within a namespace. You cannot have multiple profiles with the same issuer ID in the same namespace.
+* **Issuer Uniqueness**: Each issuer ID must be unique within a locality (globally replicated or local to the cluster) and a namespace. You cannot have multiple profiles with the same issuer ID and locality in the same namespace.
 
-* **Profile Name Immutability**: The `profile_name` and `issuer_id` cannot be changed after creation. Changing these fields will force a new resource to be created.
+* **Field Immutability**: The `profile_name`, `issuer_id`, `unique_id_claim`, and `local` cannot be changed after creation. Changing these fields will force a new resource to be created.
 
 * **Key ID Uniqueness**: Within a profile, all key IDs must be unique. This applies to both JWKS keys and static PEM keys.
 
@@ -226,9 +252,9 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_reso
 
 * **Clock Skew**: Use `clock_skew_leeway` to handle clock differences between systems. A value of 30-60 seconds is typically sufficient for most environments.
 
-* **Enterprise Feature**: OAuth Resource Server Configuration is only available in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
+* **Enterprise Feature**: OAuth Resource Server Configuration is available only in Vault Enterprise. Attempting to use this resource with Vault Community Edition will result in an error.
 
-* **Version Requirement**: This resource requires Vault 2.0.1 or later.
+* **Version Requirement**: This resource requires Vault 2.1.0 or later.
 
 ## Security Considerations
 

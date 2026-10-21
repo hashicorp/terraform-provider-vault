@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -344,6 +346,64 @@ func TestLDAPSecretBackend_selfManaged(t *testing.T) {
 	})
 }
 
+// TestLDAPSecretBackend_autoUnlock verifies that the mount-level auto_unlock
+// field round-trips correctly. auto_unlock is Active Directory only
+// and requires Vault 2.2.0+, so this test is gated on VaultVersion220 and AD_URL.
+func TestLDAPSecretBackend_autoUnlock(t *testing.T) {
+	var (
+		path         = acctest.RandomWithPrefix("tf-test-ldap")
+		resourceType = "vault_ldap_secret_backend"
+		resourceName = resourceType + ".test"
+
+		url = testutil.SkipTestEnvUnset(t, "AD_URL")[0]
+	)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendConfig_ad(path, url, `auto_unlock = true`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "ad"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAutoUnlock, "true"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendConfig_ad(path, url, `auto_unlock = false`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAutoUnlock, "false"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldBindPass, consts.FieldConnectionTimeout, consts.FieldDisableRemount),
+		},
+	})
+}
+
+// TestLDAPSecretBackendResource_autoUnlockSchema is a unit test (no live Vault
+// required) confirming the mount resource exposes the auto_unlock field with the
+// expected schema definition.
+func TestLDAPSecretBackendResource_autoUnlockSchema(t *testing.T) {
+	s := ldapSecretBackendResource().Schema
+	field, ok := s[consts.FieldAutoUnlock]
+	if !ok {
+		t.Fatalf("expected %q field in mount resource schema", consts.FieldAutoUnlock)
+	}
+	if field.Type != schema.TypeBool {
+		t.Errorf("expected %q to be TypeBool, got %v", consts.FieldAutoUnlock, field.Type)
+	}
+	if !field.Optional {
+		t.Errorf("expected %q to be Optional", consts.FieldAutoUnlock)
+	}
+	if !field.Computed {
+		t.Errorf("expected %q to be Computed", consts.FieldAutoUnlock)
+	}
+}
+
 // testLDAPSecretBackendConfig_defaults is used to setup the backend defaults.
 func testLDAPSecretBackendConfig_defaults(path, bindDN, bindPass string) string {
 	return fmt.Sprintf(`
@@ -486,4 +546,54 @@ resource "vault_ldap_secret_backend" "test" {
   bindpass_wo          = "anothersecurepassword"
   bindpass_wo_version  = 1
 }`, path)
+}
+
+func TestLDAPSecretBackend_RotateOnRead(t *testing.T) {
+	var (
+		path         = acctest.RandomWithPrefix("tf-test-ldap")
+		bindDN       = "test-bind-dn"
+		resourceType = "vault_ldap_secret_backend"
+		resourceName = resourceType + ".test"
+	)
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		PreventPostDestroyRefresh: true,
+		CheckDestroy:              testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendConfig_rotateOnRead(path, bindDN, "true", "120"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBindDN, bindDN),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnRead, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnReadCooldown, "120"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendConfig_rotateOnRead(path, bindDN, "true", "240"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnRead, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldRotateOnReadCooldown, "240"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func testLDAPSecretBackendConfig_rotateOnRead(path, bindDN, rotateOnRead, cooldown string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path                      = "%s"
+  description               = "test description"
+  binddn                    = "%s"
+  userdn                    = "CN=Users,DC=corp,DC=example,DC=net"
+  self_managed              = true
+  rotate_on_read            = %s
+  rotate_on_read_cooldown   = %s
+}`, path, bindDN, rotateOnRead, cooldown)
 }

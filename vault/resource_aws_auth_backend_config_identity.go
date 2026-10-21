@@ -36,7 +36,7 @@ func awsAuthBackendConfigIdentityResource() *schema.Resource {
 				Optional:     true,
 				Default:      "role_id",
 				Description:  "How to generate the identity alias when using the iam auth method.",
-				ValidateFunc: validation.StringInSlice([]string{"role_id", "unique_id", "full_arn"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"role_id", "unique_id", "full_arn", "canonical_arn"}, false),
 			},
 			consts.FieldIAMMetadata: {
 				Type:        schema.TypeSet,
@@ -98,13 +98,18 @@ func awsAuthBackendConfigIdentityWrite(ctx context.Context, d *schema.ResourceDa
 		consts.FieldEC2Metadata: ec2Metadata,
 	}
 
-	fields := []string{
-		consts.FieldIAMAlias,
-		consts.FieldEC2Alias,
+	data[consts.FieldEC2Alias] = d.Get(consts.FieldEC2Alias).(string)
+
+	if d.Get(consts.FieldIAMAlias) == "canonical_arn" {
+		currentVersion := meta.(*provider.ProviderMeta).GetVaultVersion()
+		minVersion := provider.VaultVersion116
+		if !provider.IsAPISupported(meta, minVersion) {
+			return diag.Errorf("feature not enabled on current Vault version. min version required=%s; "+
+				"current vault version=%s", minVersion, currentVersion)
+		}
 	}
-	for _, k := range fields {
-		data[k] = d.Get(k)
-	}
+
+	data[consts.FieldIAMAlias] = d.Get(consts.FieldIAMAlias).(string)
 
 	path := awsAuthBackendConfigIdentityPath(backend)
 

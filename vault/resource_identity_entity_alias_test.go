@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/identity/entity"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
@@ -284,6 +285,62 @@ func testAccCheckIdentityEntityAliasDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+func TestAccIdentityEntityAlias_ExternalIDIssuer(t *testing.T) {
+	entityName := acctest.RandomWithPrefix("my-entity")
+	externalID := acctest.RandomWithPrefix("ext-id")
+	issuer := "https://issuer.example.com"
+
+	nameEntityAlias := "vault_identity_entity_alias.entity-alias"
+	nameGithubA := "vault_auth_backend.githubA"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion200)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAccCheckIdentityEntityAliasDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccIdentityEntityAliasExternalIDConfig(entityName, externalID, issuer),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrPair(nameEntityAlias, "canonical_id", "vault_identity_entity.entity", "id"),
+					resource.TestCheckResourceAttrPair(nameEntityAlias, consts.FieldMountAccessor, nameGithubA, "accessor"),
+					resource.TestCheckResourceAttr(nameEntityAlias, consts.FieldExternalID, externalID),
+					resource.TestCheckResourceAttr(nameEntityAlias, consts.FieldIssuer, issuer),
+				),
+			},
+			{
+				ResourceName:      nameEntityAlias,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
+func testAccIdentityEntityAliasExternalIDConfig(entityName, externalID, issuer string) string {
+	return fmt.Sprintf(`
+resource "vault_identity_entity" "entity" {
+  name = %q
+  policies = ["test"]
+}
+
+resource "vault_auth_backend" "githubA" {
+  type = "github"
+  path = "github-%s"
+}
+
+resource "vault_identity_entity_alias" "entity-alias" {
+  name           = %q
+  mount_accessor = vault_auth_backend.githubA.accessor
+  canonical_id   = vault_identity_entity.entity.id
+  external_id    = %q
+  issuer         = %q
+}
+`, entityName, entityName, entityName, externalID, issuer)
 }
 
 func TestAccIdentityEntityAlias_Metadata(t *testing.T) {

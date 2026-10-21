@@ -23,4 +23,16 @@ func checkVaultVersion(meta *provider.ProviderMeta) error {
 	return nil
 }
 
-// Made with Bob
+// checkVaultVersionDNS verifies that the Vault server version is at least 2.1.0
+// which is required for PKI External CA DNS provider configuration.
+func checkVaultVersionDNS(meta *provider.ProviderMeta) error {
+	minVersion := provider.VaultVersion210
+	currentVersion := meta.GetVaultVersion()
+
+	if !meta.IsAPISupported(minVersion) {
+		return fmt.Errorf("PKI External CA DNS provider configuration requires Vault version %s or higher; current version: %s",
+			minVersion, currentVersion)
+	}
+
+	return nil
+}

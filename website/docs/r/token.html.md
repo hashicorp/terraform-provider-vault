@@ -25,6 +25,17 @@ path "auth/token/revoke-accessor" {
 }
 ```
 
+## JWT revoke compatibility contract
+
+This resource revokes tokens by accessor (`auth/token/revoke-accessor`). It does not provide a first-class workflow for revoking OAuth-resource-server JWT bearer tokens by JWT value.
+
+For JWT revoke operations, use explicit endpoint-driven calls to `auth/token/revoke` (for example with `vault_generic_endpoint`).
+
+For supported Vault versions, the provider contract is:
+
+* Denylist enforcement after JWT revoke is required (revoked JWTs must fail subsequent auth-time checks).
+* Cleanup behavior for associated token-entry/lease state can vary by Vault version and is not guaranteed by this resource contract.
+
 ## Example Usage
 
 ```hcl
