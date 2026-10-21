@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
 const rolesAffix = "role"
@@ -62,6 +63,7 @@ type AliCloudSecretBackendRoleModel struct {
 	RemotePolicies types.Set    `tfsdk:"remote_policies"`
 	TTL            types.Int64  `tfsdk:"ttl"`
 	MaxTTL         types.Int64  `tfsdk:"max_ttl"`
+	Metadata       types.Map    `tfsdk:"metadata"`
 }
 
 // InlinePolicyModel is the Terraform model for a single inline policy nested object.
@@ -151,6 +153,12 @@ func (r *AliCloudSecretBackendRoleResource) Schema(_ context.Context, _ resource
 			consts.FieldMaxTTL: schema.Int64Attribute{
 				Optional:            true,
 				MarkdownDescription: "The maximum allowed lifetime of credentials issued using this role.",
+			},
+			consts.FieldMetadata: schema.MapAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
 			},
 		},
 		// SetNestedBlock is used (instead of flat Set(String) attributes) because:
@@ -256,6 +264,19 @@ func (r *AliCloudSecretBackendRoleResource) Create(ctx context.Context, req reso
 		return
 	}
 
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
+		if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+			var metadata map[string]string
+			resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			if len(metadata) > 0 {
+				vaultRequest[consts.FieldMetadata] = metadata
+			}
+		}
+	}
+
 	if _, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
@@ -318,8 +339,9 @@ func (r *AliCloudSecretBackendRoleResource) Read(ctx context.Context, req resour
 }
 
 func (r *AliCloudSecretBackendRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data AliCloudSecretBackendRoleModel
+	var data, state AliCloudSecretBackendRoleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -336,6 +358,19 @@ func (r *AliCloudSecretBackendRoleResource) Update(ctx context.Context, req reso
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
+		if !data.Metadata.Equal(state.Metadata) {
+			if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+				var metadata map[string]string
+				resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+				vaultRequest[consts.FieldMetadata] = metadata
+			}
+		}
 	}
 
 	if _, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest); err != nil {
@@ -624,6 +659,16 @@ func populateModelFromVaultResponse(ctx context.Context, data *AliCloudSecretBac
 
 	if maxTTLVal, err := role.MaxTTL.Int64(); err == nil && maxTTLVal != 0 {
 		data.MaxTTL = types.Int64Value(maxTTLVal)
+	}
+
+	if v, ok := resp.Data[consts.FieldMetadata].(map[string]interface{}); ok {
+		metadata, d := types.MapValueFrom(ctx, types.StringType, v)
+		diags.Append(d...)
+		if !diags.HasError() {
+			data.Metadata = metadata
+		}
+	} else if data.Metadata.IsUnknown() {
+		data.Metadata = types.MapNull(types.StringType)
 	}
 
 	return diags

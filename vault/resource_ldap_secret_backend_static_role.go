@@ -88,6 +88,15 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 				"When unset, inherits the mount-level setting. " +
 				"Currently only the Active Directory schema is supported. Requires Vault Enterprise 2.2.0+.",
 		},
+		consts.FieldMetadata: {
+			Type:     schema.TypeMap,
+			Optional: true,
+			Computed: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
+		},
 	}
 	resource := &schema.Resource{
 		CreateContext: createUpdateLDAPStaticRoleResource,
@@ -180,6 +189,16 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 		data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
 	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", rolePath, err))
 	}
@@ -244,6 +263,12 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 			if err := d.Set(consts.FieldAutoUnlock, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting auto unlock field '%s': %s", consts.FieldAutoUnlock, err))
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
+			return diag.Errorf("error setting %s: %s", consts.FieldMetadata, err)
 		}
 	}
 

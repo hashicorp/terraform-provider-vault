@@ -763,6 +763,16 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 		Description: "Specifies if a given static account's password should be rotated on creation of the static roles associated with this database config. This is can be overridden at the role-level by the static role's skip_import_rotation field. The default is false",
 	}
 
+	s[consts.FieldMetadata] = &schema.Schema{
+		Type:     schema.TypeMap,
+		Optional: true,
+		Computed: true,
+		Elem: &schema.Schema{
+			Type: schema.TypeString,
+		},
+		Description: "A map of string key-value pairs to associate with the connection. Requires Vault Enterprise 2.3.0+.",
+	}
+
 	return &schema.Resource{
 		CreateContext: databaseSecretBackendConnectionCreateOrUpdate,
 		ReadContext:   provider.ReadContextWrapper(databaseSecretBackendConnectionRead),
@@ -2145,6 +2155,16 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 		automatedrotationutil.ParseAutomatedRotationFieldsWithFieldPrefix(d, data, prefix)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
 	log.Printf("[DEBUG] Writing connection config to %q", path)
 	_, err = client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
@@ -2295,6 +2315,12 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 
 	if provider.IsAPISupported(meta, provider.VaultVersion119) && provider.IsEnterpriseSupported(meta) {
 		automatedrotationutil.GetAutomatedRotationFieldsFromResponse(resp, result)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := resp.Data[consts.FieldMetadata]; ok && v != nil {
+			result[consts.FieldMetadata] = v
+		}
 	}
 
 	return result

@@ -120,6 +120,8 @@ policy will be attached.
 
 * `mfa_serial_number` - (Optional) The ARN or hardware device number of the device configured to the IAM user for multi-factor authentication. Only required if the IAM user has an MFA device set up in AWS.
 
+* `metadata` - (Optional) A map of string key-value pairs to associate with the role. Supplying the map replaces all existing metadata, omitting it preserves the metadata already stored in Vault, and setting `metadata = {}` clears it. A maximum of 64 keys is allowed; keys must be 1-128 bytes and values 1-512 bytes. The stored map is exported in state. Requires Vault Enterprise 2.3.0+.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

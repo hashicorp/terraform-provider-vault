@@ -71,6 +71,8 @@ identities to attach to the token. Applicable for Vault 1.11+ with Consul 1.8+.
 
 * `local` - (Optional) Indicates that the token should not be replicated globally and instead be local to the current datacenter.
 
+* `metadata` - (Optional) A map of string key-value pairs to associate with the role. Supplying the map replaces all existing metadata, omitting it preserves the metadata already stored in Vault, and setting `metadata = {}` clears it. A maximum of 64 keys is allowed; keys must be 1-128 bytes and values 1-512 bytes. The stored map is exported in state. Requires Vault Enterprise 2.3.0+.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

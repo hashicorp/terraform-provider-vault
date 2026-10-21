@@ -68,6 +68,8 @@ The `binding` block supports:
 
 * `roles` - (Required) List of [GCP IAM roles](https://cloud.google.com/iam/docs/understanding-roles) for the resource.
 
+* `metadata` - (Optional) A map of string key-value pairs to associate with the roleset. Supplying the map replaces all existing metadata, omitting it preserves the metadata already stored in Vault, and setting `metadata = {}` clears it. A maximum of 64 keys is allowed; keys must be 1-128 bytes and values 1-512 bytes. The stored map is exported in state. Requires Vault Enterprise 2.3.0+.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are also exposed:
