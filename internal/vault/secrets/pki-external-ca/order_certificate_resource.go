@@ -263,13 +263,23 @@ func (r *PKIExternalCAOrderCertificateResource) Read(ctx context.Context, req re
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+// Update handles in-place changes, which are limited to the timeouts block.
+// All other configurable fields require replacement. The computed certificate
+// fields are marked unknown in the plan on an in-place update, so they are
+// carried over from the prior state.
 func (r *PKIExternalCAOrderCertificateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// All fields require replacement, so this should never be called
-	var data PKIExternalCAOrderCertificateModel
+	var data, prior PKIExternalCAOrderCertificateModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	data.Certificate = prior.Certificate
+	data.CAChain = prior.CAChain
+	data.PrivateKey = prior.PrivateKey
+	data.SerialNumber = prior.SerialNumber
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
