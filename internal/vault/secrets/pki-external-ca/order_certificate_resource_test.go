@@ -131,7 +131,11 @@ resource "vault_pki_external_ca_secret_backend_order_certificate" "test" {
   mount     = vault_mount.test.path
   role_name = vault_pki_external_ca_secret_backend_role.test.name
   order_id  = vault_pki_external_ca_secret_backend_order.test.order_id
-  
+
+  timeouts {
+    create = "2m"
+  }
+
   depends_on = [vault_pki_external_ca_secret_backend_order_challenge_fulfilled.test]
 }
 `, backend, accountName, directoryUrl, ca, roleName, identifier, identifier, identifier)

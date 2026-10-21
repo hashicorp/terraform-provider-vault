@@ -105,6 +105,10 @@ data "vault_pki_external_ca_secret_backend_order_challenge" "http01" {
   order_id       = vault_pki_external_ca_secret_backend_order.test.order_id
   challenge_type = "http-01"
   identifier     = "%s"
+
+  timeouts {
+    read = "2m"
+  }
 }
 
 data "vault_pki_external_ca_secret_backend_order_challenge" "dns01" {
@@ -113,6 +117,10 @@ data "vault_pki_external_ca_secret_backend_order_challenge" "dns01" {
   order_id       = vault_pki_external_ca_secret_backend_order.test.order_id
   challenge_type = "dns-01"
   identifier     = "%s"
+
+  timeouts {
+    read = "2m"
+  }
 }
 `, backend, accountName, directoryUrl, ca, roleName, identifier, identifier, identifier)
 }

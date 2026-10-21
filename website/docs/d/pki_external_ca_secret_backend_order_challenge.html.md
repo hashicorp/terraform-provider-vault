@@ -53,6 +53,10 @@ data "vault_pki_external_ca_secret_backend_order_challenge" "http" {
   order_id       = vault_pki_external_ca_secret_backend_order.example.order_id
   challenge_type = "http-01"
   identifier     = "www.example.com"
+
+  timeouts {
+    read = "2m"
+  }
 }
 
 # Deploy the challenge file
@@ -81,6 +85,10 @@ data "vault_pki_external_ca_secret_backend_order_challenge" "dns" {
   order_id       = vault_pki_external_ca_secret_backend_order.example.order_id
   challenge_type = "dns-01"
   identifier     = "www.example.com"
+
+  timeouts {
+    read = "2m"
+  }
 }
 
 # Create DNS TXT record using AWS Route53
@@ -144,6 +152,22 @@ The following arguments are supported:
 
 * `identifier` - (Required) The identifier (domain name) for which to retrieve the challenge.
 
+### Timeouts
+
+The `timeouts` block allows customising the polling behaviour of this data source.
+If the order does not reach the required state within the timeout, the read will fail.
+
+```hcl
+timeouts {
+  read = "2m"
+}
+```
+
+* `read` - (Optional) The maximum duration to wait for the order to reach the
+  `awaiting-challenge-fulfillment` or `completed` state. Must be a string that can be
+  [parsed as a duration](https://pkg.go.dev/time#ParseDuration) such as `"30s"` or `"5m"`.
+  Defaults to `60s`. The order status is polled every 2 seconds until this duration elapses.
+
 ## Attributes Reference
 
 The following attributes are exported:
@@ -193,4 +217,4 @@ For TLS-ALPN-01 challenges, you must configure your TLS server to:
 
 This challenge type is more complex and typically requires custom TLS server configuration.
 
-~> **Note** This data source polls the order status with a maximum of 5 attempts at 2-second intervals. If the order does not reach the appropriate state within this time, the data source read will fail.
+~> **Note** This data source polls the order status at a fixed 2-second interval for a total duration controlled by the `timeouts.read` value (default `60s`). If the order does not reach the `awaiting-challenge-fulfillment` or `completed` state within that duration, the read will fail.

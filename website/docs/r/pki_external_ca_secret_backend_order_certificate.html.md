@@ -109,13 +109,17 @@ resource "vault_pki_external_ca_secret_backend_order_challenge_fulfilled" "examp
 
 # Fetch the certificate after challenges are fulfilled
 resource "vault_pki_external_ca_secret_backend_order_certificate" "example" {
-  depends_on = [
-    vault_pki_external_ca_secret_backend_order_challenge_fulfilled.example
-  ]
-  
   mount     = vault_mount.pki-external-ca.path
   role_name = vault_pki_external_ca_secret_backend_role.example.name
   order_id  = vault_pki_external_ca_secret_backend_order.example.order_id
+
+  timeouts {
+    create = "5m"
+  }
+
+  depends_on = [
+    vault_pki_external_ca_secret_backend_order_challenge_fulfilled.example
+  ]
 }
 
 # Use the certificate
@@ -144,6 +148,22 @@ The following arguments are supported:
 
 * `order_id` - (Required) The unique identifier for the ACME order.
 
+### Timeouts
+
+The `timeouts` block allows customising how long this resource will poll for the
+order to complete before failing.
+
+```hcl
+timeouts {
+  create = "5m"
+}
+```
+
+* `create` - (Optional) The maximum duration to wait for the ACME order to reach
+  the `completed` state. Must be a string that can be
+  [parsed as a duration](https://pkg.go.dev/time#ParseDuration) such as `"30s"` or `"5m"`.
+  Defaults to `60s`. The order status is polled every 2 seconds until this duration elapses.
+
 ## Attributes Reference
 
 In addition to the fields above, the following attributes are exported:
@@ -166,4 +186,4 @@ PKI External CA order certificates can be imported using the format `<mount>/rol
 $ terraform import vault_pki_external_ca_secret_backend_order_certificate.example pki-external-ca/role/example-role/order/abc123/certificate
 ```
 
-~> **Note** This resource polls the order status with a timeout. If the order does not complete within the polling period, the resource creation will fail. Ensure all challenges are properly fulfilled before creating this resource.
+~> **Note** This resource polls the order status at a fixed 2-second interval for a total duration controlled by the `timeouts.create` value (default `60s`). Ensure all challenges are properly fulfilled before creating this resource, otherwise the order will not complete within the timeout.
