@@ -76,7 +76,13 @@ The following arguments are supported:
 
 * `hash_function` - (Optional) The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Defaults to `SHA256`.
 
-* `version` - (Optional, Computed) Key version to update. If omitted, a new key version will be created.
+* `version` - (Optional, Computed) Key version to update. If omitted, Vault creates a new version, except when the latest version contains only a public key and the request supplies its matching private key. In that case, Vault adds the private key to the existing, latest version.
+
+## Attributes Reference
+
+The following attributes are exported:
+
+* `latest_version` - The latest version number of this key.
 
 ## Import
 

@@ -52,6 +52,7 @@ type TransitKeyImportVersionModel struct {
 	PublicKey           types.String `tfsdk:"public_key"`
 	HashFunction        types.String `tfsdk:"hash_function"`
 	Version             types.Int64  `tfsdk:"version"`
+	LatestVersion       types.Int64  `tfsdk:"latest_version"`
 }
 
 func (r *TransitKeyImportVersionResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -106,8 +107,15 @@ func (r *TransitKeyImportVersionResource) Schema(_ context.Context, _ resource.S
 				},
 			},
 			consts.FieldVersion: schema.Int64Attribute{
-				MarkdownDescription: "Key version to update. If omitted, a new key version will be created.",
+				MarkdownDescription: "Specifies the existing key version to update. If omitted, Vault creates a new version, except when the latest version contains only a public key and the request supplies its matching private key. In that case, Vault adds the private key to the existing, latest version.",
 				Optional:            true,
+				Computed:            true,
+				Validators: []validator.Int64{
+					int64validator.AtLeast(1),
+				},
+			},
+			consts.FieldLatestVersion: schema.Int64Attribute{
+				MarkdownDescription: "The latest version number of this key.",
 				Computed:            true,
 			},
 		},
@@ -152,7 +160,7 @@ func (r *TransitKeyImportVersionResource) Create(ctx context.Context, req resour
 	if !plan.HashFunction.IsNull() && !plan.HashFunction.IsUnknown() {
 		body["hash_function"] = plan.HashFunction.ValueString()
 	}
-	if !plan.Version.IsNull() && !plan.Version.IsUnknown() && plan.Version.ValueInt64() > 0 {
+	if !plan.Version.IsNull() && !plan.Version.IsUnknown() {
 		body["version"] = plan.Version.ValueInt64()
 	}
 
@@ -165,21 +173,23 @@ func (r *TransitKeyImportVersionResource) Create(ctx context.Context, req resour
 		return
 	}
 
+	secret, err := cli.Logical().ReadWithContext(ctx, keyPath(mount, keyName))
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+		return
+	}
+	// latest_version is returned by Vault after importing a new version.
+	// version only falls back to latest_version if the user did not explicitly set it.
+	// otherwise, preserve the specified version so state does not drift to latest_version.
+	lv := types.Int64Value(1)
+	if secret != nil && secret.Data != nil {
+		if v := util.Int64ValueOrNull(secret.Data[consts.FieldLatestVersion]); !v.IsNull() {
+			lv = v
+		}
+	}
+	plan.LatestVersion = lv
 	if plan.Version.IsNull() || plan.Version.IsUnknown() {
-		secret, err := cli.Logical().ReadWithContext(ctx, keyPath(mount, keyName))
-		if err != nil {
-			resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-			return
-		}
-		if secret != nil && secret.Data != nil {
-			if lv := util.Int64ValueOrNull(secret.Data[consts.FieldLatestVersion]); !lv.IsNull() {
-				plan.Version = lv
-			} else {
-				plan.Version = types.Int64Value(1)
-			}
-		} else {
-			plan.Version = types.Int64Value(1)
-		}
+		plan.Version = lv
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -206,6 +216,10 @@ func (r *TransitKeyImportVersionResource) Read(ctx context.Context, req resource
 	if secret == nil || secret.Data == nil {
 		resp.State.RemoveResource(ctx)
 		return
+	}
+
+	if lv := util.Int64ValueOrNull(secret.Data[consts.FieldLatestVersion]); !lv.IsNull() {
+		state.LatestVersion = lv
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -248,7 +262,7 @@ func (r *TransitKeyImportVersionResource) Update(ctx context.Context, req resour
 	if !plan.HashFunction.IsNull() && !plan.HashFunction.IsUnknown() {
 		body["hash_function"] = plan.HashFunction.ValueString()
 	}
-	if !plan.Version.IsNull() && !plan.Version.IsUnknown() && plan.Version.ValueInt64() > 0 {
+	if !plan.Version.IsNull() && !plan.Version.IsUnknown() {
 		body["version"] = plan.Version.ValueInt64()
 	}
 
@@ -261,21 +275,23 @@ func (r *TransitKeyImportVersionResource) Update(ctx context.Context, req resour
 		return
 	}
 
+	secret, err := cli.Logical().ReadWithContext(ctx, keyPath(mount, keyName))
+	if err != nil {
+		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
+		return
+	}
+	// latest_version is returned by Vault after importing a new version.
+	// version only falls back to latest_version if the user did not explicitly set it.
+	// otherwise, preserve the specified version so state does not drift to latest_version.
+	lv := types.Int64Value(1)
+	if secret != nil && secret.Data != nil {
+		if v := util.Int64ValueOrNull(secret.Data[consts.FieldLatestVersion]); !v.IsNull() {
+			lv = v
+		}
+	}
+	plan.LatestVersion = lv
 	if plan.Version.IsNull() || plan.Version.IsUnknown() {
-		secret, err := cli.Logical().ReadWithContext(ctx, keyPath(mount, keyName))
-		if err != nil {
-			resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-			return
-		}
-		if secret != nil && secret.Data != nil {
-			if lv := util.Int64ValueOrNull(secret.Data[consts.FieldLatestVersion]); !lv.IsNull() {
-				plan.Version = lv
-			} else {
-				plan.Version = types.Int64Value(1)
-			}
-		} else {
-			plan.Version = types.Int64Value(1)
-		}
+		plan.Version = lv
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -311,6 +327,10 @@ func (r *TransitKeyImportVersionResource) ImportState(ctx context.Context, req r
 	if secret == nil || secret.Data == nil {
 		resp.Diagnostics.AddError("Resource not found", fmt.Sprintf("Transit key %q not found on mount %q", parsed.Name, parsed.Mount))
 		return
+	}
+
+	if lv := util.Int64ValueOrNull(secret.Data[consts.FieldLatestVersion]); !lv.IsNull() {
+		data.LatestVersion = lv
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

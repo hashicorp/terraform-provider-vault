@@ -22,11 +22,18 @@ import (
 )
 
 type transitKeyImportVersionFields struct {
-	mount         string
-	keyName       string
-	keyType       string
-	basePubKey    string
-	versionPubKey string
+	mount   string
+	keyName string
+	keyType string
+	// exactly one of basePubKey or baseCiphertext must be set
+	basePubKey     string
+	baseCiphertext string
+	// version resource fields — all optional
+	versionPubKey       string
+	versionCiphertextWO string
+	versionWOVersion    int64
+	versionHashFunction string
+	versionVersion      int64
 }
 
 // TestAccTransitKeyImportVersion_publicKey validates importing subsequent public key versions:
@@ -35,9 +42,17 @@ type transitKeyImportVersionFields struct {
 //   - Step 3: In-place update to import key version 3 with new public_key
 //   - Step 4: Import state verification
 func TestAccTransitKeyImportVersion_publicKey(t *testing.T) {
+	acctestutil.TestAccPreCheck(t)
+
 	mount := acctest.RandomWithPrefix("transit-mount")
 	keyName := acctest.RandomWithPrefix("transit-key")
 	resourceAddress := "vault_transit_secret_backend_key_import_version.test"
+
+	cli := acctestutil.TestProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+	if err := cli.Sys().Mount(mount, &vaultclient.MountInput{Type: "transit"}); err != nil {
+		t.Fatalf("failed to mount transit: %v", err)
+	}
+	defer cli.Sys().Unmount(mount)
 
 	pubKey1 := generateTestECDSAPublicKeyPEM(t)
 	pubKey2 := generateTestECDSAPublicKeyPEM(t)
@@ -73,7 +88,7 @@ func TestAccTransitKeyImportVersion_publicKey(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
 					resource.TestCheckResourceAttr(resourceAddress, "key_name", keyName),
-					resource.TestCheckResourceAttr(resourceAddress, "version", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -93,7 +108,7 @@ func TestAccTransitKeyImportVersion_publicKey(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
 					resource.TestCheckResourceAttr(resourceAddress, "key_name", keyName),
-					resource.TestCheckResourceAttr(resourceAddress, "version", "3"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "3"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -120,31 +135,49 @@ func TestAccTransitKeyImportVersion_publicKey(t *testing.T) {
 }
 
 func testAccTransitKeyImportVersionConfig(f transitKeyImportVersionFields) string {
-	var versionResource string
+	// Build the version resource block — omitted when no version key material is provided.
+	var attrs string
 	if f.versionPubKey != "" {
+		attrs += fmt.Sprintf("\n\t public_key = %q", f.versionPubKey)
+	}
+	if f.versionCiphertextWO != "" {
+		attrs += fmt.Sprintf("\n\t ciphertext_wo         = %q", f.versionCiphertextWO)
+		attrs += fmt.Sprintf("\n\t ciphertext_wo_version = %d", f.versionWOVersion)
+	}
+	if f.versionHashFunction != "" {
+		attrs += fmt.Sprintf("\n\t hash_function = %q", f.versionHashFunction)
+	}
+	if f.versionVersion > 0 {
+		attrs += fmt.Sprintf("\n\t version = %d", f.versionVersion)
+	}
+
+	var versionResource string
+	if attrs != "" {
 		versionResource = fmt.Sprintf(`
 resource "vault_transit_secret_backend_key_import_version" "test" {
-	 mount      = vault_transit_secret_backend_key_import.base.mount
-	 key_name   = vault_transit_secret_backend_key_import.base.name
-	 public_key = %q
+	 mount    = vault_transit_secret_backend_key_import.base.mount
+	 key_name = vault_transit_secret_backend_key_import.base.name%s
 }
-`, f.versionPubKey)
+`, attrs)
+	}
+
+	// Use public_key or ciphertext depending on which is set.
+	var baseKeyMaterial string
+	if f.basePubKey != "" {
+		baseKeyMaterial = fmt.Sprintf("public_key = %q", f.basePubKey)
+	} else {
+		baseKeyMaterial = fmt.Sprintf("ciphertext = %q", f.baseCiphertext)
 	}
 
 	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-	 path = %q
-	 type = "transit"
-}
-
 resource "vault_transit_secret_backend_key_import" "base" {
-	 mount            = vault_mount.test.path
+	 mount            = %q
 	 name             = %q
 	 type             = %q
-	 public_key       = %q
+	 %s
 	 deletion_allowed = true
 }
-%s`, f.mount, f.keyName, f.keyType, f.basePubKey, versionResource)
+%s`, f.mount, f.keyName, f.keyType, baseKeyMaterial, versionResource)
 }
 
 func testAccTransitKeyImportVersionStateIdFunc(resourceName string) resource.ImportStateIdFunc {
@@ -157,20 +190,11 @@ func testAccTransitKeyImportVersionStateIdFunc(resourceName string) resource.Imp
 	}
 }
 
-type transitKeyImportVersionWrappedFields struct {
-	mount               string
-	keyName             string
-	keyType             string
-	baseCiphertext      string
-	versionCiphertextWO string
-	versionWOVersion    int64
-	versionHashFunction string
-}
-
-// TestAccTransitKeyImportVersion_wrappedKey validates importing and updating subsequent wrapped key versions:
+// TestAccTransitKeyImportVersion_wrappedKey validates importing and updating subsequent wrapped key versions.
+// The transit mount is pre-created outside Terraform so the wrapping key can be fetched before test steps run.
 //   - Step 1: Create base key with wrapped ciphertext (v1)
-//   - Step 2: Import key version 2 with ciphertext_wo + hash_function = "SHA256"
-//   - Step 3: In-place update to import key version 3 with new ciphertext_wo + incremented ciphertext_wo_version + hash_function = "SHA384"
+//   - Step 2: Import key version 2 with ciphertext_wo + ciphertext_wo_version + hash_function = "SHA256"
+//   - Step 3: In-place update to import key version 3 with ciphertext_wo + ciphertext_wo_version = 2 + hash_function = "SHA384"
 //   - Step 4: Import state verification
 func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
@@ -181,8 +205,7 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 	resourceAddress := "vault_transit_secret_backend_key_import_version.test"
 
 	cli := acctestutil.TestProvider.Meta().(*provider.ProviderMeta).MustGetClient()
-	err := cli.Sys().Mount(mount, &vaultclient.MountInput{Type: "transit"})
-	if err != nil {
+	if err := cli.Sys().Mount(mount, &vaultclient.MountInput{Type: "transit"}); err != nil {
 		t.Fatalf("failed to mount transit: %v", err)
 	}
 	defer cli.Sys().Unmount(mount)
@@ -196,21 +219,15 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 		t.Fatalf("failed to extract public key from wrapping key endpoint")
 	}
 
-	rawAESKey1 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey1); err != nil {
-		t.Fatalf("failed to generate random AES key 1: %v", err)
+	rawKey1, rawKey2, rawKey3 := make([]byte, 32), make([]byte, 32), make([]byte, 32)
+	for _, k := range [][]byte{rawKey1, rawKey2, rawKey3} {
+		if _, err := io.ReadFull(rand.Reader, k); err != nil {
+			t.Fatalf("failed to generate random AES key: %v", err)
+		}
 	}
-	rawAESKey2 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey2); err != nil {
-		t.Fatalf("failed to generate random AES key 2: %v", err)
-	}
-	rawAESKey3 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey3); err != nil {
-		t.Fatalf("failed to generate random AES key 3: %v", err)
-	}
-	ciphertext1 := createTransitBYOKCiphertext(t, pubKey, rawAESKey1)
-	ciphertext2 := createTransitBYOKCiphertextWithHash(t, pubKey, rawAESKey2, "SHA256")
-	ciphertext3 := createTransitBYOKCiphertextWithHash(t, pubKey, rawAESKey3, "SHA384")
+	ciphertext1 := createTransitBYOKCiphertext(t, pubKey, rawKey1)
+	ciphertext2 := createTransitBYOKCiphertextWithHash(t, pubKey, rawKey2, "SHA256")
+	ciphertext3 := createTransitBYOKCiphertextWithHash(t, pubKey, rawKey3, "SHA384")
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -220,7 +237,7 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create base imported key with wrapped ciphertext
 			{
-				Config: testAccTransitKeyImportVersionWrappedConfig(transitKeyImportVersionWrappedFields{
+				Config: testAccTransitKeyImportVersionConfig(transitKeyImportVersionFields{
 					mount:          mount,
 					keyName:        keyName,
 					keyType:        "aes256-gcm96",
@@ -232,7 +249,7 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 			},
 			// Step 2: Import key version 2 with ciphertext_wo + ciphertext_wo_version + hash_function = "SHA256"
 			{
-				Config: testAccTransitKeyImportVersionWrappedConfig(transitKeyImportVersionWrappedFields{
+				Config: testAccTransitKeyImportVersionConfig(transitKeyImportVersionFields{
 					mount:               mount,
 					keyName:             keyName,
 					keyType:             "aes256-gcm96",
@@ -244,7 +261,7 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
 					resource.TestCheckResourceAttr(resourceAddress, "key_name", keyName),
-					resource.TestCheckResourceAttr(resourceAddress, "version", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
 					resource.TestCheckResourceAttr(resourceAddress, "hash_function", "SHA256"),
 					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCiphertextWO),
 				),
@@ -256,7 +273,7 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 			},
 			// Step 3: In-place update to import key version 3 with new ciphertext_wo + ciphertext_wo_version = 2 + hash_function = "SHA384"
 			{
-				Config: testAccTransitKeyImportVersionWrappedConfig(transitKeyImportVersionWrappedFields{
+				Config: testAccTransitKeyImportVersionConfig(transitKeyImportVersionFields{
 					mount:               mount,
 					keyName:             keyName,
 					keyType:             "aes256-gcm96",
@@ -268,7 +285,7 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
 					resource.TestCheckResourceAttr(resourceAddress, "key_name", keyName),
-					resource.TestCheckResourceAttr(resourceAddress, "version", "3"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "3"),
 					resource.TestCheckResourceAttr(resourceAddress, "hash_function", "SHA384"),
 					resource.TestCheckNoResourceAttr(resourceAddress, consts.FieldCiphertextWO),
 				),
@@ -294,29 +311,4 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 			},
 		},
 	})
-}
-
-func testAccTransitKeyImportVersionWrappedConfig(f transitKeyImportVersionWrappedFields) string {
-	var versionResource string
-	if f.versionCiphertextWO != "" {
-		versionResource = fmt.Sprintf(`
-resource "vault_transit_secret_backend_key_import_version" "test" {
-	 mount                 = vault_transit_secret_backend_key_import.base.mount
-	 key_name              = vault_transit_secret_backend_key_import.base.name
-	 ciphertext_wo         = %q
-	 ciphertext_wo_version = %d
-	 hash_function         = %q
-}
-`, f.versionCiphertextWO, f.versionWOVersion, f.versionHashFunction)
-	}
-
-	return fmt.Sprintf(`
-resource "vault_transit_secret_backend_key_import" "base" {
-	 mount            = %q
-	 name             = %q
-	 type             = %q
-	 ciphertext       = %q
-	 deletion_allowed = true
-}
-%s`, f.mount, f.keyName, f.keyType, f.baseCiphertext, versionResource)
 }
