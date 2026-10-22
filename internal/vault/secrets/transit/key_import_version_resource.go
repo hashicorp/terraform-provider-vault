@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -133,21 +134,35 @@ func (r *TransitKeyImportVersionResource) Create(ctx context.Context, req resour
 		return
 	}
 
+	resp.Diagnostics.Append(r.importVersion(ctx, &plan, &config, errutil.VaultCreateErr)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// importVersion writes the key material to Vault's import_version endpoint and
+// then reads the key back to populate latest_version (and version, if unset) on plan.
+// It is shared by Create and Update since both perform the same operation.
+func (r *TransitKeyImportVersionResource) importVersion(ctx context.Context, plan, config *TransitKeyImportVersionModel, writeErr func(error) (string, string)) diag.Diagnostics {
+	var diags diag.Diagnostics
+
 	hasCiphertext := !config.CiphertextWO.IsNull() && !config.CiphertextWO.IsUnknown() && config.CiphertextWO.ValueString() != ""
 	hasPublicKey := !plan.PublicKey.IsNull() && !plan.PublicKey.IsUnknown() && plan.PublicKey.ValueString() != ""
 
 	if !hasCiphertext && !hasPublicKey {
-		resp.Diagnostics.AddError(
+		diags.AddError(
 			"Missing key material",
 			"Either 'ciphertext_wo' (for private/symmetric key import) or 'public_key' (for public key only import) must be provided.",
 		)
-		return
+		return diags
 	}
 
 	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
+		diags.AddError(errutil.ClientConfigureErr(err))
+		return diags
 	}
 
 	body := map[string]any{}
@@ -166,17 +181,16 @@ func (r *TransitKeyImportVersionResource) Create(ctx context.Context, req resour
 
 	mount := plan.Mount.ValueString()
 	keyName := plan.KeyName.ValueString()
-	p := importVersionPath(mount, keyName)
 
-	if _, err := cli.Logical().WriteWithContext(ctx, p, body); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
-		return
+	if _, err := cli.Logical().WriteWithContext(ctx, importVersionPath(mount, keyName), body); err != nil {
+		diags.AddError(writeErr(err))
+		return diags
 	}
 
 	secret, err := cli.Logical().ReadWithContext(ctx, keyPath(mount, keyName))
 	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
+		diags.AddError(errutil.VaultReadErr(err))
+		return diags
 	}
 	// latest_version is returned by Vault after importing a new version.
 	// version only falls back to latest_version if the user did not explicitly set it.
@@ -192,7 +206,7 @@ func (r *TransitKeyImportVersionResource) Create(ctx context.Context, req resour
 		plan.Version = lv
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	return diags
 }
 
 func (r *TransitKeyImportVersionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -225,6 +239,8 @@ func (r *TransitKeyImportVersionResource) Read(ctx context.Context, req resource
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
+// Update behaves identically to Create: this resource has a single Vault
+// endpoint (import_version), so every apply is the same "import key material" action.
 func (r *TransitKeyImportVersionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan TransitKeyImportVersionModel
 	var config TransitKeyImportVersionModel
@@ -235,63 +251,9 @@ func (r *TransitKeyImportVersionResource) Update(ctx context.Context, req resour
 		return
 	}
 
-	hasCiphertext := !config.CiphertextWO.IsNull() && !config.CiphertextWO.IsUnknown() && config.CiphertextWO.ValueString() != ""
-	hasPublicKey := !plan.PublicKey.IsNull() && !plan.PublicKey.IsUnknown() && plan.PublicKey.ValueString() != ""
-
-	if !hasCiphertext && !hasPublicKey {
-		resp.Diagnostics.AddError(
-			"Missing key material",
-			"Either 'ciphertext_wo' (for private/symmetric key import) or 'public_key' (for public key only import) must be provided.",
-		)
+	resp.Diagnostics.Append(r.importVersion(ctx, &plan, &config, errutil.VaultUpdateErr)...)
+	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	body := map[string]any{}
-	if hasCiphertext {
-		body["ciphertext"] = config.CiphertextWO.ValueString()
-	}
-	if hasPublicKey {
-		body["public_key"] = plan.PublicKey.ValueString()
-	}
-	if !plan.HashFunction.IsNull() && !plan.HashFunction.IsUnknown() {
-		body["hash_function"] = plan.HashFunction.ValueString()
-	}
-	if !plan.Version.IsNull() && !plan.Version.IsUnknown() {
-		body["version"] = plan.Version.ValueInt64()
-	}
-
-	mount := plan.Mount.ValueString()
-	keyName := plan.KeyName.ValueString()
-	p := importVersionPath(mount, keyName)
-
-	if _, err := cli.Logical().WriteWithContext(ctx, p, body); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
-		return
-	}
-
-	secret, err := cli.Logical().ReadWithContext(ctx, keyPath(mount, keyName))
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	// latest_version is returned by Vault after importing a new version.
-	// version only falls back to latest_version if the user did not explicitly set it.
-	// otherwise, preserve the specified version so state does not drift to latest_version.
-	lv := types.Int64Value(1)
-	if secret != nil && secret.Data != nil {
-		if v := util.Int64ValueOrNull(secret.Data[consts.FieldLatestVersion]); !v.IsNull() {
-			lv = v
-		}
-	}
-	plan.LatestVersion = lv
-	if plan.Version.IsNull() || plan.Version.IsUnknown() {
-		plan.Version = lv
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
