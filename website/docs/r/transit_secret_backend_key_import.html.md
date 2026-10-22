@@ -10,7 +10,9 @@ description: |-
 
 Imports existing key material (BYOK) or public keys into a new Transit encryption key and manages ongoing key configuration in place.
 
-~> **Deletion and replacement** Vault requires `deletion_allowed` to be `true` before a key can be deleted. This applies both to `terraform destroy` and to any plan that replaces the resource (e.g. changing `type`, `ciphertext`, `allow_rotation`, or other immutable fields). Set `deletion_allowed = true` in your configuration before making changes that would trigger replacement.
+~> **Deletion and replacement** Vault requires `deletion_allowed` to be `true` before a key can be deleted to protect from accidental deletion. This applies both to `terraform destroy` and to any plan that replaces the resource (e.g. changing `type`, `allow_rotation`, or other immutable fields). Set `deletion_allowed = true` in your configuration before making changes that would trigger replacement.
+
+~> **Importing new key versions** After the initial import, changing `public_key`, or changing `ciphertext_wo` together with `ciphertext_wo_version`, imports the new key material into the existing key through Vault's [import key version](https://developer.hashicorp.com/vault/api-docs/secret/transit#import-key-version) endpoint. This only works on keys that were imported into Vault and have not been rotated inside Vault. Vault validates the combination of arguments and returns an error for unsupported ones.
 
 For more information, please refer to [the Vault Transit documentation](https://developer.hashicorp.com/vault/api-docs/secret/transit#import-key).
 
@@ -48,12 +50,31 @@ data "vault_secret_backend_wrapping_key" "wrapping_key" {
 
 # Construct ciphertext by wrapping key material with the public wrapping key using RSA-OAEP + AES-GCM
 resource "vault_transit_secret_backend_key_import" "example_byok" {
-  mount      = vault_mount.transit.path
-  name       = "my-imported-key"
-  type       = "aes256-gcm96"
-  ciphertext = var.wrapped_ciphertext
+  mount                 = vault_mount.transit.path
+  name                  = "my-imported-key"
+  type                  = "aes256-gcm96"
+  ciphertext_wo         = var.wrapped_ciphertext
+  ciphertext_wo_version = 1
 }
 ```
+
+### Importing a New Key Version
+
+To import new key material into the existing key, provide the new wrapped ciphertext and increment
+`ciphertext_wo_version`. The ciphertext is sent to Vault only when `ciphertext_wo_version` changes, so
+leaving `ciphertext_wo` in the configuration while editing other arguments does not create duplicate key versions.
+
+```hcl
+resource "vault_transit_secret_backend_key_import" "example_byok" {
+  mount                 = vault_mount.transit.path
+  name                  = "my-imported-key"
+  type                  = "aes256-gcm96"
+  ciphertext_wo         = var.wrapped_ciphertext_v2
+  ciphertext_wo_version = 2
+}
+```
+
+For a public-key-only key, change `public_key` to import the new public key as a new version.
 
 ## Argument Reference
 
@@ -70,11 +91,16 @@ The following arguments are supported:
 
 * `type` - (Required) Specifies the type of key to create. Supported types: `aes128-gcm96`, `aes256-gcm96`, `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `hmac`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`. Changing this forces a new resource.
 
-* `ciphertext` - (Optional, Sensitive) A base64-encoded string containing the wrapped ephemeral AES key and the encrypted key material. Required when importing private or symmetric keys. Changing this forces a new resource.
+* `ciphertext_wo` - (Optional, Sensitive, Write-Only) A base64-encoded string containing the wrapped ephemeral AES key and the encrypted key material. Required when importing private or symmetric keys. Must be used together with `ciphertext_wo_version`. This field is write-only and is not stored in the Terraform plan or state, and is not read back from Vault. Either `ciphertext_wo` or `public_key` is required when the key is first imported. Afterwards it can be removed from the configuration; removing it does not change the key.
 
-* `public_key` - (Optional) A plaintext PEM public key to be imported for public-key-only import. Changing this forces a new resource.
+* `ciphertext_wo_version` - (Optional) Version identifier for `ciphertext_wo`. Ciphertext is sent to Vault on create and then only when this value changes. Increment it, along with providing the new `ciphertext_wo`, to import new key material as a new key version. Must be used together with `ciphertext_wo`.
 
-* `hash_function` - (Optional) The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Defaults to `SHA256`. Changing this forces a new resource.
+* `public_key` - (Optional) A plaintext PEM public key to be imported for public-key-only import. Changing this imports the new public key as a new key version. Either `ciphertext_wo` or `public_key` is required when the key is first imported. Afterwards it can be removed from the configuration; removing it does not change the key.
+
+* `hash_function` - (Optional) The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Defaults to `SHA256`. Vault does not store this value; it is only used to unwrap the ciphertext in each request, so it is sent to Vault every time `ciphertext_wo` is sent (on create and whenever `ciphertext_wo_version` changes).
+
+* `version` - (Optional) The existing key version to update when importing key material into an already-imported key. If omitted, Vault creates a new version, except when the latest version contains only a public key and the new ciphertext supplies its matching private key; in that case Vault adds the private key to that existing version. Ignored when the key is first imported. 
+~> **Note:** `version` is sent to Vault whenever key material is imported, so each time you bump `ciphertext_wo_version`, either remove `version` from the configuration (to target the latest version) or set it to the key version you want to add private key material to. Leaving a previous value in place targets that same version again.
 
 * `allow_rotation` - (Optional) If set to `true`, the imported key can be rotated within Vault using the rotate endpoint. Changing this forces a new resource.
 

@@ -59,14 +59,19 @@ type TransitKeyImportModel struct {
 	Mount         types.String `tfsdk:"mount"`
 	Name          types.String `tfsdk:"name"`
 	Type          types.String `tfsdk:"type"`
-	Ciphertext    types.String `tfsdk:"ciphertext"`
-	PublicKey     types.String `tfsdk:"public_key"`
-	HashFunction  types.String `tfsdk:"hash_function"`
 	AllowRotation types.Bool   `tfsdk:"allow_rotation"`
 	Derived       types.Bool   `tfsdk:"derived"`
 	Context       types.String `tfsdk:"context"`
 
-	// Tunable key configuration (POST /keys/:name/config - Update in place)
+	// Key material parameters. Used for the initial import (POST /keys/:name/import) and
+	// any subsequent changes import a new key version (POST /keys/:name/import_version).
+	CiphertextWO        types.String `tfsdk:"ciphertext_wo"`
+	CiphertextWOVersion types.Int64  `tfsdk:"ciphertext_wo_version"`
+	PublicKey           types.String `tfsdk:"public_key"`
+	HashFunction        types.String `tfsdk:"hash_function"`
+	Version             types.Int64  `tfsdk:"version"`
+
+	// Tunable key configuration (POST /keys/:name/config)
 	DeletionAllowed      types.Bool  `tfsdk:"deletion_allowed"`
 	Exportable           types.Bool  `tfsdk:"exportable"`
 	AllowPlaintextBackup types.Bool  `tfsdk:"allow_plaintext_backup"`
@@ -74,7 +79,7 @@ type TransitKeyImportModel struct {
 	MinDecryptionVersion types.Int64 `tfsdk:"min_decryption_version"`
 	MinEncryptionVersion types.Int64 `tfsdk:"min_encryption_version"`
 
-	// Read-only key metadata (GET /keys/:name - Computed)
+	// Read-only key metadata (GET /keys/:name)
 	MinAvailableVersion      types.Int64  `tfsdk:"min_available_version"`
 	ImportedKey              types.Bool   `tfsdk:"imported_key"`
 	ImportedKeyAllowRotation types.Bool   `tfsdk:"imported_key_allow_rotation"`
@@ -116,37 +121,40 @@ func (r *TransitKeyImportResource) Schema(_ context.Context, _ resource.SchemaRe
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			consts.FieldCiphertext: schema.StringAttribute{
-				MarkdownDescription: "A base64-encoded string containing the wrapped ephemeral AES key and the encrypted key material. Required when importing private or symmetric keys.",
+			consts.FieldCiphertextWO: schema.StringAttribute{
+				MarkdownDescription: "A base64-encoded string containing the wrapped ephemeral AES key and the encrypted key material (write-only). Required with `ciphertext_wo_version`. Either this or `public_key` is needed for the initial import.",
 				Optional:            true,
 				Sensitive:           true,
+				WriteOnly:           true,
 				Validators: []validator.String{
-					stringvalidator.AtLeastOneOf(path.MatchRoot(consts.FieldPublicKey)),
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldCiphertextWOVersion)),
 				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+			},
+			consts.FieldCiphertextWOVersion: schema.Int64Attribute{
+				MarkdownDescription: "Version identifier for `ciphertext_wo`. Increment it to import a new ciphertext as a new key version. Required with `ciphertext_wo`.",
+				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.AlsoRequires(path.MatchRoot(consts.FieldCiphertextWO)),
 				},
 			},
 			consts.FieldPublicKey: schema.StringAttribute{
-				MarkdownDescription: "A plaintext PEM public key to be imported. This limits the operations available under this key to verification and encryption, depending on the key type and algorithm, as no private key is available.",
+				MarkdownDescription: "A plaintext PEM public key to be imported. Either this or `ciphertext_wo` is needed for the initial import. Changing it imports the new public key as a new key version.",
 				Optional:            true,
-				Validators: []validator.String{
-					stringvalidator.AtLeastOneOf(path.MatchRoot(consts.FieldCiphertext)),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			consts.FieldHashFunction: schema.StringAttribute{
-				MarkdownDescription: "The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Defaults to `SHA256`.",
+				MarkdownDescription: "The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Defaults to `SHA256`. Sent with `ciphertext_wo`, so it must match how the ciphertext was wrapped.",
 				Optional:            true,
 				Computed:            true,
 				Default:             stringdefault.StaticString("SHA256"),
 				Validators: []validator.String{
 					stringvalidator.OneOfCaseInsensitive("SHA1", "SHA224", "SHA256", "SHA384", "SHA512"),
 				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+			},
+			consts.FieldVersion: schema.Int64Attribute{
+				MarkdownDescription: "Specifies the existing key version to update when importing key material to an already-imported key. If omitted, Vault creates a new version, except when the latest version contains only a public key and the request supplies its matching private key; in that case Vault adds the private key to the existing, latest version. Ignored when the key is first imported.",
+				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.AtLeast(1),
 				},
 			},
 			consts.FieldAllowRotation: schema.BoolAttribute{
@@ -297,6 +305,13 @@ func (r *TransitKeyImportResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
+	// ciphertext_wo is write-only, so it is only available from config.
+	var config TransitKeyImportModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
@@ -307,8 +322,8 @@ func (r *TransitKeyImportResource) Create(ctx context.Context, req resource.Crea
 		"type": plan.Type.ValueString(),
 	}
 
-	if !plan.Ciphertext.IsNull() && !plan.Ciphertext.IsUnknown() && plan.Ciphertext.ValueString() != "" {
-		body["ciphertext"] = plan.Ciphertext.ValueString()
+	if !config.CiphertextWO.IsNull() && !config.CiphertextWO.IsUnknown() && config.CiphertextWO.ValueString() != "" {
+		body["ciphertext"] = config.CiphertextWO.ValueString()
 	}
 	if !plan.PublicKey.IsNull() && !plan.PublicKey.IsUnknown() && plan.PublicKey.ValueString() != "" {
 		body["public_key"] = plan.PublicKey.ValueString()
@@ -415,6 +430,13 @@ func (r *TransitKeyImportResource) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
+	// ciphertext_wo is write-only, so it is only available from config.
+	var config TransitKeyImportModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
@@ -423,6 +445,34 @@ func (r *TransitKeyImportResource) Update(ctx context.Context, req resource.Upda
 
 	mount := plan.Mount.ValueString()
 	name := plan.Name.ValueString()
+
+	// New key material is imported as a key version (POST /import_version) only when
+	// ciphertext_wo_version or public_key changes. ciphertext_wo is write-only and never
+	// diffed, so ciphertext_wo_version is its change trigger: the ciphertext is sent only
+	// when it changes. A field removed from config (null plan) is not a request to import.
+	// hash_function and version describe the key material being imported, so they are sent
+	// along with it but never trigger an import on their own.
+	ciphertextChanged := !plan.CiphertextWOVersion.IsNull() && !plan.CiphertextWOVersion.Equal(state.CiphertextWOVersion)
+	publicKeyChanged := !plan.PublicKey.IsNull() && !plan.PublicKey.Equal(state.PublicKey)
+	if ciphertextChanged || publicKeyChanged {
+		importBody := map[string]any{}
+		if ciphertextChanged && !config.CiphertextWO.IsNull() {
+			importBody["ciphertext"] = config.CiphertextWO.ValueString()
+		}
+		if publicKeyChanged {
+			importBody["public_key"] = plan.PublicKey.ValueString()
+		}
+		if !plan.HashFunction.IsNull() {
+			importBody["hash_function"] = plan.HashFunction.ValueString()
+		}
+		if !plan.Version.IsNull() {
+			importBody["version"] = plan.Version.ValueInt64()
+		}
+		if _, err := cli.Logical().WriteWithContext(ctx, importVersionPath(mount, name), importBody); err != nil {
+			resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
+			return
+		}
+	}
 
 	// Build the /config request body. All config fields are Optional+Computed,
 	// so we check if the value is set before sending it to Vault to update.

@@ -45,6 +45,30 @@ func generateTestECDSAPublicKeyPEM(t *testing.T) string {
 	return string(pem.EncodeToMemory(pemBlock))
 }
 
+// generateTestECDSAKeyPair generates a test ECDSA P-256 key pair. It returns the public
+// key in PEM format and the private key as PKCS#8 DER, which is the key material format
+// Vault expects inside the wrapped ciphertext for asymmetric keys.
+func generateTestECDSAKeyPair(t *testing.T) (string, []byte) {
+	t.Helper()
+
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate ECDSA key: %v", err)
+	}
+
+	pubDER, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		t.Fatalf("failed to marshal public key: %v", err)
+	}
+
+	privDER, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		t.Fatalf("failed to marshal private key: %v", err)
+	}
+
+	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})), privDER
+}
+
 // generateTestRSAPublicKeyPEM generates a test RSA 2048 public key in PEM format.
 func generateTestRSAPublicKeyPEM(t *testing.T) string {
 	t.Helper()

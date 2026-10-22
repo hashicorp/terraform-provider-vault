@@ -29,6 +29,8 @@ type transitKeyImportFields struct {
 	keyType              string
 	publicKey            string
 	ciphertext           string
+	ciphertextWOVersion  int64
+	version              int64
 	hashFunction         string
 	allowRotation        bool
 	exportable           bool
@@ -122,6 +124,8 @@ func TestAccTransitKeyImport_publicKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, "deletion_allowed", "true"),
 					resource.TestCheckResourceAttr(resourceAddress, "exportable", "true"),
 					resource.TestCheckResourceAttr(resourceAddress, "imported_key", "true"),
+					// A tunable-only change must not import another key version.
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
 					// latest_version_type is only populated by Vault >= 2.1
 					func(s *terraform.State) error {
 						if acctestutil.IsAPIVersionGTE(version.Must(version.NewVersion("2.1.0"))) {
@@ -168,7 +172,9 @@ func TestAccTransitKeyImport_publicKey(t *testing.T) {
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				// These are all values that are not returned by vault.
 				ImportStateVerifyIgnore: []string{
-					consts.FieldCiphertext,
+					consts.FieldCiphertextWO,
+					consts.FieldCiphertextWOVersion,
+					consts.FieldVersion,
 					consts.FieldContext,
 					consts.FieldPublicKey,
 					consts.FieldHashFunction,
@@ -178,10 +184,14 @@ func TestAccTransitKeyImport_publicKey(t *testing.T) {
 	})
 }
 
-// TestAccTransitKeyImport_wrappedKey validates importing wrapped symmetric key material:
-//   - Step 1: Create with wrapped AES-256 ciphertext
-//   - Step 2: Modify ciphertext -> verify resource replacement (destroy + recreate)
-//   - Step 3: Import state verification
+// TestAccTransitKeyImport_wrappedKey validates importing wrapped symmetric key material and
+// the ciphertext_wo / ciphertext_wo_version gating:
+//   - Step 1: ciphertext_wo without ciphertext_wo_version -> validation error
+//   - Step 2: Create with wrapped AES-256 ciphertext (defaults only)
+//   - Step 3: Edit only a tunable with ciphertext_wo still in config -> ciphertext must NOT be
+//     re-sent (Vault would append a duplicate version, so latest_version must stay at 1)
+//   - Step 4: Bump ciphertext_wo_version with new ciphertext -> in-place update importing version 2
+//   - Step 5: Import state verification
 func TestAccTransitKeyImport_wrappedKey(t *testing.T) {
 	acctestutil.SkipTestAcc(t)
 	acctestutil.TestAccPreCheck(t)
@@ -224,13 +234,27 @@ func TestAccTransitKeyImport_wrappedKey(t *testing.T) {
 			acctestutil.TestAccPreCheck(t)
 		},
 		Steps: []resource.TestStep{
-			// Step 1: Create with initial wrapped ciphertext
+			// Step 1: ciphertext_wo must be paired with ciphertext_wo_version.
+			{
+				Config: fmt.Sprintf(`
+resource "vault_transit_secret_backend_key_import" "test" {
+		mount            = %q
+		name             = %q
+		type             = "aes256-gcm96"
+		deletion_allowed = true
+		ciphertext_wo    = %q
+}
+`, mount, keyName, ciphertext1),
+				ExpectError: regexp.MustCompile(`ciphertext_wo_version`),
+			},
+			// Step 2: Create with initial wrapped ciphertext
 			{
 				Config: testAccTransitKeyImportConfigDirectMount(transitKeyImportFields{
-					mount:      mount,
-					name:       keyName,
-					keyType:    "aes256-gcm96",
-					ciphertext: ciphertext1,
+					mount:               mount,
+					name:                keyName,
+					keyType:             "aes256-gcm96",
+					ciphertext:          ciphertext1,
+					ciphertextWOVersion: 1,
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
@@ -247,17 +271,46 @@ func TestAccTransitKeyImport_wrappedKey(t *testing.T) {
 					},
 				},
 			},
-			// Step 2: Modify ciphertext -> verify resource replacement (destroy + recreate)
+			// Step 3: ciphertext_wo stays in config but only a tunable changes. ciphertext_wo_version
+			// is unchanged, so the ciphertext must not be re-sent. Vault appends a duplicate version
+			// when the same ciphertext is posted again, so latest_version staying at 1 proves it.
 			{
 				Config: testAccTransitKeyImportConfigDirectMount(transitKeyImportFields{
-					mount:      mount,
-					name:       keyName,
-					keyType:    "aes256-gcm96",
-					ciphertext: ciphertext2,
+					mount:               mount,
+					name:                keyName,
+					keyType:             "aes256-gcm96",
+					ciphertext:          ciphertext1,
+					ciphertextWOVersion: 1,
+					exportable:          true,
 				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionReplace),
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "exportable", "true"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "1"),
+				),
+			},
+			// Step 4: New ciphertext with a bumped ciphertext_wo_version -> in-place update
+			// that imports the ciphertext as version 2.
+			{
+				Config: testAccTransitKeyImportConfigDirectMount(transitKeyImportFields{
+					mount:               mount,
+					name:                keyName,
+					keyType:             "aes256-gcm96",
+					ciphertext:          ciphertext2,
+					ciphertextWOVersion: 2,
+					exportable:          true,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
 					},
 					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
@@ -267,10 +320,11 @@ func TestAccTransitKeyImport_wrappedKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, "mount", mount),
 					resource.TestCheckResourceAttr(resourceAddress, "name", keyName),
 					resource.TestCheckResourceAttr(resourceAddress, "type", "aes256-gcm96"),
-					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "2"),
 				),
 			},
-			// Step 3: Import state verification
+			// Step 5: Import state verification
 			{
 				ResourceName:                         resourceAddress,
 				ImportState:                          true,
@@ -278,11 +332,277 @@ func TestAccTransitKeyImport_wrappedKey(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
-					consts.FieldCiphertext,
+					consts.FieldCiphertextWO,
+					consts.FieldCiphertextWOVersion,
+					consts.FieldVersion,
 					consts.FieldContext,
 					consts.FieldPublicKey,
 					consts.FieldHashFunction,
 				},
+			},
+		},
+	})
+}
+
+// testAccTransitKeyImportWrappingKey mounts transit and returns the mount's public
+// wrapping key, which is used to build wrapped ciphertexts for the BYOK tests.
+func testAccTransitKeyImportWrappingKey(t *testing.T, mount string) string {
+	t.Helper()
+
+	cli := acctestutil.TestProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+	if err := cli.Sys().Mount(mount, &vaultclient.MountInput{Type: "transit"}); err != nil {
+		t.Fatalf("failed to mount transit: %v", err)
+	}
+	t.Cleanup(func() { cli.Sys().Unmount(mount) })
+
+	secret, err := cli.Logical().Read(mount + "/wrapping_key")
+	if err != nil || secret == nil {
+		t.Fatalf("failed to read wrapping key: %v", err)
+	}
+	wrappingKey, ok := secret.Data["public_key"].(string)
+	if !ok {
+		t.Fatalf("failed to extract public key from wrapping key endpoint")
+	}
+	return wrappingKey
+}
+
+// TestAccTransitKeyImport_backfillPrivateKey validates the version argument by attaching a
+// private key to an older, public-key-only version:
+//   - Step 1: Create with public_key only (version 1)
+//   - Step 2: Change public_key -> version 2 is imported
+//   - Step 3: Add ciphertext_wo wrapping the private key for version 1 with version = 1 ->
+//     Vault attaches the private key to version 1 instead of creating version 3
+func TestAccTransitKeyImport_backfillPrivateKey(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
+	acctestutil.TestAccPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transit-mount")
+	keyName := acctest.RandomWithPrefix("transit-key")
+	resourceAddress := "vault_transit_secret_backend_key_import.test"
+
+	wrappingKey := testAccTransitKeyImportWrappingKey(t, mount)
+	pubKey1, privKey1 := generateTestECDSAKeyPair(t)
+	pubKey2 := generateTestECDSAPublicKeyPEM(t)
+	privKey1Ciphertext := createTransitBYOKCiphertext(t, wrappingKey, privKey1)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			// Step 1: public key only.
+			{
+				Config: testAccTransitKeyImportConfigDirectMount(transitKeyImportFields{
+					mount:     mount,
+					name:      keyName,
+					keyType:   "ecdsa-p256",
+					publicKey: pubKey1,
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "1"),
+				),
+			},
+			// Step 2: a new public_key imports version 2.
+			{
+				Config: testAccTransitKeyImportConfigDirectMount(transitKeyImportFields{
+					mount:     mount,
+					name:      keyName,
+					keyType:   "ecdsa-p256",
+					publicKey: pubKey2,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "2"),
+				),
+			},
+			// Step 3: attach the private key to version 1. latest_version must stay at 2.
+			{
+				Config: testAccTransitKeyImportConfigDirectMount(transitKeyImportFields{
+					mount:               mount,
+					name:                keyName,
+					keyType:             "ecdsa-p256",
+					publicKey:           pubKey2,
+					ciphertext:          privKey1Ciphertext,
+					ciphertextWOVersion: 1,
+					version:             1,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "2"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccTransitKeyImport_hashFunctionWithCiphertext validates that hash_function is sent
+// with every ciphertext import, not only when it changes. Both ciphertexts are wrapped with
+// SHA512, so hash_function does not change between steps; if it were omitted on the bump,
+// Vault would default to SHA256 and fail to unwrap the ciphertext.
+//   - Step 1: Create with a SHA512-wrapped ciphertext and hash_function = SHA512
+//   - Step 2: Bump ciphertext_wo_version with a new SHA512-wrapped ciphertext -> version 2
+func TestAccTransitKeyImport_hashFunctionWithCiphertext(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
+	acctestutil.TestAccPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transit-mount")
+	keyName := acctest.RandomWithPrefix("transit-key")
+	resourceAddress := "vault_transit_secret_backend_key_import.test"
+
+	wrappingKey := testAccTransitKeyImportWrappingKey(t, mount)
+
+	rawAESKey1 := make([]byte, 32)
+	rawAESKey2 := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, rawAESKey1); err != nil {
+		t.Fatalf("failed to generate random AES key 1: %v", err)
+	}
+	if _, err := io.ReadFull(rand.Reader, rawAESKey2); err != nil {
+		t.Fatalf("failed to generate random AES key 2: %v", err)
+	}
+	ciphertext1 := createTransitBYOKCiphertextWithHash(t, wrappingKey, rawAESKey1, "SHA512")
+	ciphertext2 := createTransitBYOKCiphertextWithHash(t, wrappingKey, rawAESKey2, "SHA512")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTransitKeyImportConfigDirectMount(transitKeyImportFields{
+					mount:               mount,
+					name:                keyName,
+					keyType:             "aes256-gcm96",
+					ciphertext:          ciphertext1,
+					ciphertextWOVersion: 1,
+					hashFunction:        "SHA512",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "hash_function", "SHA512"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
+				),
+			},
+			{
+				Config: testAccTransitKeyImportConfigDirectMount(transitKeyImportFields{
+					mount:               mount,
+					name:                keyName,
+					keyType:             "aes256-gcm96",
+					ciphertext:          ciphertext2,
+					ciphertextWOVersion: 2,
+					hashFunction:        "SHA512",
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "2"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccTransitKeyImport_ciphertextWOVersionRequiresCiphertext validates the only
+// schema-level check left on the key material arguments: ciphertext_wo_version must be
+// paired with ciphertext_wo. Everything else (for example no key material at all) is
+// left for Vault to reject.
+func TestAccTransitKeyImport_ciphertextWOVersionRequiresCiphertext(t *testing.T) {
+	mount := acctest.RandomWithPrefix("transit-mount")
+	keyName := acctest.RandomWithPrefix("transit-key")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: fmt.Sprintf(`
+resource "vault_transit_secret_backend_key_import" "test" {
+  mount                 = %q
+  name                  = %q
+  type                  = "aes256-gcm96"
+  ciphertext_wo_version = 1
+}
+`, mount, keyName),
+				ExpectError: regexp.MustCompile(`ciphertext_wo`),
+			},
+		},
+	})
+}
+
+// TestAccTransitKeyImport_keyMaterialRemovedFromConfig validates that key material is only
+// needed when it is imported: once the key exists, public_key can be dropped from config
+// and the resource keeps managing its tunables without importing another key version.
+func TestAccTransitKeyImport_keyMaterialRemovedFromConfig(t *testing.T) {
+	mount := acctest.RandomWithPrefix("transit-mount")
+	keyName := acctest.RandomWithPrefix("transit-key")
+	resourceAddress := "vault_transit_secret_backend_key_import.test"
+
+	pubKey := generateTestECDSAPublicKeyPEM(t)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTransitKeyImportConfig(transitKeyImportFields{
+					mount:           mount,
+					name:            keyName,
+					keyType:         "ecdsa-p256",
+					publicKey:       pubKey,
+					deletionAllowed: true,
+				}),
+				Check: resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
+			},
+			// public_key removed from config and a tunable changed: in-place update, no new version.
+			{
+				Config: testAccTransitKeyImportConfig(transitKeyImportFields{
+					mount:           mount,
+					name:            keyName,
+					keyType:         "ecdsa-p256",
+					deletionAllowed: true,
+					exportable:      true,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "exportable", "true"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "1"),
+				),
 			},
 		},
 	})
@@ -402,7 +722,9 @@ func TestAccTransitKeyImport_optionalFields(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 				ImportStateVerifyIgnore: []string{
-					consts.FieldCiphertext,
+					consts.FieldCiphertextWO,
+					consts.FieldCiphertextWOVersion,
+					consts.FieldVersion,
 					consts.FieldContext,
 					consts.FieldPublicKey,
 					consts.FieldHashFunction,
@@ -413,17 +735,16 @@ func TestAccTransitKeyImport_optionalFields(t *testing.T) {
 }
 
 // TestAccTransitKeyImport_versionImportedDuringUpdate verifies that computed
-// attributes Vault can change outside this resource (latest_version, keys,
+// attributes that change when a key version is imported (latest_version, keys,
 // min_available_version) are not planned with UseStateForUnknown. Otherwise,
-// importing a key version in the same apply makes Vault return a different
-// value than the plan and Terraform fails with "inconsistent result after apply".
-//
-// The version resource doesn't reference the key, so the key uses depends_on to
-// make the version import run first. That makes the ordering deterministic.
+// importing a key version in the same Update as a /config change makes Vault
+// return a different value than the plan and Terraform fails with
+// "inconsistent result after apply".
 //
 //   - Step 1: Create the key at version 1.
-//   - Step 2: Update the key and import version 2 in the same apply.
-//   - Step 3: Change min_decryption_version alone (the key's own Update).
+//   - Step 2: Change public_key and a tunable in the same apply: version 2 is
+//     imported and /config is updated.
+//   - Step 3: Change min_decryption_version alone: no new version is imported.
 func TestAccTransitKeyImport_versionImportedDuringUpdate(t *testing.T) {
 	mount := acctest.RandomWithPrefix("transit-mount")
 	keyName := acctest.RandomWithPrefix("transit-key")
@@ -440,16 +761,29 @@ func TestAccTransitKeyImport_versionImportedDuringUpdate(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create the key at version 1.
 			{
-				Config: testAccTransitKeyImportVersionDuringUpdateConfig(mount, keyName, pubKey1, "", false, 0),
+				Config: testAccTransitKeyImportConfig(transitKeyImportFields{
+					mount:           mount,
+					name:            keyName,
+					keyType:         "ecdsa-p256",
+					publicKey:       pubKey1,
+					deletionAllowed: true,
+				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
 					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "1"),
 					resource.TestCheckResourceAttr(resourceAddress, "exportable", "false"),
 				),
 			},
-			// Step 2: Update the key and import version 2 in the same apply.
+			// Step 2: Import version 2 (public_key change) and update /config in the same apply.
 			{
-				Config: testAccTransitKeyImportVersionDuringUpdateConfig(mount, keyName, pubKey1, pubKey2, true, 0),
+				Config: testAccTransitKeyImportConfig(transitKeyImportFields{
+					mount:           mount,
+					name:            keyName,
+					keyType:         "ecdsa-p256",
+					publicKey:       pubKey2,
+					deletionAllowed: true,
+					exportable:      true,
+				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
@@ -460,17 +794,24 @@ func TestAccTransitKeyImport_versionImportedDuringUpdate(t *testing.T) {
 				},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "exportable", "true"),
-					resource.TestCheckResourceAttr("vault_transit_secret_backend_key_import_version.v2", "version", "2"),
-					// Values that changed due to the version import, not the key's Update.
+					// Values that changed due to the version import, not the /config update.
 					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
 					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "2"),
 					// Unchanged by a same-type version import; asserted to document that.
 					resource.TestCheckResourceAttr(resourceAddress, "min_available_version", "0"),
 				),
 			},
-			// Step 3: Change min_decryption_version alone (the key's own Update).
+			// Step 3: Change min_decryption_version alone; no new version is imported.
 			{
-				Config: testAccTransitKeyImportVersionDuringUpdateConfig(mount, keyName, pubKey1, pubKey2, true, 2),
+				Config: testAccTransitKeyImportConfig(transitKeyImportFields{
+					mount:                mount,
+					name:                 keyName,
+					keyType:              "ecdsa-p256",
+					publicKey:            pubKey2,
+					deletionAllowed:      true,
+					exportable:           true,
+					minDecryptionVersion: 2,
+				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
@@ -482,6 +823,10 @@ func TestAccTransitKeyImport_versionImportedDuringUpdate(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceAddress, "min_decryption_version", "2"),
 					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
+					// Vault only returns key versions >= min_decryption_version, so version 1
+					// drops out of keys even though it still exists. latest_version staying at 2
+					// shows no new version was imported.
+					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "1"),
 				),
 			},
 		},
@@ -537,58 +882,19 @@ resource "vault_transit_secret_backend_key_import" "test" {
 	})
 }
 
-// testAccTransitKeyImportVersionDuringUpdateConfig builds a config where the
-// version resource uses literal mount and key_name values, so it has no implicit
-// dependency on the key. The key depends_on the version resource to force the
-// version import to run before the key's Update. minDecryptionVersion is only
-// set when > 0.
-func testAccTransitKeyImportVersionDuringUpdateConfig(mount, keyName, basePubKey, versionPubKey string, exportable bool, minDecryptionVersion int) string {
-	var dependsOn, versionResource, minDecryption string
-	if versionPubKey != "" {
-		dependsOn = "  depends_on = [vault_transit_secret_backend_key_import_version.v2]\n"
-		versionResource = fmt.Sprintf(`
-resource "vault_transit_secret_backend_key_import_version" "v2" {
-  mount      = %q
-  key_name   = %q
-  public_key = %q
-
-  # The mount is a literal, so order after the mount explicitly. There is
-  # deliberately no reference to the key resource.
-  depends_on = [vault_mount.test]
-}
-`, mount, keyName, versionPubKey)
-	}
-	if minDecryptionVersion > 0 {
-		minDecryption = fmt.Sprintf("  min_decryption_version = %d\n", minDecryptionVersion)
-	}
-
-	return fmt.Sprintf(`
-resource "vault_mount" "test" {
-  path = %q
-  type = "transit"
-}
-
-resource "vault_transit_secret_backend_key_import" "test" {
-  mount            = vault_mount.test.path
-  name             = %q
-  type             = "ecdsa-p256"
-  public_key       = %q
-  deletion_allowed = true
-  exportable       = %t
-%s%s}
-%s`, mount, keyName, basePubKey, exportable, minDecryption, dependsOn, versionResource)
-}
-
 func testAccTransitKeyImportConfig(f transitKeyImportFields) string {
 	var optionalArgs string
 	if f.publicKey != "" {
 		optionalArgs += fmt.Sprintf("  public_key = %q\n", f.publicKey)
 	}
 	if f.ciphertext != "" {
-		optionalArgs += fmt.Sprintf("  ciphertext = %q\n", f.ciphertext)
+		optionalArgs += fmt.Sprintf("  ciphertext_wo = %q\n  ciphertext_wo_version = %d\n", f.ciphertext, f.ciphertextWOVersion)
 	}
 	if f.hashFunction != "" {
 		optionalArgs += fmt.Sprintf("  hash_function = %q\n", f.hashFunction)
+	}
+	if f.version > 0 {
+		optionalArgs += fmt.Sprintf("  version = %d\n", f.version)
 	}
 	if f.allowRotation {
 		optionalArgs += fmt.Sprintf("  allow_rotation = %t\n", f.allowRotation)
@@ -642,10 +948,13 @@ func testAccTransitKeyImportConfigDirectMount(f transitKeyImportFields) string {
 		optionalArgs += fmt.Sprintf("  public_key = %q\n", f.publicKey)
 	}
 	if f.ciphertext != "" {
-		optionalArgs += fmt.Sprintf("  ciphertext = %q\n", f.ciphertext)
+		optionalArgs += fmt.Sprintf("  ciphertext_wo = %q\n  ciphertext_wo_version = %d\n", f.ciphertext, f.ciphertextWOVersion)
 	}
 	if f.hashFunction != "" {
 		optionalArgs += fmt.Sprintf("  hash_function = %q\n", f.hashFunction)
+	}
+	if f.version > 0 {
+		optionalArgs += fmt.Sprintf("  version = %d\n", f.version)
 	}
 	if f.allowRotation {
 		optionalArgs += fmt.Sprintf("  allow_rotation = %t\n", f.allowRotation)

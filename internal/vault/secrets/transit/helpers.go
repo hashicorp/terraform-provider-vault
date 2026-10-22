@@ -6,7 +6,6 @@ package transit
 import (
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -16,23 +15,11 @@ var (
 
 	// keyIDSimpleRegex matches shorthand import: {mount}/{name} (e.g. transit/my-key)
 	keyIDSimpleRegex = regexp.MustCompile(`^(.+)/([^/]+)$`)
-
-	// keyVersionIDWithKeysRegex matches canonical version import: {mount}/keys/{name}/version/{ver} (e.g. transit/keys/my-key/version/2)
-	keyVersionIDWithKeysRegex = regexp.MustCompile(`^(.+)/keys/([^/]+)/version/(\d+)$`)
-
-	// keyVersionIDSimpleRegex matches shorthand version import: {mount}/{name}/{ver} (e.g. transit/my-key/2)
-	keyVersionIDSimpleRegex = regexp.MustCompile(`^(.+)/([^/]+)/(\d+)$`)
 )
 
 type parsedKeyID struct {
 	Mount string
 	Name  string
-}
-
-type parsedKeyVersionID struct {
-	Mount   string
-	Name    string
-	Version int64
 }
 
 func keyPath(mount, name string) string {
@@ -56,7 +43,7 @@ func wrappingKeyPath(mount string) string {
 }
 
 // Note: below, "import" has two separate meanings:
-//   - the resource type (a Vault transit key import or key version import resource)
+//   - the resource type (a Vault transit key import resource)
 //   - the Terraform import action (adding it to Terraform state)
 
 // parseTransitKeyID parses the ID used when importing a vault_transit_secret_backend_key_import
@@ -77,28 +64,4 @@ func parseTransitKeyID(id string) (parsedKeyID, error) {
 		return parsedKeyID{Mount: strings.Trim(matches[1], "/"), Name: strings.Trim(matches[2], "/")}, nil
 	}
 	return parsedKeyID{}, fmt.Errorf("invalid transit key import ID %q: expected 'mount/keys/name' or 'mount/name'", id)
-}
-
-// parseTransitKeyVersionID parses the ID used when importing a vault_transit_secret_backend_key_import_version
-// resource into Terraform state.
-//
-//	terraform import vault_transit_secret_backend_key_import_version.example transit/keys/my-key/version/2
-//	terraform import vault_transit_secret_backend_key_import_version.example transit/my-key/2
-func parseTransitKeyVersionID(id string) (parsedKeyVersionID, error) {
-	id = strings.Trim(id, "/")
-	if matches := keyVersionIDWithKeysRegex.FindStringSubmatch(id); len(matches) == 4 {
-		v, err := strconv.ParseInt(matches[3], 10, 64)
-		if err != nil {
-			return parsedKeyVersionID{}, fmt.Errorf("invalid version number in ID %q: %w", id, err)
-		}
-		return parsedKeyVersionID{Mount: strings.Trim(matches[1], "/"), Name: strings.Trim(matches[2], "/"), Version: v}, nil
-	}
-	if matches := keyVersionIDSimpleRegex.FindStringSubmatch(id); len(matches) == 4 {
-		v, err := strconv.ParseInt(matches[3], 10, 64)
-		if err != nil {
-			return parsedKeyVersionID{}, fmt.Errorf("invalid version number in ID %q: %w", id, err)
-		}
-		return parsedKeyVersionID{Mount: strings.Trim(matches[1], "/"), Name: strings.Trim(matches[2], "/"), Version: v}, nil
-	}
-	return parsedKeyVersionID{}, fmt.Errorf("invalid transit key version import ID %q: expected 'mount/keys/name/version/<ver>' or 'mount/name/<ver>'", id)
 }
