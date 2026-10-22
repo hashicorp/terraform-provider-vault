@@ -499,7 +499,10 @@ See the [Vault
 
 * `username` - (Required) The username to be used in the connection.
 
-* `password` - (Required) The password to be used in the connection.
+* `password` - (Optional) The password to be used in the connection.
+
+* `password_wo` - (Optional) Write-only password to be used in the connection.
+  **Note**: This property is write-only and will not be read from the API.
 
 * `ca_cert` - (Optional) The path to a PEM-encoded CA cert file to use to verify the Elasticsearch server's identity.
 
