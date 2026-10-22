@@ -164,6 +164,7 @@ jobs:
         - "vault-enterprise:1.21.12-ent"
         - "vault-enterprise:2.0.4-ent"
         - "vault-enterprise:2.1.2-ent"
+        - "vault-enterprise:2.2.0-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
