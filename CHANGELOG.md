@@ -1,15 +1,68 @@
-## 5.12.0 (Unreleased)
+## 5.13.0 (October 14, 2026)
 
 FEATURES:
 
-* **New Ephemeral Resource**: `vault_azure_access_token` for fetching Azure OAuth2 access tokens from Vault's Azure secrets engine static role credentials. Requires Vault 2.2.0 or later. ([#2974](https://github.com/hashicorp/terraform-provider-vault/pull/2974))
+* **New Resource**: `vault_scim_client` for managing Vault Enterprise SCIM 2.0 clients. Supports a `deletion_policy` argument to control cleanup of linked entities and groups on destroy. Requires Vault Enterprise 2.2.0 or later. ([#3073](https://github.com/hashicorp/terraform-provider-vault/pull/3073))
+* **New Resources**: Add support for PKI BYOK CA migration with `vault_pki_secret_backend_export_key` and `vault_pki_secret_backend_wrapped_key_import` resources, and `vault_pki_secret_backend_ca_key_export` ephemeral resource. Requires Vault Enterprise 2.2.0 or later. ([#3075](https://github.com/hashicorp/terraform-provider-vault/pull/3075))
+* **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
+* **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
+* **New Resource for transform rewrapping**: Add new resource `vault_transform_rewrap` to support rewrapping FPE transformations. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
 
 IMPROVEMENTS:
 
-* `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to allow ephemeral resource values, to supply the CA certificate. The `certificate` field is now `Computed` and `ForceNew` has been removed enabling in-place updates when the certificate changes instead of resource replacement.
+* `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
+* `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
+* `vault_oauth_resource_server_config_profile`: Add `unique_id_claim` and `actor_claim` parameters to support configuring the JWT claim used as the token unique identifier and the actor claim for delegation scenarios. Requires Vault 2.2.0 or later. ([#3060](https://github.com/hashicorp/terraform-provider-vault/pull/3060))
+* `vault_pki_external_ca_secret_backend_acme_account`: Remove redundant `Sensitive` attribute from write-only fields `eab_kid` and `eab_key`, and add mutual-requirement validation so both fields must be specified together. ([#3038](https://github.com/hashicorp/terraform-provider-vault/pull/3038))
+* `vault_plugin`: Add `download` field to let Vault Enterprise (1.20+) automatically download official enterprise plugin artifacts from releases.hashicorp.com during registration, instead of requiring the artifact to be pre-staged in the server's `plugin_directory`. ([#3022](https://github.com/hashicorp/terraform-provider-vault/pull/3022))
+* `vault_transform_transformation`: Add support for FPE fields `max_tweak_len` and `fpe_algorithm`. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
+* `vault_oauth_resource_server_config_profile`: Add support for `authorization_details_claim` field. Requires Vault 2.2.0 or later. ([#3058](https://github.com/hashicorp/terraform-provider-vault/pull/3058))
+* `vault_pki_secret_backend_key`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_intermediate_cert_request`, `vault_pki_secret_backend_role`: Add support for  `ml-dsa` key type and `parameter_set` field. Requires Vault 2.2.0 or later. ([#3070](https://github.com/hashicorp/terraform-provider-vault/pull/3070))
 
+BUG FIXES:
+
+* provider: Perform token self-lookup without a namespace header so Vault resolves the token's own namespace. This prevents an unrelated `VAULT_NAMESPACE` from causing provider configuration failures and allows Terraform to recover when a configured namespace has been deleted outside Terraform. The configured provider namespace is still used for resource operations. ([#3067](https://github.com/hashicorp/terraform-provider-vault/pull/3067))
+
+DEPENDENCIES:
+
+  * Build with Go 1.27.2
+  * Bumped 20 Go module dependencies ([#3081](https://github.com/hashicorp/terraform-provider-vault/pull/3081), [#3080](https://github.com/hashicorp/terraform-provider-vault/pull/3080), [#3074](https://github.com/hashicorp/terraform-provider-vault/pull/3074))
+  * `cloud.google.com/go/compute/metadata` v0.9.0 → v0.10.0
+  * `cloud.google.com/go/iam` v1.13.0 → v1.14.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.1 → v1.23.3
+  * `github.com/aws/aws-sdk-go-v2` v1.47.0 → v1.47.3
+  * `github.com/aws/aws-sdk-go-v2/config` v1.33.5 → v1.33.9
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.20.5 → v1.20.9
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.20.0 → v1.20.3
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.64.0 → v1.64.4
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.51.0 → v1.51.4
+  * `github.com/aws/smithy-go` v1.28.1 → v1.28.5
+  * `github.com/hashicorp/go-secure-stdlib/awsutil/v2` v2.1.2 → v2.1.3
+  * `github.com/hashicorp/go-uuid` v1.0.3 → v1.0.4
+  * `github.com/hashicorp/vault/sdk` v0.25.1 → v0.26.0
+  * `github.com/mitchellh/mapstructure` v1.5.0 → v1.5.1-0.20231216201459-8508981c8b6c
+  * `github.com/moby/moby/client` v0.6.0 → v0.6.2
+  * `github.com/spiffe/go-spiffe/v2` v2.8.1 → v2.9.0
+  * `go.uber.org/atomic` v1.11.0 → v1.12.0
+  * `golang.org/x/crypto` v0.57.0 → v0.58.0
+  * `golang.org/x/net` v0.59.0 → v0.61.0
+  * `google.golang.org/api` v0.298.0 → v0.301.0
+
+
+## 5.12.0 (September 17, 2026)
+
+FEATURES:
+
+* **New Resources**: Add support for PKI External CA DNS-01 challenge providers with `vault_pki_external_ca_secret_backend_dns_provider_aws_route53`, `vault_pki_external_ca_secret_backend_dns_provider_azure`, `vault_pki_external_ca_secret_backend_dns_provider_gcp`, and `vault_pki_external_ca_secret_backend_dns_provider_rfc2136` resources. Also adds `default_nameserver` to `vault_pki_external_ca_secret_backend_acme_account` and `dns_provider_name`/`dns_provider_type` to `vault_pki_external_ca_secret_backend_role`. Requires Vault 2.1.0 or later. ([#3014](https://github.com/hashicorp/terraform-provider-vault/pull/3014))
+* **New Ephemeral Resource**: `vault_azure_access_token` for fetching Azure OAuth2 access tokens from Vault's Azure secrets engine static role credentials. Requires Vault 2.2.0 or later. ([#2974](https://github.com/hashicorp/terraform-provider-vault/pull/2974))
+* **New Resource for tokenization transforms**: Add new resources `vault_transform_transformation_tokenization` and `vault_transform_transformation_tokenization_store` for tokenization transformations in transform secrets engine and tokenization stores. Uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-tokenization-transformation) to support creating and updating of tokenization transformations and [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-tokenization-store) for tokenization stores. Supported parameters include `name`, `mapping_mode`, `max_ttl`, `allowed_roles`, `stores`, `convergent`, `deletion_allowed` for `vault_transform_transformation_tokenization` and `name`, `type`, `driver`, `connection_string`, `username`, `password`, `supported_transformations`, `schema`, `max_open_connections`, `max_idle_connections`, `max_connection_lifetime` for `vault_transform_transformation_tokenization_store`. ([#3023](https://github.com/hashicorp/terraform-provider-vault/pull/3023))
+* `vault_azure_auth_backend_config`: Add `auth_type` field to explicitly control how Vault authenticates to Azure APIs. Valid values are `root_creds`, `plugin_wif`, `msi`, and `aks_wif`. When omitted, Vault retains its existing credential-discovery behaviour for backward compatibility ([#2999](https://github.com/hashicorp/terraform-provider-vault/pull/2999)). Requires Vault 2.2.0+.
+
+IMPROVEMENTS:
+
+* `vault_cert_auth_backend_role`: Add `certificate_wo` and `certificate_wo_version` write-only fields to allow ephemeral resource values, to supply the CA certificate. The `certificate` field is now `Computed` and `ForceNew` has been removed enabling in-place updates when the certificate changes instead of resource replacement. ([#3011](https://github.com/hashicorp/terraform-provider-vault/pull/3011))
 * `vault_ldap_auth_backend`: emit a warning when the auth mount or its config is not found during refresh, so users see an actionable message in `terraform plan` output rather than a silent state removal. ([#2997](https://github.com/hashicorp/terraform-provider-vault/pull/2997))
-* Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
+* Update supported Vault version for PKI formats `pkcs12_bundle` and `jks_bundle` to require Vault 2.1.0+ (not 2.0.5+) per latest Vault versioning strategy. ([#3017](https://github.com/hashicorp/terraform-provider-vault/pull/3017)[#2950](https://github.com/hashicorp/terraform-provider-vault/pull/2950))
 
 
 BUG FIXES:
@@ -17,12 +70,39 @@ BUG FIXES:
 * `vault_mount`: Fix spurious `ForceNew` destroy when importing a `kv-v2` mount. Vault returns `type=kv`+`options.version=2` on import; a `DiffSuppressFunc` now suppresses the `kv`/`kv-v2` alias diff so the next plan is clean. ([#3007](https://github.com/hashicorp/terraform-provider-vault/pull/3007))
 * `vault_terraform_cloud_secret_backend`: Fix logic gap in `Read` where execution would fall through to a stray `GET <backend>/config` call after `readMount` detected the mount was deleted out-of-band and cleared the resource ID. Add `util.Is404` guard to `Delete` so that `terraform destroy` succeeds cleanly when the mount has already been removed from Vault. ([#3006](https://github.com/hashicorp/terraform-provider-vault/pull/3006))
 
+BUILD:
+
+Add support for linux/s390x architecture. ([#3028](https://github.com/hashicorp/terraform-provider-vault/pull/3028))
+
+DEPENDENCIES:
+
+  * Build with Go 1.27.1
+  * Bumped 20 Go module dependencies ([#3036](https://github.com/hashicorp/terraform-provider-vault/pull/3036))
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.0 → v1.23.1
+  * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.14.0 → v1.14.1
+  * `github.com/aws/aws-sdk-go-v2` v1.43.5 → v1.47.0
+  * `github.com/aws/aws-sdk-go-v2/config` v1.32.36 → v1.33.5
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.19.35 → v1.20.5
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.18.36 → v1.20.0
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.59.0 → v1.64.0
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.45.5 → v1.51.0
+  * `github.com/aws/smithy-go` v1.27.7 → v1.28.1
+  * `github.com/go-sql-driver/mysql` v1.10.0 → v1.10.1
+  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.26.3 → v0.27.1
+  * `github.com/moby/moby/client` v0.5.1 → v0.6.0
+  * `github.com/stretchr/testify` v1.11.1 → v1.12.1
+  * `golang.org/x/crypto` v0.55.0 → v0.57.0
+  * `golang.org/x/oauth2` v0.36.0 → v0.37.0
+  * `google.golang.org/api` v0.293.0 → v0.298.0
+  * `github.com/hashicorp/consul/api` v1.34.4 → v1.34.5
+  * `github.com/hashicorp/vault-plugin-auth-kerberos` v0.17.1 → v0.18.0
+  * `github.com/hashicorp/vault-plugin-auth-oci` v0.21.3 → v0.22.0
+  * `golang.org/x/net` v0.58.0 → v0.59.0
+
 
 ## 5.11.0 (August 14, 2026)
 
 FEATURES:
-
-* `vault_azure_auth_backend_config`: Add `auth_type` field to explicitly control how Vault authenticates to Azure APIs. Valid values are `root_creds`, `plugin_wif`, `msi`, and `aks_wif`. When omitted, Vault retains its existing credential-discovery behaviour for backward compatibility ([#2999](https://github.com/hashicorp/terraform-provider-vault/pull/2999)). Requires Vault 2.2.0+.
 
 * **New Resources**: Add support for GCP KMS secrets engine with `vault_gcpkms_secret_backend` and `vault_gcpkms_secret_backend_key` resources, `vault_gcpkms_verify` data source, and ephemeral resources `vault_gcpkms_encrypt`, `vault_gcpkms_decrypt`, `vault_gcpkms_reencrypt`, and `vault_gcpkms_sign` for cryptographic operations. Includes internal Plugin Framework `mount_helpers` for Vault mount operations to support incremental migration from SDKv2. ([#2763](https://github.com/hashicorp/terraform-provider-vault/pull/2763))
 * **New resource for transform key configurations**: `vault_transform_key_configuration` - Supports setting an `auto_rotate_period` and `min_decryption_version` to keys used in for tokenization transformations. This uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#update-tokenization-key-config) to modify the configuration and [this one](https://developer.hashicorp.com/vault/api-docs/secret/transform#read-tokenization-key-configuration) to read configurations. ([#2980](https://github.com/hashicorp/terraform-provider-vault/pull/2980))
@@ -85,7 +165,7 @@ BUG FIXES:
 
 ## 5.10.1 (June 26, 2026)
 
-BREAKING CHANGES: 
+BREAKING CHANGES:
 
 Reverted the 5.10.0 support for `pkcs12_bundle` and `jks_bundle` formats in formats in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` that forced resource recreation. Configurations using these formats or their related arguments are no longer supported. ([#2945](https://github.com/hashicorp/terraform-provider-vault/pull/2945))
 
@@ -328,7 +408,7 @@ IMPROVEMENTS:
 * `vault_secrets_sync_gcp_destination`: Add support for replication field (`replication_locations`; Vault 1.18+), networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`; Vault 1.19+), and encryption fields (`global_kms_key`, `locational_kms_keys`; Vault 1.19+) in `vault_secrets_sync_gcp_destination` resource. ([#2699](https://github.com/hashicorp/terraform-provider-vault/pull/2699))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_azure_destination` resource. Requires Vault 1.19+. ([#2702](https://github.com/hashicorp/terraform-provider-vault/pull/2702))
 * `vault_database_secret_backend_connection`: Add support for MongoDB `write_concern` parameter and TLS parameters (`tls_ca`, `tls_certificate_key`) ([#2678](https://github.com/hashicorp/terraform-provider-vault/pull/2678))
-* Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674)) 
+* Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resource for MongoDB Atlas([#2674](https://github.com/hashicorp/terraform-provider-vault/pull/2674))
 * Add support for `username_template` parameter in `vault_database_secret_backend_connection` and `vault_database_secrets_mount` resources for HANADB connections: ([#2671](https://github.com/hashicorp/terraform-provider-vault/pull/2671))
 * Add support for networking allowlist fields (`allowed_ipv4_addresses`, `allowed_ipv6_addresses`, `allowed_ports`, `disable_strict_networking`) in `vault_secrets_sync_vercel_destination` resource. Requires Vault 1.19+. ([#2681](https://github.com/hashicorp/terraform-provider-vault/pull/2681))
 * Add support for configuration parameters (`allowed_ipv4_addresses`,`allowed_ipv6_addresses`,`allowed_ports`,`disable_strict_networking`,`secrets_location`,`environment_name`) in `vault_secrets_sync_gh_destination` resource. Requires Vault 1.18+ for `secrets_location`,`environment_name`.Requires Vault 1.19+ for `allowed_ipv4_addresses`,`allowed_ipv6_addresses`,`allowed_ports`,`disable_strict_networking`.([#2697](https://github.com/hashicorp/terraform-provider-vault/pull/2697)).
@@ -371,10 +451,10 @@ BUGS:
 
 ## 5.5.0 (Nov 19, 2025)
 
-BEHAVIOR CHANGES: With v5.5.0, the default value for `deny_null_bind` in the `vault_ldap_auth_backend` resource has changed from `false` to `true` 
-to match with the Vault API defaults. Configurations that do not explicitly set `deny_null_bind` will now have it set to `true` upon upgrade, and 
-customers should verify that this change aligns with their intended LDAP authentication behavior. Furthermore, Customers should also consider 
-upgrading to Vault Community Edition 1.21.1 and Vault Enterprise 1.21.1, 1.20.6, 1.19.12, and 1.16.28, which no longer allows Vault to perform 
+BEHAVIOR CHANGES: With v5.5.0, the default value for `deny_null_bind` in the `vault_ldap_auth_backend` resource has changed from `false` to `true`
+to match with the Vault API defaults. Configurations that do not explicitly set `deny_null_bind` will now have it set to `true` upon upgrade, and
+customers should verify that this change aligns with their intended LDAP authentication behavior. Furthermore, Customers should also consider
+upgrading to Vault Community Edition 1.21.1 and Vault Enterprise 1.21.1, 1.20.6, 1.19.12, and 1.16.28, which no longer allows Vault to perform
 unauthenticated or null binds against the LDAP server.
 
 SECURITY:
@@ -553,7 +633,7 @@ FEATURES:
 * Add support for signature_bits field to `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate` and `vault_pki_secret_backend_intermediate_cert_request` ([#2401])(https://github.com/hashicorp/terraform-provider-vault/pull/2401)
 * Add support for key_usage and serial_number to `vault_pki_secret_backend_intermediate_cert_request` ([#2404])(https://github.com/hashicorp/terraform-provider-vault/pull/2404)
 * Add support for `skip_import_rotation` in `vault_database_secret_backend_static_role`. Requires Vault Enterprise 1.18.5+ ([#2386](https://github.com/hashicorp/terraform-provider-vault/pull/2386)).
-* Add support for `not_after` in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2385](https://github.com/hashicorp/terraform-provider-vault/pull/2385)). 
+* Add support for `not_after` in `vault_pki_secret_backend_cert`, `vault_pki_secret_backend_role`, `vault_pki_secret_backend_root_cert`, `vault_pki_secret_backend_root_sign_intermediate`, and `vault_pki_secret_backend_sign` ([#2385](https://github.com/hashicorp/terraform-provider-vault/pull/2385)).
 * Update `vault_pki_secret_backend_config_acme` to support the `max_ttl` field. [#2411](https://github.com/hashicorp/terraform-provider-vault/pull/2411)
 * Add new data source `vault_ssh_secret_backend_sign`. ([#2409](https://github.com/hashicorp/terraform-provider-vault/pull/2409))
 * Add support for `disabled_validations` in `vault_pki_secret_backend_config_cmpv2` [#2412](https://github.com/hashicorp/terraform-provider-vault/pull/2412)

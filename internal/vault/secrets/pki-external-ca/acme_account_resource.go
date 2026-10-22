@@ -53,15 +53,16 @@ type PKIACMEAccountResource struct {
 type PKIACMEAccountModel struct {
 	base.BaseModel
 
-	Mount            types.String `tfsdk:"mount"`
-	Name             types.String `tfsdk:"name"`
-	DirectoryURL     types.String `tfsdk:"directory_url"`
-	EmailContacts    types.List   `tfsdk:"email_contacts"`
-	KeyType          types.String `tfsdk:"key_type"`
-	EABKid           types.String `tfsdk:"eab_kid"`
-	EABKey           types.String `tfsdk:"eab_key"`
-	TrustedCA        types.String `tfsdk:"trusted_ca"`
-	ActiveKeyVersion types.Int64  `tfsdk:"active_key_version"`
+	Mount             types.String `tfsdk:"mount"`
+	Name              types.String `tfsdk:"name"`
+	DirectoryURL      types.String `tfsdk:"directory_url"`
+	EmailContacts     types.List   `tfsdk:"email_contacts"`
+	KeyType           types.String `tfsdk:"key_type"`
+	EABKid            types.String `tfsdk:"eab_kid"`
+	EABKey            types.String `tfsdk:"eab_key"`
+	TrustedCA         types.String `tfsdk:"trusted_ca"`
+	DefaultNameserver types.String `tfsdk:"default_nameserver"`
+	ActiveKeyVersion  types.Int64  `tfsdk:"active_key_version"`
 }
 type ACMEAccountKeyAPIModel struct {
 	KeyType         string    `json:"key_type"`
@@ -71,14 +72,15 @@ type ACMEAccountKeyAPIModel struct {
 
 // PKIACMEAccountAPIModel describes the Vault API data model.
 type PKIACMEAccountAPIModel struct {
-	DirectoryURL     string                         `json:"directory_url" mapstructure:"directory_url"`
-	EmailContacts    []string                       `json:"email_contacts" mapstructure:"email_contacts"`
-	KeyType          string                         `json:"key_type" mapstructure:"key_type"`
-	EABKid           string                         `json:"eab_kid,omitempty" mapstructure:"eab_kid"`
-	EABKey           string                         `json:"eab_key,omitempty" mapstructure:"eab_key"`
-	TrustedCA        string                         `json:"trusted_ca,omitempty" mapstructure:"trusted_ca"`
-	AccountKeys      map[int]ACMEAccountKeyAPIModel `json:"account_keys" mapstructure:"account_keys"`
-	ActiveKeyVersion int                            `json:"active_key_version" mapstructure:"active_key_version"`
+	DirectoryURL      string                         `json:"directory_url" mapstructure:"directory_url"`
+	EmailContacts     []string                       `json:"email_contacts" mapstructure:"email_contacts"`
+	KeyType           string                         `json:"key_type" mapstructure:"key_type"`
+	EABKid            string                         `json:"eab_kid,omitempty" mapstructure:"eab_kid"`
+	EABKey            string                         `json:"eab_key,omitempty" mapstructure:"eab_key"`
+	TrustedCA         string                         `json:"trusted_ca,omitempty" mapstructure:"trusted_ca"`
+	DefaultNameserver string                         `json:"default_nameserver,omitempty" mapstructure:"default_nameserver"`
+	AccountKeys       map[int]ACMEAccountKeyAPIModel `json:"account_keys" mapstructure:"account_keys"`
+	ActiveKeyVersion  int                            `json:"active_key_version" mapstructure:"active_key_version"`
 }
 
 func (r *PKIACMEAccountResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -120,26 +122,34 @@ func (r *PKIACMEAccountResource) Schema(_ context.Context, _ resource.SchemaRequ
 				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_kid": schema.StringAttribute{
-				MarkdownDescription: "The external binding key ID to create the initial account.",
+				MarkdownDescription: "The external account binding key ID to create the initial account. If specified, `eab_key` must also be provided.",
 				Optional:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot("eab_key")),
+				},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"eab_key": schema.StringAttribute{
-				MarkdownDescription: "An url base64 encoded external binding token to create the initial account.",
+				MarkdownDescription: "A URL base64-encoded external account binding HMAC key to create the initial account. If specified, `eab_kid` must also be provided.",
 				Optional:            true,
-				Sensitive:           true,
 				WriteOnly:           true,
-				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot("eab_kid")),
+				},
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"trusted_ca": schema.StringAttribute{
 				MarkdownDescription: "Trusted CA certificates for the ACME server.",
 				Optional:            true,
 			},
+			consts.FieldDefaultNameserver: schema.StringAttribute{
+				MarkdownDescription: "Address of a DNS nameserver (`host` or `host:port`) to use when verifying DNS-01 challenge propagation for providers that do not specify a nameserver, in addition to the domain's primary nameserver.",
+				Optional:            true,
+			},
 			"active_key_version": schema.Int64Attribute{
 				Computed:            true,
-				MarkdownDescription: "Version of account key, starts at zero",
+				MarkdownDescription: "Current version of the account key, starting at zero.",
 			},
 		},
 		MarkdownDescription: "Manage PKI ACME accounts for external CA integration.",
@@ -162,6 +172,14 @@ func (r *PKIACMEAccountResource) Create(ctx context.Context, req resource.Create
 	if err := checkVaultVersion(r.Meta()); err != nil {
 		resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
 		return
+	}
+
+	// default_nameserver requires Vault 2.1.0+
+	if !data.DefaultNameserver.IsNull() && !data.DefaultNameserver.IsUnknown() && data.DefaultNameserver.ValueString() != "" {
+		if err := checkVaultVersionDNS(r.Meta()); err != nil {
+			resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
+			return
+		}
 	}
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
@@ -229,9 +247,18 @@ func (r *PKIACMEAccountResource) Read(ctx context.Context, req resource.ReadRequ
 
 func (r *PKIACMEAccountResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data PKIACMEAccountModel
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Use req.Config to read write-only fields, which are nullified in plan.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// default_nameserver requires Vault 2.1.0+
+	if !data.DefaultNameserver.IsNull() && !data.DefaultNameserver.IsUnknown() && data.DefaultNameserver.ValueString() != "" {
+		if err := checkVaultVersionDNS(r.Meta()); err != nil {
+			resp.Diagnostics.AddError("Vault Version Check Failed", err.Error())
+			return
+		}
 	}
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
@@ -279,13 +306,14 @@ func handleAccountResponseData(ctx context.Context, data *PKIACMEAccountModel, r
 	}
 	data.EmailContacts = emailList
 
-	// Optional fields - only set if present in response
+	// Optional fields - only set if present in response; preserve state when absent.
 	if apiModel.TrustedCA != "" {
 		data.TrustedCA = types.StringValue(apiModel.TrustedCA)
 	}
 
-	// Note: EAB credentials are write-only and won't be returned by the API
-	// Keep the values from state if they were set
+	if apiModel.DefaultNameserver != "" {
+		data.DefaultNameserver = types.StringValue(apiModel.DefaultNameserver)
+	}
 
 	return rd
 }
@@ -319,6 +347,10 @@ func buildVaultRequestFromModel(ctx context.Context, data *PKIACMEAccountModel) 
 
 	if !data.TrustedCA.IsNull() && !data.TrustedCA.IsUnknown() && data.TrustedCA.ValueString() != "" {
 		vaultRequest["trusted_ca"] = data.TrustedCA.ValueString()
+	}
+
+	if !data.DefaultNameserver.IsNull() && !data.DefaultNameserver.IsUnknown() && data.DefaultNameserver.ValueString() != "" {
+		vaultRequest[consts.FieldDefaultNameserver] = data.DefaultNameserver.ValueString()
 	}
 
 	return vaultRequest, diags

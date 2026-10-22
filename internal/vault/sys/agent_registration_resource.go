@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -58,6 +59,7 @@ type AgentRegistrationModel struct {
 	CreationTime                 types.String `tfsdk:"creation_time"`
 	LastUpdatedTime              types.String `tfsdk:"last_updated_time"`
 	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
+	Local                        types.Bool   `tfsdk:"local"`
 }
 
 // AgentRegistrationAPIModel describes the Vault API data model.
@@ -72,6 +74,7 @@ type AgentRegistrationAPIModel struct {
 	CreationTime                 string   `json:"creation_time" mapstructure:"creation_time"`
 	LastUpdatedTime              string   `json:"last_updated_time" mapstructure:"last_updated_time"`
 	OptionalAuthorizationDetails bool     `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
+	Local                        bool     `json:"local" mapstructure:"local"`
 }
 
 // Metadata defines the resource name as it would appear in Terraform configurations
@@ -149,6 +152,15 @@ func (r *AgentRegistrationResource) Schema(ctx context.Context, req resource.Sch
 				Default:             booldefault.StaticBool(false),
 				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional for this agent. This setting works in conjunction with the OAuth Resource Server profile's optional_authorization_details setting - RAR is optional if EITHER is true. Defaults to false.",
 			},
+			consts.FieldLocal: schema.BoolAttribute{
+				Optional: true,
+				Computed: true,
+				Default:  booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
+				MarkdownDescription: "When set to true, the agent registration is not replicated globally and will be local to the current cluster. Defaults to false.",
+			},
 		},
 		MarkdownDescription: "Manages Agent Registry registrations in Vault Enterprise. " +
 			"The Agent Registry allows you to register agents with Vault and apply authorization ceilings to them.",
@@ -209,6 +221,9 @@ func (r *AgentRegistrationResource) Create(ctx context.Context, req resource.Cre
 	}
 	if !data.Owner.IsNull() && !data.Owner.IsUnknown() {
 		vaultRequest[consts.FieldOwner] = data.Owner.ValueString()
+	}
+	if !data.Local.IsNull() && !data.Local.IsUnknown() {
+		vaultRequest[consts.FieldLocal] = data.Local.ValueBool()
 	}
 
 	// RAR support
@@ -514,6 +529,7 @@ func (r *AgentRegistrationResource) readFromVault(ctx context.Context, client *a
 	}
 
 	data.NoDefaultCeilingPolicy = types.BoolValue(apiModel.NoDefaultCeilingPolicy)
+	data.Local = types.BoolValue(apiModel.Local)
 
 	// RAR support
 	data.OptionalAuthorizationDetails = types.BoolValue(apiModel.OptionalAuthorizationDetails)

@@ -6,6 +6,7 @@ package pki_external_ca
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -34,7 +35,7 @@ const roleAffix = "role"
 
 var roleIDRe = regexp.MustCompile(`^([^/]+)/` + roleAffix + `/([^/]+)$`)
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
+// Ensure the implementation satisfies the expected interfaces
 var _ resource.ResourceWithConfigure = &PKIExternalCARoleResource{}
 
 // NewPKIExternalCARoleResource returns the implementation for this resource to be
@@ -57,6 +58,8 @@ type PKIExternalCARoleModel struct {
 	Mount                   types.String `tfsdk:"mount"`
 	Name                    types.String `tfsdk:"name"`
 	AcmeAccountName         types.String `tfsdk:"acme_account_name"`
+	DnsProviderName         types.String `tfsdk:"dns_provider_name"`
+	DnsProviderType         types.String `tfsdk:"dns_provider_type"`
 	AllowedDomains          types.List   `tfsdk:"allowed_domains"`
 	AllowedDomainOptions    types.List   `tfsdk:"allowed_domain_options"`
 	AllowedChallengeTypes   types.List   `tfsdk:"allowed_challenge_types"`
@@ -64,20 +67,22 @@ type PKIExternalCARoleModel struct {
 	CsrIdentifierPopulation types.String `tfsdk:"csr_identifier_population"`
 	Force                   types.Bool   `tfsdk:"force"`
 	CreationDate            types.String `tfsdk:"creation_date"`
-	LastUpdateDate          types.String `tfsdk:"last_update_date"`
+	LastUpdatedDate         types.String `tfsdk:"last_updated_date"`
 }
 
 // PKIExternalCARoleAPIModel describes the Vault API data model.
 type PKIExternalCARoleAPIModel struct {
 	Name                    string   `json:"name" mapstructure:"name"`
 	AcmeAccountName         string   `json:"acme_account_name" mapstructure:"acme_account_name"`
+	DnsProviderName         string   `json:"dns_provider_name" mapstructure:"dns_provider_name"`
+	DnsProviderType         string   `json:"dns_provider_type" mapstructure:"dns_provider_type"`
 	AllowedDomains          []string `json:"allowed_domains" mapstructure:"allowed_domains"`
 	AllowedDomainOptions    []string `json:"allowed_domain_options" mapstructure:"allowed_domain_options"`
 	AllowedChallengeTypes   []string `json:"allowed_challenge_types" mapstructure:"allowed_challenge_types"`
 	CsrGenerateKeyType      string   `json:"csr_generate_key_type" mapstructure:"csr_generate_key_type"`
 	CsrIdentifierPopulation string   `json:"csr_identifier_population" mapstructure:"csr_identifier_population"`
 	CreationDate            string   `json:"creation_date" mapstructure:"creation_date"`
-	LastUpdateDate          string   `json:"last_updated_date" mapstructure:"last_updated_date"`
+	LastUpdatedDate         string   `json:"last_updated_date" mapstructure:"last_updated_date"`
 }
 
 func (r *PKIExternalCARoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -97,23 +102,40 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 				Required:            true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
-			"acme_account_name": schema.StringAttribute{
+			consts.FieldAcmeAccountName: schema.StringAttribute{
 				MarkdownDescription: "The ACME account to use when validating certificates.",
 				Required:            true,
 			},
-			"allowed_domains": schema.ListAttribute{
+			consts.FieldDnsProviderName: schema.StringAttribute{
+				MarkdownDescription: "The name of the DNS provider configuration to use for DNS-01 challenges.",
+				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldDnsProviderType)),
+				},
+			},
+			consts.FieldDnsProviderType: schema.StringAttribute{
+				MarkdownDescription: "The type of the DNS provider. Valid values are: `aws-route53`, `rfc2136`, `google-cloud-dns`, `azure-dns`.",
+				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("aws-route53", "rfc2136", "google-cloud-dns", "azure-dns"),
+					stringvalidator.AlsoRequires(path.MatchRoot(consts.FieldDnsProviderName)),
+				},
+			},
+			consts.FieldAllowedDomains: schema.ListAttribute{
 				MarkdownDescription: "A list of domains the role will accept certificates for. May contain templates, as with ACL Path Templating.",
 				ElementType:         types.StringType,
 				Optional:            true,
 			},
-			"allowed_domain_options": schema.ListAttribute{
+			consts.FieldAllowedDomainOptions: schema.ListAttribute{
 				MarkdownDescription: "A list of keyword options that influence how values within allowed_domains are interpreted against the requested set of identifiers from the client. Valid values are: `bare_domains`, `subdomains`, `wildcards`, `globs`.",
 				ElementType:         types.StringType,
 				Optional:            true,
 				Computed:            true,
 				Default:             listdefault.StaticValue(types.ListValueMust(types.StringType, []attr.Value{})),
 			},
-			"allowed_challenge_types": schema.ListAttribute{
+			consts.FieldAllowedChallengeTypes: schema.ListAttribute{
 				MarkdownDescription: "The list of challenge types that are allowed to be used. Valid values are: `http-01`, `dns-01`, `tls-alpn-01`. Defaults to all challenge types.",
 				ElementType:         types.StringType,
 				Optional:            true,
@@ -124,7 +146,7 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 					types.StringValue("tls-alpn-01"),
 				})),
 			},
-			"csr_generate_key_type": schema.StringAttribute{
+			consts.FieldCsrGenerateKeyType: schema.StringAttribute{
 				MarkdownDescription: "The key type and size/parameters to use when generating a new key if running in the identifier workflow. Valid values are: `ec-256`, `ec-384`, `ec-521`, `rsa-2048`, `rsa-4096`.",
 				Optional:            true,
 				Computed:            true,
@@ -133,7 +155,7 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 					stringvalidator.OneOf("ec-256", "ec-384", "ec-521", "rsa-2048", "rsa-4096"),
 				},
 			},
-			"csr_identifier_population": schema.StringAttribute{
+			consts.FieldCsrIdentifierPopulation: schema.StringAttribute{
 				MarkdownDescription: "The technique used to populate a CSR from the provided identifiers in the identifier workflow. Valid values are: `cn_first`, `sans_only`.",
 				Optional:            true,
 				Computed:            true,
@@ -142,17 +164,17 @@ func (r *PKIExternalCARoleResource) Schema(_ context.Context, _ resource.SchemaR
 					stringvalidator.OneOf("cn_first", "sans_only"),
 				},
 			},
-			"force": schema.BoolAttribute{
+			consts.FieldForce: schema.BoolAttribute{
 				MarkdownDescription: "Force deletion even when active orders exist.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
-			"creation_date": schema.StringAttribute{
+			consts.FieldCreationDate: schema.StringAttribute{
 				MarkdownDescription: "The date and time the role was created in RFC3339 format.",
 				Computed:            true,
 			},
-			"last_update_date": schema.StringAttribute{
+			consts.FieldLastUpdatedDate: schema.StringAttribute{
 				MarkdownDescription: "The date and time the role was last updated in RFC3339 format.",
 				Computed:            true,
 			},
@@ -283,10 +305,23 @@ func handleRoleResponseData(ctx context.Context, data *PKIExternalCARoleModel, r
 
 	// Map values back to Terraform model
 	data.AcmeAccountName = types.StringValue(apiModel.AcmeAccountName)
+	// dns_provider_name and dns_provider_type are Optional+Computed — they must
+	// always be set to a known value after apply, so use null when absent rather
+	// than the preserve-state helper (which would leave Unknown in state).
+	if apiModel.DnsProviderName != "" {
+		data.DnsProviderName = types.StringValue(apiModel.DnsProviderName)
+	} else {
+		data.DnsProviderName = types.StringNull()
+	}
+	if apiModel.DnsProviderType != "" {
+		data.DnsProviderType = types.StringValue(apiModel.DnsProviderType)
+	} else {
+		data.DnsProviderType = types.StringNull()
+	}
 	data.CsrGenerateKeyType = types.StringValue(apiModel.CsrGenerateKeyType)
 	data.CsrIdentifierPopulation = types.StringValue(apiModel.CsrIdentifierPopulation)
 	data.CreationDate = types.StringValue(apiModel.CreationDate)
-	data.LastUpdateDate = types.StringValue(apiModel.LastUpdateDate)
+	data.LastUpdatedDate = types.StringValue(apiModel.LastUpdatedDate)
 
 	// Convert allowed_domains list
 	if len(apiModel.AllowedDomains) > 0 {
@@ -323,9 +358,11 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 	var diags diag.Diagnostics
 
 	vaultRequest := map[string]any{
-		"acme_account_name":         data.AcmeAccountName.ValueString(),
-		"csr_generate_key_type":     data.CsrGenerateKeyType.ValueString(),
-		"csr_identifier_population": data.CsrIdentifierPopulation.ValueString(),
+		consts.FieldAcmeAccountName:         data.AcmeAccountName.ValueString(),
+		consts.FieldCsrGenerateKeyType:      data.CsrGenerateKeyType.ValueString(),
+		consts.FieldCsrIdentifierPopulation: data.CsrIdentifierPopulation.ValueString(),
+		consts.FieldDnsProviderName:         data.DnsProviderName.ValueString(),
+		consts.FieldDnsProviderType:         data.DnsProviderType.ValueString(),
 	}
 
 	// Convert allowed_domains list to string slice
@@ -335,7 +372,7 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 			diags.Append(allowedDomainsDiags...)
 			return nil, diags
 		}
-		vaultRequest["allowed_domains"] = allowedDomains
+		vaultRequest[consts.FieldAllowedDomains] = allowedDomains
 	}
 
 	// Convert allowed_domain_options list to string slice
@@ -345,7 +382,7 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 			diags.Append(optionsDiags...)
 			return nil, diags
 		}
-		vaultRequest["allowed_domain_options"] = allowedDomainOptions
+		vaultRequest[consts.FieldAllowedDomainOptions] = allowedDomainOptions
 	}
 
 	// Convert allowed_challenge_types list to string slice
@@ -355,7 +392,7 @@ func buildRoleVaultRequestFromModel(ctx context.Context, data *PKIExternalCARole
 			diags.Append(challengeDiags...)
 			return nil, diags
 		}
-		vaultRequest["allowed_challenge_types"] = allowedChallengeTypes
+		vaultRequest[consts.FieldAllowedChallengeTypes] = allowedChallengeTypes
 	}
 
 	return vaultRequest, diags
@@ -402,9 +439,9 @@ func (r *PKIExternalCARoleResource) ImportState(ctx context.Context, req resourc
 		return
 	}
 
-	mount := matches[1]
-	name := matches[2]
-
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), mount)...)
-	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), name)...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldMount), matches[1])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldName), matches[2])...)
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root(consts.FieldNamespace), ns)...)
+	}
 }

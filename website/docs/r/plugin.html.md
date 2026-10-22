@@ -35,6 +35,25 @@ resource "vault_plugin" "oracle" {
 }
 ```
 
+### Register an Official Enterprise plugin with automatic download
+
+On Vault Enterprise 1.20 and later, setting `download` to `true` makes Vault
+download the plugin artifact from
+[releases.hashicorp.com](https://releases.hashicorp.com) during registration,
+so the artifact does not need to be manually extracted into the server's
+`plugin_directory` beforehand. All Vault cluster nodes need outbound HTTPS
+access to `releases.hashicorp.com`. Automatic plugin downloads are currently
+a beta feature in Vault.
+
+```hcl
+resource "vault_plugin" "os" {
+  type     = "secret"
+  name     = "vault-plugin-secrets-os"
+  version  = "v0.1.0+ent"
+  download = true
+}
+```
+
 ### Register a CE plugin (version vX.Y.Z)
 
 The `sha256` and `command` are required to register a CE plugin.
@@ -65,6 +84,12 @@ The following arguments are supported:
 * `name` - (Required) Name of the plugin.
 
 * `version` - (Optional) Semantic version of the plugin. Required for official enterprise plugins.
+
+* `download` - (Optional) If `true`, Vault downloads the plugin artifact from
+  releases.hashicorp.com during registration instead of requiring it to be
+  pre-staged in the server's `plugin_directory`. Only valid for official
+  enterprise plugins (`version` ending in `+ent`). Requires Vault Enterprise
+  1.20+ (beta feature). Defaults to `false`.
 
 * `sha256` - (Optional) SHA256 sum of the plugin binary. Need to be set for non-enterprise plugin.
 

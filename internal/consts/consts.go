@@ -68,6 +68,7 @@ const (
 	FieldPathFQ                             = "path_fq"
 	FieldPathsFQ                            = "paths_fq"
 	FieldData                               = "data"
+	FieldDisabled                           = "disabled"
 	FieldDisableRead                        = "disable_read"
 	FieldWriteFields                        = "write_fields"
 	FieldWriteData                          = "write_data"
@@ -336,6 +337,8 @@ const (
 	FieldTemplate                           = "template"
 	FieldTemplates                          = "templates"
 	FieldTweakSource                        = "tweak_source"
+	FieldFpeAlgorithm                       = "fpe_algorithm"
+	FieldMaxTweakLen                        = "max_tweak_len"
 	FieldMappingMode                        = "mapping_mode"
 	FieldStores                             = "stores"
 	FieldConvergent                         = "convergent"
@@ -670,6 +673,33 @@ const (
 	FieldProvider                           = "provider"
 	FieldAllowedOrigins                     = "allowed_origins"
 	FieldAllowedHeaders                     = "allowed_headers"
+	FieldAcmeAccountName                    = "acme_account_name"
+	FieldAllowedDomainOptions               = "allowed_domain_options"
+	FieldAllowedChallengeTypes              = "allowed_challenge_types"
+	FieldCsrGenerateKeyType                 = "csr_generate_key_type"
+	FieldCsrIdentifierPopulation            = "csr_identifier_population"
+	FieldCreationDate                       = "creation_date"
+	FieldForce                              = "force"
+	FieldIdentifiers                        = "identifiers"
+	FieldIdentifier                         = "identifier"
+	FieldExpires                            = "expires"
+	FieldLastUpdatedDate                    = "last_updated_date"
+	FieldDnsProviderName                    = "dns_provider_name"
+	FieldDnsProviderType                    = "dns_provider_type"
+	FieldNameserver                         = "nameserver"
+	FieldTsigKeyName                        = "tsig_key_name"
+	FieldTsigSecret                         = "tsig_secret"
+	FieldTsigSecretWO                       = "tsig_secret_wo"
+	FieldTsigSecretWOVersion                = "tsig_secret_wo_version"
+	FieldTsigAlgorithm                      = "tsig_algorithm"
+	FieldHostedZoneID                       = "hosted_zone_id"
+	FieldAccessKeyID                        = "access_key_id"
+	FieldSecretAccessKey                    = "secret_access_key"
+	FieldSecretAccessKeyWO                  = "secret_access_key_wo"
+	FieldSecretAccessKeyWOVersion           = "secret_access_key_wo_version"
+	FieldZoneName                           = "zone_name"
+	FieldImpersonateServiceAccount          = "impersonate_service_account"
+	FieldDefaultNameserver                  = "default_nameserver"
 
 	FieldInput                       = "input"
 	FieldKeyVersion                  = "key_version"
@@ -713,6 +743,12 @@ const (
 	FieldTokenBoundCIDRs             = "token_bound_cidrs"
 	FieldLocalSecretIDs              = "local_secret_ids"
 	FieldTokenNumUses                = "token_num_uses"
+	FieldDriver                      = "driver"
+	FieldConnectionString            = "connection_string"
+	FieldSupportedTransformations    = "supported_transformations"
+	FieldMaxOpenConnections          = "max_open_connections"
+	FieldMaxIdleConnections          = "max_idle_connections"
+	FieldMaxConnectionLifetime       = "max_connection_lifetime"
 	// OS Secrets Engine fields
 	FieldSSHHostKey                = "ssh_host_key"
 	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
@@ -840,6 +876,18 @@ const (
 	FieldValidateAssertionSignature = "validate_assertion_signature"
 	FieldValidateResponseSignature  = "validate_response_signature"
 
+	// TPM auth backend fields
+	FieldCertTTL        = "cert_ttl"
+	FieldCALifetime     = "ca_lifetime"
+	FieldCASoftExpiry   = "ca_soft_expiry"
+	FieldDefaultCertTTL = "default_cert_ttl"
+	FieldTPMEKPublicKey = "tpm_ek_public_key"
+	FieldTPMID          = "tpm_id"
+	FieldTPMGroupID     = "tpm_group_id"
+	FieldTPMIDs         = "tpm_ids"
+	FieldTPMGroupIDs    = "tpmgroup_ids"
+	FieldMemberTPMIDs   = "member_tpm_ids"
+
 	/*
 		agent registry fields
 	*/
@@ -849,6 +897,9 @@ const (
 	FieldCreationTime                 = "creation_time"
 	FieldLastUpdatedTime              = "last_updated_time"
 	FieldOptionalAuthorizationDetails = "optional_authorization_details"
+	FieldAuthorizationDetailsClaim    = "authorization_details_claim"
+	FieldUniqueIDClaim                = "unique_id_claim"
+	FieldActorClaim                   = "actor_claim"
 
 	/*
 		raft snapshot agent config fields
@@ -927,6 +978,10 @@ const (
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
 	FieldCertificateWO              = "certificate_wo"
 	FieldCertificateWOVersion       = "certificate_wo_version"
+
+	// Azure seamless rotation
+	FieldSeamlessRotation    = "seamless_rotation"
+	FieldRotationGracePeriod = "rotation_grace_period"
 
 	/*
 		common environment variables
@@ -1050,6 +1105,31 @@ const (
 	FieldBoundInstanceIDs         = "bound_instance_ids"
 	FieldDisableIPMatching        = "disable_ip_matching"
 	FieldSigningTime              = "signing_time"
+
+	/*
+		Vault SCIM Support
+	*/
+
+	FieldSCIMClientName                  = "client_name"
+	FieldAccessGrantPrincipal            = "access_grant_principal"
+	FieldDefaultSchemaVersion            = "default_schema_version"
+	FieldAllowUserAdoption               = "allow_user_adoption"
+	FieldAllowGroupAdoption              = "allow_group_adoption"
+	FieldAllowedExtraAliasMountAccessors = "allowed_extra_alias_mount_accessors"
+	FieldMaxActiveTokens                 = "max_active_tokens"
+	FieldMaxTokenTTL                     = "max_token_ttl"
+	FieldDeleteLinkedResources           = "delete_linked_resources"
+	FieldDeletionPolicy                  = "deletion_policy"
+	FieldDeleting                        = "deleting"
+	FieldAliasMountAccessor              = "alias_mount_accessor"
+
+	// deletion_policy accepted values (Terraform-facing enum)
+	DeletionPolicyOrphanChildResources = "orphan_child_resources"
+	DeletionPolicyDeleteChildResources = "delete_child_resources"
+
+	// Vault DELETE query param names deletion_policy maps onto
+	SCIMDeleteQueryParamUnlinkResources       = "unlink-resources"
+	SCIMDeleteQueryParamDeleteLinkedResources = "delete-linked-resources"
 
 	/*
 		Vault auth methods

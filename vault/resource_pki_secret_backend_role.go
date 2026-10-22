@@ -78,6 +78,10 @@ var pkiSecretBooleanFields = []string{
 	consts.FieldUseCSRSans,
 }
 
+func pkiRoleResourceCustomizeDiff(_ context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	return pkiValidateKeyTypeField(d, meta)
+}
+
 func pkiSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: pkiSecretBackendRoleCreate,
@@ -87,6 +91,7 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: pkiRoleResourceCustomizeDiff,
 
 		Schema: map[string]*schema.Schema{
 			consts.FieldBackend: {
@@ -248,8 +253,16 @@ func pkiSecretBackendRoleResource() *schema.Resource {
 				Required:     false,
 				Optional:     true,
 				Description:  "The generated key type.",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519", "any"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519", "ml-dsa", "any"}, false),
 				Default:      "rsa",
+			},
+			consts.FieldParameterSet: {
+				Type:         schema.TypeString,
+				Required:     false,
+				Optional:     true,
+				Computed:     true,
+				Description:  "Parameter set for an ml-dsa key type.",
+				ValidateFunc: validation.StringInSlice([]string{"ml-dsa-44", "ml-dsa-65", "ml-dsa-87"}, false),
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
@@ -583,6 +596,12 @@ func pkiSecretBackendRoleCreate(ctx context.Context, d *schema.ResourceData, met
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		if paramSet, ok := d.GetOk(consts.FieldParameterSet); ok {
+			data[consts.FieldParameterSet] = paramSet
+		}
+	}
+
 	log.Printf("[DEBUG] Creating role %s on PKI secret backend %q", name, backend)
 	_, err := client.Logical().Write(path, data)
 	if err != nil {
@@ -720,6 +739,15 @@ func pkiSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion220) && d.Get(consts.FieldKeyType).(string) == "ml-dsa" {
+		if paramSet, ok := secret.Data[consts.FieldParameterSet]; ok {
+			err = d.Set(consts.FieldParameterSet, paramSet)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -810,6 +838,12 @@ func pkiSecretBackendRoleUpdate(ctx context.Context, d *schema.ResourceData, met
 	if provider.IsAPISupported(meta, provider.VaultVersion119) {
 		if serialNumberSource, ok := d.GetOk(consts.FieldSerialNumberSource); ok {
 			data[consts.FieldSerialNumberSource] = serialNumberSource
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		if paramSet, ok := d.GetOk(consts.FieldParameterSet); ok {
+			data[consts.FieldParameterSet] = paramSet
 		}
 	}
 
