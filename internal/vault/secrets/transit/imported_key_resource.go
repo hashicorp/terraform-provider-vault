@@ -33,26 +33,26 @@ import (
 )
 
 var (
-	_ resource.Resource                = &TransitKeyImportResource{}
-	_ resource.ResourceWithConfigure   = &TransitKeyImportResource{}
-	_ resource.ResourceWithImportState = &TransitKeyImportResource{}
+	_ resource.Resource                = &TransitImportedKeyResource{}
+	_ resource.ResourceWithConfigure   = &TransitImportedKeyResource{}
+	_ resource.ResourceWithImportState = &TransitImportedKeyResource{}
 )
 
-// NewTransitKeyImportResource returns the implementation for this resource.
-func NewTransitKeyImportResource() resource.Resource {
-	return &TransitKeyImportResource{}
+// NewTransitImportedKeyResource returns the implementation for this resource.
+func NewTransitImportedKeyResource() resource.Resource {
+	return &TransitImportedKeyResource{}
 }
 
-// TransitKeyImportResource manages importing external key material into a Vault Transit secrets engine.
+// TransitImportedKeyResource manages importing external key material into a Vault Transit secrets engine.
 // The resource model combines parameters for both initial key import (/keys/:name/import)
 // and ongoing key configuration (/keys/:name/config) so an imported key's lifecycle can be managed
 // within a single Terraform resource.
-type TransitKeyImportResource struct {
+type TransitImportedKeyResource struct {
 	base.ResourceWithConfigure
 }
 
-// TransitKeyImportModel describes the Terraform resource data model.
-type TransitKeyImportModel struct {
+// TransitImportedKeyModel describes the Terraform resource data model.
+type TransitImportedKeyModel struct {
 	base.BaseModel
 
 	// Identifier and immutable import parameters (POST /keys/:name/import - ForceNew)
@@ -95,11 +95,11 @@ type TransitKeyImportModel struct {
 	Keys                     types.Map    `tfsdk:"keys"`
 }
 
-func (r *TransitKeyImportResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_transit_secret_backend_key_import"
+func (r *TransitImportedKeyResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_transit_secret_backend_imported_key"
 }
 
-func (r *TransitKeyImportResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Imports existing key material (BYOK) into a new transit-managed encryption key.",
 		Attributes: map[string]schema.Attribute{
@@ -305,15 +305,15 @@ func (r *TransitKeyImportResource) Schema(_ context.Context, _ resource.SchemaRe
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
-func (r *TransitKeyImportResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan TransitKeyImportModel
+func (r *TransitImportedKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var plan TransitImportedKeyModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// ciphertext_wo is write-only, so it is only available from config.
-	var config TransitKeyImportModel
+	var config TransitImportedKeyModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -396,8 +396,8 @@ func (r *TransitKeyImportResource) Create(ctx context.Context, req resource.Crea
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *TransitKeyImportResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state TransitKeyImportModel
+func (r *TransitImportedKeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var state TransitImportedKeyModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -424,21 +424,21 @@ func (r *TransitKeyImportResource) Read(ctx context.Context, req resource.ReadRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (r *TransitKeyImportResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan TransitKeyImportModel
+func (r *TransitImportedKeyResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan TransitImportedKeyModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	var state TransitKeyImportModel
+	var state TransitImportedKeyModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// ciphertext_wo is write-only, so it is only available from config.
-	var config TransitKeyImportModel
+	var config TransitImportedKeyModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -550,8 +550,8 @@ func (r *TransitKeyImportResource) Update(ctx context.Context, req resource.Upda
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
-func (r *TransitKeyImportResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state TransitKeyImportModel
+func (r *TransitImportedKeyResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var state TransitImportedKeyModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -573,14 +573,14 @@ func (r *TransitKeyImportResource) Delete(ctx context.Context, req resource.Dele
 	}
 }
 
-func (r *TransitKeyImportResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *TransitImportedKeyResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	parsed, err := parseTransitKeyID(req.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Invalid import ID", err.Error())
 		return
 	}
 
-	var data TransitKeyImportModel
+	var data TransitImportedKeyModel
 	data.Mount = types.StringValue(parsed.Mount)
 	data.Name = types.StringValue(parsed.Name)
 
@@ -607,7 +607,7 @@ func (r *TransitKeyImportResource) ImportState(ctx context.Context, req resource
 		resp.Diagnostics.AddError(
 			"Key was not imported into Vault",
 			fmt.Sprintf("Transit key %q on mount %q was created by Vault (imported_key is false) and cannot be managed by "+
-				"vault_transit_secret_backend_key_import. Use the vault_transit_secret_backend_key resource instead.", parsed.Name, parsed.Mount),
+				"vault_transit_secret_backend_imported_key. Use the vault_transit_secret_backend_key resource instead.", parsed.Name, parsed.Mount),
 		)
 		return
 	}
@@ -617,7 +617,7 @@ func (r *TransitKeyImportResource) ImportState(ctx context.Context, req resource
 
 // readFromVault populates data from Vault. It returns false if the key does not
 // exist (or on error, in which case the returned diag.Diagnostics contains the error).
-func (r *TransitKeyImportResource) readFromVault(ctx context.Context, cli *vaultclient.Client, data *TransitKeyImportModel) (bool, diag.Diagnostics) {
+func (r *TransitImportedKeyResource) readFromVault(ctx context.Context, cli *vaultclient.Client, data *TransitImportedKeyModel) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	mount := data.Mount.ValueString()

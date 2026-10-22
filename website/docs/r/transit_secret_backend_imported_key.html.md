@@ -1,12 +1,12 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_transit_secret_backend_key_import resource"
-sidebar_current: "docs-vault-resource-transit-secret-backend-key-import"
+page_title: "Vault: vault_transit_secret_backend_imported_key resource"
+sidebar_current: "docs-vault-resource-transit-secret-backend-imported-key"
 description: |-
   Imports existing key material into a Transit secret backend for Vault and manages its ongoing configuration in place.
 ---
 
-# vault\_transit\_secret\_backend\_key\_import
+# vault\_transit\_secret\_backend\_imported\_key
 
 Imports existing key material (BYOK) or public keys into a new Transit encryption key and manages ongoing key configuration in place.
 
@@ -26,7 +26,7 @@ resource "vault_mount" "transit" {
   type = "transit"
 }
 
-resource "vault_transit_secret_backend_key_import" "example_pubkey" {
+resource "vault_transit_secret_backend_imported_key" "example_pubkey" {
   mount      = vault_mount.transit.path
   name       = "my-public-key"
   type       = "ecdsa-p256"
@@ -49,7 +49,7 @@ data "vault_secret_backend_wrapping_key" "wrapping_key" {
 }
 
 # Construct ciphertext by wrapping key material with the public wrapping key using RSA-OAEP + AES-GCM
-resource "vault_transit_secret_backend_key_import" "example_byok" {
+resource "vault_transit_secret_backend_imported_key" "example_byok" {
   mount                 = vault_mount.transit.path
   name                  = "my-imported-key"
   type                  = "aes256-gcm96"
@@ -65,7 +65,7 @@ To import new key material into the existing key, provide the new wrapped cipher
 leaving `ciphertext_wo` in the configuration while editing other arguments does not create duplicate key versions.
 
 ```hcl
-resource "vault_transit_secret_backend_key_import" "example_byok" {
+resource "vault_transit_secret_backend_imported_key" "example_byok" {
   mount                 = vault_mount.transit.path
   name                  = "my-imported-key"
   type                  = "aes256-gcm96"
@@ -142,5 +142,5 @@ In addition to all arguments above, the following attributes are exported:
 Transit keys can be imported using the `{mount}/keys/{name}` or `{mount}/{name}` format:
 
 ```
-$ terraform import vault_transit_secret_backend_key_import.example transit/keys/my-imported-key
+$ terraform import vault_transit_secret_backend_imported_key.example transit/keys/my-imported-key
 ```

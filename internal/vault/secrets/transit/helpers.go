@@ -46,11 +46,11 @@ func wrappingKeyPath(mount string) string {
 //   - the resource type (a Vault transit key import resource)
 //   - the Terraform import action (adding it to Terraform state)
 
-// parseTransitKeyID parses the ID used when importing a vault_transit_secret_backend_key_import
+// parseTransitKeyID parses the ID used when importing a vault_transit_secret_backend_imported_key
 // resource into Terraform state.
 //
-//	terraform import vault_transit_secret_backend_key_import.example transit/keys/my-key
-//	terraform import vault_transit_secret_backend_key_import.example transit/my-key
+//	terraform import vault_transit_secret_backend_imported_key.example transit/keys/my-key
+//	terraform import vault_transit_secret_backend_imported_key.example transit/my-key
 func parseTransitKeyID(id string) (parsedKeyID, error) {
 	trimmed := strings.Trim(id, "/")
 	if matches := keyIDWithKeysRegex.FindStringSubmatch(trimmed); len(matches) == 3 {
