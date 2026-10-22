@@ -42,6 +42,7 @@ type transitKeyImportVersionFields struct {
 //   - Step 3: In-place update to import key version 3 with new public_key
 //   - Step 4: Import state verification
 func TestAccTransitKeyImportVersion_publicKey(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
 	acctestutil.TestAccPreCheck(t)
 
 	mount := acctest.RandomWithPrefix("transit-mount")
@@ -59,9 +60,6 @@ func TestAccTransitKeyImportVersion_publicKey(t *testing.T) {
 	pubKey3 := generateTestECDSAPublicKeyPEM(t)
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			// Step 1: Create base imported key
@@ -231,9 +229,6 @@ func TestAccTransitKeyImportVersion_wrappedKey(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
-		PreCheck: func() {
-			acctestutil.TestAccPreCheck(t)
-		},
 		Steps: []resource.TestStep{
 			// Step 1: Create base imported key with wrapped ciphertext
 			{
