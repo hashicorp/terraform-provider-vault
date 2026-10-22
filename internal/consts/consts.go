@@ -78,6 +78,7 @@ const (
 	FieldValues                             = "values"
 	FieldGroupPolicyApplicationMode         = "group_policy_application_mode"
 	FieldVersion                            = "version"
+	FieldImportVersionType                  = "import_version_type"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
 	FieldLeaseID                            = "lease_id"

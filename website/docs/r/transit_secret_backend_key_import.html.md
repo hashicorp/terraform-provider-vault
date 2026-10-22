@@ -102,6 +102,8 @@ The following arguments are supported:
 * `version` - (Optional) The existing key version to update when importing key material into an already-imported key. If omitted, Vault creates a new version, except when the latest version contains only a public key and the new ciphertext supplies its matching private key; in that case Vault adds the private key to that existing version. Ignored when the key is first imported. 
 ~> **Note:** `version` is sent to Vault whenever key material is imported, so each time you bump `ciphertext_wo_version`, either remove `version` from the configuration (to target the latest version) or set it to the key version you want to add private key material to. Leaving a previous value in place targets that same version again.
 
+* `import_version_type` - (Optional) The key type of the key version being imported, when it differs from `type` (the type the key was created with). The usage of the new type must match the usage of the existing type. This is a provider argument that Terraform sends to Vault as `type` on the import key version endpoint. It is sent whenever key material is imported into an existing key and ignored on the initial import. The resulting type is shown in `latest_version_type`; `type` remains the initial key type. *Available only for Vault Enterprise*.
+
 * `allow_rotation` - (Optional) If set to `true`, the imported key can be rotated within Vault using the rotate endpoint. Changing this forces a new resource.
 
 * `derived` - (Optional) Specifies if key derivation is to be used. Changing this forces a new resource.

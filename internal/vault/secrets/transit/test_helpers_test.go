@@ -69,6 +69,23 @@ func generateTestECDSAKeyPair(t *testing.T) (string, []byte) {
 	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})), privDER
 }
 
+// generateTestECDSAP384PublicKeyPEM generates a test ECDSA P-384 public key in PEM format.
+func generateTestECDSAP384PublicKeyPEM(t *testing.T) string {
+	t.Helper()
+
+	privateKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed to generate ECDSA key: %v", err)
+	}
+
+	pubDER, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		t.Fatalf("failed to marshal public key: %v", err)
+	}
+
+	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER}))
+}
+
 // generateTestRSAPublicKeyPEM generates a test RSA 2048 public key in PEM format.
 func generateTestRSAPublicKeyPEM(t *testing.T) string {
 	t.Helper()

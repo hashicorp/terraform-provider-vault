@@ -31,6 +31,7 @@ type transitKeyImportFields struct {
 	ciphertext           string
 	ciphertextWOVersion  int64
 	version              int64
+	importVersionType    string
 	hashFunction         string
 	allowRotation        bool
 	exportable           bool
@@ -833,6 +834,68 @@ func TestAccTransitKeyImport_versionImportedDuringUpdate(t *testing.T) {
 	})
 }
 
+// TestAccTransitKeyImport_importVersionType validates importing a key version of a different type
+// (crypto agility, Vault Enterprise only):
+//   - Step 1: Create an ecdsa-p256 key from a public key
+//   - Step 2: Import an ecdsa-p384 public key as version 2 with import_version_type -> type stays
+//     ecdsa-p256 and latest_version_type becomes ecdsa-p384
+func TestAccTransitKeyImport_importVersionType(t *testing.T) {
+	mount := acctest.RandomWithPrefix("transit-mount")
+	keyName := acctest.RandomWithPrefix("transit-key")
+	resourceAddress := "vault_transit_secret_backend_key_import.test"
+
+	pubKeyP256 := generateTestECDSAPublicKeyPEM(t)
+	pubKeyP384 := generateTestECDSAP384PublicKeyPEM(t)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, version.Must(version.NewVersion("2.1.0")))
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTransitKeyImportConfig(transitKeyImportFields{
+					mount:           mount,
+					name:            keyName,
+					keyType:         "ecdsa-p256",
+					publicKey:       pubKeyP256,
+					deletionAllowed: true,
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "type", "ecdsa-p256"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version_type", "ecdsa-p256"),
+				),
+			},
+			{
+				Config: testAccTransitKeyImportConfig(transitKeyImportFields{
+					mount:             mount,
+					name:              keyName,
+					keyType:           "ecdsa-p256",
+					publicKey:         pubKeyP384,
+					importVersionType: "ecdsa-p384",
+					deletionAllowed:   true,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "type", "ecdsa-p256"),
+					resource.TestCheckResourceAttr(resourceAddress, "import_version_type", "ecdsa-p384"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "2"),
+					resource.TestCheckResourceAttr(resourceAddress, "latest_version_type", "ecdsa-p384"),
+				),
+			},
+		},
+	})
+}
+
 // TestAccTransitKeyImport_rejectVaultCreatedKey verifies that importing a key
 // that Vault generated itself (imported_key=false) into
 // vault_transit_secret_backend_key_import is rejected.
@@ -895,6 +958,9 @@ func testAccTransitKeyImportConfig(f transitKeyImportFields) string {
 	}
 	if f.version > 0 {
 		optionalArgs += fmt.Sprintf("  version = %d\n", f.version)
+	}
+	if f.importVersionType != "" {
+		optionalArgs += fmt.Sprintf("  import_version_type = %q\n", f.importVersionType)
 	}
 	if f.allowRotation {
 		optionalArgs += fmt.Sprintf("  allow_rotation = %t\n", f.allowRotation)

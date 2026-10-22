@@ -70,6 +70,9 @@ type TransitKeyImportModel struct {
 	PublicKey           types.String `tfsdk:"public_key"`
 	HashFunction        types.String `tfsdk:"hash_function"`
 	Version             types.Int64  `tfsdk:"version"`
+	// This is a separate field to manage key type updates
+	// because `type` returned from vault is always the initial key type
+	ImportVersionType types.String `tfsdk:"import_version_type"`
 
 	// Tunable key configuration (POST /keys/:name/config)
 	DeletionAllowed      types.Bool  `tfsdk:"deletion_allowed"`
@@ -156,6 +159,10 @@ func (r *TransitKeyImportResource) Schema(_ context.Context, _ resource.SchemaRe
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
 				},
+			},
+			consts.FieldImportVersionType: schema.StringAttribute{
+				MarkdownDescription: "If set, updates the key type of the key version being imported. Sent as `type` to Vault's import key version endpoint; ignored on the initial import. Reported by `latest_version_type`. Vault Enterprise only.",
+				Optional:            true,
 			},
 			consts.FieldAllowRotation: schema.BoolAttribute{
 				MarkdownDescription: "If set, the imported key can be rotated within Vault by using the rotate endpoint.",
@@ -455,6 +462,10 @@ func (r *TransitKeyImportResource) Update(ctx context.Context, req resource.Upda
 	ciphertextChanged := !plan.CiphertextWOVersion.IsNull() && !plan.CiphertextWOVersion.Equal(state.CiphertextWOVersion)
 	publicKeyChanged := !plan.PublicKey.IsNull() && !plan.PublicKey.Equal(state.PublicKey)
 	if ciphertextChanged || publicKeyChanged {
+		if !plan.ImportVersionType.IsNull() && !provider.IsEnterpriseSupported(r.Meta()) {
+			resp.Diagnostics.AddError("Unsupported Vault edition", "import_version_type requires Vault Enterprise.")
+			return
+		}
 		importBody := map[string]any{}
 		if ciphertextChanged && !config.CiphertextWO.IsNull() {
 			importBody["ciphertext"] = config.CiphertextWO.ValueString()
@@ -467,6 +478,9 @@ func (r *TransitKeyImportResource) Update(ctx context.Context, req resource.Upda
 		}
 		if !plan.Version.IsNull() {
 			importBody["version"] = plan.Version.ValueInt64()
+		}
+		if !plan.ImportVersionType.IsNull() {
+			importBody["type"] = plan.ImportVersionType.ValueString()
 		}
 		if _, err := cli.Logical().WriteWithContext(ctx, importVersionPath(mount, name), importBody); err != nil {
 			resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
