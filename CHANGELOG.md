@@ -1,3 +1,9 @@
+## 5.14.0 (Unreleased)
+
+FEATURES:
+
+* **New Resources**: Add support for Transit BYOK key import with the `vault_transit_secret_backend_imported_key` resource and `vault_secret_backend_wrapping_key` data source.([#3090](https://github.com/hashicorp/terraform-provider-vault/pull/3090))
+
 ## 5.13.0 (October 14, 2026)
 
 FEATURES:

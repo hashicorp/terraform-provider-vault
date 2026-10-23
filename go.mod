@@ -53,6 +53,7 @@ require (
 	github.com/moby/moby/client v0.6.2
 	github.com/spiffe/go-spiffe/v2 v2.9.0
 	github.com/stretchr/testify v1.12.1
+	github.com/tink-crypto/tink-go/v2 v2.7.0
 	go.uber.org/atomic v1.12.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.61.0
