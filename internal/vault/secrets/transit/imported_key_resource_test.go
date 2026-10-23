@@ -77,7 +77,6 @@ func TestAccTransitImportedKey_publicKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, "name", keyName),
 					resource.TestCheckResourceAttr(resourceAddress, "type", "ecdsa-p256"),
 					resource.TestCheckResourceAttr(resourceAddress, "imported_key", "true"),
-					resource.TestCheckResourceAttr(resourceAddress, "hash_function", "SHA256"),
 					resource.TestCheckResourceAttr(resourceAddress, "allow_rotation", "false"),
 					resource.TestCheckResourceAttr(resourceAddress, "deletion_allowed", "false"),
 					resource.TestCheckResourceAttr(resourceAddress, "exportable", "false"),

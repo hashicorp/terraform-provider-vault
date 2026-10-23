@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -101,7 +100,7 @@ func (r *TransitImportedKeyResource) Metadata(_ context.Context, req resource.Me
 
 func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Imports existing key material (BYOK) into a new transit-managed encryption key.",
+		MarkdownDescription: "Imports externally generated key material (BYOK) into a Vault Transit key and manages subsequent key versions and tunable key settings.",
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
 				MarkdownDescription: "Path where the Transit secret backend is mounted.",
@@ -145,10 +144,8 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				Optional:            true,
 			},
 			consts.FieldHashFunction: schema.StringAttribute{
-				MarkdownDescription: "The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Defaults to `SHA256`. Sent with `ciphertext_wo`, so it must match how the ciphertext was wrapped.",
+				MarkdownDescription: "The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Vault uses `SHA256` if not set.",
 				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString("SHA256"),
 				Validators: []validator.String{
 					stringvalidator.OneOfCaseInsensitive("SHA1", "SHA224", "SHA256", "SHA384", "SHA512"),
 				},

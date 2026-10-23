@@ -97,7 +97,7 @@ The following arguments are supported:
 
 * `public_key` - (Optional) A plaintext PEM public key to be imported for public-key-only import. Changing this imports the new public key as a new key version. Either `ciphertext_wo` or `public_key` is required when the key is first imported. Afterwards it can be removed from the configuration; removing it does not change the key.
 
-* `hash_function` - (Optional) The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Defaults to `SHA256`. Vault does not store this value; it is only used to unwrap the ciphertext in each request, so it is sent to Vault every time `ciphertext_wo` is sent (on create and whenever `ciphertext_wo_version` changes).
+* `hash_function` - (Optional) The hash function used for the RSA-OAEP step of creating the ciphertext (`SHA1`, `SHA224`, `SHA256`, `SHA384`, `SHA512`). Vault uses `SHA256` if not set. Vault does not store this value; it is only used to unwrap the ciphertext in each request, so it is sent to Vault every time `ciphertext_wo` is sent (on create and whenever `ciphertext_wo_version` changes).
 
 * `version` - (Optional) The existing key version to update when importing key material into an already-imported key. If omitted, Vault creates a new version, except when the latest version contains only a public key and the new ciphertext supplies its matching private key; in that case Vault adds the private key to that existing version. Ignored when the key is first imported. 
 ~> **Note:** `version` is sent to Vault whenever key material is imported, so each time you bump `ciphertext_wo_version`, either remove `version` from the configuration (to target the latest version) or set it to the key version you want to add private key material to. Leaving a previous value in place targets that same version again.
@@ -144,3 +144,5 @@ Transit keys can be imported using the `{mount}/keys/{name}` or `{mount}/{name}`
 ```
 $ terraform import vault_transit_secret_backend_imported_key.example transit/keys/my-imported-key
 ```
+
+~> **Note:** Vault does not return key material, so only the key metadata returned by Vault is set in state. **If your configuration sets `ciphertext_wo_version` or `public_key`, the next apply imports that key material as a new key version.** To only bring an existing imported key under Terraform management, leave these arguments out of the configuration.
