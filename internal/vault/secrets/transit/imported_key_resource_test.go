@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"testing"
 
-	version "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -129,9 +128,9 @@ func TestAccTransitImportedKey_publicKey(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceAddress, "imported_key", "true"),
 					// A tunable-only change must not import another key version.
 					resource.TestCheckResourceAttr(resourceAddress, "latest_version", "1"),
-					// latest_version_type is only populated by Vault >= 2.1
+					// latest_version_type is only populated by Vault >= 2.2.0
 					func(s *terraform.State) error {
-						if acctestutil.IsAPIVersionGTE(version.Must(version.NewVersion("2.1.0"))) {
+						if acctestutil.IsAPIVersionGTE(provider.VaultVersion220) {
 							return resource.TestCheckResourceAttr(resourceAddress, "latest_version_type", "ecdsa-p256")(s)
 						}
 						return nil
@@ -893,7 +892,7 @@ func TestAccTransitImportedKey_importVersionType(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, version.Must(version.NewVersion("2.1.0")))
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{

@@ -261,7 +261,7 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				Computed:            true,
 			},
 			consts.FieldLatestVersionType: schema.StringAttribute{
-				MarkdownDescription: "The key type of the latest key version in the keyring. Supported as of Vault 2.1.",
+				MarkdownDescription: "The key type of the latest key version in the keyring. Supported as of Vault 2.2.0.",
 				Computed:            true,
 			},
 			consts.FieldSupportsEncryption: schema.BoolAttribute{
@@ -700,7 +700,7 @@ func (r *TransitImportedKeyResource) readFromVault(ctx context.Context, cli *vau
 		data.LatestVersion = types.Int64Value(1)
 	}
 
-	if r.Meta().IsAPISupported(provider.VaultVersion210) {
+	if r.Meta().IsAPISupported(provider.VaultVersion220) {
 		if v, ok := secret.Data[consts.FieldLatestVersionType].(string); ok && v != "" {
 			data.LatestVersionType = types.StringValue(v)
 		} else if data.LatestVersionType.IsUnknown() {
