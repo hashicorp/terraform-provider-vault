@@ -333,8 +333,9 @@ resource "vault_transit_secret_backend_imported_key" "test" {
 					resource.TestCheckResourceAttr(resourceAddress, "keys.%", "2"),
 				),
 			},
-			// Step 5: ciphertext_wo and ciphertext_wo_version removed from config -> no plan change,
-			// no new version. The key material is only needed when it is imported.
+			// Step 5: ciphertext_wo and ciphertext_wo_version removed from config. The only change is
+			// clearing ciphertext_wo_version in state (2 -> null): an in-place update that does not
+			// import a new version.
 			{
 				Config: importedKeyConfig(transitImportedKeyFields{
 					directMount:     true,
@@ -346,6 +347,9 @@ resource "vault_transit_secret_backend_imported_key" "test" {
 				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
 						plancheck.ExpectEmptyPlan(),
 					},
 				},
