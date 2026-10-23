@@ -103,28 +103,28 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 		MarkdownDescription: "Imports externally generated key material (BYOK) into a Vault Transit key and manages subsequent key versions and tunable key settings.",
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
-				MarkdownDescription: "Path where the Transit secret backend is mounted.",
+				MarkdownDescription: "Path where the Transit secret backend is mounted. Changing this field replaces this resource.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldName: schema.StringAttribute{
-				MarkdownDescription: "Name of the encryption key to create.",
+				MarkdownDescription: "Name of the encryption key to create. Changing this field replaces this resource.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldType: schema.StringAttribute{
-				MarkdownDescription: "Specifies the type of key to create (e.g. `aes128-gcm96`, `aes256-gcm96`, `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `hmac`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`).",
+				MarkdownDescription: "Specifies the type of key to create (e.g. `aes128-gcm96`, `aes256-gcm96`, `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `hmac`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`). Changing this field replaces this resource.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldCiphertextWO: schema.StringAttribute{
-				MarkdownDescription: "A base64-encoded string containing the wrapped ephemeral AES key and the encrypted key material (write-only). Required with `ciphertext_wo_version`. Either this or `public_key` is needed for the initial import.",
+				MarkdownDescription: "A base64-encoded string containing the wrapped ephemeral AES key and the encrypted key material (write-only). Required with `ciphertext_wo_version`. Vault requires either this or `public_key` for the initial import.",
 				Optional:            true,
 				Sensitive:           true,
 				WriteOnly:           true,
@@ -140,7 +140,7 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			consts.FieldPublicKey: schema.StringAttribute{
-				MarkdownDescription: "A plaintext PEM public key to be imported. Either this or `ciphertext_wo` is needed for the initial import. Changing it imports the new public key as a new key version.",
+				MarkdownDescription: "A plaintext PEM public key to be imported. Vault requires either this or `ciphertext_wo` for the initial import. Changing it imports the new public key as a new key version.",
 				Optional:            true,
 			},
 			consts.FieldHashFunction: schema.StringAttribute{
@@ -158,11 +158,11 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			consts.FieldImportVersionType: schema.StringAttribute{
-				MarkdownDescription: "If set, updates the key type of the key version being imported. Sent as `type` to Vault's import key version endpoint; ignored on the initial import. Reported by `latest_version_type`. Vault Enterprise only.",
+				MarkdownDescription: "Changes the key type of the new key version when importing key material into an existing key. Sent as `type` to Vault's import key version endpoint, so it has no effect on the initial import. Reported by `latest_version_type`. Vault Enterprise only.",
 				Optional:            true,
 			},
 			consts.FieldAllowRotation: schema.BoolAttribute{
-				MarkdownDescription: "If set, the imported key can be rotated within Vault by using the rotate endpoint.",
+				MarkdownDescription: "If set, the imported key can be rotated within Vault by using the rotate endpoint. Once the key is rotated in Vault, it no longer accepts imported key material. Changing this field replaces this resource.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Bool{
@@ -171,7 +171,7 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			consts.FieldDerived: schema.BoolAttribute{
-				MarkdownDescription: "Specifies if key derivation is to be used.",
+				MarkdownDescription: "Specifies if key derivation is to be used. Changing this field replaces this resource.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Bool{
@@ -180,7 +180,7 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			consts.FieldContext: schema.StringAttribute{
-				MarkdownDescription: "A base64-encoded string providing a context for key derivation. Required if `derived` is true.",
+				MarkdownDescription: "A base64-encoded string providing a context for key derivation. Required if `derived` is true. Changing this field replaces this resource.",
 				Optional:            true,
 				Sensitive:           true,
 				PlanModifiers: []planmodifier.String{
@@ -212,7 +212,7 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			consts.FieldAutoRotatePeriod: schema.Int64Attribute{
-				MarkdownDescription: "The period in seconds at which this key should be rotated automatically. Set to 0 to disable.",
+				MarkdownDescription: "The period in seconds at which this key should be rotated automatically. Set to 0 to disable; otherwise it must be at least one hour (3600).",
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.Int64{
@@ -223,7 +223,7 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			consts.FieldMinDecryptionVersion: schema.Int64Attribute{
-				MarkdownDescription: "Minimum key version to use for decryption.",
+				MarkdownDescription: "Minimum key version to use for decryption. Vault always sets this to at least 1.",
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.Int64{
@@ -293,7 +293,7 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			consts.FieldKeys: schema.MapAttribute{
-				MarkdownDescription: "List of key versions and metadata in the keyring.",
+				MarkdownDescription: "Map of key version to its metadata in the keyring.",
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
