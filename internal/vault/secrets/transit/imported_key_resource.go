@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -529,9 +530,11 @@ func (r *TransitImportedKeyResource) Update(ctx context.Context, req resource.Up
 		}
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, configPath(mount, name), configBody); err != nil {
-		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
-		return
+	if len(configBody) > 0 {
+		if _, err := cli.Logical().WriteWithContext(ctx, configPath(mount, name), configBody); err != nil {
+			resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
+			return
+		}
 	}
 
 	found, d := r.readFromVault(ctx, cli, &plan)
@@ -580,6 +583,12 @@ func (r *TransitImportedKeyResource) ImportState(ctx context.Context, req resour
 	var data TransitImportedKeyModel
 	data.Mount = types.StringValue(parsed.Mount)
 	data.Name = types.StringValue(parsed.Name)
+
+	// Namespaced resources can only be imported by providing the namespace through an
+	// environment variable. Persist it so the imported state matches the configuration.
+	if ns := os.Getenv(consts.EnvVarVaultNamespaceImport); ns != "" {
+		data.Namespace = types.StringValue(ns)
+	}
 
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
