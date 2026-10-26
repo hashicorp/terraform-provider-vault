@@ -159,7 +159,7 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			consts.FieldImportVersionType: schema.StringAttribute{
-				MarkdownDescription: "Changes the key type of the new key version when importing key material into an existing key. Sent as `type` to Vault's import key version endpoint, so it has no effect on the initial import. Reported by `latest_version_type`. Vault Enterprise only.",
+				MarkdownDescription: "Changes the key type of the new key version when importing key material into an existing key. Sent as `type` to Vault's import key version endpoint, so it has no effect on the initial import. Reported by `latest_version_type`. Requires Vault Enterprise 2.2.0 or later.",
 				Optional:            true,
 			},
 			consts.FieldAllowRotation: schema.BoolAttribute{
@@ -306,6 +306,21 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
+// validateImportVersionType rejects import_version_type when it is set but the Vault
+// server cannot honor it. The parameter is Enterprise-only and was added in Vault 2.2.0.
+func (r *TransitImportedKeyResource) validateImportVersionType(data TransitImportedKeyModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if data.ImportVersionType.IsNull() {
+		return diags
+	}
+	if !provider.IsEnterpriseSupported(r.Meta()) {
+		diags.AddError("Unsupported Vault edition", "import_version_type requires Vault Enterprise.")
+	} else if !r.Meta().IsAPISupported(provider.VaultVersion220) {
+		diags.AddError("Unsupported Vault version", "import_version_type requires Vault Enterprise 2.2.0 or later.")
+	}
+	return diags
+}
+
 func (r *TransitImportedKeyResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan TransitImportedKeyModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -323,6 +338,13 @@ func (r *TransitImportedKeyResource) Create(ctx context.Context, req resource.Cr
 	cli, err := client.GetClient(ctx, r.Meta(), plan.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	// import_version_type is not sent on the initial import, but reject early
+	// instead of accept a value that would fail on a later update.
+	if d := r.validateImportVersionType(plan); d.HasError() {
+		resp.Diagnostics.Append(d...)
 		return
 	}
 
@@ -377,16 +399,19 @@ func (r *TransitImportedKeyResource) Create(ctx context.Context, req resource.Cr
 	if !plan.MinEncryptionVersion.IsNull() && !plan.MinEncryptionVersion.IsUnknown() {
 		configBody["min_encryption_version"] = plan.MinEncryptionVersion.ValueInt64()
 	}
+
+	// The key already exists in Vault once /import succeeds, so a /config failure must not
+	// skip saving state. Record the error, read the key's actual state, and save it below
+	// alongside the error so the key stays tracked instead of being orphaned.
 	if len(configBody) > 0 {
 		if _, err := cli.Logical().WriteWithContext(ctx, configPath(mount, name), configBody); err != nil {
 			resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
-			return
 		}
 	}
 
 	found, d := r.readFromVault(ctx, cli, &plan)
 	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
+	if d.HasError() {
 		return
 	}
 	if !found {
@@ -462,11 +487,33 @@ func (r *TransitImportedKeyResource) Update(ctx context.Context, req resource.Up
 	// along with it but never trigger an import on their own.
 	ciphertextChanged := !plan.CiphertextWOVersion.IsNull() && !plan.CiphertextWOVersion.Equal(state.CiphertextWOVersion)
 	publicKeyChanged := !plan.PublicKey.IsNull() && !plan.PublicKey.Equal(state.PublicKey)
-	if ciphertextChanged || publicKeyChanged {
-		if !plan.ImportVersionType.IsNull() && !provider.IsEnterpriseSupported(r.Meta()) {
-			resp.Diagnostics.AddError("Unsupported Vault edition", "import_version_type requires Vault Enterprise.")
-			return
-		}
+	importNewVersion := ciphertextChanged || publicKeyChanged
+
+	// import_version_type is only supported on Vault enterprise 2.2+
+	if d := r.validateImportVersionType(plan); d.HasError() {
+		resp.Diagnostics.Append(d...)
+		return
+	}
+
+	// Vault treats these flags as one-way: once enabled, they cannot be disabled.
+	// But the API silently ignores attempts to set them to false, so reject that
+	// change here, before any write to Vault, rather than silently failing to apply
+	if !plan.Exportable.IsNull() && !plan.Exportable.IsUnknown() && !plan.Exportable.ValueBool() && state.Exportable.ValueBool() {
+		resp.Diagnostics.AddError(
+			"Cannot disable exportable",
+			"'exportable' cannot be disabled once enabled on a key",
+		)
+		return
+	}
+	if !plan.AllowPlaintextBackup.IsNull() && !plan.AllowPlaintextBackup.IsUnknown() && !plan.AllowPlaintextBackup.ValueBool() && state.AllowPlaintextBackup.ValueBool() {
+		resp.Diagnostics.AddError(
+			"Cannot disable allow_plaintext_backup",
+			"'allow_plaintext_backup' cannot be disabled once enabled on a key",
+		)
+		return
+	}
+
+	if importNewVersion {
 		importBody := map[string]any{}
 		if ciphertextChanged && !config.CiphertextWO.IsNull() {
 			importBody["ciphertext"] = config.CiphertextWO.ValueString()
@@ -505,44 +552,30 @@ func (r *TransitImportedKeyResource) Update(ctx context.Context, req resource.Up
 	if !plan.AutoRotatePeriod.IsNull() && !plan.AutoRotatePeriod.IsUnknown() {
 		configBody["auto_rotate_period"] = plan.AutoRotatePeriod.ValueInt64()
 	}
-
-	// Vault treats these flags as one-way: once enabled, they cannot be disabled.
-	// But the API silently ignores attempts to set them to false, so reject that
-	// change here rather than leave Terraform unable to apply the requested value.
-	if !plan.Exportable.IsNull() && !plan.Exportable.IsUnknown() {
-		if plan.Exportable.ValueBool() {
-			configBody["exportable"] = true
-		} else if state.Exportable.ValueBool() {
-			resp.Diagnostics.AddError(
-				"Cannot disable exportable",
-				"'exportable' cannot be disabled once enabled on a key",
-			)
-			return
-		}
+	// exportable and allow_plaintext_backup are only ever sent as true; disabling is rejected above.
+	if !plan.Exportable.IsNull() && !plan.Exportable.IsUnknown() && plan.Exportable.ValueBool() {
+		configBody["exportable"] = true
+	}
+	if !plan.AllowPlaintextBackup.IsNull() && !plan.AllowPlaintextBackup.IsUnknown() && plan.AllowPlaintextBackup.ValueBool() {
+		configBody["allow_plaintext_backup"] = true
 	}
 
-	if !plan.AllowPlaintextBackup.IsNull() && !plan.AllowPlaintextBackup.IsUnknown() {
-		if plan.AllowPlaintextBackup.ValueBool() {
-			configBody["allow_plaintext_backup"] = true
-		} else if state.AllowPlaintextBackup.ValueBool() {
-			resp.Diagnostics.AddError(
-				"Cannot disable allow_plaintext_backup",
-				"'allow_plaintext_backup' cannot be disabled once enabled on a key",
-			)
-			return
-		}
-	}
-
+	// Only send config updates if they are specified.
 	if len(configBody) > 0 {
 		if _, err := cli.Logical().WriteWithContext(ctx, configPath(mount, name), configBody); err != nil {
 			resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
-			return
+			if !importNewVersion {
+				// If only /config was attempted we can return because there are no updates to state.
+				return
+			}
+			// Otherwise /import_version succeeded earlier and the new key version exists in Vault.
+			// The prior state is stale, so even though config failed, we need to save the current state.
 		}
 	}
 
 	found, d := r.readFromVault(ctx, cli, &plan)
 	resp.Diagnostics.Append(d...)
-	if resp.Diagnostics.HasError() {
+	if d.HasError() {
 		return
 	}
 	if !found {
