@@ -227,6 +227,9 @@ func (r *TransitImportedKeyResource) Schema(_ context.Context, _ resource.Schema
 				MarkdownDescription: "Minimum key version to use for decryption. Vault always sets this to at least 1.",
 				Optional:            true,
 				Computed:            true,
+				Validators: []validator.Int64{
+					int64validator.AtLeast(1),
+				},
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 				},
