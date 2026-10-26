@@ -212,9 +212,10 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		if field == consts.FieldSkipImportRotation && !provider.IsAPISupported(meta, provider.VaultVersion116) {
 			continue
 		}
-		val := resp.Data[field]
-		if err := d.Set(field, val); err != nil {
-			return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
+		if val, ok := resp.Data[field]; ok {
+			if err := d.Set(field, val); err != nil {
+				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
+			}
 		}
 	}
 
