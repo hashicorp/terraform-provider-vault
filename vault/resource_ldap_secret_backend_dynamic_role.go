@@ -147,10 +147,9 @@ func readLDAPDynamicRoleResource(ctx context.Context, d *schema.ResourceData, me
 		return nil
 	}
 	for _, field := range ldapSecretBackendDynamicRoleFields {
-		if val, ok := resp.Data[field]; ok {
-			if err := d.Set(field, val); err != nil {
-				return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
-			}
+		val := resp.Data[field]
+		if err := d.Set(field, val); err != nil {
+			return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
 		}
 	}
 
