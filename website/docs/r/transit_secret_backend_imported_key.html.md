@@ -48,7 +48,7 @@ data "vault_secret_backend_wrapping_key" "wrapping_key" {
   mount = vault_mount.transit.path
 }
 
-# Construct ciphertext by wrapping key material with the public wrapping key using RSA-OAEP + AES-GCM
+# Construct ciphertext using AES-KWP to wrap key material and RSA-OAEP with the public wrapping key to wrap the ephemeral AES key
 resource "vault_transit_secret_backend_imported_key" "example_byok" {
   mount                 = vault_mount.transit.path
   name                  = "my-imported-key"

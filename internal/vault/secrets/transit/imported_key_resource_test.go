@@ -38,10 +38,14 @@ type transitImportedKeyFields struct {
 	allowRotation        bool
 	exportable           bool
 	allowPlaintextBackup bool
-	autoRotatePeriod     *int64
-	minDecryptionVersion int64
-	minEncryptionVersion int64
-	deletionAllowed      bool
+	// disableExportable and disablePlaintextBackup render an explicit `= false` for the
+	// one-way flags. They only apply when the matching flag above is not set.
+	disableExportable      bool
+	disablePlaintextBackup bool
+	autoRotatePeriod       *int64
+	minDecryptionVersion   int64
+	minEncryptionVersion   int64
+	deletionAllowed        bool
 }
 
 func int64Ptr(v int64) *int64 {
@@ -777,6 +781,69 @@ func TestAccTransitImportedKey_optionalFields(t *testing.T) {
 	})
 }
 
+// TestAccTransitImportedKey_rejectDisablingOneWayFlags verifies that exportable and
+// allow_plaintext_backup cannot be set back to false once enabled. Vault silently ignores
+// that change, so the provider rejects it with an error before writing anything to Vault.
+//
+//   - Step 1: Create the key with both flags enabled.
+//   - Step 2: Disabling exportable fails.
+//   - Step 3: Disabling allow_plaintext_backup fails.
+func TestAccTransitImportedKey_rejectDisablingOneWayFlags(t *testing.T) {
+	mount := acctest.RandomWithPrefix("transit-mount")
+	keyName := acctest.RandomWithPrefix("transit-key")
+	resourceAddress := "vault_transit_secret_backend_imported_key.test"
+
+	pubKey := generateTestRSAPublicKeyPEM(t)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: importedKeyConfig(transitImportedKeyFields{
+					mount:                mount,
+					name:                 keyName,
+					keyType:              "rsa-2048",
+					publicKey:            pubKey,
+					exportable:           true,
+					allowPlaintextBackup: true,
+					deletionAllowed:      true,
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceAddress, "exportable", "true"),
+					resource.TestCheckResourceAttr(resourceAddress, "allow_plaintext_backup", "true"),
+				),
+			},
+			{
+				Config: importedKeyConfig(transitImportedKeyFields{
+					mount:                mount,
+					name:                 keyName,
+					keyType:              "rsa-2048",
+					publicKey:            pubKey,
+					disableExportable:    true,
+					allowPlaintextBackup: true,
+					deletionAllowed:      true,
+				}),
+				ExpectError: regexp.MustCompile(`Cannot disable exportable`),
+			},
+			{
+				Config: importedKeyConfig(transitImportedKeyFields{
+					mount:                  mount,
+					name:                   keyName,
+					keyType:                "rsa-2048",
+					publicKey:              pubKey,
+					exportable:             true,
+					disablePlaintextBackup: true,
+					deletionAllowed:        true,
+				}),
+				ExpectError: regexp.MustCompile(`Cannot disable allow_plaintext_backup`),
+			},
+		},
+	})
+}
+
 // TestAccTransitImportedKey_versionImportedDuringUpdate verifies that computed
 // attributes that change when a key version is imported (latest_version, keys,
 // min_available_version) are not planned with UseStateForUnknown. Otherwise,
@@ -1236,9 +1303,13 @@ func importedKeyConfig(f transitImportedKeyFields) string {
 	}
 	if f.exportable {
 		optionalArgs += fmt.Sprintf("  exportable = %t\n", f.exportable)
+	} else if f.disableExportable {
+		optionalArgs += "  exportable = false\n"
 	}
 	if f.allowPlaintextBackup {
 		optionalArgs += fmt.Sprintf("  allow_plaintext_backup = %t\n", f.allowPlaintextBackup)
+	} else if f.disablePlaintextBackup {
+		optionalArgs += "  allow_plaintext_backup = false\n"
 	}
 	if f.autoRotatePeriod != nil {
 		optionalArgs += fmt.Sprintf("  auto_rotate_period = %d\n", *f.autoRotatePeriod)
