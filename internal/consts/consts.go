@@ -78,6 +78,7 @@ const (
 	FieldValues                             = "values"
 	FieldGroupPolicyApplicationMode         = "group_policy_application_mode"
 	FieldVersion                            = "version"
+	FieldImportVersionType                  = "import_version_type"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
 	FieldLeaseID                            = "lease_id"
@@ -811,6 +812,11 @@ const (
 	FieldSupportsDecryption                   = "supports_decryption"
 	FieldSupportsDerivation                   = "supports_derivation"
 	FieldSupportsSigning                      = "supports_signing"
+	FieldHashFunction                         = "hash_function"
+	FieldAllowRotation                        = "allow_rotation"
+	FieldImportedKeyAllowRotation             = "imported_key_allow_rotation"
+	FieldLatestVersionType                    = "latest_version_type"
+	FieldImportedKey                          = "imported_key"
 	FieldLengths                              = "lengths"
 	FieldExcludeCIDRList                      = "exclude_cidr_list"
 	FieldPort                                 = "port"
@@ -982,6 +988,8 @@ const (
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
 	FieldCertificateWO              = "certificate_wo"
 	FieldCertificateWOVersion       = "certificate_wo_version"
+	FieldCiphertextWO               = "ciphertext_wo"
+	FieldCiphertextWOVersion        = "ciphertext_wo_version"
 
 	// Azure seamless rotation
 	FieldSeamlessRotation    = "seamless_rotation"
