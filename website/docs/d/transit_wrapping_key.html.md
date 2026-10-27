@@ -1,15 +1,15 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_secret_backend_wrapping_key data source"
-sidebar_current: "docs-vault-datasource-secret-backend-wrapping-key"
+page_title: "Vault: vault_transit_wrapping_key data source"
+sidebar_current: "docs-vault-datasource-transit-wrapping-key"
 description: |-
-  Reads the public wrapping key of a secrets engine mount.
+  Reads the public wrapping key of a Transit secrets engine mount.
 ---
 
-# vault\_secret\_backend\_wrapping\_key
+# vault\_transit\_wrapping\_key
 
-Reads the public wrapping key of a secrets engine mount. Use it to wrap key material
-before importing it (BYOK). Currently supported by the Transit and Transform secrets engines.
+Reads the public wrapping key of a Transit secrets engine mount. Use it to wrap key material
+before importing it (BYOK).
 
 For more information, please refer to [the Vault Transit documentation](https://developer.hashicorp.com/vault/api-docs/secret/transit#get-wrapping-key).
 
@@ -21,7 +21,7 @@ resource "vault_mount" "transit" {
   type = "transit"
 }
 
-data "vault_secret_backend_wrapping_key" "wrapping_key" {
+data "vault_transit_wrapping_key" "wrapping_key" {
   mount = vault_mount.transit.path
 }
 ```
@@ -35,7 +35,7 @@ The following arguments are supported:
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
   *Available only for Vault Enterprise*.
 
-* `mount` - (Required) Path where the secrets engine is mounted.
+* `mount` - (Required) Path where the Transit secrets engine is mounted.
 
 ## Attributes Reference
 

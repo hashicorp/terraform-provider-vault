@@ -27,11 +27,8 @@ func NewWrappingKeyDataSource() datasource.DataSource {
 	return &WrappingKeyDataSource{}
 }
 
-// WrappingKeyDataSource reads the public wrapping key of a secrets engine
-// mount. The key is used to wrap key material before a BYOK import.
-//
-// The data source is named generically so that multiple secrets engines can use
-// it. It is currently supported by the Transit and Transform secrets engines.
+// WrappingKeyDataSource reads the public wrapping key of a Transit secrets
+// engine mount. The key is used to wrap key material before a BYOK import.
 type WrappingKeyDataSource struct {
 	base.DataSourceWithConfigure
 }
@@ -45,20 +42,20 @@ type WrappingKeyModel struct {
 }
 
 func (d *WrappingKeyDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_secret_backend_wrapping_key"
+	resp.TypeName = req.ProviderTypeName + "_transit_wrapping_key"
 }
 
 func (d *WrappingKeyDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Reads the public wrapping key of a secrets engine mount. Use it to wrap key material " +
-			"before importing it (BYOK). Currently supported by the Transit and Transform secrets engines.",
+		MarkdownDescription: "Reads the public wrapping key of a Transit secrets engine mount. Use it to wrap key material " +
+			"before importing it (BYOK).",
 		Attributes: map[string]schema.Attribute{
 			consts.FieldNamespace: schema.StringAttribute{
 				MarkdownDescription: "Target namespace. (requires Enterprise)",
 				Optional:            true,
 			},
 			consts.FieldMount: schema.StringAttribute{
-				MarkdownDescription: "Path where the secrets engine is mounted.",
+				MarkdownDescription: "Path where the Transit secrets engine is mounted.",
 				Required:            true,
 			},
 			consts.FieldPublicKey: schema.StringAttribute{

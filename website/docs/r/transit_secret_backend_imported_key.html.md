@@ -44,7 +44,7 @@ resource "vault_mount" "transit" {
   type = "transit"
 }
 
-data "vault_secret_backend_wrapping_key" "wrapping_key" {
+data "vault_transit_wrapping_key" "wrapping_key" {
   mount = vault_mount.transit.path
 }
 

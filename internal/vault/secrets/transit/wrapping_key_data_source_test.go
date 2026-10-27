@@ -27,8 +27,8 @@ func TestAccTransitWrappingKeyDataSource_basic(t *testing.T) {
 			{
 				Config: testConfigTransitWrappingKeyDataSource(mount),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("data.vault_secret_backend_wrapping_key.test", "mount", mount),
-					resource.TestMatchResourceAttr("data.vault_secret_backend_wrapping_key.test", "public_key", regexp.MustCompile(`^-----BEGIN PUBLIC KEY-----`)),
+					resource.TestCheckResourceAttr("data.vault_transit_wrapping_key.test", "mount", mount),
+					resource.TestMatchResourceAttr("data.vault_transit_wrapping_key.test", "public_key", regexp.MustCompile(`^-----BEGIN PUBLIC KEY-----`)),
 				),
 			},
 		},
@@ -39,7 +39,7 @@ func testConfigTransitWrappingKeyDataSource(mount string) string {
 	return fmt.Sprintf(`
 %s
 
-data "vault_secret_backend_wrapping_key" "test" {
+data "vault_transit_wrapping_key" "test" {
   mount = vault_mount.test.path
 }
 `, testConfigTransitMount(mount))
