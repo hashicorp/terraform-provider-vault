@@ -14,9 +14,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
@@ -313,6 +315,184 @@ func TestAccKeymgmtKey_invalidMount(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAccKeymgmtKey_metadataDrift verifies that metadata is detected as drifted
+// when the key is recreated outside Terraform, which leaves Vault with no
+// metadata record. Vault omits metadata on read in that case, and the provider
+// must not keep the stale value in state.
+func TestAccKeymgmtKey_metadataDrift(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	keyName := acctest.RandomWithPrefix("key")
+	resourceName := "vault_keymgmt_key.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion230)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtKey_metadataConfig(mount, keyName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.owner", "payments"),
+				),
+			},
+			{
+				PreConfig: func() {
+					client, err := api.NewClient(api.DefaultConfig())
+					if err != nil {
+						t.Fatalf("failed to create client: %v", err)
+					}
+					keyPath := fmt.Sprintf("%s/key/%s", mount, keyName)
+					if _, err := client.Logical().Delete(keyPath); err != nil {
+						t.Fatalf("failed to delete key %s: %v", keyPath, err)
+					}
+					if _, err := client.Logical().Write(keyPath, map[string]interface{}{"type": "aes256-gcm96"}); err != nil {
+						t.Fatalf("failed to recreate key %s: %v", keyPath, err)
+					}
+					// Keep deletion_allowed in sync so metadata is the only drift.
+					if _, err := client.Logical().Write(keyPath, map[string]interface{}{consts.FieldDeletionAllowed: true}); err != nil {
+						t.Fatalf("failed to update key %s: %v", keyPath, err)
+					}
+				},
+				Config: testKeymgmtKey_metadataConfig(mount, keyName),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: resource.TestCheckResourceAttr(resourceName, "metadata.owner", "payments"),
+			},
+		},
+	})
+}
+
+// TestAccKeymgmtKey_metadataClear verifies how metadata maps to what Vault
+// stores for a Plugin Framework resource: a map is written, {} clears it, and
+// removing the attribute also clears it, with no diff left over because Vault
+// returns an empty map after a clear. It also verifies that an import reads the
+// stored map back.
+func TestAccKeymgmtKey_metadataClear(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tf-test-keymgmt")
+	keyName := acctest.RandomWithPrefix("key")
+	resourceName := "vault_keymgmt_key.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion230)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testKeymgmtKey_metadataConfigWith(mount, keyName, `metadata = { owner = "payments", team = "eco" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "2"),
+					testKeymgmtKeyVaultMetadata(resourceName, map[string]interface{}{"owner": "payments", "team": "eco"}),
+				),
+			},
+			{
+				Config: testKeymgmtKey_metadataConfigWith(mount, keyName, `metadata = {}`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "0"),
+					testKeymgmtKeyVaultMetadata(resourceName, nil),
+				),
+			},
+			{
+				Config: testKeymgmtKey_metadataConfigWith(mount, keyName, `metadata = { owner = "payments" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "1"),
+					testKeymgmtKeyVaultMetadata(resourceName, map[string]interface{}{"owner": "payments"}),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccKeymgmtKeyImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore:              []string{consts.FieldReplicaRegions},
+			},
+			{
+				Config: testKeymgmtKey_metadataConfigWith(mount, keyName, ``),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.%"),
+					testKeymgmtKeyVaultMetadata(resourceName, nil),
+				),
+			},
+		},
+	})
+}
+
+func testKeymgmtKey_metadataConfigWith(mount, keyName, metadata string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  mount            = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
+  %s
+}
+`, mount, keyName, metadata)
+}
+
+// testKeymgmtKeyVaultMetadata checks the metadata Vault itself returns for the
+// key. A nil want means Vault holds no metadata, either as an omitted field or
+// as an empty map.
+func testKeymgmtKeyVaultMetadata(resourceName string, want map[string]interface{}) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+		client, err := api.NewClient(api.DefaultConfig())
+		if err != nil {
+			return err
+		}
+		keyPath := fmt.Sprintf("%s/key/%s", rs.Primary.Attributes[consts.FieldMount], rs.Primary.Attributes[consts.FieldName])
+		resp, err := client.Logical().Read(keyPath)
+		if err != nil {
+			return err
+		}
+		if resp == nil {
+			return fmt.Errorf("key %q not found in Vault", keyPath)
+		}
+		got, _ := resp.Data[consts.FieldMetadata].(map[string]interface{})
+		if len(got) != len(want) {
+			return fmt.Errorf("Vault metadata for %q: got %v, want %v", keyPath, got, want)
+		}
+		for k, v := range want {
+			if got[k] != v {
+				return fmt.Errorf("Vault metadata for %q: got %v, want %v", keyPath, got, want)
+			}
+		}
+		return nil
+	}
+}
+
+func testKeymgmtKey_metadataConfig(mount, keyName string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "keymgmt" {
+  path = %q
+  type = "keymgmt"
+}
+
+resource "vault_keymgmt_key" "test" {
+  mount            = vault_mount.keymgmt.path
+  name             = %q
+  type             = "aes256-gcm96"
+  deletion_allowed = true
+  metadata         = { owner = "payments" }
+}
+`, mount, keyName)
 }
 
 func testKeymgmtKey_multipleConfig(mount, key1Name, key2Name string) string {

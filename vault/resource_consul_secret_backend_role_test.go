@@ -433,6 +433,111 @@ func TestConsulSecretBackendRoleBackendFromPath(t *testing.T) {
 	}
 }
 
+// TestConsulSecretBackendRole_metadata verifies how the metadata attribute maps
+// to what Vault stores: a map is written, {} clears it, and removing the
+// attribute also clears it, because the provider treats the configuration as the
+// source of truth. It also verifies that an import reads the stored map back.
+func TestConsulSecretBackendRole_metadata(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("tf-test-consul")
+	name := acctest.RandomWithPrefix("tf-test-name")
+	resourceName := "vault_consul_secret_backend_role.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion230)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testConsulSecretBackendRole_metadataConfig(path, name, `metadata = { owner = "payments", team = "eco" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.owner", "payments"),
+					testConsulSecretBackendRoleVaultMetadata(resourceName, map[string]interface{}{"owner": "payments", "team": "eco"}),
+				),
+			},
+			{
+				Config: testConsulSecretBackendRole_metadataConfig(path, name, `metadata = {}`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "0"),
+					testConsulSecretBackendRoleVaultMetadata(resourceName, nil),
+				),
+			},
+			{
+				Config: testConsulSecretBackendRole_metadataConfig(path, name, `metadata = { owner = "payments" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "1"),
+					testConsulSecretBackendRoleVaultMetadata(resourceName, map[string]interface{}{"owner": "payments"}),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testConsulSecretBackendRole_metadataConfig(path, name, ``),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.%"),
+					testConsulSecretBackendRoleVaultMetadata(resourceName, nil),
+				),
+			},
+		},
+	})
+}
+
+func testConsulSecretBackendRole_metadataConfig(path, name, metadata string) string {
+	return fmt.Sprintf(`
+resource "vault_consul_secret_backend" "test" {
+  path    = %q
+  address = "127.0.0.1:8500"
+  token   = "026a0c16-87cd-4c2d-b3f3-fb539f592b7e"
+}
+
+resource "vault_consul_secret_backend_role" "test" {
+  backend      = vault_consul_secret_backend.test.path
+  name         = %q
+  consul_roles = ["role-0"]
+  %s
+}
+`, path, name, metadata)
+}
+
+// testConsulSecretBackendRoleVaultMetadata checks the metadata Vault itself
+// returns for the role. A nil want means Vault holds no metadata, either as an
+// omitted field or as an empty map.
+func testConsulSecretBackendRoleVaultMetadata(resourceName string, want map[string]interface{}) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+		resp, err := client.Logical().Read(rs.Primary.ID)
+		if err != nil {
+			return err
+		}
+		if resp == nil {
+			return fmt.Errorf("role %q not found in Vault", rs.Primary.ID)
+		}
+		got, _ := resp.Data[consts.FieldMetadata].(map[string]interface{})
+		if len(got) != len(want) {
+			return fmt.Errorf("Vault metadata for %q: got %v, want %v", rs.Primary.ID, got, want)
+		}
+		for k, v := range want {
+			if got[k] != v {
+				return fmt.Errorf("Vault metadata for %q: got %v, want %v", rs.Primary.ID, got, want)
+			}
+		}
+		return nil
+	}
+}
+
 // This custom ImportStateCheck function is used for import tests where the legacy policies field is
 // defined, but ensures the returned value always matches under the new field name consul_policies.
 func importStateCheckLegacyPolicies(policies ...string) resource.ImportStateCheckFunc {

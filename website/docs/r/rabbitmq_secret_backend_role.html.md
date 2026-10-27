@@ -73,6 +73,8 @@ Must be unique within the backend.
 
 * `vhost_topic` - (Optional) Specifies a map of virtual hosts and exchanges to topic permissions. This option requires RabbitMQ 3.7.0 or later.
 
+* `metadata` - (Optional) A map of string key-value pairs to associate with the role. Supplying the map replaces all existing metadata, and removing the attribute or setting `metadata = {}` clears it. A maximum of 64 keys is allowed; keys must be 1-128 bytes and values 1-512 bytes. Requires Vault Enterprise 2.3.0+.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

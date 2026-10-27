@@ -281,7 +281,7 @@ func databaseSecretsMountCreateOrUpdate(ctx context.Context, d *schema.ResourceD
 					return diag.Errorf("duplicate name %q for engine %#v", name, engine)
 				}
 				seen[name] = true
-				if err := writeDatabaseSecretConfig(ctx, d, client, engine, i, true, path, meta); err != nil {
+				if _, err := writeDatabaseSecretConfig(ctx, d, client, engine, i, true, path, meta); err != nil {
 					return diag.FromErr(err)
 				}
 				count++

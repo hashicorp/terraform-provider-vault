@@ -11,9 +11,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/vault/api"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 )
 
@@ -480,6 +482,134 @@ resource "vault_alicloud_secret_backend_role" "test_role_arn" {
   ttl = 7200
 }
 `, backend, accessKey, secretKey, name, testAccAliCloudSecretBackendRoleInlinePolicy_updated, name, name, testAccAliCloudSecretBackendRoleRoleARN_updated)
+}
+
+// TestAccAliCloudSecretBackendRole_metadata verifies how metadata maps to what Vault
+// stores for a Plugin Framework resource: a map is written, {} clears it, and
+// removing the attribute also clears it. An object recreated outside Terraform has
+// no metadata record, which must show as drift. It also verifies that an import
+// reads the stored map back.
+func TestAccAliCloudSecretBackendRole_metadata(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-alicloud")
+	name := acctest.RandomWithPrefix("tf-test-role")
+	resourceName := "vault_alicloud_secret_backend_role.test"
+	rolePath := fmt.Sprintf("%s/role/%s", backend, name)
+
+	vaultMetadata := func(want map[string]interface{}) resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			client, err := api.NewClient(api.DefaultConfig())
+			if err != nil {
+				return err
+			}
+			resp, err := client.Logical().Read(rolePath)
+			if err != nil || resp == nil {
+				return fmt.Errorf("reading %s: resp=%v err=%v", rolePath, resp, err)
+			}
+			got, _ := resp.Data[consts.FieldMetadata].(map[string]interface{})
+			if len(got) != len(want) {
+				return fmt.Errorf("Vault metadata for %s: got %v, want %v", rolePath, got, want)
+			}
+			for k, v := range want {
+				if got[k] != v {
+					return fmt.Errorf("Vault metadata for %s: got %v, want %v", rolePath, got, want)
+				}
+			}
+			return nil
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion230)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccAliCloudSecretBackendRoleConfig_metadata(backend, name, `metadata = { owner = "payments", team = "eco" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "2"),
+					vaultMetadata(map[string]interface{}{"owner": "payments", "team": "eco"}),
+				),
+			},
+			{
+				Config: testAccAliCloudSecretBackendRoleConfig_metadata(backend, name, `metadata = {}`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "0"),
+					vaultMetadata(nil),
+				),
+			},
+			{
+				PreConfig: func() {
+					client, err := api.NewClient(api.DefaultConfig())
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := client.Logical().Write(rolePath, map[string]interface{}{"metadata": map[string]interface{}{"owner": "HACKED"}}); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testAccAliCloudSecretBackendRoleConfig_metadata(backend, name, `metadata = { owner = "payments" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "metadata.owner", "payments"),
+					vaultMetadata(map[string]interface{}{"owner": "payments"}),
+				),
+			},
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateIdFunc:                    testAccAliCloudSecretBackendRoleImportStateIdFunc(resourceName),
+			},
+			{
+				PreConfig: func() {
+					client, err := api.NewClient(api.DefaultConfig())
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := client.Logical().Delete(rolePath); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := client.Logical().Write(rolePath, map[string]interface{}{
+						"remote_policies": []string{"name:AliyunOSSReadOnlyAccess,type:System"},
+					}); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testAccAliCloudSecretBackendRoleConfig_metadata(backend, name, `metadata = { owner = "payments" }`),
+				Check:  vaultMetadata(map[string]interface{}{"owner": "payments"}),
+			},
+			{
+				Config: testAccAliCloudSecretBackendRoleConfig_metadata(backend, name, ``),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "metadata.%"),
+					vaultMetadata(nil),
+				),
+			},
+		},
+	})
+}
+
+func testAccAliCloudSecretBackendRoleConfig_metadata(backend, name, metadata string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path = %q
+  type = "alicloud"
+}
+
+resource "vault_alicloud_secret_backend_role" "test" {
+  mount = vault_mount.test.path
+  name  = %q
+
+  remote_policies {
+    name = "AliyunOSSReadOnlyAccess"
+    type = "System"
+  }
+
+  %s
+}
+`, backend, name, metadata)
 }
 
 func testAccAliCloudSecretBackendRoleConfig_remotePolicy(name, backend, accessKey, secretKey string) string {

@@ -68,6 +68,14 @@ func awsSecretBackendStaticRoleResource() *schema.Resource {
 			Optional:    true,
 			Description: "External ID to use when assuming the role.",
 		},
+		consts.FieldMetadata: {
+			Type:     schema.TypeMap,
+			Optional: true,
+			Elem: &schema.Schema{
+				Type: schema.TypeString,
+			},
+			Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
+		},
 	}
 	return &schema.Resource{
 		CreateContext: provider.MountCreateContextWrapper(createUpdateAWSStaticRoleResource, provider.VaultVersion114),
@@ -120,13 +128,25 @@ func createUpdateAWSStaticRoleResource(ctx context.Context, d *schema.ResourceDa
 		}
 	}
 
-	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
+	resp, err := client.Logical().WriteWithContext(ctx, rolePath, data)
+	if err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", rolePath, err))
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 
 	d.SetId(rolePath)
 	log.Printf("[DEBUG] Wrote %q", rolePath)
-	return readAWSStaticRoleResource(ctx, d, meta)
+	return append(diags, readAWSStaticRoleResource(ctx, d, meta)...)
 }
 
 func readAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -173,6 +193,12 @@ func readAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta
 					return diag.FromErr(fmt.Errorf("error setting state key '%s': %s", field, err))
 				}
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
+			return diag.FromErr(fmt.Errorf("error setting %s: %w", consts.FieldMetadata, err))
 		}
 	}
 

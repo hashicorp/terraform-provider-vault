@@ -4,14 +4,18 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -21,11 +25,11 @@ var (
 
 func gcpSecretStaticAccountResource() *schema.Resource {
 	return &schema.Resource{
-		Create: gcpSecretStaticAccountCreate,
-		Read:   provider.ReadWrapper(gcpSecretStaticAccountRead),
-		Update: gcpSecretStaticAccountUpdate,
-		Delete: gcpSecretStaticAccountDelete,
-		Exists: gcpSecretStaticAccountExists,
+		CreateContext: gcpSecretStaticAccountCreate,
+		Read:          provider.ReadWrapper(gcpSecretStaticAccountRead),
+		UpdateContext: gcpSecretStaticAccountUpdate,
+		Delete:        gcpSecretStaticAccountDelete,
+		Exists:        gcpSecretStaticAccountExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -95,14 +99,22 @@ func gcpSecretStaticAccountResource() *schema.Resource {
 				Computed:    true,
 				Description: "Project of the GCP Service Account managed by this static account",
 			},
+			consts.FieldMetadata: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of string key-value pairs to associate with the static account. Requires Vault Enterprise 2.3.0+.",
+			},
 		},
 	}
 }
 
-func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretStaticAccountCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -114,15 +126,26 @@ func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) erro
 
 	data := map[string]interface{}{}
 	gcpSecretStaticAccountUpdateFields(d, data)
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+			data[consts.FieldMetadata] = v.(map[string]interface{})
+		}
+	}
+
 	d.SetId(path)
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing GCP Secrets backend static account %q: %s", path, err)
+		return diag.Errorf("error writing GCP Secrets backend static account %q: %s", path, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Wrote GCP Secrets backend static account %q", path)
 
-	return gcpSecretStaticAccountRead(d, meta)
+	if err := gcpSecretStaticAccountRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error {
@@ -182,13 +205,19 @@ func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error 
 		return fmt.Errorf("error reading %s for GCP Secrets backend static account %q", "binding", path)
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
+			return fmt.Errorf("error setting %s: %s", consts.FieldMetadata, err)
+		}
+	}
+
 	return nil
 }
 
-func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretStaticAccountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -196,15 +225,25 @@ func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) erro
 	data := map[string]interface{}{}
 	gcpSecretStaticAccountUpdateFields(d, data)
 
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
 	log.Printf("[DEBUG] Updating GCP Secrets backend static account %q", path)
 
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating GCP Secrets backend static account %q: %s", path, err)
+		return diag.Errorf("error updating GCP Secrets backend static account %q: %s", path, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Updated GCP Secrets backend static account %q", path)
 
-	return gcpSecretStaticAccountRead(d, meta)
+	if err := gcpSecretStaticAccountRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func gcpSecretStaticAccountDelete(d *schema.ResourceData, meta interface{}) error {

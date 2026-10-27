@@ -28,6 +28,8 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const rolesAffix = "role"
@@ -62,6 +64,7 @@ type AliCloudSecretBackendRoleModel struct {
 	RemotePolicies types.Set    `tfsdk:"remote_policies"`
 	TTL            types.Int64  `tfsdk:"ttl"`
 	MaxTTL         types.Int64  `tfsdk:"max_ttl"`
+	Metadata       types.Map    `tfsdk:"metadata"`
 }
 
 // InlinePolicyModel is the Terraform model for a single inline policy nested object.
@@ -151,6 +154,11 @@ func (r *AliCloudSecretBackendRoleResource) Schema(_ context.Context, _ resource
 			consts.FieldMaxTTL: schema.Int64Attribute{
 				Optional:            true,
 				MarkdownDescription: "The maximum allowed lifetime of credentials issued using this role.",
+			},
+			consts.FieldMetadata: schema.MapAttribute{
+				ElementType:         types.StringType,
+				Optional:            true,
+				MarkdownDescription: "A map of string key-value pairs to associate with the role. Removing the attribute or setting it to `{}` clears the metadata. Requires Vault Enterprise 2.3.0+.",
 			},
 		},
 		// SetNestedBlock is used (instead of flat Set(String) attributes) because:
@@ -256,10 +264,25 @@ func (r *AliCloudSecretBackendRoleResource) Create(ctx context.Context, req reso
 		return
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest); err != nil {
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
+		if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+			var metadata map[string]string
+			resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+			if len(metadata) > 0 {
+				vaultRequest[consts.FieldMetadata] = metadata
+			}
+		}
+	}
+
+	writeResp, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
+	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
+	resp.Diagnostics.Append(util.MetadataWriteFrameworkDiags(writeResp, vaultRequest)...)
 
 	// Read back the role to get computed values
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, rolePath)
@@ -314,12 +337,21 @@ func (r *AliCloudSecretBackendRoleResource) Read(ctx context.Context, req resour
 		return
 	}
 
+	// Create and Update keep the planned metadata. Only a read reflects what Vault stores,
+	// so a failed metadata write shows up as drift on the next refresh.
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
+		metadata, diags := util.FrameworkMetadataFromRead(ctx, data.Metadata, vaultResp.Data[consts.FieldMetadata])
+		resp.Diagnostics.Append(diags...)
+		data.Metadata = metadata
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *AliCloudSecretBackendRoleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data AliCloudSecretBackendRoleModel
+	var data, state AliCloudSecretBackendRoleModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -338,10 +370,26 @@ func (r *AliCloudSecretBackendRoleResource) Update(ctx context.Context, req reso
 		return
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest); err != nil {
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
+		if !data.Metadata.Equal(state.Metadata) {
+			// A null plan means the attribute was removed, which clears the stored metadata.
+			metadata := map[string]string{}
+			if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
+				resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
+				if resp.Diagnostics.HasError() {
+					return
+				}
+			}
+			vaultRequest[consts.FieldMetadata] = metadata
+		}
+	}
+
+	writeResp, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
+	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
 	}
+	resp.Diagnostics.Append(util.MetadataWriteFrameworkDiags(writeResp, vaultRequest)...)
 
 	// Read back the role to get computed values
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, rolePath)

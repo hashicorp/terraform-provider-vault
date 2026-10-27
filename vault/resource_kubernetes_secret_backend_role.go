@@ -136,6 +136,14 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			consts.FieldMetadata: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
+			},
 		},
 	}
 }
@@ -180,16 +188,28 @@ func kubernetesSecretBackendRoleCreateUpdate(ctx context.Context, d *schema.Reso
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
 	name := d.Get(consts.FieldName).(string)
 	backend := d.Get(consts.FieldBackend).(string)
 	rolePath := kubernetesSecretBackendRolePath(backend, name)
-	if _, err := client.Logical().Write(rolePath, data); err != nil {
+	resp, err := client.Logical().Write(rolePath, data)
+	if err != nil {
 		return diag.Errorf(`error writing Kubernetes backend role %q, err=%s`,
 			rolePath, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 
 	d.SetId(rolePath)
-	return kubernetesSecretBackendRoleRead(ctx, d, meta)
+	return append(diags, kubernetesSecretBackendRoleRead(ctx, d, meta)...)
 }
 
 func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -243,6 +263,12 @@ func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, 
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.Errorf("error setting state key %q on Kubernetes backend role, err=%s",
 				k, err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
+			return diag.Errorf("error setting %s: %s", consts.FieldMetadata, err)
 		}
 	}
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -96,6 +97,14 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 				Optional:    true,
 				Description: "The maximum allowed lifetime of credentials issued using this role",
 			},
+			consts.FieldMetadata: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
+			},
 		},
 	}
 }
@@ -129,13 +138,25 @@ func mongodbAtlasSecretRoleCreateUpdate(ctx context.Context, d *schema.ResourceD
 		}
 	}
 
-	if _, err := client.Logical().WriteWithContext(ctx, path, data); err != nil {
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
+	resp, err := client.Logical().WriteWithContext(ctx, path, data)
+	if err != nil {
 		return diag.Errorf("error updating MongoDB Atlas role %q, err=%s", name, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 
 	d.SetId(path)
 
-	return mongodbAtlasSecretRoleRead(ctx, d, meta)
+	return append(diags, mongodbAtlasSecretRoleRead(ctx, d, meta)...)
 }
 
 func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -185,6 +206,12 @@ func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, met
 		if err := d.Set(k, resp.Data[k]); err != nil {
 			return diag.Errorf("error setting state key %q on MongoDB Atlas backend role, err=%s",
 				k, err)
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, resp.Data[consts.FieldMetadata]); err != nil {
+			return diag.Errorf("error setting %s: %s", consts.FieldMetadata, err)
 		}
 	}
 

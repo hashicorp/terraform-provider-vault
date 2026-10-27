@@ -111,6 +111,8 @@ mutually exclusive. One of them must be set but not both.
 
 * `rotation_statements` - (Optional) Database statements to execute to rotate the password for the configured database user.
 
+* `metadata` - (Optional) A map of string key-value pairs to associate with the role. Supplying the map replaces all existing metadata, and removing the attribute or setting `metadata = {}` clears it. A maximum of 64 keys is allowed; keys must be 1-128 bytes and values 1-512 bytes. Requires Vault Enterprise 2.3.0+.
+
 ## Attributes Reference
 
 No additional attributes are exported by this resource.

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -135,6 +136,14 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 				Description: "The configuration for the credential type." +
 					"Full documentation for the allowed values can be found under \"https://developer.hashicorp.com/vault/api-docs/secret/databases#credential_config\".",
 			},
+			consts.FieldMetadata: {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
+			},
 		},
 	}
 }
@@ -208,15 +217,26 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 		}
 	}
 
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if d.IsNewResource() {
+			if v, ok := d.GetOk(consts.FieldMetadata); ok && len(v.(map[string]interface{})) > 0 {
+				data[consts.FieldMetadata] = v.(map[string]interface{})
+			}
+		} else if d.HasChange(consts.FieldMetadata) {
+			data[consts.FieldMetadata] = d.Get(consts.FieldMetadata)
+		}
+	}
+
 	log.Printf("[DEBUG] Creating static role %q on database backend %q", name, backend)
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
 		return diag.Errorf("error creating static role %q for backend %q: %s", name, backend, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Created static role %q on AWS backend %q", name, backend)
 
 	d.SetId(path)
-	return databaseSecretBackendStaticRoleRead(ctx, d, meta)
+	return append(diags, databaseSecretBackendStaticRoleRead(ctx, d, meta)...)
 }
 
 func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
@@ -299,6 +319,12 @@ func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.Resource
 			if err := d.Set(k, v); err != nil {
 				return diag.FromErr(err)
 			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if err := d.Set(consts.FieldMetadata, role.Data[consts.FieldMetadata]); err != nil {
+			return diag.FromErr(err)
 		}
 	}
 
