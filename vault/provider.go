@@ -223,6 +223,10 @@ var (
 			Resource:      UpdateSchemaResource(transitVerifyDataSource()),
 			PathInventory: []string{"/transit/verify/{name}"},
 		},
+		"vault_transit_secret_backend_key_version": {
+			Resource:      UpdateSchemaResource(transitSecretBackendKeyVersionDataSource()),
+			PathInventory: []string{"/transit/keys/{name}/versions/{version}"},
+		},
 		"vault_transit_cmac": {
 			Resource:      UpdateSchemaResource(transitCMACDataSource()),
 			PathInventory: []string{"/transit/cmac/{name}/{url_mac_length}"},

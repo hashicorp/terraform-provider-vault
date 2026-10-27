@@ -85,9 +85,16 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			consts.FieldType: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `managed_key`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`, `ml-dsa`, `hybrid`, and `slh-dsa`.",
-				ForceNew:    true,
+				Description: "Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `managed_key`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`, `ml-dsa`, `hybrid`, `slh-dsa`, `aes128-cbc`, and `aes256-cbc`. On Vault Enterprise 2.2.0+, changing the type of an existing key rotates it to a new key version of the new type (crypto agility); the new type must have the same `key_usages` as the existing type. On other versions, changing the type forces a new resource.",
 				Default:     "aes256-gcm96",
+			},
+			consts.FieldKeyUsages: {
+				Type:        schema.TypeList,
+				Computed:    true,
+				Description: "The usages of the key, derived from the key type. Requires Vault Enterprise 2.2.0+.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			consts.FieldKeys: {
 				Type:        schema.TypeList,
@@ -157,13 +164,11 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			consts.FieldManagedKeyName: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "The name of the managed key to use when the key type is managed_key.",
 			},
 			consts.FieldManagedKeyID: {
 				Type:        schema.TypeString,
 				Optional:    true,
-				ForceNew:    true,
 				Description: "The UUID of the managed key to use when the key type is managed_key.",
 			},
 			consts.FieldSupportsEncryption: {
@@ -218,8 +223,28 @@ func transitSecretBackendKeyResource() *schema.Resource {
 			customdiff.ForceNewIfChange(consts.FieldAllowPlaintextBackup, func(_ context.Context, old, new, meta interface{}) bool {
 				return !new.(bool) && old.(bool)
 			}),
+			// Without crypto agility support, the key type and managed key
+			// cannot be changed in place.
+			transitForceNewWithoutCryptoAgility(consts.FieldType),
+			transitForceNewWithoutCryptoAgility(consts.FieldManagedKeyName),
+			transitForceNewWithoutCryptoAgility(consts.FieldManagedKeyID),
 		),
 	}
+}
+
+// transitCryptoAgilitySupported returns true if the server supports changing
+// the algorithm of an existing key (Vault Enterprise 2.2.0+).
+func transitCryptoAgilitySupported(meta interface{}) bool {
+	return provider.IsAPISupported(meta, provider.VaultVersion220) && provider.IsEnterpriseSupported(meta)
+}
+
+// transitForceNewWithoutCryptoAgility forces a new resource when the given
+// field is changed on an existing key and the server does not support
+// changing the algorithm of an existing key.
+func transitForceNewWithoutCryptoAgility(field string) schema.CustomizeDiffFunc {
+	return customdiff.ForceNewIf(field, func(_ context.Context, d *schema.ResourceDiff, meta interface{}) bool {
+		return d.Id() != "" && d.HasChange(field) && !transitCryptoAgilitySupported(meta)
+	})
 }
 
 func transitSecretBackendKeyCreate(d *schema.ResourceData, meta interface{}) error {
@@ -444,6 +469,25 @@ func transitSecretBackendKeyRead(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
+	// key_usages is only returned by Vault Enterprise 2.2.0+. It is always
+	// written to state, as an empty list when absent, because a computed
+	// attribute that is never set produces a perpetual diff.
+	keyUsages, ok := secret.Data[consts.FieldKeyUsages]
+	if !ok || keyUsages == nil {
+		keyUsages = []interface{}{}
+	}
+	if err := d.Set(consts.FieldKeyUsages, keyUsages); err != nil {
+		return err
+	}
+
+	// With crypto agility, "type" is the type the key was created with, while
+	// "latest_version_type" is the type of the latest key version.
+	if v, ok := secret.Data[consts.FieldLatestVersionType]; ok {
+		if err := d.Set(consts.FieldType, v); err != nil {
+			return err
+		}
+	}
+
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
 		managedKeyFields := []string{consts.FieldManagedKeyName, consts.FieldManagedKeyID}
 		for _, f := range managedKeyFields {
@@ -467,6 +511,30 @@ func transitSecretBackendKeyUpdate(d *schema.ResourceData, meta interface{}) err
 	path := d.Id()
 
 	log.Printf("[DEBUG] Updating transit secret backend key %q", path)
+
+	// Changing the type (or managed key) rotates the key to a new version with
+	// a new algorithm.
+	if d.HasChanges(consts.FieldType, consts.FieldManagedKeyName, consts.FieldManagedKeyID) && transitCryptoAgilitySupported(meta) {
+		algorithmData := map[string]interface{}{
+			consts.FieldType: d.Get(consts.FieldType).(string),
+		}
+		if v, ok := d.GetOk(consts.FieldKeySize); ok {
+			algorithmData[consts.FieldKeySize] = v
+		}
+		for _, f := range []string{
+			consts.FieldManagedKeyName, consts.FieldManagedKeyID,
+			consts.FieldParameterSet, consts.FieldHybridKeyTypeEC, consts.FieldHybridKeyTypePQC,
+		} {
+			if v, ok := d.GetOk(f); ok {
+				algorithmData[f] = v
+			}
+		}
+
+		log.Printf("[DEBUG] Changing algorithm of transit secret backend key %q to %q", path, algorithmData[consts.FieldType])
+		if _, err := client.Logical().Write(path+"/algorithm", algorithmData); err != nil {
+			return fmt.Errorf("error changing algorithm of transit secret backend key %q: %s", path, err)
+		}
+	}
 
 	data := map[string]interface{}{
 		"min_decryption_version": d.Get(consts.FieldMinDecryptionVersion),

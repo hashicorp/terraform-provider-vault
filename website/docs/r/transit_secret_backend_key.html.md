@@ -85,8 +85,11 @@ The following arguments are supported:
 
 * `name` - (Required) The name to identify this key within the backend. Must be unique within the backend.
 
-* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `managed_key`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`, `ml-dsa`, `hybrid`, and `slh-dsa`.
+* `type` - (Optional) Specifies the type of key to create. The currently-supported types are: `aes128-gcm96`, `aes256-gcm96` (default), `chacha20-poly1305`, `ed25519`, `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `hmac`, `rsa-2048`, `rsa-3072`, `rsa-4096`, `managed_key`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`, `ml-dsa`, `hybrid`, `slh-dsa`, `aes128-cbc`, and `aes256-cbc`.
     * Refer to the Vault documentation on transit key types for more information: [Key Types](https://www.vaultproject.io/docs/secrets/transit#key-types)
+    * On Vault Enterprise 2.2.0+, changing `type` on an existing key rotates the key to a new key version
+      using the new algorithm instead of replacing the key (see [crypto agility](#crypto-agility)).
+      On any other Vault version, changing `type` forces a new resource.
 
 * `deletion_allowed` - (Optional) Specifies if the keyring is allowed to be deleted. Must be set to 'true' before terraform will be able to destroy keys.
 
@@ -123,9 +126,38 @@ Valid values for SLH-DSA are `slh-dsa-sha2-128s`, `slh-dsa-shake-128s`, `slh-dsa
 
 * `context` - (Optional) Base64 encoded context for key derivation. Required if `derived` is set to `true`. This provides additional entropy for key derivation and should be consistent across operations that need to use the same derived key.
 
-* `managed_key_name` - (Optional) The name of the managed key to use when the key `type` is `managed_key`. This references a previously configured managed key in Vault (e.g., AWS KMS, Azure Key Vault, PKCS#11, etc.). When `type` is `managed_key`, either `managed_key_name` or `managed_key_id` must be specified.
+* `managed_key_name` - (Optional) The name of the managed key to use when the key `type` is `managed_key`. This references a previously configured managed key in Vault (e.g., AWS KMS, Azure Key Vault, PKCS#11, etc.). When `type` is `managed_key`, either `managed_key_name` or `managed_key_id` must be specified. Changing this on an existing key forces a new resource unless the server supports [crypto agility](#crypto-agility).
 
-* `managed_key_id` - (Optional) The UUID of the managed key to use when the key `type` is `managed_key`. This is the unique identifier of a previously configured managed key. When `type` is `managed_key`, either `managed_key_name` or `managed_key_id` must be specified.
+* `managed_key_id` - (Optional) The UUID of the managed key to use when the key `type` is `managed_key`. This is the unique identifier of a previously configured managed key. When `type` is `managed_key`, either `managed_key_name` or `managed_key_id` must be specified. Changing this on an existing key forces a new resource unless the server supports [crypto agility](#crypto-agility).
+
+## Crypto Agility
+
+Vault Enterprise 2.2.0 added support for changing the algorithm when creating a new key version, so that a
+single Transit key can contain key material for multiple key types. When the provider detects Vault Enterprise
+2.2.0 or later, a change to `type`, `managed_key_name` or `managed_key_id` on an existing key is applied by
+rotating the key through the `/transit/keys/:name/algorithm` endpoint. The new key type must have the same
+`key_usages` as the existing key type, and any key type may be rotated to a `managed_key`. `parameter_set`,
+`hybrid_key_type_pqc`, `hybrid_key_type_ec` and `key_size` are sent with the rotation when set, and must
+be set as required by the new key type.
+
+| `key_usages`             | Key Types                                                                                                              |
+|--------------------------|------------------------------------------------------------------------------------------------------------------------|
+| `aead-encryption`        | `aes128-gcm96`, `aes256-gcm96`, `chacha20-poly1305`                                                                    |
+| `symmetric-encryption`   | `aes128-cbc`, `aes256-cbc`                                                                                             |
+| `digital-signature`      | `ecdsa-p256`, `ecdsa-p384`, `ecdsa-p521`, `ed25519`, `ml-dsa`, `slh-dsa`, `hybrid`, `rsa-2048`, `rsa-3072`, `rsa-4096` |
+| `asymmetric-encryption`  | `rsa-2048`, `rsa-3072`, `rsa-4096`                                                                                     |
+| `message-authentication` | `hmac`, `aes128-cmac`, `aes192-cmac`, `aes256-cmac`                                                                    |
+
+### Example: migrating a signing key to ML-DSA
+
+```hcl
+resource "vault_transit_secret_backend_key" "signing" {
+  backend       = vault_mount.transit.path
+  name          = "signing_key"
+  type          = "ml-dsa"   # previously "ecdsa-p256"
+  parameter_set = "65"
+}
+```
 
 ## Attributes Reference
 
@@ -147,6 +179,8 @@ Valid values for SLH-DSA are `slh-dsa-sha2-128s`, `slh-dsa-shake-128s`, `slh-dsa
 * `supports_derivation` - Whether or not the key supports derivation, based on key type.
 
 * `supports_signing` - Whether or not the key supports signing, based on key type.
+
+* `key_usages` - The usages of the key, derived from the key type. Only set on Vault Enterprise 2.2.0+.
 
 ## Import
 
