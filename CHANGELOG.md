@@ -2,6 +2,7 @@
 
 FEATURES:
 
+* `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
 
 IMPROVEMENTS:
 
@@ -9,10 +10,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-
-DEPENDENCIES:
-
-
+* `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
 
 ## 5.13.0 (October 14, 2026)
 
@@ -123,7 +121,7 @@ FEATURES:
 
 * **New Resources**: Add support for GCP KMS secrets engine with `vault_gcpkms_secret_backend` and `vault_gcpkms_secret_backend_key` resources, `vault_gcpkms_verify` data source, and ephemeral resources `vault_gcpkms_encrypt`, `vault_gcpkms_decrypt`, `vault_gcpkms_reencrypt`, and `vault_gcpkms_sign` for cryptographic operations. Includes internal Plugin Framework `mount_helpers` for Vault mount operations to support incremental migration from SDKv2. ([#2763](https://github.com/hashicorp/terraform-provider-vault/pull/2763))
 * **New resource for transform key configurations**: `vault_transform_key_configuration` - Supports setting an `auto_rotate_period` and `min_decryption_version` to keys used in for tokenization transformations. This uses [this endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#update-tokenization-key-config) to modify the configuration and [this one](https://developer.hashicorp.com/vault/api-docs/secret/transform#read-tokenization-key-configuration) to read configurations. ([#2980](https://github.com/hashicorp/terraform-provider-vault/pull/2980))
-* **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault 2.2.0+.
+* **LDAP Role Level Password Policy Support**: Added `password_policy` parameter to `vault_ldap_secret_backend_static_role` and `vault_ldap_secret_backend_dynamic_role` resources to support role-level password policy configuration ([#2921](https://github.com/hashicorp/terraform-provider-vault/pull/2921)). Requires Vault Enterprise 2.2.0+.
 * **LDAP Rotate-on-Read Support**: Added `rotate_on_read` and `rotate_on_read_cooldown` parameters to `vault_ldap_secret_backend` and `vault_ldap_secret_backend_static_role` resources, and `rotated_on_read` attribute to `vault_ldap_static_role_credentials` data source to support credential rotation on each read ([#2960](https://github.com/hashicorp/terraform-provider-vault/pull/2960). Requires Vault Enterprise 2.2.0+.
 * **LDAP Account Unlock for Static Role**: Added `auto_unlock` field (Optional+Computed) to `vault_ldap_secret_backend` and `vault_ldap_secret_backend_static_role`. When set at the mount level, Vault automatically unlocks the managed AD account after every successful static-role rotation, the per-role field overrides the mount-level setting, and when unset the role inherits the mount default. Active Directory schema only. Requires Vault Enterprise 2.2.0+.([#2977](https://github.com/hashicorp/terraform-provider-vault/pull/2977))
 * **Terraform Secret Engine Root Rotation Support**: Add support for automated root token rotation via the `rotation_period`, `rotation_schedule`, `rotation_window`, and `disable_automated_rotation` fields, and add `explicit_max_ttl` to bound the lifetime of the rotated root token. Requires Vault 2.2.0+. ([#2958](https://github.com/hashicorp/terraform-provider-vault/issues/2958))
