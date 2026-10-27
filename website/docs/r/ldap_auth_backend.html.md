@@ -28,6 +28,7 @@ resource "vault_ldap_auth_backend" "ldap" {
     dereference_aliases           = "always"
     enable_samaccountname_login   = false
     anonymous_group_search        = false
+    schema                        = "ad"
 }
 ```
 
@@ -153,6 +154,12 @@ These arguments are common across several Authentication Token resources since V
 * `enable_samaccountname_login` - (Optional) Lets Active Directory LDAP users log in using sAMAccountName or userPrincipalName when the upndomain parameter is set. Requires Vault 1.19.0+.
 
 * `anonymous_group_search` - (Optional) Use anonymous binds when performing LDAP group searches (note: even when true, the initial credentials will still be used for the initial connection test).
+
+* `schema` - (Optional) The LDAP schema to use when storing entry passwords. Accepted values are
+  `openldap` and `ad`. Defaults to `openldap`. Active Directory users must set this to `ad`, since it
+  also determines the encoding used by root credential rotation (`unicodePwd`, UTF-16LE encoded, for
+  `ad` versus `userPassword` for `openldap`).
+  *Available only for Vault 2.0.0+, and Vault Enterprise 1.19.16+, 1.20.10+ and 1.21.5+*.
 
 * `token_ttl` - (Optional) The incremental lifetime for generated tokens in number of seconds.
   Its current value will be referenced at renewal time.
