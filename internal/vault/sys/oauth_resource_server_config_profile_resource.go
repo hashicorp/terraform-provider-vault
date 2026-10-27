@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -35,8 +36,13 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
-// Ensure the implementation satisfies the resource.ResourceWithConfigure interface
-var _ resource.ResourceWithConfigure = &OAuthResourceServerConfigProfileResource{}
+const defaultAuthorizationDetailsClaim = "authorization_details"
+
+// Ensure the implementation satisfies the expected interfaces
+var (
+	_ resource.ResourceWithConfigure  = &OAuthResourceServerConfigProfileResource{}
+	_ resource.ResourceWithModifyPlan = &OAuthResourceServerConfigProfileResource{}
+)
 
 // NewOAuthResourceServerConfigProfileResource returns the implementation for this resource
 func NewOAuthResourceServerConfigProfileResource() resource.Resource {
@@ -84,6 +90,9 @@ type OAuthResourceServerConfigProfileModel struct {
 	ClockSkewLeeway              types.Int64  `tfsdk:"clock_skew_leeway"`
 	Enabled                      types.Bool   `tfsdk:"enabled"`
 	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
+	AuthorizationDetailsClaim    types.String `tfsdk:"authorization_details_claim"`
+	UniqueIDClaim                types.String `tfsdk:"unique_id_claim"`
+	ActorClaim                   types.String `tfsdk:"actor_claim"`
 	Local                        types.Bool   `tfsdk:"local"`
 }
 
@@ -104,6 +113,9 @@ type OAuthResourceServerConfigProfileAPIModel struct {
 	ClockSkewLeeway              int                 `json:"clock_skew_leeway" mapstructure:"clock_skew_leeway"`
 	Enabled                      bool                `json:"enabled" mapstructure:"enabled"`
 	OptionalAuthorizationDetails bool                `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
+	AuthorizationDetailsClaim    string              `json:"authorization_details_claim" mapstructure:"authorization_details_claim"`
+	UniqueIDClaim                string              `json:"unique_id_claim" mapstructure:"unique_id_claim"`
+	ActorClaim                   string              `json:"actor_claim" mapstructure:"actor_claim"`
 	Local                        bool                `json:"local" mapstructure:"local"`
 }
 
@@ -223,6 +235,28 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Default:             booldefault.StaticBool(false),
 				MarkdownDescription: "When false, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to true, authorization_details in the JWT token are optional. Defaults to false.",
 			},
+			consts.FieldAuthorizationDetailsClaim: schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "The claim to use for RAR (Rich Authorization Requests) authorization details. Defaults to 'authorization_details'. Requires Vault 2.2.0 or later when set.",
+			},
+			consts.FieldUniqueIDClaim: schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					// Keep the state value when the field is omitted so unrelated
+					// updates do not plan an unknown value and trigger a replace.
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
+				MarkdownDescription: "The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. " +
+					"This field is immutable after creation; changing it forces a new resource. Requires Vault 2.2.0 or later.",
+			},
+			consts.FieldActorClaim: schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "The JWT claim to use as the actor identifier for delegation/chained-token scenarios (RFC 8693 `act` claim). Requires Vault 2.2.0 or later.",
+			},
 			consts.FieldLocal: schema.BoolAttribute{
 				Optional: true,
 				Computed: true,
@@ -259,6 +293,43 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 	}
 
 	base.MustAddBaseSchema(&resp.Schema)
+}
+
+// ModifyPlan resets authorization_details_claim to Vault's default when the
+// configuration omits it after previously setting a value.
+func (r *OAuthResourceServerConfigProfileResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+		return
+	}
+
+	var configuredClaim types.String
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(consts.FieldAuthorizationDetailsClaim), &configuredClaim)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// An unknown value comes from config and resolves during apply; only an
+	// omitted (null) value should reset to the default.
+	if !configuredClaim.IsNull() {
+		return
+	}
+	if !provider.IsAPISupported(r.Meta(), provider.VaultVersion220) {
+		return
+	}
+
+	var stateClaim types.String
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root(consts.FieldAuthorizationDetailsClaim), &stateClaim)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if stateClaim.IsNull() || stateClaim.IsUnknown() {
+		return
+	}
+
+	resp.Diagnostics.Append(resp.Plan.SetAttribute(
+		ctx,
+		path.Root(consts.FieldAuthorizationDetailsClaim),
+		types.StringValue(defaultAuthorizationDetailsClaim),
+	)...)
 }
 
 // Create is called during terraform apply
@@ -403,6 +474,16 @@ func (r *OAuthResourceServerConfigProfileResource) writeProfile(ctx context.Cont
 		return
 	}
 
+	if !data.AuthorizationDetailsClaim.IsNull() && !data.AuthorizationDetailsClaim.IsUnknown() {
+		if err := validateAuthorizationDetailsClaimVersion(
+			data.AuthorizationDetailsClaim,
+			provider.IsAPISupported(r.Meta(), provider.VaultVersion220),
+		); err != nil {
+			diags.AddError("Unsupported Vault Version", err.Error())
+			return
+		}
+	}
+
 	// Validate mutual exclusivity before building the request payload.
 	if err := r.validateConfiguration(data, diags); err != nil {
 		diags.AddError("Configuration Validation Error", err.Error())
@@ -516,6 +597,12 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 		data.UserClaim = types.StringValue(apiModel.UserClaim)
 	}
 
+	data.AuthorizationDetailsClaim = authorizationDetailsClaimState(
+		data.AuthorizationDetailsClaim,
+		apiModel.AuthorizationDetailsClaim,
+		provider.IsAPISupported(r.Meta(), provider.VaultVersion220),
+	)
+
 	if apiModel.JwtType != "" {
 		data.JwtType = types.StringValue(apiModel.JwtType)
 	}
@@ -546,9 +633,43 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 	// RAR support
 	data.OptionalAuthorizationDetails = types.BoolValue(apiModel.OptionalAuthorizationDetails)
 
+	// Unique ID claim
+	if apiModel.UniqueIDClaim != "" {
+		data.UniqueIDClaim = types.StringValue(apiModel.UniqueIDClaim)
+	} else {
+		data.UniqueIDClaim = types.StringNull()
+	}
+
+	// Actor claim
+	if apiModel.ActorClaim != "" {
+		data.ActorClaim = types.StringValue(apiModel.ActorClaim)
+	} else {
+		data.ActorClaim = types.StringNull()
+	}
+
 	data.Local = types.BoolValue(apiModel.Local)
 
 	return true
+}
+
+func validateAuthorizationDetailsClaimVersion(claim types.String, supported bool) error {
+	if claim.IsNull() || claim.IsUnknown() || supported {
+		return nil
+	}
+	return fmt.Errorf("authorization_details_claim requires Vault version %s or later", provider.VaultVersion220)
+}
+
+func authorizationDetailsClaimState(current types.String, apiValue string, supported bool) types.String {
+	if !supported {
+		return types.StringNull()
+	}
+	if apiValue != "" {
+		return types.StringValue(apiValue)
+	}
+	if current.IsNull() || current.IsUnknown() {
+		return types.StringValue(defaultAuthorizationDetailsClaim)
+	}
+	return current
 }
 
 // buildVaultRequest builds the Vault API request from the Terraform model
@@ -606,6 +727,10 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 		vaultRequest[consts.FieldUserClaim] = data.UserClaim.ValueString()
 	}
 
+	if !data.AuthorizationDetailsClaim.IsNull() && !data.AuthorizationDetailsClaim.IsUnknown() {
+		vaultRequest[consts.FieldAuthorizationDetailsClaim] = data.AuthorizationDetailsClaim.ValueString()
+	}
+
 	if !data.JwtType.IsNull() && !data.JwtType.IsUnknown() {
 		vaultRequest[consts.FieldJwtType] = data.JwtType.ValueString()
 	}
@@ -629,9 +754,20 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 		vaultRequest[consts.FieldOptionalAuthorizationDetails] = data.OptionalAuthorizationDetails.ValueBool()
 	}
 
+	// Unique ID claim
+	if !data.UniqueIDClaim.IsNull() && !data.UniqueIDClaim.IsUnknown() {
+		vaultRequest[consts.FieldUniqueIDClaim] = data.UniqueIDClaim.ValueString()
+	}
+
+	// Actor claim
+	if !data.ActorClaim.IsNull() && !data.ActorClaim.IsUnknown() {
+		vaultRequest[consts.FieldActorClaim] = data.ActorClaim.ValueString()
+	}
+
 	if !data.Local.IsNull() && !data.Local.IsUnknown() {
 		vaultRequest[consts.FieldLocal] = data.Local.ValueBool()
 	}
+
 	return vaultRequest
 }
 

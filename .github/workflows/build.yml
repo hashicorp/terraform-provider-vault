@@ -351,6 +351,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-golang-
 
+      # plugin_directory is this workspace bind-mounted at /vault/plugins. The
+      # Vault process runs as the vault user, which cannot create
+      # /vault/plugins/.cache unless the directory is writable by others.
+      - name: Allow Vault to write into plugin_directory
+        run: chmod a+rwx "${GITHUB_WORKSPACE}"
+
       - name: Acceptance Tests
         env:
           VAULT_TOKEN: "root"

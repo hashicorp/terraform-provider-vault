@@ -8,7 +8,7 @@ description: |-
 
 # vault\_azure\_secret\_backend\_static\_role
 
-Manages a static role in the Azure Secrets Engine.  
+Manages a static role in the Azure Secrets Engine.
 Static roles in Vault are linked to existing Azure AD applications, and manage long-lived credentials for those
 applications.
 
@@ -58,20 +58,22 @@ The following arguments are supported:
 * `backend` - (Required) Path where the Azure Secrets Engine is mounted.
 * `application_object_id` - (Required) The Azure AD Application Object ID associated with the existing application whose
   credentials Vault will manage.
-* `ttl` – (Optional) Duration that defines the validity period of the managed credential. Defaults to 2 years. Must be
-  at least 1 month.
+* `ttl` – (Optional) Duration that defines the validity period of the managed credential. Defaults to 2 years. Must be at least 2 hours.
   Accepts an integer number of seconds (31536000). Defaults to the system/engine default TTL time.
 * `metadata` – (Optional) A map of string key-value pairs that are stored alongside the role and returned with generated
   credentials.
 * `secret_id` - (Optional) When importing an existing credential, specifies the Azure secret’s key ID.
 * `client_secret` - (Optional, Sensitive) When importing an existing credential, provides the existing client secret
   value.
-* `expiration` - (Optional) **Deprecated** - Expiration timestamp (UTC, RFC3339 format) of the existing credential being imported. 
+* `expiration` - (Optional) **Deprecated** - Expiration timestamp (UTC, RFC3339 format) of the existing credential being imported.
   Vault reads expiration from Azure.
 * `skip_import_rotation` - (Optional, Bool) - If true, Vault will import the provided credential without performing
   rotation. Valid only during creation. Defaults to `false`.
 * `defer_initial_creds` - (Optional, Bool) - If true, the initial credential generation will be deferred until the
   first read of credentials from this role. Defaults to `false`.
+* `seamless_rotation` - (Optional) Enables automated seamless rotation for the static role when `true`. For more information about seamless rotation, refer to the [Static Roles section](https://developer.hashicorp.com/vault/docs/secrets/azure#static-roles) for the Azure Secrets Engine. *Available only for Vault Enterprise 2.2.0 and later.*
+* `rotation_period` - (Optional) an alias for `ttl` when `seamless_rotation` is enabled. *Available only for Vault Enterprise 2.2.0 and later.*
+* `rotation_grace_period` - (Optional) Duration which defines the amount of time the current and next credential are both active when `seamless_rotation` is enabled for the static role. Must not exceed `(rotation_period - 3600) / 2`. Set to `-1` to disable lifetime overlap between credentials. Accepts an integer number of seconds. Defaults to five minutes (`300` seconds). *Available only for Vault Enterprise 2.2.0 and later.*
 
 ## Attributes Reference
 

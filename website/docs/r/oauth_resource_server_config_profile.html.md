@@ -118,6 +118,16 @@ resource "vault_oauth_resource_server_config_profile" "rar_mandatory" {
   # Require authorization_details in JWT tokens (default behavior)
   optional_authorization_details   = false
 }
+
+resource "vault_oauth_resource_server_config_profile" "rar_custom_claim" {
+  profile_name                     = "rar-custom-claim-profile"
+  issuer_id                        = "https://auth.example.com"
+  use_jwks                         = true
+  jwks_uri                         = "https://auth.example.com/.well-known/jwks.json"
+
+  # Use a custom claim name for authorization details
+  authorization_details_claim      = "rar_details"
+}
 ```
 
 ### Profile in a Namespace
@@ -190,7 +200,14 @@ The following arguments are supported:
 
 * `optional_authorization_details` - (Optional) When `false`, RAR (Rich Authorization Requests) is mandatory and authorization_details must be present in the token. When set to `true`, authorization_details in the JWT token are optional. Defaults to `false`. Requires Vault 2.0.3 or later.
 
+* `authorization_details_claim` - (Optional) The string name of the JWT claim that contains RAR (Rich Authorization Requests) authorization details. Requires Vault 2.2.0 or later when set. If omitted, Vault 2.2.0 and later use `authorization_details`.
+
 * `local` - (Optional) When `false`, the profile is written to replicated storage and propagated to all performance secondaries. When set to `true`, the profile remains local to the current cluster and is not replicated. The `local` field cannot be updated on a profile. Requires Vault 2.2.0 or later.
+
+* `unique_id_claim` - (Optional) The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. The `unique_id_claim` field cannot be updated on a profile; changing it forces a new resource. Requires Vault 2.2.0 or later.
+
+* `actor_claim` - (Optional) The JWT claim to use as the actor identifier for delegation and chained-token scenarios (RFC 8693 `act` claim). Requires Vault 2.2.0 or later.
+
 
 ## Attributes Reference
 
@@ -223,7 +240,7 @@ $ TERRAFORM_VAULT_NAMESPACE_IMPORT=application terraform import vault_oauth_reso
 
 * **Issuer Uniqueness**: Each issuer ID must be unique within a locality (globally replicated or local to the cluster) and a namespace. You cannot have multiple profiles with the same issuer ID and locality in the same namespace.
 
-* **Field Immutability**: The `profile_name`, `issuer_id`, and `local` cannot be changed after creation. Changing these fields will force a new resource to be created.
+* **Field Immutability**: The `profile_name`, `issuer_id`, `unique_id_claim`, and `local` cannot be changed after creation. Changing these fields will force a new resource to be created.
 
 * **Key ID Uniqueness**: Within a profile, all key IDs must be unique. This applies to both JWKS keys and static PEM keys.
 

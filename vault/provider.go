@@ -211,6 +211,10 @@ var (
 			Resource:      UpdateSchemaResource(transformDecodeDataSource()),
 			PathInventory: []string{"/transform/decode/{role_name}"},
 		},
+		"vault_transform_rewrap": {
+			Resource:      UpdateSchemaResource(transformRewrapDataSource()),
+			PathInventory: []string{"/transform/rewrap/{role_name}"},
+		},
 		"vault_transit_sign": {
 			Resource:      UpdateSchemaResource(transitSignDataSource()),
 			PathInventory: []string{"/transit/sign/{name}"},
@@ -814,6 +818,10 @@ var (
 		"vault_saml_auth_backend_role": {
 			Resource:      UpdateSchemaResource(samlAuthBackendRoleResource()),
 			PathInventory: []string{"/auth/saml/role/{name}"},
+		},
+		"vault_scim_client": {
+			Resource:      UpdateSchemaResource(scimClientResource()),
+			PathInventory: []string{"/identity/scim/client/{client_name}"},
 		},
 		"vault_secrets_sync_config": {
 			Resource:      UpdateSchemaResource(secretsSyncConfigResource()),

@@ -4,11 +4,14 @@
 package sys
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -106,6 +109,116 @@ func TestValidateConfiguration(t *testing.T) {
 				t.Fatalf("validateConfiguration() expected error containing %q, got nil", tt.wantErrContains)
 			case tt.wantErrContains != "" && !strings.Contains(err.Error(), tt.wantErrContains):
 				t.Fatalf("validateConfiguration() error = %q, want substring %q", err.Error(), tt.wantErrContains)
+			}
+		})
+	}
+}
+
+// TestAuthorizationDetailsClaimSchemaHasNoVersionIndependentDefault verifies
+// that the authorization_details_claim schema attribute has no default value
+// and is both optional and computed.
+func TestAuthorizationDetailsClaimSchemaHasNoVersionIndependentDefault(t *testing.T) {
+	var resp resource.SchemaResponse
+	(&OAuthResourceServerConfigProfileResource{}).Schema(context.Background(), resource.SchemaRequest{}, &resp)
+
+	attribute, ok := resp.Schema.Attributes[consts.FieldAuthorizationDetailsClaim].(schema.StringAttribute)
+	if !ok {
+		t.Fatalf("authorization_details_claim schema attribute has type %T, want schema.StringAttribute", resp.Schema.Attributes[consts.FieldAuthorizationDetailsClaim])
+	}
+	if attribute.Default != nil {
+		t.Fatalf("authorization_details_claim has a schema default %v, want no default", attribute.Default)
+	}
+	if !attribute.Optional || !attribute.Computed {
+		t.Fatalf("authorization_details_claim Optional=%t, Computed=%t, want both true", attribute.Optional, attribute.Computed)
+	}
+}
+
+// TestValidateAuthorizationDetailsClaimVersion verifies the behavior of the
+// validateAuthorizationDetailsClaimVersion function for different claim values
+// and Vault support scenarios.
+func TestValidateAuthorizationDetailsClaimVersion(t *testing.T) {
+	tests := []struct {
+		name      string
+		claim     types.String
+		supported bool
+		wantErr   bool
+	}{
+		{
+			name:      "unset claim is valid on older Vault",
+			claim:     types.StringNull(),
+			supported: false,
+		},
+		{
+			name:      "unknown claim is valid on older Vault",
+			claim:     types.StringUnknown(),
+			supported: false,
+		},
+		{
+			name:      "explicit claim requires newer Vault",
+			claim:     types.StringValue("custom_claim"),
+			supported: false,
+			wantErr:   true,
+		},
+		{
+			name:      "explicit claim is valid on supported Vault",
+			claim:     types.StringValue("custom_claim"),
+			supported: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateAuthorizationDetailsClaimVersion(tt.claim, tt.supported)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("validateAuthorizationDetailsClaimVersion() error = %v, wantErr %t", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TestAuthorizationDetailsClaimState verifies the behavior of the
+// authorizationDetailsClaimState function for different current values,
+// API values, and Vault support scenarios.
+func TestAuthorizationDetailsClaimState(t *testing.T) {
+	tests := []struct {
+		name      string
+		current   types.String
+		apiValue  string
+		supported bool
+		want      types.String
+	}{
+		{
+			name:      "older Vault excludes the claim",
+			current:   types.StringNull(),
+			supported: false,
+			want:      types.StringNull(),
+		},
+		{
+			name:      "supported Vault uses API value",
+			current:   types.StringNull(),
+			apiValue:  "custom_claim",
+			supported: true,
+			want:      types.StringValue("custom_claim"),
+		},
+		{
+			name:      "supported Vault fills API default on read or import",
+			current:   types.StringUnknown(),
+			supported: true,
+			want:      types.StringValue(defaultAuthorizationDetailsClaim),
+		},
+		{
+			name:      "preserves the current state value when the API value is empty",
+			current:   types.StringValue("custom_claim"),
+			supported: true,
+			want:      types.StringValue("custom_claim"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := authorizationDetailsClaimState(tt.current, tt.apiValue, tt.supported)
+			if got != tt.want {
+				t.Fatalf("authorizationDetailsClaimState() = %#v, want %#v", got, tt.want)
 			}
 		})
 	}
