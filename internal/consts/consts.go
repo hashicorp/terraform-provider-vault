@@ -279,6 +279,7 @@ const (
 	FieldDefaultRole                        = "default_role"
 	FieldProviderConfig                     = "provider_config"
 	FieldNamespaceInState                   = "namespace_in_state"
+	FieldUnsupportedCriticalCertExtensions  = "unsupported_critical_cert_extensions"
 	FieldIdentityGroupIDs                   = "identity_group_ids"
 	FieldEntityAlias                        = "entity_alias"
 	FieldIdentityEntityIDs                  = "identity_entity_ids"
