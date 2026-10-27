@@ -22,6 +22,8 @@ import (
 )
 
 func TestTerraformCloudSecretBackend(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN")
+
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 
 	resourceType := "vault_terraform_cloud_secret_backend"
@@ -62,6 +64,8 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 }
 
 func TestTerraformCloudSecretBackend_remount(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN")
+
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-terraform-cloud-updated")
 
@@ -104,6 +108,8 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 }
 
 func TestTerraformCloudSecretBackend_tokenWO(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN")
+
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 
 	resourceType := "vault_terraform_cloud_secret_backend"
