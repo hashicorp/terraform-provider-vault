@@ -28,9 +28,6 @@ const (
 	kmsTypeGCP   = "gcpckms"
 )
 
-// versionGatedFields maps providerType → fieldName → minimum Vault version.
-// Any field listed here is skipped on read and rejected on write when the
-// connected Vault is older than the stated minimum version.
 var versionGatedFields = map[string]map[string]*goversion.Version{
 	consts.FieldPKCS:  {consts.FieldRsaOaepHash: provider.VaultVersion220},
 	consts.FieldAzure: {consts.FieldEncryptionMode: provider.VaultVersion220},
@@ -706,7 +703,14 @@ func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *a
 		oldKeySet[name] = true
 	}
 
-	newKeySet := map[string]bool{}
+	// validate every block before writing anything to Vault, so that a
+	// bad block cannot leave the keys partially written.
+	type managedKeyData struct {
+		name string
+		data map[string]interface{}
+	}
+
+	var keysToWrite []managedKeyData
 	for _, block := range newBlocks.(*schema.Set).List() {
 		keyName, data, err := getManagedKeysConfigData(block.(map[string]interface{}), config.schemaFunc())
 		if err != nil {
@@ -717,21 +721,26 @@ func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *a
 			return diag.Errorf("bad configuration for %s: %v", keyName, err)
 		}
 
-		for field, minVersion := range versionGatedFields[providerType] {
-			if _, ok := data[field]; ok && !provider.IsAPISupported(meta, minVersion) {
-				return diag.Errorf("%s is only supported in Vault %s and later", field, minVersion)
-			}
+		if err := validateVersionGatedFields(providerType, data, func(v *goversion.Version) bool {
+			return provider.IsAPISupported(meta, v)
+		}); err != nil {
+			return diag.Errorf("bad configuration for %s: %v", keyName, err)
 		}
 
-		path := getManagedKeysPath(config.keyType, keyName)
+		keysToWrite = append(keysToWrite, managedKeyData{name: keyName, data: data})
+	}
+
+	newKeySet := map[string]bool{}
+	for _, k := range keysToWrite {
+		path := getManagedKeysPath(config.keyType, k.name)
 
 		tflog.Debug(ctx, "Writing data to Vault", map[string]interface{}{"path": path})
-		if _, err := client.Logical().Write(path, data); err != nil {
+		if _, err := client.Logical().Write(path, k.data); err != nil {
 			return diag.Errorf("error writing managed key %q, err=%s", path, err)
 		}
 
 		// populate the set of new keys
-		newKeySet[keyName] = true
+		newKeySet[k.name] = true
 	}
 
 	// Flush out all unused keys
@@ -742,6 +751,20 @@ func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *a
 			if diags := deleteSingleManagedKey(ctx, client, config.keyType, k); diags != nil {
 				return diags
 			}
+		}
+	}
+
+	return nil
+}
+
+// validateVersionGatedFields returns an error if data sets a field that the
+// connected Vault, as reported by isSupported, is too old to support.
+func validateVersionGatedFields(providerType string, data map[string]interface{},
+	isSupported func(*goversion.Version) bool,
+) error {
+	for field, minVersion := range versionGatedFields[providerType] {
+		if _, ok := data[field]; ok && !isSupported(minVersion) {
+			return fmt.Errorf("%s is only supported in Vault %s and later", field, minVersion)
 		}
 	}
 
@@ -810,7 +833,7 @@ func updateRedactedFields(d *schema.ResourceData, providerType, name string,
 	}
 }
 
-func readAndSetManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client, meta interface{}, providerType string,
+func readAndSetManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client, providerType string,
 	sm map[string]string, redactedFields []string,
 ) error {
 	config, err := getManagedKeyConfig(providerType)
@@ -855,10 +878,6 @@ func readAndSetManagedKeys(ctx context.Context, d *schema.ResourceData, client *
 				vaultKey := k
 				if v, ok := sm[k]; ok {
 					vaultKey = v
-				}
-
-				if minVersion, gated := versionGatedFields[providerType][k]; gated && !provider.IsAPISupported(meta, minVersion) {
-					continue
 				}
 
 				if v, ok := resp.Data[vaultKey]; ok {
@@ -909,9 +928,9 @@ func readAndSetManagedKeys(ctx context.Context, d *schema.ResourceData, client *
 	return nil
 }
 
-func readAWSManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client, meta interface{}) error {
+func readAWSManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client) error {
 	redacted := []string{consts.FieldAccessKey, consts.FieldSecretKey}
-	if err := readAndSetManagedKeys(ctx, d, client, meta, consts.FieldAWS,
+	if err := readAndSetManagedKeys(ctx, d, client, consts.FieldAWS,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -919,9 +938,9 @@ func readAWSManagedKeys(ctx context.Context, d *schema.ResourceData, client *api
 	return nil
 }
 
-func readAzureManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client, meta interface{}) error {
+func readAzureManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client) error {
 	var redacted []string
-	if err := readAndSetManagedKeys(ctx, d, client, meta, consts.FieldAzure,
+	if err := readAndSetManagedKeys(ctx, d, client, consts.FieldAzure,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -929,9 +948,9 @@ func readAzureManagedKeys(ctx context.Context, d *schema.ResourceData, client *a
 	return nil
 }
 
-func readPKCSManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client, meta interface{}) error {
+func readPKCSManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client) error {
 	redacted := []string{consts.FieldPin, consts.FieldKeyID}
-	if err := readAndSetManagedKeys(ctx, d, client, meta, consts.FieldPKCS,
+	if err := readAndSetManagedKeys(ctx, d, client, consts.FieldPKCS,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -939,10 +958,10 @@ func readPKCSManagedKeys(ctx context.Context, d *schema.ResourceData, client *ap
 	return nil
 }
 
-func readGCPManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client, meta interface{}) error {
+func readGCPManagedKeys(ctx context.Context, d *schema.ResourceData, client *api.Client) error {
 	// credentials is a sensitive field preserved from config
 	redacted := []string{consts.FieldCredentials}
-	if err := readAndSetManagedKeys(ctx, d, client, meta, consts.FieldGCP,
+	if err := readAndSetManagedKeys(ctx, d, client, consts.FieldGCP,
 		map[string]string{consts.FieldUUID: "UUID"}, redacted); err != nil {
 		return err
 	}
@@ -958,28 +977,28 @@ func readManagedKeys(ctx context.Context, d *schema.ResourceData, meta interface
 
 	diags := diag.Diagnostics{}
 
-	if err := readAWSManagedKeys(ctx, d, client, meta); err != nil {
+	if err := readAWSManagedKeys(ctx, d, client); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read AWS Managed Keys, err=%s", err),
 		})
 	}
 
-	if err := readPKCSManagedKeys(ctx, d, client, meta); err != nil {
+	if err := readPKCSManagedKeys(ctx, d, client); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read PKCS Managed Keys, err=%s", err),
 		})
 	}
 
-	if err := readAzureManagedKeys(ctx, d, client, meta); err != nil {
+	if err := readAzureManagedKeys(ctx, d, client); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read Azure Managed Keys, err=%s", err),
 		})
 	}
 
-	if err := readGCPManagedKeys(ctx, d, client, meta); err != nil {
+	if err := readGCPManagedKeys(ctx, d, client); err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
 			Summary:  fmt.Sprintf("Failed to read GCP Cloud KMS Managed Keys, err=%s", err),
