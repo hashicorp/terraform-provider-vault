@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -138,7 +139,6 @@ func databaseSecretBackendStaticRoleResource() *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -228,14 +228,15 @@ func databaseSecretBackendStaticRoleWrite(ctx context.Context, d *schema.Resourc
 	}
 
 	log.Printf("[DEBUG] Creating static role %q on database backend %q", name, backend)
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
 		return diag.Errorf("error creating static role %q for backend %q: %s", name, backend, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Created static role %q on AWS backend %q", name, backend)
 
 	d.SetId(path)
-	return databaseSecretBackendStaticRoleRead(ctx, d, meta)
+	return append(diags, databaseSecretBackendStaticRoleRead(ctx, d, meta)...)
 }
 
 func databaseSecretBackendStaticRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

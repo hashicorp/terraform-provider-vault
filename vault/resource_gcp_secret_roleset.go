@@ -10,11 +10,13 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/customdiff"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -24,11 +26,11 @@ var (
 
 func gcpSecretRolesetResource() *schema.Resource {
 	return &schema.Resource{
-		Create: gcpSecretRolesetCreate,
-		Read:   provider.ReadWrapper(gcpSecretRolesetRead),
-		Update: gcpSecretRolesetUpdate,
-		Delete: gcpSecretRolesetDelete,
-		Exists: gcpSecretRolesetExists,
+		CreateContext: gcpSecretRolesetCreate,
+		Read:          provider.ReadWrapper(gcpSecretRolesetRead),
+		UpdateContext: gcpSecretRolesetUpdate,
+		Delete:        gcpSecretRolesetDelete,
+		Exists:        gcpSecretRolesetExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -101,7 +103,6 @@ func gcpSecretRolesetResource() *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -122,10 +123,10 @@ func gcpSecretRolesetResource() *schema.Resource {
 	}
 }
 
-func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretRolesetCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -145,14 +146,18 @@ func gcpSecretRolesetCreate(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	d.SetId(path)
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("Error writing GCP Secrets backend roleset %q: %s", path, err)
+		return diag.Errorf("Error writing GCP Secrets backend roleset %q: %s", path, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Wrote GCP Secrets backend roleset %q", path)
 
-	return gcpSecretRolesetRead(d, meta)
+	if err := gcpSecretRolesetRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
@@ -225,10 +230,10 @@ func gcpSecretRolesetRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretRolesetUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -244,13 +249,17 @@ func gcpSecretRolesetUpdate(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("[DEBUG] Updating GCP Secrets backend roleset %q", path)
 
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("Error updating GCP Secrets backend roleset %q: %s", path, err)
+		return diag.Errorf("Error updating GCP Secrets backend roleset %q: %s", path, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Updated GCP Secrets backend roleset %q", path)
 
-	return gcpSecretRolesetRead(d, meta)
+	if err := gcpSecretRolesetRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func gcpSecretRolesetDelete(d *schema.ResourceData, meta interface{}) error {

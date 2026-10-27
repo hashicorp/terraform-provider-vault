@@ -766,7 +766,6 @@ func databaseSecretBackendConnectionResource() *schema.Resource {
 	s[consts.FieldMetadata] = &schema.Schema{
 		Type:     schema.TypeMap,
 		Optional: true,
-		Computed: true,
 		Elem: &schema.Schema{
 			Type: schema.TypeString,
 		},
@@ -2080,20 +2079,21 @@ func databaseSecretBackendConnectionCreateOrUpdate(
 
 	path := databaseSecretBackendConnectionPath(
 		d.Get(consts.FieldBackend).(string), d.Get(consts.FieldName).(string))
-	if err := writeDatabaseSecretConfig(ctx, d, client, engine, 0, false, path, meta); err != nil {
+	writeDiags, err := writeDatabaseSecretConfig(ctx, d, client, engine, 0, false, path, meta)
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
 	log.Printf("[DEBUG] Wrote database connection config %q", path)
 
-	return databaseSecretBackendConnectionRead(ctx, d, meta)
+	return append(writeDiags, databaseSecretBackendConnectionRead(ctx, d, meta)...)
 }
 
-func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) error {
+func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, client *api.Client, engine *dbEngine, idx int, unifiedSchema bool, path string, meta interface{}) (diag.Diagnostics, error) {
 	data, err := getDatabaseAPIDataForEngine(engine, idx, d, meta, unifiedSchema)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var prefix string
@@ -2166,14 +2166,14 @@ func writeDatabaseSecretConfig(ctx context.Context, d *schema.ResourceData, clie
 	}
 
 	log.Printf("[DEBUG] Writing connection config to %q", path)
-	_, err = client.Logical().WriteWithContext(ctx, path, data)
+	resp, err := client.Logical().WriteWithContext(ctx, path, data)
 	if err != nil {
-		return fmt.Errorf("error configuring database connection %q: %s", path, err)
+		return nil, fmt.Errorf("error configuring database connection %q: %s", path, err)
 	}
 
 	log.Printf("[DEBUG] Wrote database connection config %q", path)
 
-	return nil
+	return util.MetadataWriteDiags(resp, data), nil
 }
 
 func validateDBPluginName(s string) error {
@@ -2317,10 +2317,10 @@ func getDBCommonConfig(d *schema.ResourceData, resp *api.Secret, engine *dbEngin
 		automatedrotationutil.GetAutomatedRotationFieldsFromResponse(resp, result)
 	}
 
-	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
-		if v, ok := resp.Data[consts.FieldMetadata]; ok && v != nil {
-			result[consts.FieldMetadata] = v
-		}
+	// Only the standalone connection resource has a metadata attribute. Vault omits the field
+	// when no record exists, so set it unconditionally to clear a stale value from state.
+	if !unifiedSchema && provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		result[consts.FieldMetadata] = resp.Data[consts.FieldMetadata]
 	}
 
 	return result

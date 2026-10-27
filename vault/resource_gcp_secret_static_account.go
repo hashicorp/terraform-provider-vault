@@ -4,15 +4,18 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -22,11 +25,11 @@ var (
 
 func gcpSecretStaticAccountResource() *schema.Resource {
 	return &schema.Resource{
-		Create: gcpSecretStaticAccountCreate,
-		Read:   provider.ReadWrapper(gcpSecretStaticAccountRead),
-		Update: gcpSecretStaticAccountUpdate,
-		Delete: gcpSecretStaticAccountDelete,
-		Exists: gcpSecretStaticAccountExists,
+		CreateContext: gcpSecretStaticAccountCreate,
+		Read:          provider.ReadWrapper(gcpSecretStaticAccountRead),
+		UpdateContext: gcpSecretStaticAccountUpdate,
+		Delete:        gcpSecretStaticAccountDelete,
+		Exists:        gcpSecretStaticAccountExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -99,7 +102,6 @@ func gcpSecretStaticAccountResource() *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -109,10 +111,10 @@ func gcpSecretStaticAccountResource() *schema.Resource {
 	}
 }
 
-func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretStaticAccountCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -132,14 +134,18 @@ func gcpSecretStaticAccountCreate(d *schema.ResourceData, meta interface{}) erro
 	}
 
 	d.SetId(path)
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
 		d.SetId("")
-		return fmt.Errorf("error writing GCP Secrets backend static account %q: %s", path, err)
+		return diag.Errorf("error writing GCP Secrets backend static account %q: %s", path, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Wrote GCP Secrets backend static account %q", path)
 
-	return gcpSecretStaticAccountRead(d, meta)
+	if err := gcpSecretStaticAccountRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error {
@@ -208,10 +214,10 @@ func gcpSecretStaticAccountRead(d *schema.ResourceData, meta interface{}) error 
 	return nil
 }
 
-func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) error {
+func gcpSecretStaticAccountUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	path := d.Id()
@@ -227,13 +233,17 @@ func gcpSecretStaticAccountUpdate(d *schema.ResourceData, meta interface{}) erro
 
 	log.Printf("[DEBUG] Updating GCP Secrets backend static account %q", path)
 
-	_, err := client.Logical().Write(path, data)
+	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return fmt.Errorf("error updating GCP Secrets backend static account %q: %s", path, err)
+		return diag.Errorf("error updating GCP Secrets backend static account %q: %s", path, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Updated GCP Secrets backend static account %q", path)
 
-	return gcpSecretStaticAccountRead(d, meta)
+	if err := gcpSecretStaticAccountRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func gcpSecretStaticAccountDelete(d *schema.ResourceData, meta interface{}) error {

@@ -69,7 +69,6 @@ func ldapSecretBackendDynamicRoleResource() *schema.Resource {
 		consts.FieldMetadata: {
 			Type:     schema.TypeMap,
 			Optional: true,
-			Computed: true,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
@@ -137,13 +136,15 @@ func createUpdateLDAPDynamicRoleResource(ctx context.Context, d *schema.Resource
 		}
 	}
 
-	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
+	resp, err := client.Logical().WriteWithContext(ctx, rolePath, data)
+	if err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", rolePath, err))
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 
 	d.SetId(rolePath)
 	log.Printf("[DEBUG] Wrote %q", rolePath)
-	return readLDAPDynamicRoleResource(ctx, d, meta)
+	return append(diags, readLDAPDynamicRoleResource(ctx, d, meta)...)
 }
 
 func readLDAPDynamicRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

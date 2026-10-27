@@ -139,7 +139,6 @@ func kubernetesSecretBackendRoleResource() *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -202,13 +201,15 @@ func kubernetesSecretBackendRoleCreateUpdate(ctx context.Context, d *schema.Reso
 	name := d.Get(consts.FieldName).(string)
 	backend := d.Get(consts.FieldBackend).(string)
 	rolePath := kubernetesSecretBackendRolePath(backend, name)
-	if _, err := client.Logical().Write(rolePath, data); err != nil {
+	resp, err := client.Logical().Write(rolePath, data)
+	if err != nil {
 		return diag.Errorf(`error writing Kubernetes backend role %q, err=%s`,
 			rolePath, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 
 	d.SetId(rolePath)
-	return kubernetesSecretBackendRoleRead(ctx, d, meta)
+	return append(diags, kubernetesSecretBackendRoleRead(ctx, d, meta)...)
 }
 
 func kubernetesSecretBackendRoleRead(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

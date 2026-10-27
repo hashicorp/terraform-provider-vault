@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -99,7 +100,6 @@ func mongodbAtlasSecretRoleResource() *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -148,13 +148,15 @@ func mongodbAtlasSecretRoleCreateUpdate(ctx context.Context, d *schema.ResourceD
 		}
 	}
 
-	if _, err := client.Logical().WriteWithContext(ctx, path, data); err != nil {
+	resp, err := client.Logical().WriteWithContext(ctx, path, data)
+	if err != nil {
 		return diag.Errorf("error updating MongoDB Atlas role %q, err=%s", name, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 
 	d.SetId(path)
 
-	return mongodbAtlasSecretRoleRead(ctx, d, meta)
+	return append(diags, mongodbAtlasSecretRoleRead(ctx, d, meta)...)
 }
 
 func mongodbAtlasSecretRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

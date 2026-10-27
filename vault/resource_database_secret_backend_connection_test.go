@@ -2654,6 +2654,125 @@ resource "vault_database_secret_backend_connection" "test" {
 	return config
 }
 
+// TestAccDatabaseSecretBackendConnection_metadata verifies that metadata read from
+// Vault is reflected in state: a connection recreated outside Terraform has no
+// metadata record, so Vault omits the field and Terraform must plan to restore the
+// configured map. It also verifies that {} and removing the attribute clear it.
+func TestAccDatabaseSecretBackendConnection_metadata(t *testing.T) {
+	MaybeSkipDBTests(t, dbEnginePostgres)
+
+	values := testutil.SkipTestEnvUnset(t, "POSTGRES_URL")
+	parsedURL, err := url.Parse(values[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	username := parsedURL.User.Username()
+	password, _ := parsedURL.User.Password()
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	name := acctest.RandomWithPrefix("db")
+
+	vaultMetadata := func(want map[string]interface{}) resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			client, err := api.NewClient(api.DefaultConfig())
+			if err != nil {
+				return err
+			}
+			resp, err := client.Logical().Read(fmt.Sprintf("%s/config/%s", backend, name))
+			if err != nil || resp == nil {
+				return fmt.Errorf("reading connection: resp=%v err=%v", resp, err)
+			}
+			got, _ := resp.Data[consts.FieldMetadata].(map[string]interface{})
+			if !reflect.DeepEqual(got, want) && (len(got) != 0 || len(want) != 0) {
+				return fmt.Errorf("Vault metadata: got %v, want %v", got, want)
+			}
+			return nil
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion230)
+		},
+		CheckDestroy: testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_metadata(backend, name, parsedURL, username, password, `metadata = { owner = "payments" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "metadata.owner", "payments"),
+					vaultMetadata(map[string]interface{}{"owner": "payments"}),
+				),
+			},
+			{
+				PreConfig: func() {
+					client, err := api.NewClient(api.DefaultConfig())
+					if err != nil {
+						t.Fatal(err)
+					}
+					path := fmt.Sprintf("%s/config/%s", backend, name)
+					if _, err := client.Logical().Delete(path); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := client.Logical().Write(path, map[string]interface{}{
+						"plugin_name":    "postgresql-database-plugin",
+						"connection_url": parsedURL.String(),
+						"username":       username,
+						"password":       password,
+						"allowed_roles":  []string{"dev"},
+					}); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testAccDatabaseSecretBackendConnectionConfig_metadata(backend, name, parsedURL, username, password, `metadata = { owner = "payments" }`),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				Check: vaultMetadata(map[string]interface{}{"owner": "payments"}),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_metadata(backend, name, parsedURL, username, password, `metadata = {}`),
+				Check:  vaultMetadata(nil),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_metadata(backend, name, parsedURL, username, password, `metadata = { owner = "payments" }`),
+				Check:  vaultMetadata(map[string]interface{}{"owner": "payments"}),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_metadata(backend, name, parsedURL, username, password, ``),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(testDefaultDatabaseSecretBackendResource, "metadata.%"),
+					vaultMetadata(nil),
+				),
+			},
+		},
+	})
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_metadata(path, name string, parsedURL *url.URL, username, password, metadata string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend       = vault_mount.db.path
+  name          = "%s"
+  allowed_roles = ["dev"]
+  %s
+
+  postgresql {
+    connection_url = "%s"
+    username       = "%s"
+    password       = "%s"
+  }
+}
+`, path, name, metadata, parsedURL.String(), username, password)
+}
+
 func testAccDatabaseSecretBackendConnectionConfig_postgresql(name, path, userTempl, username, password, openConn, idleConn, maxConnLifetime string, parsedURL *url.URL, includeSkipStatic bool) string {
 	skipStaticLine := ""
 	if includeSkipStatic {

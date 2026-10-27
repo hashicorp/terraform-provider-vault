@@ -4,11 +4,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -18,11 +20,11 @@ import (
 
 func awsSecretBackendRoleResource(name string) *schema.Resource {
 	return &schema.Resource{
-		Create: awsSecretBackendRoleWrite,
-		Read:   provider.ReadWrapper(awsSecretBackendRoleRead),
-		Update: awsSecretBackendRoleWrite,
-		Delete: awsSecretBackendRoleDelete,
-		Exists: awsSecretBackendRoleExists,
+		CreateContext: awsSecretBackendRoleWrite,
+		Read:          provider.ReadWrapper(awsSecretBackendRoleRead),
+		UpdateContext: awsSecretBackendRoleWrite,
+		Delete:        awsSecretBackendRoleDelete,
+		Exists:        awsSecretBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -129,7 +131,6 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -139,10 +140,10 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 	}
 }
 
-func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func awsSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -169,7 +170,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	mfaSerialNumber := d.Get(consts.FieldMFASerialNumber)
 
 	if policyDocument == "" && len(policyARNs) == 0 && len(roleARNs) == 0 && len(iamGroups) == 0 {
-		return fmt.Errorf("at least one of: `policy_document`, `policy_arns`, `role_arns` or `iam_groups` must be set")
+		return diag.Errorf("at least one of: `policy_document`, `policy_arns`, `role_arns` or `iam_groups` must be set")
 	}
 
 	credentialType := d.Get("credential_type").(string)
@@ -185,7 +186,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		if credentialType == "iam_user" {
 			data["permissions_boundary_arn"] = permissionBoundaryArn
 		} else {
-			return fmt.Errorf("permissions_boundary_arn is only valid when credential_type is iam_user")
+			return diag.Errorf("permissions_boundary_arn is only valid when credential_type is iam_user")
 		}
 	}
 	if d.HasChange("policy_document") {
@@ -213,7 +214,7 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		if credentialType == "iam_user" {
 			data["user_path"] = userPath
 		} else {
-			return fmt.Errorf("user_path is only valid when credential_type is iam_user")
+			return diag.Errorf("user_path is only valid when credential_type is iam_user")
 		}
 	}
 	if d.HasChange(consts.FieldMFASerialNumber) {
@@ -231,10 +232,10 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 		}
 	} else {
 		if defaultStsTTLOk {
-			return fmt.Errorf("default_sts_ttl is only valid when credential_type is assumed_role or federation_token")
+			return diag.Errorf("default_sts_ttl is only valid when credential_type is assumed_role or federation_token")
 		}
 		if maxStsTTLOk {
-			return fmt.Errorf("max_sts_ttl is only valid when credential_type is assumed_role or federation_token")
+			return diag.Errorf("max_sts_ttl is only valid when credential_type is assumed_role or federation_token")
 		}
 	}
 
@@ -249,14 +250,18 @@ func awsSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Creating role %q on AWS backend %q", name, backend)
-	_, err := client.Logical().Write(backend+"/roles/"+name, data)
+	resp, err := client.Logical().Write(backend+"/roles/"+name, data)
 	if err != nil {
-		return fmt.Errorf("error creating role %q for backend %q: %s", name, backend, err)
+		return diag.Errorf("error creating role %q for backend %q: %s", name, backend, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Created role %q on AWS backend %q", name, backend)
 
 	d.SetId(backend + "/roles/" + name)
-	return awsSecretBackendRoleRead(d, meta)
+	if err := awsSecretBackendRoleRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func awsSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {

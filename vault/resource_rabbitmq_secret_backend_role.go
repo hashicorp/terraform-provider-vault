@@ -4,24 +4,27 @@
 package vault
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 func rabbitMQSecretBackendRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: rabbitMQSecretBackendRoleWrite,
-		Read:   provider.ReadWrapper(rabbitMQSecretBackendRoleRead),
-		Update: rabbitMQSecretBackendRoleWrite,
-		Delete: rabbitMQSecretBackendRoleDelete,
-		Exists: rabbitMQSecretBackendRoleExists,
+		CreateContext: rabbitMQSecretBackendRoleWrite,
+		Read:          provider.ReadWrapper(rabbitMQSecretBackendRoleRead),
+		UpdateContext: rabbitMQSecretBackendRoleWrite,
+		Delete:        rabbitMQSecretBackendRoleDelete,
+		Exists:        rabbitMQSecretBackendRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -115,7 +118,6 @@ func rabbitMQSecretBackendRoleResource() *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -125,10 +127,10 @@ func rabbitMQSecretBackendRoleResource() *schema.Resource {
 	}
 }
 
-func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func rabbitMQSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -137,11 +139,11 @@ func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 
 	vhostsJSON, _, err := expandRabbitMQSecretBackendRoleVhost(d.Get("vhost").(*schema.Set), "host")
 	if err != nil {
-		return fmt.Errorf("error expanding vhost: %w", err)
+		return diag.Errorf("error expanding vhost: %s", err)
 	}
 	vhostTopicsJSON, err := expandRabbitMQSecretBackendRoleVhostTopic(d.Get("vhost_topic").(*schema.Set))
 	if err != nil {
-		return fmt.Errorf("error expanding vhost_topic: %w", err)
+		return diag.Errorf("error expanding vhost_topic: %s", err)
 	}
 
 	data := map[string]interface{}{
@@ -161,14 +163,18 @@ func rabbitMQSecretBackendRoleWrite(d *schema.ResourceData, meta interface{}) er
 	}
 
 	log.Printf("[DEBUG] Creating role %q on Rabbitmq backend %q", name, backend)
-	_, err = client.Logical().Write(backend+"/roles/"+name, data)
+	resp, err := client.Logical().Write(backend+"/roles/"+name, data)
 	if err != nil {
-		return fmt.Errorf("error creating role %q for backend %q: %w", name, backend, err)
+		return diag.Errorf("error creating role %q for backend %q: %s", name, backend, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Created role %q on Rabbitmq backend %q", name, backend)
 
 	d.SetId(backend + "/roles/" + name)
-	return rabbitMQSecretBackendRoleRead(d, meta)
+	if err := rabbitMQSecretBackendRoleRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func rabbitMQSecretBackendRoleRead(d *schema.ResourceData, meta interface{}) error {

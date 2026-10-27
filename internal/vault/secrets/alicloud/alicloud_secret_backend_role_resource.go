@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/model"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 const rolesAffix = "role"
@@ -157,8 +158,7 @@ func (r *AliCloudSecretBackendRoleResource) Schema(_ context.Context, _ resource
 			consts.FieldMetadata: schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				Computed:            true,
-				MarkdownDescription: "A map of string key-value pairs to associate with the role. Requires Vault Enterprise 2.3.0+.",
+				MarkdownDescription: "A map of string key-value pairs to associate with the role. Removing the attribute or setting it to `{}` clears the metadata. Requires Vault Enterprise 2.3.0+.",
 			},
 		},
 		// SetNestedBlock is used (instead of flat Set(String) attributes) because:
@@ -277,10 +277,12 @@ func (r *AliCloudSecretBackendRoleResource) Create(ctx context.Context, req reso
 		}
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest); err != nil {
+	writeResp, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
+	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultCreateErr(err))
 		return
 	}
+	resp.Diagnostics.Append(util.MetadataWriteFrameworkDiags(writeResp, vaultRequest)...)
 
 	// Read back the role to get computed values
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, rolePath)
@@ -335,6 +337,14 @@ func (r *AliCloudSecretBackendRoleResource) Read(ctx context.Context, req resour
 		return
 	}
 
+	// Create and Update keep the planned metadata. Only a read reflects what Vault stores,
+	// so a failed metadata write shows up as drift on the next refresh.
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
+		metadata, diags := util.FrameworkMetadataFromRead(ctx, data.Metadata, vaultResp.Data[consts.FieldMetadata])
+		resp.Diagnostics.Append(diags...)
+		data.Metadata = metadata
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -362,21 +372,24 @@ func (r *AliCloudSecretBackendRoleResource) Update(ctx context.Context, req reso
 
 	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
 		if !data.Metadata.Equal(state.Metadata) {
+			// A null plan means the attribute was removed, which clears the stored metadata.
+			metadata := map[string]string{}
 			if !data.Metadata.IsNull() && !data.Metadata.IsUnknown() {
-				var metadata map[string]string
 				resp.Diagnostics.Append(data.Metadata.ElementsAs(ctx, &metadata, false)...)
 				if resp.Diagnostics.HasError() {
 					return
 				}
-				vaultRequest[consts.FieldMetadata] = metadata
 			}
+			vaultRequest[consts.FieldMetadata] = metadata
 		}
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest); err != nil {
+	writeResp, err := cli.Logical().WriteWithContext(ctx, rolePath, vaultRequest)
+	if err != nil {
 		resp.Diagnostics.AddError(errutil.VaultUpdateErr(err))
 		return
 	}
+	resp.Diagnostics.Append(util.MetadataWriteFrameworkDiags(writeResp, vaultRequest)...)
 
 	// Read back the role to get computed values
 	vaultResp, err := cli.Logical().ReadWithContext(ctx, rolePath)
@@ -659,16 +672,6 @@ func populateModelFromVaultResponse(ctx context.Context, data *AliCloudSecretBac
 
 	if maxTTLVal, err := role.MaxTTL.Int64(); err == nil && maxTTLVal != 0 {
 		data.MaxTTL = types.Int64Value(maxTTLVal)
-	}
-
-	if v, ok := resp.Data[consts.FieldMetadata].(map[string]interface{}); ok {
-		metadata, d := types.MapValueFrom(ctx, types.StringType, v)
-		diags.Append(d...)
-		if !diags.HasError() {
-			data.Metadata = metadata
-		}
-	} else if data.Metadata.IsUnknown() {
-		data.Metadata = types.MapNull(types.StringType)
 	}
 
 	return diags

@@ -4,11 +4,13 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -60,7 +62,6 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 		consts.FieldMetadata: {
 			Type:     schema.TypeMap,
 			Optional: true,
-			Computed: true,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
@@ -68,10 +69,10 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 		},
 	}
 	return &schema.Resource{
-		Create: createNomadRoleResource,
-		Update: updateNomadRoleResource,
-		Read:   provider.ReadWrapper(readNomadRoleResource),
-		Delete: deleteNomadRoleResource,
+		CreateContext: createNomadRoleResource,
+		UpdateContext: updateNomadRoleResource,
+		Read:          provider.ReadWrapper(readNomadRoleResource),
+		Delete:        deleteNomadRoleResource,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -79,10 +80,10 @@ func nomadSecretBackendRoleResource() *schema.Resource {
 	}
 }
 
-func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
+func createNomadRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	backend := d.Get("backend").(string)
@@ -113,12 +114,12 @@ func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if roleType == "client" && data["policies"] == nil {
-		return fmt.Errorf("error creating role %s: policies are required when role type is 'client'", role)
+		return diag.Errorf("error creating role %s: policies are required when role type is 'client'", role)
 	}
 
 	// Policies not supported when role type is 'management'
 	if roleType == "management" && data["policies"] != nil {
-		return fmt.Errorf("error creating role %s: policies should be empty when using management tokens", role)
+		return diag.Errorf("error creating role %s: policies should be empty when using management tokens", role)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
@@ -128,12 +129,17 @@ func createNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	log.Printf("[DEBUG] Writing %q", rolePath)
-	if _, err := client.Logical().Write(rolePath, data); err != nil {
-		return fmt.Errorf("error writing %q: %s", rolePath, err)
+	resp, err := client.Logical().Write(rolePath, data)
+	if err != nil {
+		return diag.Errorf("error writing %q: %s", rolePath, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	d.SetId(rolePath)
 	log.Printf("[DEBUG] Wrote %q", rolePath)
-	return readNomadRoleResource(d, meta)
+	if err := readNomadRoleResource(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
@@ -196,10 +202,10 @@ func readNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
+func updateNomadRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	rolePath := d.Id()
@@ -210,7 +216,7 @@ func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 
 	roleName, err := nomadSecretBackendRoleNameFromPath(rolePath)
 	if err != nil {
-		return fmt.Errorf("invalid role ID %q: %s", rolePath, err)
+		return diag.Errorf("invalid role ID %q: %s", rolePath, err)
 	}
 
 	log.Printf("[DEBUG] Updating %q", rolePath)
@@ -228,7 +234,7 @@ func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 	}
 
 	if roleType == "client" && data["policies"] == "" {
-		return fmt.Errorf("error updating role %s: policies are required when role type is 'client'", roleName)
+		return diag.Errorf("error updating role %s: policies are required when role type is 'client'", roleName)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
@@ -237,11 +243,16 @@ func updateNomadRoleResource(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	if _, err := client.Logical().Write(rolePath, data); err != nil {
-		return fmt.Errorf("error updating role %q: %s", rolePath, err)
+	resp, err := client.Logical().Write(rolePath, data)
+	if err != nil {
+		return diag.Errorf("error updating role %q: %s", rolePath, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 	log.Printf("[DEBUG] Updated %q", rolePath)
-	return readNomadRoleResource(d, meta)
+	if err := readNomadRoleResource(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func deleteNomadRoleResource(d *schema.ResourceData, meta interface{}) error {

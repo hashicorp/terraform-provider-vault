@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -124,7 +125,6 @@ func consulSecretBackendRoleResource() *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -211,12 +211,14 @@ func consulSecretBackendRoleWrite(ctx context.Context, d *schema.ResourceData, m
 
 	log.Printf("[DEBUG] Configuring Consul secrets backend role at %q", path)
 
-	if _, err := client.Logical().Write(path, data); err != nil {
+	resp, err := client.Logical().Write(path, data)
+	if err != nil {
 		return diag.Errorf("error writing role configuration for %q: %s", path, err)
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 
 	d.SetId(path)
-	return consulSecretBackendRoleRead(ctx, d, meta)
+	return append(diags, consulSecretBackendRoleRead(ctx, d, meta)...)
 }
 
 func consulSecretBackendRoleRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

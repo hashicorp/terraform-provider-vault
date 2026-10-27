@@ -71,7 +71,6 @@ func awsSecretBackendStaticRoleResource() *schema.Resource {
 		consts.FieldMetadata: {
 			Type:     schema.TypeMap,
 			Optional: true,
-			Computed: true,
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
@@ -139,13 +138,15 @@ func createUpdateAWSStaticRoleResource(ctx context.Context, d *schema.ResourceDa
 		}
 	}
 
-	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
+	resp, err := client.Logical().WriteWithContext(ctx, rolePath, data)
+	if err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", rolePath, err))
 	}
+	diags := util.MetadataWriteDiags(resp, data)
 
 	d.SetId(rolePath)
 	log.Printf("[DEBUG] Wrote %q", rolePath)
-	return readAWSStaticRoleResource(ctx, d, meta)
+	return append(diags, readAWSStaticRoleResource(ctx, d, meta)...)
 }
 
 func readAWSStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

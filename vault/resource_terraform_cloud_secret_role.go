@@ -4,16 +4,19 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var (
@@ -23,11 +26,11 @@ var (
 
 func terraformCloudSecretRoleResource() *schema.Resource {
 	return &schema.Resource{
-		Create: terraformCloudSecretRoleWrite,
-		Read:   provider.ReadWrapper(terraformCloudSecretRoleRead),
-		Update: terraformCloudSecretRoleWrite,
-		Delete: terraformCloudSecretRoleDelete,
-		Exists: terraformCloudSecretRoleExists,
+		CreateContext: terraformCloudSecretRoleWrite,
+		Read:          provider.ReadWrapper(terraformCloudSecretRoleRead),
+		UpdateContext: terraformCloudSecretRoleWrite,
+		Delete:        terraformCloudSecretRoleDelete,
+		Exists:        terraformCloudSecretRoleExists,
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -87,7 +90,6 @@ func terraformCloudSecretRoleResource() *schema.Resource {
 			consts.FieldMetadata: {
 				Type:     schema.TypeMap,
 				Optional: true,
-				Computed: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -105,17 +107,17 @@ func terraformCloudSecretRoleGetBackend(d *schema.ResourceData) string {
 	}
 }
 
-func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) error {
+func terraformCloudSecretRoleWrite(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return e
+		return diag.FromErr(e)
 	}
 
 	name := d.Get("name").(string)
 
 	backend := terraformCloudSecretRoleGetBackend(d)
 	if backend == "" {
-		return fmt.Errorf("No backend specified for Terraform Cloud secret backend role %s", name)
+		return diag.Errorf("No backend specified for Terraform Cloud secret backend role %s", name)
 	}
 
 	path := terraformCloudSecretRolePath(backend, name)
@@ -160,13 +162,18 @@ func terraformCloudSecretRoleWrite(d *schema.ResourceData, meta interface{}) err
 
 	log.Printf("[DEBUG] Configuring Terraform Cloud secrets backend role at %q", path)
 
-	if _, err := client.Logical().Write(path, payload); err != nil {
-		return fmt.Errorf("error writing role configuration for %q: %s", path, err)
+	resp, err := client.Logical().Write(path, payload)
+	if err != nil {
+		return diag.Errorf("error writing role configuration for %q: %s", path, err)
 	}
+	diags := util.MetadataWriteDiags(resp, payload)
 	log.Printf("[DEBUG] Configured Terraform Cloud secrets backend role at %q", path)
 
 	d.SetId(path)
-	return terraformCloudSecretRoleRead(d, meta)
+	if err := terraformCloudSecretRoleRead(d, meta); err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+	return diags
 }
 
 func terraformCloudSecretRoleRead(d *schema.ResourceData, meta interface{}) error {

@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var _ resource.Resource = &KeyResource{}
@@ -119,8 +120,7 @@ func (r *KeyResource) Schema(ctx context.Context, req resource.SchemaRequest, re
 			consts.FieldMetadata: schema.MapAttribute{
 				ElementType:         types.StringType,
 				Optional:            true,
-				Computed:            true,
-				MarkdownDescription: "A map of string key-value pairs to associate with the key. Requires Vault Enterprise 2.3.0+.",
+				MarkdownDescription: "A map of string key-value pairs to associate with the key. Removing the attribute or setting it to `{}` clears the metadata. Requires Vault Enterprise 2.3.0+.",
 			},
 		},
 	}
@@ -170,10 +170,12 @@ func (r *KeyResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 	}
 
-	if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
+	vaultWriteResp, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData)
+	if err != nil {
 		resp.Diagnostics.AddError(ErrCreating(ResourceTypeKey, apiPath, err))
 		return
 	}
+	resp.Diagnostics.Append(util.MetadataWriteFrameworkDiags(vaultWriteResp, writeData)...)
 
 	// Update deletion_allowed configuration only when it differs from the default.
 	if data.DeletionAllowed.ValueBool() {
@@ -231,6 +233,14 @@ func (r *KeyResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 
 	data.parseKeyResponse(ctx, responseData)
 
+	// Create and Update keep the planned metadata. Only a read reflects what Vault stores,
+	// so a failed metadata write shows up as drift on the next refresh.
+	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
+		metadata, diags := util.FrameworkMetadataFromRead(ctx, data.Metadata, responseData[consts.FieldMetadata])
+		resp.Diagnostics.Append(diags...)
+		data.Metadata = metadata
+	}
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -260,22 +270,25 @@ func (r *KeyResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if r.Meta().IsAPISupported(provider.VaultVersion230) && r.Meta().IsEnterpriseSupported() {
 		if !plan.Metadata.Equal(state.Metadata) {
+			// A null plan means the attribute was removed, which clears the stored metadata.
+			metadata := map[string]string{}
 			if !plan.Metadata.IsNull() && !plan.Metadata.IsUnknown() {
-				var metadata map[string]string
 				resp.Diagnostics.Append(plan.Metadata.ElementsAs(ctx, &metadata, false)...)
 				if resp.Diagnostics.HasError() {
 					return
 				}
-				writeData[consts.FieldMetadata] = metadata
 			}
+			writeData[consts.FieldMetadata] = metadata
 		}
 	}
 
 	if len(writeData) > 0 {
-		if _, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData); err != nil {
+		vaultWriteResp, err := cli.Logical().WriteWithContext(ctx, apiPath, writeData)
+		if err != nil {
 			resp.Diagnostics.AddError(ErrUpdating(ResourceTypeKey, apiPath, err))
 			return
 		}
+		resp.Diagnostics.Append(util.MetadataWriteFrameworkDiags(vaultWriteResp, writeData)...)
 	}
 
 	responseData, exists := r.readKey(ctx, cli, apiPath, &resp.Diagnostics)
@@ -405,14 +418,5 @@ func (data *KeyResourceModel) parseKeyResponse(ctx context.Context, responseData
 		if !diagsResult.HasError() {
 			data.ReplicaRegions = setValue
 		}
-	}
-
-	if v, ok := responseData[consts.FieldMetadata].(map[string]interface{}); ok {
-		mapVal, diagsResult := types.MapValueFrom(ctx, types.StringType, v)
-		if !diagsResult.HasError() {
-			data.Metadata = mapVal
-		}
-	} else if data.Metadata.IsUnknown() {
-		data.Metadata = types.MapNull(types.StringType)
 	}
 }
