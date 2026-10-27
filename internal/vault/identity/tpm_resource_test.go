@@ -4,10 +4,7 @@
 package identity_test
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
@@ -22,12 +19,13 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // TestAccIdentityTPM_versionGate verifies that TPM identity creation fails
 // with an appropriate error on Vault versions < 2.2.0.
 func TestAccIdentityTPM_versionGate(t *testing.T) {
-	publicKey := testTPMPublicKey(t)
+	publicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -54,8 +52,8 @@ func TestAccIdentityTPM_versionGate(t *testing.T) {
 func TestAccIdentityTPM(t *testing.T) {
 	renamedName := acctest.RandomWithPrefix("tpm")
 	resourceName := "vault_identity_tpm.test"
-	originalPk := testTPMPublicKey(t)
-	newPk := testTPMPublicKey(t)
+	originalPk := testutil.GenerateRSAPublicKeyPEM(t, 2048)
+	newPk := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 	var originalTPMID string
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -171,7 +169,7 @@ func TestAccIdentityTPM(t *testing.T) {
 // with/without a trailing line, do not replace the entire TPM resource.
 func TestAccIdentityTPM_pemNormalization(t *testing.T) {
 	resourceName := "vault_identity_tpm.test"
-	pkWithNewline := testTPMPublicKey(t)
+	pkWithNewline := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 	pkTrimmed := strings.TrimRight(pkWithNewline, "\n")
 	var originalTPMID string
 
@@ -249,7 +247,7 @@ func TestAccIdentityTPM_pemNormalization(t *testing.T) {
 // - Setting metadata = {} explicitly clears it in Vault
 func TestAccIdentityTPM_metadata(t *testing.T) {
 	resourceName := "vault_identity_tpm.test"
-	publicKey := testTPMPublicKey(t)
+	publicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 	var tpmId string
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -415,23 +413,6 @@ func testAccIdentityTPMImportStateIdFunc(resourceName string) resource.ImportSta
 		}
 		return rs.Primary.Attributes["tpm_id"], nil
 	}
-}
-
-func testTPMPublicKey(t *testing.T) string {
-	t.Helper()
-
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("failed to generate RSA key: %v", err)
-	}
-
-	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		t.Fatalf("failed to marshal public key: %v", err)
-	}
-
-	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes})
-	return string(pemBytes)
 }
 
 // tpmIDFromPublicKey computes the TPM record ID (SHA256 of canonical PEM) the
