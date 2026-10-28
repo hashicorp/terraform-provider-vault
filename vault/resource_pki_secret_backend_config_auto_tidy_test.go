@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
-	"github.com/stretchr/testify/require"
 	"regexp"
 	"testing"
 
@@ -19,35 +18,6 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
-
-func TestPkiSecretBackendConfigAutoTidySuppressDurationDiff(t *testing.T) {
-	type testCase struct {
-		oldValue string
-		newValue string
-		expected bool
-	}
-	same := func(oldValue, newValue string) testCase {
-		return testCase{oldValue, newValue, true}
-	}
-	diff := func(oldValue, newValue string) testCase {
-		return testCase{oldValue, newValue, false}
-	}
-	testCases := []testCase{
-		diff("", "1"),
-		diff("1", ""),
-		same("1", "1s"),
-		same("1", "0h0m1s"),
-		diff("1s", "2s"),
-		same("60", "1m"),
-		same("3600", "1h"),
-		same("61", "1m1s"),
-	}
-	for _, tc := range testCases {
-		require.Equal(t, tc.expected,
-			pkiSecretBackendConfigAutoTidySuppressDurationDiff("interval_duration", tc.oldValue, tc.newValue, nil),
-			"test case %v", tc)
-	}
-}
 
 func TestAccPKISecretBackendConfigAutoTidy_basic(t *testing.T) {
 	backend := acctest.RandomWithPrefix("tf-test-pki")
@@ -207,6 +177,17 @@ interval_duration = "3m"
 				),
 			},
 			{
+				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
+enabled = true
+tidy_cert_store = true
+interval_duration = "1500ms"
+`),
+				ExpectNonEmptyPlan: true,
+				Check: resource.ComposeTestCheckFunc(
+					checkAttributes("1", consts.FieldIntervalDuration),
+				),
+			},
+			{
 				// Set the non-tidy bool fields
 				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
 enabled = true
@@ -246,7 +227,7 @@ safety_buffer = "59000s"
 					),
 					checkAttributes("10000", consts.FieldAcmeAccountSafetyBuffer),
 					checkAttributes("12000", consts.FieldIssuerSafetyBuffer),
-					checkAttributes("4m2s", consts.FieldPauseDuration), // Interesting, pause_duration behaves correctly
+					checkAttributes("4m2s", consts.FieldPauseDuration),
 					checkAttributes("2800", consts.FieldRevocationQueueSafetyBuffer),
 					checkAttributes("59000", consts.FieldSafetyBuffer),
 				),
@@ -278,7 +259,7 @@ safety_buffer = "59000s"
 					checkAttributes("12000", consts.FieldIssuerSafetyBuffer),
 					checkAttributes("15000", consts.FieldMaxStartupBackoffDuration),
 					checkAttributes("1000", consts.FieldMinStartupBackoffDuration),
-					checkAttributes("4m2s", consts.FieldPauseDuration), // Interesting, pause_duration behaves correctly
+					checkAttributes("4m2s", consts.FieldPauseDuration),
 					checkAttributes("2800", consts.FieldRevocationQueueSafetyBuffer),
 					checkAttributes("59000", consts.FieldSafetyBuffer),
 				),
@@ -297,6 +278,18 @@ safety_buffer = "59000s"
 						consts.FieldTidyCertStore,
 					),
 					checkAttributes("3600", consts.FieldIntervalDuration),
+				),
+			},
+			{
+				// Vault reads pause_duration back as "1m0s"
+				Config: testAccPKISecretBackendConfigAutoTidy_basic(backend, `
+  enabled = true
+  tidy_cert_store = true
+  pause_duration = "1m"
+`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, backend),
+					checkAttributes("1m0s", consts.FieldPauseDuration),
 				),
 			},
 			getImportTestStep(provider.VaultVersion118),
