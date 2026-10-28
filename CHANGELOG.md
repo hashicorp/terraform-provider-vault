@@ -3,12 +3,21 @@
 FEATURES:
 
 * `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
+* **New Resources**: Add support for Transit BYOK key import with the `vault_transit_secret_backend_imported_key` resource and `vault_transit_wrapping_key` data source. ([#3090](https://github.com/hashicorp/terraform-provider-vault/pull/3090))
 
 IMPROVEMENTS:
 
 * `vault_jwt_auth_backend`: Add `unsupported_critical_cert_extensions` field to support whitelisting unsupported critical X.509 certificate extensions during OIDC discovery TLS handshakes. ([#3088](https://github.com/hashicorp/terraform-provider-vault/pull/3088))
 * `vault_pki_external_ca_secret_backend_order_challenge`: Add `timeouts` block with a `read` attribute to make the order-status polling duration configurable. Defaults to `60s`. ([#3095](https://github.com/hashicorp/terraform-provider-vault/pull/3095))
 * `vault_pki_external_ca_secret_backend_order_certificate`: Add `timeouts` block with a `create` attribute to make the order-status polling duration configurable. Defaults to `60s`. ([#3095](https://github.com/hashicorp/terraform-provider-vault/pull/3095))
+
+* `vault_transit_encrypt`: Add `hash_algorithm` and `padding_scheme` fields to support RSA key encryption with configurable hash algorithm and OAEP/PKCS1v15 padding. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
+
+* `vault_transit_decrypt`: Add `hash_algorithm` and `padding_scheme` fields to support RSA key decryption with configurable hash algorithm and OAEP/PKCS1v15 padding. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
+
+* `vault_managed_keys`: Add `rsa_oaep_hash` field to PKCS configuration block to specify the hash algorithm for RSA-OAEP encryption with `CKM_RSA_PKCS_OAEP`. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
+
+* `vault_managed_keys`: Add `encryption_mode` field to Azure configuration block to control AES-GCM envelope vs. direct KMS encryption. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
 
 BUG FIXES:
 

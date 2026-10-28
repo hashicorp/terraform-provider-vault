@@ -161,6 +161,10 @@ The following arguments are supported:
 * `key_bits` - (Optional) The size in bits for an RSA key. This field is required
   when `key_type` is `RSA` or when `allow_generate_key` is `true`
 
+* `encryption_mode` - (Optional) The encryption mode for the key. `envelope` for
+  AES-GCM envelope encryption or `raw` to encrypt directly with the KMS key.
+  Default is `envelope`.
+
 
 ### PKCS Parameters
 
@@ -196,6 +200,11 @@ The following arguments are supported:
   the HSM.
 
 * `max_parallel` - (Optional) The number of concurrent requests that may be in flight to the HSM at any given time.
+
+* `rsa_oaep_hash` - (Optional) The hash algorithm to use for RSA-OAEP encryption
+  with mechanism `CKM_RSA_PKCS_OAEP`. Only applies when `mechanism` is set to
+  `CKM_RSA_PKCS_OAEP`. Supported values are: `sha1`, `sha224`, `sha256`, `sha384`,
+  `sha512`. If not set, Vault defaults to `sha256`.
 
 
 ### GCP Cloud KMS Parameters
