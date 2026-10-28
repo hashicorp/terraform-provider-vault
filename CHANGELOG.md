@@ -38,7 +38,7 @@ FEATURES:
 
 
 IMPROVEMENTS:
-
+* `vault_kv_secret_backend_v2`: Fixed kvSecretBackendV2Read to correctly strip the `/config` suffix
 * `vault_agent_registration`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
 * `vault_oauth_resource_server_config_profile`: Add support for `local` field. Requires Vault 2.2.0 or later. ([#3039](https://github.com/hashicorp/terraform-provider-vault/pull/3039))
 * `vault_oauth_resource_server_config_profile`: Add `unique_id_claim` and `actor_claim` parameters to support configuring the JWT claim used as the token unique identifier and the actor claim for delegation scenarios. Requires Vault 2.2.0 or later. ([#3060](https://github.com/hashicorp/terraform-provider-vault/pull/3060))
