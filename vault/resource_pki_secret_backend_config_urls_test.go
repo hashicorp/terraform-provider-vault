@@ -128,6 +128,14 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 				},
 				Config: testPkiSecretBackendCertConfigUrlsConfig120(
 					rootPath, issuingCertificates, crlDistributionPoints, deltaCrlDistributionPoints, ocspServers, !enableTemplating),
+				Check: getChecks(
+					issuingCertificates, crlDistributionPoints, deltaCrlDistributionPoints, ocspServers, !enableTemplating),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !provider.IsAPISupported(meta, provider.VaultVersion120), nil
+				},
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,

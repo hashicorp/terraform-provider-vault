@@ -89,11 +89,11 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 					return !provider.IsAPISupported(meta, provider.VaultVersion120), nil
 				},
 				Config: testAccPKISecretBackendIssuer_basic(backend, fmt.Sprintf(`
-                    issuer_name                   = "%[1]s"
-                    issuing_certificates          = ["%[2]s"]
-                    crl_distribution_points       = ["%[3]s"]
-                    delta_crl_distribution_points = ["%[4]s"]
-                    ocsp_servers                  = ["%[5]s"]`,
+			                 issuer_name                   = "%[1]s"
+			                 issuing_certificates          = ["%[2]s"]
+			                 crl_distribution_points       = ["%[3]s"]
+			                 delta_crl_distribution_points = ["%[4]s"]
+			                 ocsp_servers                  = ["%[5]s"]`,
 					issuerName,
 					issuingCertificates,
 					crlDistributionPoints,
@@ -112,17 +112,24 @@ func TestAccPKISecretBackendIssuer_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ocsp_servers.#", "1"),
 					resource.TestCheckResourceAttr(resourceName, "ocsp_servers.0", ocspServers),
 				),
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !provider.IsAPISupported(meta, provider.VaultVersion120), nil
+				},
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{consts.FieldUsage},
 			},
 			{
 				Config: testAccPKISecretBackendIssuer_basic(backend, fmt.Sprintf(`
-                    issuer_name                   = "%[1]s"
-                    issuing_certificates          = ["%[2]s"]
-                    crl_distribution_points       = ["%[3]s"]
-                    delta_crl_distribution_points = ["%[4]s"]
-                    ocsp_servers                  = ["%[5]s"]`,
+			                 issuer_name                   = "%[1]s"
+			                 issuing_certificates          = ["%[2]s"]
+			                 crl_distribution_points       = ["%[3]s"]
+			                 delta_crl_distribution_points = ["%[4]s"]
+			                 ocsp_servers                  = ["%[5]s"]`,
 					issuerName,
 					issuingCertificates+"/new",
 					crlDistributionPoints+"/new",
