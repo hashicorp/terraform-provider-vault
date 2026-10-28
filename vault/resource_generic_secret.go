@@ -141,10 +141,36 @@ func genericSecretResourceWrite(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	if v2 {
+		options := map[string]interface{}{}
 		path = addPrefixToVKVPath(path, mountPath, "data")
+
+		log.Printf("[DEBUG] Reading KV Engine configuration from Vault")
+		config, err := client.Logical().Read(mountPath + "config")
+
+		if err != nil {
+			return fmt.Errorf("error reading from Vault: %s", err)
+		}
+
+		casRequired := config.Data["cas_required"].(bool)
+		if casRequired {
+			log.Printf("[DEBUG] Reading %s from Vault", path)
+			secret, err := kvReadRequest(client, path, nil)
+
+			if err != nil {
+				return fmt.Errorf("error reading from Vault: %s", err)
+			}
+
+			if secret == nil {
+				options["cas"] = 0
+			} else {
+				metadata := secret.Data["metadata"].(map[string]interface{})
+				options["cas"] = metadata["version"]
+			}
+		}
+
 		data = map[string]interface{}{
 			"data":    data,
-			"options": map[string]interface{}{},
+			"options": options,
 		}
 
 	}
