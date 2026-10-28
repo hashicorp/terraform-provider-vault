@@ -1,6 +1,6 @@
 module github.com/hashicorp/terraform-provider-vault
 
-go 1.27.1
+go 1.27.2
 
 require (
 	cloud.google.com/go/compute/metadata v0.10.0
@@ -35,6 +35,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.4
 	github.com/hashicorp/go-version v1.9.0
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
+	github.com/hashicorp/terraform-plugin-framework-timeouts v0.7.0
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-log v0.11.0
@@ -53,6 +54,7 @@ require (
 	github.com/moby/moby/client v0.6.2
 	github.com/spiffe/go-spiffe/v2 v2.9.0
 	github.com/stretchr/testify v1.12.1
+	github.com/tink-crypto/tink-go/v2 v2.7.0
 	go.uber.org/atomic v1.12.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.61.0

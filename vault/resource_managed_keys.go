@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -26,6 +27,11 @@ const (
 	kmsTypeAzure = "azurekeyvault"
 	kmsTypeGCP   = "gcpckms"
 )
+
+var versionGatedFields = map[string]map[string]*goversion.Version{
+	consts.FieldPKCS:  {consts.FieldRsaOaepHash: provider.VaultVersion220},
+	consts.FieldAzure: {consts.FieldEncryptionMode: provider.VaultVersion220},
+}
 
 type managedKeysConfig struct {
 	providerType string
@@ -294,6 +300,15 @@ func managedKeysPKCSConfigSchema() schemaMap {
 			Description: "The number of concurrent requests that may be in flight to the HSM at any given time." +
 				" Default is 1",
 		},
+		consts.FieldRsaOaepHash: {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "The hash algorithm to use for RSA-OAEP encryption with mechanism CKM_RSA_PKCS_OAEP. " +
+				"Only applies when 'mechanism' is set to 'CKM_RSA_PKCS_OAEP'. " +
+				"Supported values are: sha1, sha224, sha256, sha384, sha512. " +
+				"If not set, Vault defaults to sha256.",
+			ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"sha1", "sha224", "sha256", "sha384", "sha512"}),
+		},
 	}
 
 	return setCommonManagedKeysSchema(s)
@@ -411,6 +426,13 @@ func managedKeysAzureConfigSchema() schemaMap {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The type of key to use",
+		},
+		consts.FieldEncryptionMode: {
+			Type:     schema.TypeString,
+			Optional: true,
+			Description: "The encryption mode to use for the key. `envelope` uses AES-GCM envelope encryption, " +
+				"`raw` encrypts directly with the KMS key. If not set, Vault defaults to envelope.",
+			ValidateDiagFunc: provider.GetValidateDiagChoices([]string{"envelope", "raw"}),
 		},
 	}
 
@@ -642,7 +664,7 @@ func handleKeyProviderRequired(d *schema.ResourceData, providerType string, err 
 	return nil
 }
 
-func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *api.Client, providerType string) diag.Diagnostics {
+func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *api.Client, meta interface{}, providerType string) diag.Diagnostics {
 	config, err := getManagedKeyConfig(providerType)
 	if err != nil {
 		return diag.FromErr(err)
@@ -681,7 +703,14 @@ func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *a
 		oldKeySet[name] = true
 	}
 
-	newKeySet := map[string]bool{}
+	// validate every block before writing anything to Vault, so that a
+	// bad block cannot leave the keys partially written.
+	type managedKeyData struct {
+		name string
+		data map[string]interface{}
+	}
+
+	var keysToWrite []managedKeyData
 	for _, block := range newBlocks.(*schema.Set).List() {
 		keyName, data, err := getManagedKeysConfigData(block.(map[string]interface{}), config.schemaFunc())
 		if err != nil {
@@ -692,15 +721,26 @@ func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *a
 			return diag.Errorf("bad configuration for %s: %v", keyName, err)
 		}
 
-		path := getManagedKeysPath(config.keyType, keyName)
+		if err := validateVersionGatedFields(providerType, data, func(v *goversion.Version) bool {
+			return provider.IsAPISupported(meta, v)
+		}); err != nil {
+			return diag.Errorf("bad configuration for %s: %v", keyName, err)
+		}
+
+		keysToWrite = append(keysToWrite, managedKeyData{name: keyName, data: data})
+	}
+
+	newKeySet := map[string]bool{}
+	for _, k := range keysToWrite {
+		path := getManagedKeysPath(config.keyType, k.name)
 
 		tflog.Debug(ctx, "Writing data to Vault", map[string]interface{}{"path": path})
-		if _, err := client.Logical().Write(path, data); err != nil {
+		if _, err := client.Logical().Write(path, k.data); err != nil {
 			return diag.Errorf("error writing managed key %q, err=%s", path, err)
 		}
 
 		// populate the set of new keys
-		newKeySet[keyName] = true
+		newKeySet[k.name] = true
 	}
 
 	// Flush out all unused keys
@@ -711,6 +751,20 @@ func writeManagedKeysData(ctx context.Context, d *schema.ResourceData, client *a
 			if diags := deleteSingleManagedKey(ctx, client, config.keyType, k); diags != nil {
 				return diags
 			}
+		}
+	}
+
+	return nil
+}
+
+// validateVersionGatedFields returns an error if data sets a field that the
+// connected Vault, as reported by isSupported, is too old to support.
+func validateVersionGatedFields(providerType string, data map[string]interface{},
+	isSupported func(*goversion.Version) bool,
+) error {
+	for field, minVersion := range versionGatedFields[providerType] {
+		if _, ok := data[field]; ok && !isSupported(minVersion) {
+			return fmt.Errorf("%s is only supported in Vault %s and later", field, minVersion)
 		}
 	}
 
@@ -738,25 +792,25 @@ func createUpdateManagedKeys(ctx context.Context, d *schema.ResourceData, meta i
 	}
 
 	if _, ok := d.GetOk(consts.FieldAWS); ok {
-		if diags := writeManagedKeysData(ctx, d, client, consts.FieldAWS); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, client, meta, consts.FieldAWS); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldPKCS); ok {
-		if diags := writeManagedKeysData(ctx, d, client, consts.FieldPKCS); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, client, meta, consts.FieldPKCS); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldAzure); ok {
-		if diags := writeManagedKeysData(ctx, d, client, consts.FieldAzure); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, client, meta, consts.FieldAzure); diags != nil {
 			return diags
 		}
 	}
 
 	if _, ok := d.GetOk(consts.FieldGCP); ok {
-		if diags := writeManagedKeysData(ctx, d, client, consts.FieldGCP); diags != nil {
+		if diags := writeManagedKeysData(ctx, d, client, meta, consts.FieldGCP); diags != nil {
 			return diags
 		}
 	}
