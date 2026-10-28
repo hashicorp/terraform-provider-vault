@@ -78,6 +78,10 @@ DEPENDENCIES:
   * `google.golang.org/api` v0.298.0 → v0.301.0
 
 
+BUG FIXES:
+
+* `vault_generic_secret`: Fix `path` values that already contain the KV v2 `data/` or `metadata/` prefix being rewritten to `data/data/...` or `data/metadata/...`, so explicit metadata paths can be read. ([#3068](https://github.com/hashicorp/terraform-provider-vault/issues/3068))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:
