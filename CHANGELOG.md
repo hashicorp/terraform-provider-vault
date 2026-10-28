@@ -7,7 +7,12 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#3093](https://github.com/hashicorp/terraform-provider-vault/pull/3093))
+
+
 * `vault_jwt_auth_backend`: Add `unsupported_critical_cert_extensions` field to support whitelisting unsupported critical X.509 certificate extensions during OIDC discovery TLS handshakes. ([#3088](https://github.com/hashicorp/terraform-provider-vault/pull/3088))
+* `vault_pki_external_ca_secret_backend_order_challenge`: Add `timeouts` block with a `read` attribute to make the order-status polling duration configurable. Defaults to `60s`. ([#3095](https://github.com/hashicorp/terraform-provider-vault/pull/3095))
+* `vault_pki_external_ca_secret_backend_order_certificate`: Add `timeouts` block with a `create` attribute to make the order-status polling duration configurable. Defaults to `60s`. ([#3095](https://github.com/hashicorp/terraform-provider-vault/pull/3095))
 
 * `vault_transit_encrypt`: Add `hash_algorithm` and `padding_scheme` fields to support RSA key encryption with configurable hash algorithm and OAEP/PKCS1v15 padding. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
 
@@ -21,7 +26,6 @@ BUG FIXES:
 
 * `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
 
-
 ## 5.13.0 (October 14, 2026)
 
 FEATURES:
@@ -31,6 +35,7 @@ FEATURES:
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
 * **New Resource for transform rewrapping**: Add new resource `vault_transform_rewrap` to support rewrapping FPE transformations. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
+
 
 IMPROVEMENTS:
 
