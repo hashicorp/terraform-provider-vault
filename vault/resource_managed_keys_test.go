@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -970,4 +971,177 @@ func TestManagedKeyUsagesToAPI(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateVersionGatedFields(t *testing.T) {
+	supported := func(*goversion.Version) bool { return true }
+	unsupported := func(*goversion.Version) bool { return false }
+
+	tests := []struct {
+		name         string
+		providerType string
+		data         map[string]interface{}
+		isSupported  func(*goversion.Version) bool
+		wantErr      string
+	}{
+		{
+			name:         "pkcs gated field on old vault",
+			providerType: consts.FieldPKCS,
+			data:         map[string]interface{}{consts.FieldRsaOaepHash: "sha256"},
+			isSupported:  unsupported,
+			wantErr:      "rsa_oaep_hash is only supported in Vault 2.2.0 and later",
+		},
+		{
+			name:         "azure gated field on old vault",
+			providerType: consts.FieldAzure,
+			data:         map[string]interface{}{consts.FieldEncryptionMode: "raw"},
+			isSupported:  unsupported,
+			wantErr:      "encryption_mode is only supported in Vault 2.2.0 and later",
+		},
+		{
+			name:         "pkcs gated field on supported vault",
+			providerType: consts.FieldPKCS,
+			data:         map[string]interface{}{consts.FieldRsaOaepHash: "sha256"},
+			isSupported:  supported,
+		},
+		{
+			name:         "gated field not set on old vault",
+			providerType: consts.FieldPKCS,
+			data:         map[string]interface{}{consts.FieldName: "key"},
+			isSupported:  unsupported,
+		},
+		{
+			name:         "provider without gated fields on old vault",
+			providerType: consts.FieldAWS,
+			data:         map[string]interface{}{consts.FieldRsaOaepHash: "sha256"},
+			isSupported:  unsupported,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateVersionGatedFields(tc.providerType, tc.data, tc.isSupported)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+
+			if err == nil || err.Error() != tc.wantErr {
+				t.Fatalf("got error %v, want %q", err, tc.wantErr)
+			}
+		})
+	}
+}
+
+// TestManagedKeysPKCS_RsaOaepHash requires the same local PKCS#11 setup as
+// TestManagedKeysPKCS, plus Vault 2.2.0 or later.
+func TestManagedKeysPKCS_RsaOaepHash(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name := acctest.RandomWithPrefix("pkcs-oaep")
+	resourceName := "vault_managed_keys.test"
+	library, slot, pin := testutil.GetTestPKCSCreds(t)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_pkcsRsaOaepHash(name, library, slot, pin, "sha1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "pkcs.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.mechanism", "9"),
+					resource.TestCheckResourceAttr(resourceName, "pkcs.0.rsa_oaep_hash", "sha1"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"pkcs.0.pin", "pkcs.0.key_id"},
+			},
+		},
+	})
+}
+
+func testManagedKeysConfig_pkcsRsaOaepHash(name, library, slot, pin, hash string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  pkcs {
+    name          = "%s"
+    library       = "%s"
+    key_label     = "kms-intermediate"
+    mechanism     = "0x0009"
+    slot          = "%s"
+    pin           = "%s"
+    rsa_oaep_hash = "%s"
+  }
+}
+`, name, library, slot, pin, hash)
+}
+
+// TestManagedKeysAzure_EncryptionMode requires a local Vault Enterprise Plus
+// setup, Azure Key Vault credentials and Vault 2.2.0 or later:
+// * AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_KEYVAULT_NAME
+// * AZURE_KEY_NAME - name of an existing RSA key in the Key Vault
+// * TF_ACC_LOCAL=1
+func TestManagedKeysAzure_EncryptionMode(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TF_ACC_LOCAL")
+
+	name := acctest.RandomWithPrefix("azure-keys")
+	resourceName := "vault_managed_keys.test"
+	tenantID, clientID, clientSecret, keyVaultName := testutil.GetTestAzureKMSCreds(t)
+	keyName := testutil.SkipTestEnvUnset(t, "AZURE_KEY_NAME")[0]
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config: testManagedKeysConfig_azureEncryptionMode(name, tenantID, clientID, clientSecret, keyVaultName, keyName, "envelope"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "azure.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "azure.0.encryption_mode", "envelope"),
+				),
+			},
+			{
+				Config: testManagedKeysConfig_azureEncryptionMode(name, tenantID, clientID, clientSecret, keyVaultName, keyName, "raw"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "azure.0.encryption_mode", "raw"),
+				),
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"azure.0.client_secret"},
+			},
+		},
+	})
+}
+
+func testManagedKeysConfig_azureEncryptionMode(name, tenantID, clientID, clientSecret, keyVaultName, keyName, mode string) string {
+	return fmt.Sprintf(`
+resource "vault_managed_keys" "test" {
+  azure {
+    name            = "%s"
+    tenant_id       = "%s"
+    client_id       = "%s"
+    client_secret   = "%s"
+    vault_name      = "%s"
+    key_name        = "%s"
+    key_type        = "RSA"
+    key_bits        = "2048"
+    encryption_mode = "%s"
+  }
+}
+`, name, tenantID, clientID, clientSecret, keyVaultName, keyName, mode)
 }
