@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"time"
 
+	resourcetimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -46,9 +46,10 @@ type PKIExternalCAOrderCertificateResource struct {
 type PKIExternalCAOrderCertificateModel struct {
 	base.BaseModel
 
-	Mount    types.String `tfsdk:"mount"`
-	RoleName types.String `tfsdk:"role_name"`
-	OrderID  types.String `tfsdk:"order_id"`
+	Mount    types.String           `tfsdk:"mount"`
+	RoleName types.String           `tfsdk:"role_name"`
+	OrderID  types.String           `tfsdk:"order_id"`
+	Timeouts resourcetimeouts.Value `tfsdk:"timeouts"`
 
 	// Computed fields from certificate fetch
 	Certificate  types.String `tfsdk:"certificate"`
@@ -69,7 +70,7 @@ func (r *PKIExternalCAOrderCertificateResource) Metadata(_ context.Context, req 
 	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_order_certificate"
 }
 
-func (r *PKIExternalCAOrderCertificateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *PKIExternalCAOrderCertificateResource) Schema(ctx context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
@@ -112,6 +113,11 @@ func (r *PKIExternalCAOrderCertificateResource) Schema(_ context.Context, _ reso
 				Computed:            true,
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"timeouts": resourcetimeouts.Block(ctx, resourcetimeouts.Opts{
+				Create: true,
+			}),
+		},
 		MarkdownDescription: "Polls the order status endpoint until the order is completed, then fetches the certificate.",
 	}
 	base.MustAddBaseSchema(&resp.Schema)
@@ -141,10 +147,17 @@ func (r *PKIExternalCAOrderCertificateResource) Create(ctx context.Context, req 
 	roleName := data.RoleName.ValueString()
 	orderID := data.OrderID.ValueString()
 
+	// Use the configured (or default) create timeout to bound order polling.
+	createTimeout, timeoutDiags := data.Timeouts.Create(ctx, defaultPollTimeout)
+	resp.Diagnostics.Append(timeoutDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Poll the order status endpoint until it reaches Completed
-	if err := pollOrderStatus(ctx, cli, mount, roleName, orderID, 30, 2*time.Second, []string{"completed"}); err != nil {
+	if err := pollOrderStatus(ctx, cli, mount, roleName, orderID, createTimeout, defaultPollInterval, []string{"completed"}); err != nil {
 		resp.Diagnostics.AddError(
-			"Order status not awaiting-challenge-fulfillment",
+			"Order status not completed",
 			err.Error())
 		return
 	}
@@ -170,10 +183,10 @@ func (r *PKIExternalCAOrderCertificateResource) Create(ctx context.Context, req 
 	}
 
 	// Map values to Terraform model
-	var diags diag.Diagnostics
 	data.Certificate = types.StringValue(apiModel.Certificate)
-	data.CAChain, diags = types.ListValueFrom(ctx, types.StringType, apiModel.CAChain)
-	resp.Diagnostics.Append(diags...)
+	var listDiags diag.Diagnostics
+	data.CAChain, listDiags = types.ListValueFrom(ctx, types.StringType, apiModel.CAChain)
+	resp.Diagnostics.Append(listDiags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -250,13 +263,23 @@ func (r *PKIExternalCAOrderCertificateResource) Read(ctx context.Context, req re
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
+// Update handles in-place changes, which are limited to the timeouts block.
+// All other configurable fields require replacement. The computed certificate
+// fields are marked unknown in the plan on an in-place update, so they are
+// carried over from the prior state.
 func (r *PKIExternalCAOrderCertificateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// All fields require replacement, so this should never be called
-	var data PKIExternalCAOrderCertificateModel
+	var data, prior PKIExternalCAOrderCertificateModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	data.Certificate = prior.Certificate
+	data.CAChain = prior.CAChain
+	data.PrivateKey = prior.PrivateKey
+	data.SerialNumber = prior.SerialNumber
+
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
