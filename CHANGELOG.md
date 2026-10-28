@@ -5,6 +5,10 @@ FEATURES:
 * `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
 * **New Resources**: Add support for Transit BYOK key import with the `vault_transit_secret_backend_imported_key` resource and `vault_transit_wrapping_key` data source. ([#3090](https://github.com/hashicorp/terraform-provider-vault/pull/3090))
 
+FEATURES:
+
+* `resource/vault_identity_mfa_totp`: Add support for the `enable_self_enrollment` field, allowing users to control whether end users can self-enroll in the TOTP MFA method. Requires Vault Enterpise. ([#2919](https://github.com/hashicorp/terraform-provider-vault/pull/2920))
+
 IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#3093](https://github.com/hashicorp/terraform-provider-vault/pull/3093))
