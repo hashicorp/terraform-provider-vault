@@ -51,9 +51,9 @@ func TestPkiSecretBackendConfigUrls_basic(t *testing.T) {
 		if d != "" {
 			v120Checks = append(v120Checks,
 				resource.TestCheckResourceAttr(
-					resourceName, "delta_crl_distribution_points.#", "1"),
+					resourceName, consts.FieldDeltaCRLDistributionPoints+".#", "1"),
 				resource.TestCheckResourceAttr(
-					resourceName, "delta_crl_distribution_points.0", d),
+					resourceName, consts.FieldDeltaCRLDistributionPoints+".0", d),
 			)
 		}
 

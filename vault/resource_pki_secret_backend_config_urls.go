@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
@@ -55,7 +56,7 @@ func pkiSecretBackendConfigUrlsResource() *schema.Resource {
 				Description: "Specifies the URL values for the CRL Distribution Points field.",
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
-			"delta_crl_distribution_points": {
+			consts.FieldDeltaCRLDistributionPoints: {
 				Type:        schema.TypeList,
 				Optional:    true,
 				Description: "Specifies the URL values for the Delta CRL Distribution Points field.",
@@ -98,7 +99,7 @@ func pkiSecretBackendConfigUrlsCreateUpdate(d *schema.ResourceData, meta interfa
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion120) {
-		data["delta_crl_distribution_points"] = d.Get("delta_crl_distribution_points")
+		data[consts.FieldDeltaCRLDistributionPoints] = d.Get(consts.FieldDeltaCRLDistributionPoints)
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion113) {
@@ -155,7 +156,7 @@ func pkiSecretBackendConfigUrlsRead(d *schema.ResourceData, meta interface{}) er
 	}
 
 	if provider.IsAPISupported(meta, provider.VaultVersion120) {
-		if err := d.Set("delta_crl_distribution_points", config.Data["delta_crl_distribution_points"]); err != nil {
+		if err := d.Set(consts.FieldDeltaCRLDistributionPoints, config.Data[consts.FieldDeltaCRLDistributionPoints]); err != nil {
 			return err
 		}
 	}
