@@ -78,6 +78,10 @@ DEPENDENCIES:
   * `google.golang.org/api` v0.298.0 → v0.301.0
 
 
+BUG FIXES:
+
+* `vault_kv_secret_v2`: Fix crash when neither `data_json` nor `data_json_wo` is set; exactly one of them is now required. ([#3054](https://github.com/hashicorp/terraform-provider-vault/issues/3054))
+
 ## 5.12.0 (September 17, 2026)
 
 FEATURES:

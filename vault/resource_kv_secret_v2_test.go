@@ -9,8 +9,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"reflect"
+	"regexp"
+	"strings"
 	"testing"
 
+	sdkterraform "github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/vault/api"
@@ -63,6 +66,64 @@ func TestAccKVSecretV2_pathRegex(t *testing.T) {
 			}
 			if name != tc.wantName {
 				t.Fatalf("expected name %q, got %q", tc.wantName, name)
+			}
+		})
+	}
+}
+
+func TestKVSecretV2_validateData(t *testing.T) {
+	r := kvSecretV2Resource("vault_kv_secret_v2")
+	tests := map[string]struct {
+		raw     map[string]interface{}
+		wantErr string
+	}{
+		"data_json": {
+			raw: map[string]interface{}{
+				consts.FieldMount:    "kvv2",
+				consts.FieldName:     "foo",
+				consts.FieldDataJSON: `{"zip":"zap"}`,
+			},
+		},
+		"data_json_wo": {
+			raw: map[string]interface{}{
+				consts.FieldMount:             "kvv2",
+				consts.FieldName:              "foo",
+				consts.FieldDataJSONWO:        `{"zip":"zap"}`,
+				consts.FieldDataJSONWOVersion: 1,
+			},
+		},
+		"no data": {
+			raw: map[string]interface{}{
+				consts.FieldMount: "kvv2",
+				consts.FieldName:  "foo",
+			},
+			wantErr: "one of `data_json,data_json_wo` must be specified",
+		},
+		"both": {
+			raw: map[string]interface{}{
+				consts.FieldMount:      "kvv2",
+				consts.FieldName:       "foo",
+				consts.FieldDataJSON:   `{"zip":"zap"}`,
+				consts.FieldDataJSONWO: `{"zip":"zap"}`,
+			},
+			wantErr: "only one of `data_json,data_json_wo` can be specified",
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			diags := r.Validate(sdkterraform.NewResourceConfigRaw(tc.raw))
+			if tc.wantErr == "" {
+				if diags.HasError() {
+					t.Fatalf("unexpected error: %v", diags)
+				}
+				return
+			}
+			var got []string
+			for _, d := range diags {
+				got = append(got, d.Summary+": "+d.Detail)
+			}
+			if !strings.Contains(strings.Join(got, "\n"), tc.wantErr) {
+				t.Fatalf("expected error containing %q, got %v", tc.wantErr, got)
 			}
 		})
 	}
@@ -249,6 +310,23 @@ func TestAccKVSecretV2_data_json_wo(t *testing.T) {
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDataJSONWO, consts.FieldDataJSONWOVersion,
 				consts.FieldDisableRead, consts.FieldDeleteAllVersions),
+		},
+	})
+}
+
+func TestAccKVSecretV2_noData(t *testing.T) {
+	t.Parallel()
+
+	mount := acctest.RandomWithPrefix("tf-kv")
+	name := acctest.RandomWithPrefix("foo")
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		Steps: []resource.TestStep{
+			{
+				Config:      testKVSecretV2Config_noData(mount, name),
+				ExpectError: regexp.MustCompile("one of `data_json,data_json_wo` must be specified"),
+			},
 		},
 	})
 }
@@ -496,6 +574,21 @@ resource "vault_kv_secret_v2" "test" {
   )
   data_json_wo_version = %d
 }`, name, version)
+
+	return ret
+}
+
+func testKVSecretV2Config_noData(mount, name string) string {
+	ret := fmt.Sprintf(`
+%s
+
+`, kvV2MountConfig(mount))
+
+	ret += fmt.Sprintf(`
+resource "vault_kv_secret_v2" "test" {
+  mount = vault_mount.kvv2.path
+  name  = "%s"
+}`, name)
 
 	return ret
 }
