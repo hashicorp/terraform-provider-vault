@@ -5,9 +5,7 @@ package transit_test
 
 import (
 	"crypto/elliptic"
-	"crypto/rand"
 	"fmt"
-	"io"
 	"regexp"
 	"testing"
 
@@ -224,14 +222,8 @@ func TestAccTransitImportedKey_wrappedKey(t *testing.T) {
 		t.Fatalf("failed to extract public key from wrapping key endpoint")
 	}
 
-	rawAESKey1 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey1); err != nil {
-		t.Fatalf("failed to generate random AES key 1: %v", err)
-	}
-	rawAESKey2 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey2); err != nil {
-		t.Fatalf("failed to generate random AES key 2: %v", err)
-	}
+	rawAESKey1 := testutil.RandomAESKey(t)
+	rawAESKey2 := testutil.RandomAESKey(t)
 
 	ciphertext1 := testutil.CreateBYOKCiphertext(t, pubKey, rawAESKey1, "SHA256")
 	ciphertext2 := testutil.CreateBYOKCiphertext(t, pubKey, rawAESKey2, "SHA256")
@@ -514,14 +506,8 @@ func TestAccTransitImportedKey_hashFunctionWithCiphertext(t *testing.T) {
 
 	wrappingKey := testAccTransitImportedKeyWrappingKey(t, mount)
 
-	rawAESKey1 := make([]byte, 32)
-	rawAESKey2 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey1); err != nil {
-		t.Fatalf("failed to generate random AES key 1: %v", err)
-	}
-	if _, err := io.ReadFull(rand.Reader, rawAESKey2); err != nil {
-		t.Fatalf("failed to generate random AES key 2: %v", err)
-	}
+	rawAESKey1 := testutil.RandomAESKey(t)
+	rawAESKey2 := testutil.RandomAESKey(t)
 	ciphertext1 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawAESKey1, "SHA512")
 	ciphertext2 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawAESKey2, "SHA512")
 
@@ -1173,10 +1159,7 @@ func TestAccTransitImportedKey_terraformImportWrappedKey(t *testing.T) {
 
 	rawKeys := make([][]byte, 3)
 	for i := range rawKeys {
-		rawKeys[i] = make([]byte, 32)
-		if _, err := io.ReadFull(rand.Reader, rawKeys[i]); err != nil {
-			t.Fatalf("failed to generate random AES key: %v", err)
-		}
+		rawKeys[i] = testutil.RandomAESKey(t)
 	}
 	ciphertext1 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawKeys[0], "SHA256")
 	ciphertext2 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawKeys[1], "SHA256")

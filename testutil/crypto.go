@@ -90,6 +90,17 @@ func CreateBYOKCiphertext(t *testing.T, wrappingKeyPEM string, keyMaterial []byt
 	return base64.StdEncoding.EncodeToString(combined)
 }
 
+// RandomAESKey generates 32 random bytes, usable as raw AES-256 key material.
+func RandomAESKey(t *testing.T) []byte {
+	t.Helper()
+
+	key := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, key); err != nil {
+		t.Fatalf("failed to generate random AES key: %v", err)
+	}
+	return key
+}
+
 // GenerateECDSAKeyPair generates an ECDSA key on the given curve. It returns the public key as a
 // PKIX PEM block and the private key as PKCS#8 DER, which is the key material format Vault expects
 // inside a wrapped BYOK ciphertext for asymmetric keys.
