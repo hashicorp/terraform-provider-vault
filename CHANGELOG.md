@@ -4,6 +4,7 @@ FEATURES:
 
 * `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
 * **New Resources**: Add support for Transit BYOK key import with the `vault_transit_secret_backend_imported_key` resource and `vault_transit_wrapping_key` data source. ([#3090](https://github.com/hashicorp/terraform-provider-vault/pull/3090))
+* **New Resources**: Add support for Transform BYOK key import with the `vault_transform_transformation_tokenization_imported_key` and `vault_transform_transformation_fpe_imported_key` resources and the `vault_transform_wrapping_key` data source. Requires Vault Enterprise. ([#31125](https://github.com/hashicorp/terraform-provider-vault/pull/31125))
 
 IMPROVEMENTS:
 
