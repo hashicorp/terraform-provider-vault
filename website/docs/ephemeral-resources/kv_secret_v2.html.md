@@ -16,39 +16,50 @@ refer to [the Vault documentation](https://www.vaultproject.io/docs/secrets/kv/k
 
 ```hcl
 resource "vault_mount" "kvv2" {
-  path        = "my-kvv2"
-  type        = "kv"
-  options     = { version = "2" }
+  path    = "my-kvv2"
+  type    = "kv"
+  options = { version = "2" }
 }
 
 resource "vault_kv_secret_v2" "db_root" {
-  mount                      = vault_mount.kvv2.path
-  name                       = "pgx-root"
-  data_json_wo                  = jsonencode(
+  mount        = vault_mount.kvv2.path
+  name         = "pgx-root"
+  data_json_wo = jsonencode(
     {
-      password       = "root-user-password"
+      password = "root-user-password"
     }
   )
   data_json_wo_version = 1
 }
 
-ephemeral "vault_kv_secret_v2" "db_secret" {
-  mount = vault_mount.kvv2.path
-  mount_id = vault_mount.kvv2.id
-  name = vault_kv_secret_v2.db_root.name
+#
+# Read the database root password and manage a backend connection
+#
+data "vault_kv_secret_v2_metadata" "db_secret" {
+  mount    = vault_mount.kvv2.path
+  name     = vault_kv_secret_v2.db_root.name
 }
 
+# Load explicit version to avoid drift between the stateful version and the ephemeral secret data.
+ephemeral "vault_kv_secret_v2" "db_secret" {
+  mount    = vault_mount.kvv2.path
+  mount_id = vault_mount.kvv2.id
+  name     = data.vault_kv_secret_v2_metadata.db_secret.name
+  version  = data.vault_kv_secret_v2_metadata.db_secret.version
+}
+
+# Use the ephemeral secret data and stateful version to control updates of write-only arguments.
 resource "vault_database_secret_backend_connection" "postgres" {
-  backend       = vault_mount.db.path
-  name          = "postrgres-db"
+  backend       = "db-mount"
+  name          = "postgres-db"
   allowed_roles = ["*"]
 
   postgresql {
-    connection_url = "postgresql://{{username}}:{{password}}@localhost:5432/postgres"
+    connection_url          = "postgresql://{{username}}:{{password}}@localhost:5432/postgres"
     password_authentication = ""
-    username = "postgres"
-    password_wo = tostring(ephemeral.vault_kv_secret_v2.db_secret.data.password)
-    password_wo_version = 1
+    username                = "postgres"
+    password_wo             = ephemeral.vault_kv_secret_v2.db_secret.data.password
+    password_wo_version     = data.vault_kv_secret_v2_metadata.db_secret.version
   }
 }
 ```
@@ -88,5 +99,3 @@ The following attributes are exported in addition to the arguments listed above:
 * `deletion_time` - Deletion time for the secret.
 
 * `destroyed` - Indicates whether the secret has been destroyed.
-
-* `custom_metadata` - Custom metadata for the secret.
