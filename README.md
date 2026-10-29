@@ -130,7 +130,7 @@ The following is adapted from [Debugging Providers](https://developer.hashicorp.
 
 ### Starting A Provider In Debug Mode
 
-You can enable debbuging with the `make debug` target:
+You can enable debugging with the `make debug` target:
 
 ```shell
 make debug

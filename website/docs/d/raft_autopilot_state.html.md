@@ -49,9 +49,9 @@ In addition to the arguments above, the following attributes are exported:
 
 * `redundancy_zones` - Additional output related to redundancy zones stored as a serialized map of strings.
 
-* `servers_json` - Additionaly output related to servers in the cluster.
+* `servers_json` - Additionally output related to servers in the cluster.
 
-* `servers` - Additionaly output related to servers in the cluster stored as a serialized map of strings.
+* `servers` - Additionally output related to servers in the cluster stored as a serialized map of strings.
 
 * `upgrade_info_json` - Additional output related to upgrade information.
 
