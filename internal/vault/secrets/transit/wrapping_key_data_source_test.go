@@ -37,10 +37,13 @@ func TestAccTransitWrappingKeyDataSource_basic(t *testing.T) {
 
 func testConfigTransitWrappingKeyDataSource(mount string) string {
 	return fmt.Sprintf(`
-%s
+resource "vault_mount" "test" {
+  path = %q
+  type = "transit"
+}
 
 data "vault_transit_wrapping_key" "test" {
   mount = vault_mount.test.path
 }
-`, testConfigTransitMount(mount))
+`, mount)
 }

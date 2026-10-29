@@ -4,9 +4,8 @@
 package transit_test
 
 import (
-	"crypto/rand"
+	"crypto/elliptic"
 	"fmt"
-	"io"
 	"regexp"
 	"testing"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 	vaultclient "github.com/hashicorp/vault/api"
 )
 
@@ -62,7 +62,7 @@ func TestAccTransitImportedKey_publicKey(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("transit-key")
 	resourceAddress := "vault_transit_secret_backend_imported_key.test"
 
-	pubKey := generateTestECDSAPublicKeyPEM(t)
+	pubKey, _ := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -222,17 +222,11 @@ func TestAccTransitImportedKey_wrappedKey(t *testing.T) {
 		t.Fatalf("failed to extract public key from wrapping key endpoint")
 	}
 
-	rawAESKey1 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey1); err != nil {
-		t.Fatalf("failed to generate random AES key 1: %v", err)
-	}
-	rawAESKey2 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey2); err != nil {
-		t.Fatalf("failed to generate random AES key 2: %v", err)
-	}
+	rawAESKey1 := testutil.RandomAESKey(t)
+	rawAESKey2 := testutil.RandomAESKey(t)
 
-	ciphertext1 := createTransitBYOKCiphertext(t, pubKey, rawAESKey1)
-	ciphertext2 := createTransitBYOKCiphertext(t, pubKey, rawAESKey2)
+	ciphertext1 := testutil.CreateBYOKCiphertext(t, pubKey, rawAESKey1, "SHA256")
+	ciphertext2 := testutil.CreateBYOKCiphertext(t, pubKey, rawAESKey2, "SHA256")
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -418,9 +412,9 @@ func TestAccTransitImportedKey_backfillPrivateKey(t *testing.T) {
 	resourceAddress := "vault_transit_secret_backend_imported_key.test"
 
 	wrappingKey := testAccTransitImportedKeyWrappingKey(t, mount)
-	pubKey1, privKey1 := generateTestECDSAKeyPair(t)
-	pubKey2 := generateTestECDSAPublicKeyPEM(t)
-	privKey1Ciphertext := createTransitBYOKCiphertext(t, wrappingKey, privKey1)
+	pubKey1, privKey1 := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
+	pubKey2, _ := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
+	privKey1Ciphertext := testutil.CreateBYOKCiphertext(t, wrappingKey, privKey1, "SHA256")
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -512,16 +506,10 @@ func TestAccTransitImportedKey_hashFunctionWithCiphertext(t *testing.T) {
 
 	wrappingKey := testAccTransitImportedKeyWrappingKey(t, mount)
 
-	rawAESKey1 := make([]byte, 32)
-	rawAESKey2 := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, rawAESKey1); err != nil {
-		t.Fatalf("failed to generate random AES key 1: %v", err)
-	}
-	if _, err := io.ReadFull(rand.Reader, rawAESKey2); err != nil {
-		t.Fatalf("failed to generate random AES key 2: %v", err)
-	}
-	ciphertext1 := createTransitBYOKCiphertextWithHash(t, wrappingKey, rawAESKey1, "SHA512")
-	ciphertext2 := createTransitBYOKCiphertextWithHash(t, wrappingKey, rawAESKey2, "SHA512")
+	rawAESKey1 := testutil.RandomAESKey(t)
+	rawAESKey2 := testutil.RandomAESKey(t)
+	ciphertext1 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawAESKey1, "SHA512")
+	ciphertext2 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawAESKey2, "SHA512")
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
@@ -610,7 +598,7 @@ func TestAccTransitImportedKey_keyMaterialRemovedFromConfig(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("transit-key")
 	resourceAddress := "vault_transit_secret_backend_imported_key.test"
 
-	pubKey := generateTestECDSAPublicKeyPEM(t)
+	pubKey, _ := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -661,7 +649,7 @@ func TestAccTransitImportedKey_optionalFields(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("transit-key")
 	resourceAddress := "vault_transit_secret_backend_imported_key.test"
 
-	pubKey := generateTestRSAPublicKeyPEM(t)
+	pubKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -793,7 +781,7 @@ func TestAccTransitImportedKey_rejectDisablingOneWayFlags(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("transit-key")
 	resourceAddress := "vault_transit_secret_backend_imported_key.test"
 
-	pubKey := generateTestRSAPublicKeyPEM(t)
+	pubKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -860,8 +848,8 @@ func TestAccTransitImportedKey_versionImportedDuringUpdate(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("transit-key")
 	resourceAddress := "vault_transit_secret_backend_imported_key.test"
 
-	pubKey1 := generateTestECDSAPublicKeyPEM(t)
-	pubKey2 := generateTestECDSAPublicKeyPEM(t)
+	pubKey1, _ := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
+	pubKey2, _ := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -953,8 +941,8 @@ func TestAccTransitImportedKey_importVersionType(t *testing.T) {
 	keyName := acctest.RandomWithPrefix("transit-key")
 	resourceAddress := "vault_transit_secret_backend_imported_key.test"
 
-	pubKeyP256 := generateTestECDSAPublicKeyPEM(t)
-	pubKeyP384 := generateTestECDSAP384PublicKeyPEM(t)
+	pubKeyP256, _ := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
+	pubKeyP384, _ := testutil.GenerateECDSAKeyPair(t, elliptic.P384())
 
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
@@ -1069,9 +1057,9 @@ func TestAccTransitImportedKey_terraformImportPublicKey(t *testing.T) {
 	resourceAddress := "vault_transit_secret_backend_imported_key.test"
 
 	wrappingKey := testAccTransitImportedKeyWrappingKey(t, mount)
-	pubKey1, privKey1 := generateTestECDSAKeyPair(t)
-	pubKey2 := generateTestECDSAPublicKeyPEM(t)
-	privKey1Ciphertext := createTransitBYOKCiphertext(t, wrappingKey, privKey1)
+	pubKey1, privKey1 := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
+	pubKey2, _ := testutil.GenerateECDSAKeyPair(t, elliptic.P256())
+	privKey1Ciphertext := testutil.CreateBYOKCiphertext(t, wrappingKey, privKey1, "SHA256")
 
 	importKeyVaultSetup(t, mount, keyName, map[string]any{
 		"type":       "ecdsa-p256",
@@ -1171,14 +1159,11 @@ func TestAccTransitImportedKey_terraformImportWrappedKey(t *testing.T) {
 
 	rawKeys := make([][]byte, 3)
 	for i := range rawKeys {
-		rawKeys[i] = make([]byte, 32)
-		if _, err := io.ReadFull(rand.Reader, rawKeys[i]); err != nil {
-			t.Fatalf("failed to generate random AES key: %v", err)
-		}
+		rawKeys[i] = testutil.RandomAESKey(t)
 	}
-	ciphertext1 := createTransitBYOKCiphertext(t, wrappingKey, rawKeys[0])
-	ciphertext2 := createTransitBYOKCiphertext(t, wrappingKey, rawKeys[1])
-	ciphertext3 := createTransitBYOKCiphertextWithHash(t, wrappingKey, rawKeys[2], "SHA512")
+	ciphertext1 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawKeys[0], "SHA256")
+	ciphertext2 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawKeys[1], "SHA256")
+	ciphertext3 := testutil.CreateBYOKCiphertext(t, wrappingKey, rawKeys[2], "SHA512")
 
 	importKeyVaultSetup(t, mount, keyName, map[string]any{
 		"type":       "aes256-gcm96",
