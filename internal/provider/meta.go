@@ -37,28 +37,30 @@ const (
 var (
 	MaxHTTPRetriesCCC int
 
-	VaultVersion110  = version.Must(version.NewSemver(consts.VaultVersion110))
-	VaultVersion111  = version.Must(version.NewSemver(consts.VaultVersion111))
-	VaultVersion112  = version.Must(version.NewSemver(consts.VaultVersion112))
-	VaultVersion113  = version.Must(version.NewSemver(consts.VaultVersion113))
-	VaultVersion114  = version.Must(version.NewSemver(consts.VaultVersion114))
-	VaultVersion115  = version.Must(version.NewSemver(consts.VaultVersion115))
-	VaultVersion116  = version.Must(version.NewSemver(consts.VaultVersion116))
-	VaultVersion117  = version.Must(version.NewSemver(consts.VaultVersion117))
-	VaultVersion118  = version.Must(version.NewSemver(consts.VaultVersion118))
-	VaultVersion1185 = version.Must(version.NewSemver(consts.VaultVersion1185))
-	VaultVersion119  = version.Must(version.NewSemver(consts.VaultVersion119))
-	VaultVersion1192 = version.Must(version.NewSemver(consts.VaultVersion1192))
-	VaultVersion1194 = version.Must(version.NewSemver(consts.VaultVersion1194))
-	VaultVersion120  = version.Must(version.NewSemver(consts.VaultVersion120))
-	VaultVersion121  = version.Must(version.NewSemver(consts.VaultVersion121))
-	VaultVersion1215 = version.Must(version.NewSemver(consts.VaultVersion1215))
-	VaultVersion200  = version.Must(version.NewSemver(consts.VaultVersion200))
-	VaultVersion201  = version.Must(version.NewSemver(consts.VaultVersion201))
-	VaultVersion203  = version.Must(version.NewSemver(consts.VaultVersion203))
-	VaultVersion205  = version.Must(version.NewSemver(consts.VaultVersion205))
-	VaultVersion210  = version.Must(version.NewSemver(consts.VaultVersion210))
-	VaultVersion220  = version.Must(version.NewSemver(consts.VaultVersion220))
+	VaultVersion110   = version.Must(version.NewSemver(consts.VaultVersion110))
+	VaultVersion111   = version.Must(version.NewSemver(consts.VaultVersion111))
+	VaultVersion112   = version.Must(version.NewSemver(consts.VaultVersion112))
+	VaultVersion113   = version.Must(version.NewSemver(consts.VaultVersion113))
+	VaultVersion114   = version.Must(version.NewSemver(consts.VaultVersion114))
+	VaultVersion115   = version.Must(version.NewSemver(consts.VaultVersion115))
+	VaultVersion116   = version.Must(version.NewSemver(consts.VaultVersion116))
+	VaultVersion117   = version.Must(version.NewSemver(consts.VaultVersion117))
+	VaultVersion118   = version.Must(version.NewSemver(consts.VaultVersion118))
+	VaultVersion1185  = version.Must(version.NewSemver(consts.VaultVersion1185))
+	VaultVersion119   = version.Must(version.NewSemver(consts.VaultVersion119))
+	VaultVersion1192  = version.Must(version.NewSemver(consts.VaultVersion1192))
+	VaultVersion1194  = version.Must(version.NewSemver(consts.VaultVersion1194))
+	VaultVersion11916 = version.Must(version.NewSemver(consts.VaultVersion11916))
+	VaultVersion12010 = version.Must(version.NewSemver(consts.VaultVersion12010))
+	VaultVersion120   = version.Must(version.NewSemver(consts.VaultVersion120))
+	VaultVersion121   = version.Must(version.NewSemver(consts.VaultVersion121))
+	VaultVersion1215  = version.Must(version.NewSemver(consts.VaultVersion1215))
+	VaultVersion200   = version.Must(version.NewSemver(consts.VaultVersion200))
+	VaultVersion201   = version.Must(version.NewSemver(consts.VaultVersion201))
+	VaultVersion203   = version.Must(version.NewSemver(consts.VaultVersion203))
+	VaultVersion210   = version.Must(version.NewSemver(consts.VaultVersion210))
+	VaultVersion211   = version.Must(version.NewSemver(consts.VaultVersion211))
+	VaultVersion220   = version.Must(version.NewSemver(consts.VaultVersion220))
 
 	TokenTTLMinRecommended = time.Minute * 15
 )
@@ -246,6 +248,10 @@ func (p *ProviderMeta) setClient() error {
 	if err != nil {
 		return fmt.Errorf("failed to configure Vault API: %s", err)
 	}
+
+	// lookup-self is resolved from the token's namespace, so the client must not
+	// inherit VAULT_NAMESPACE before the token is inspected.
+	client.ClearNamespace()
 
 	// setting this is critical for proper namespace handling
 	client.SetCloneHeaders(true)

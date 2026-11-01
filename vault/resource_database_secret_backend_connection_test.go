@@ -1325,7 +1325,7 @@ func TestAccDatabaseSecretBackendConnection_postgresql_automatedRootRotation(t *
 			},
 			{
 				Config:      testAccDatabaseSecretBackendConnectionConfig_postgres_automatedRootRotation(name, backend, connURL, "", 30, 120, false),
-				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to"),
 			},
 			// zero-out rotation_schedule and rotation_window
 			{

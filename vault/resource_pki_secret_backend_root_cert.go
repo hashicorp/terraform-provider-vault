@@ -108,6 +108,9 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 
 			}
 
+			if err := pkiValidateKeyTypeField(d, meta); err != nil {
+				return err
+			}
 			return nil
 		},
 
@@ -176,7 +179,7 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 			consts.FieldFormat: {
 				Type:         schema.TypeString,
 				Optional:     true,
-				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion205),
+				Description:  fmt.Sprintf(`The format of data. Values "pkcs12_bundle" and "jks_bundle" require Vault version %s or later.`, consts.VaultVersion210),
 				ForceNew:     true,
 				Default:      "pem",
 				ValidateFunc: validation.StringInSlice([]string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, false),
@@ -233,7 +236,15 @@ integrity format (PBMAC1).`,
 				Description:  "The desired key type.",
 				ForceNew:     true,
 				Default:      "rsa",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519", "ml-dsa"}, false),
+			},
+			consts.FieldParameterSet: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "The parameter set for ml-dsa.",
+				ForceNew:     true,
+				ValidateFunc: validation.StringInSlice([]string{"ml-dsa-44", "ml-dsa-65", "ml-dsa-87"}, false),
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
@@ -533,6 +544,10 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	// Fields only used when we are generating a key
 	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
+		// For parameter set, this is only supported in Vault 2.2.0+
+		if provider.IsAPISupported(meta, provider.VaultVersion220) {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldParameterSet)
+		}
 	}
 
 	if isIssuerAPISupported {
@@ -547,7 +562,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	}
 
 	// Only add additional format parameters if supported
-	if provider.IsAPISupported(meta, provider.VaultVersion205) {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
 		rootCertAPIFields = append(rootCertAPIFields,
 			consts.FieldPKCS12Password,
 			consts.FieldPKCS12Encoder,

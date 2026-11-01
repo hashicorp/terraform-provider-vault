@@ -484,6 +484,7 @@ func TestTransitSecretBackendKey_managedKey(t *testing.T) {
 						"key_bits":   "2048",
 						"key_type":   "RSA",
 						"kms_key":    "12345678-1234-1234-1234-123456789012",
+						"region":     "us-east-1",
 					}
 
 					path := fmt.Sprintf("sys/managed-keys/awskms/%s", managedKeyName)

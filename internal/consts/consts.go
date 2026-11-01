@@ -68,6 +68,7 @@ const (
 	FieldPathFQ                             = "path_fq"
 	FieldPathsFQ                            = "paths_fq"
 	FieldData                               = "data"
+	FieldDisabled                           = "disabled"
 	FieldDisableRead                        = "disable_read"
 	FieldWriteFields                        = "write_fields"
 	FieldWriteData                          = "write_data"
@@ -77,6 +78,7 @@ const (
 	FieldValues                             = "values"
 	FieldGroupPolicyApplicationMode         = "group_policy_application_mode"
 	FieldVersion                            = "version"
+	FieldImportVersionType                  = "import_version_type"
 	FieldMetadata                           = "metadata"
 	FieldNames                              = "names"
 	FieldLeaseID                            = "lease_id"
@@ -278,6 +280,7 @@ const (
 	FieldDefaultRole                        = "default_role"
 	FieldProviderConfig                     = "provider_config"
 	FieldNamespaceInState                   = "namespace_in_state"
+	FieldUnsupportedCriticalCertExtensions  = "unsupported_critical_cert_extensions"
 	FieldIdentityGroupIDs                   = "identity_group_ids"
 	FieldEntityAlias                        = "entity_alias"
 	FieldIdentityEntityIDs                  = "identity_entity_ids"
@@ -336,6 +339,8 @@ const (
 	FieldTemplate                           = "template"
 	FieldTemplates                          = "templates"
 	FieldTweakSource                        = "tweak_source"
+	FieldFpeAlgorithm                       = "fpe_algorithm"
+	FieldMaxTweakLen                        = "max_tweak_len"
 	FieldMappingMode                        = "mapping_mode"
 	FieldStores                             = "stores"
 	FieldConvergent                         = "convergent"
@@ -488,6 +493,7 @@ const (
 	FieldRevocationSignatureAlgorithm       = "revocation_signature_algorithm"
 	FieldIssuingCertificates                = "issuing_certificates"
 	FieldCRLDistributionPoints              = "crl_distribution_points"
+	FieldDeltaCRLDistributionPoints         = "delta_crl_distribution_points"
 	FieldOCSPServers                        = "ocsp_servers"
 	FieldEnableAIAURLTemplating             = "enable_aia_url_templating"
 	FieldCredentialConfig                   = "credential_config"
@@ -670,6 +676,33 @@ const (
 	FieldProvider                           = "provider"
 	FieldAllowedOrigins                     = "allowed_origins"
 	FieldAllowedHeaders                     = "allowed_headers"
+	FieldAcmeAccountName                    = "acme_account_name"
+	FieldAllowedDomainOptions               = "allowed_domain_options"
+	FieldAllowedChallengeTypes              = "allowed_challenge_types"
+	FieldCsrGenerateKeyType                 = "csr_generate_key_type"
+	FieldCsrIdentifierPopulation            = "csr_identifier_population"
+	FieldCreationDate                       = "creation_date"
+	FieldForce                              = "force"
+	FieldIdentifiers                        = "identifiers"
+	FieldIdentifier                         = "identifier"
+	FieldExpires                            = "expires"
+	FieldLastUpdatedDate                    = "last_updated_date"
+	FieldDnsProviderName                    = "dns_provider_name"
+	FieldDnsProviderType                    = "dns_provider_type"
+	FieldNameserver                         = "nameserver"
+	FieldTsigKeyName                        = "tsig_key_name"
+	FieldTsigSecret                         = "tsig_secret"
+	FieldTsigSecretWO                       = "tsig_secret_wo"
+	FieldTsigSecretWOVersion                = "tsig_secret_wo_version"
+	FieldTsigAlgorithm                      = "tsig_algorithm"
+	FieldHostedZoneID                       = "hosted_zone_id"
+	FieldAccessKeyID                        = "access_key_id"
+	FieldSecretAccessKey                    = "secret_access_key"
+	FieldSecretAccessKeyWO                  = "secret_access_key_wo"
+	FieldSecretAccessKeyWOVersion           = "secret_access_key_wo_version"
+	FieldZoneName                           = "zone_name"
+	FieldImpersonateServiceAccount          = "impersonate_service_account"
+	FieldDefaultNameserver                  = "default_nameserver"
 
 	FieldInput                       = "input"
 	FieldKeyVersion                  = "key_version"
@@ -682,6 +715,9 @@ const (
 	FieldSignatureAlgorithm          = "signature_algorithm"
 	FieldMarshalingAlgorithm         = "marshaling_algorithm"
 	FieldSaltLength                  = "salt_length"
+	FieldRsaOaepHash                 = "rsa_oaep_hash"
+	FieldEncryptionMode              = "encryption_mode"
+	FieldPaddingScheme               = "padding_scheme"
 	FieldSignature                   = "signature"
 	FieldBatchResults                = "batch_results"
 	FieldHMAC                        = "hmac"
@@ -713,6 +749,12 @@ const (
 	FieldTokenBoundCIDRs             = "token_bound_cidrs"
 	FieldLocalSecretIDs              = "local_secret_ids"
 	FieldTokenNumUses                = "token_num_uses"
+	FieldDriver                      = "driver"
+	FieldConnectionString            = "connection_string"
+	FieldSupportedTransformations    = "supported_transformations"
+	FieldMaxOpenConnections          = "max_open_connections"
+	FieldMaxIdleConnections          = "max_idle_connections"
+	FieldMaxConnectionLifetime       = "max_connection_lifetime"
 	// OS Secrets Engine fields
 	FieldSSHHostKey                = "ssh_host_key"
 	FieldSSHHostKeyTrustOnFirstUse = "ssh_host_key_trust_on_first_use"
@@ -771,6 +813,11 @@ const (
 	FieldSupportsDecryption                   = "supports_decryption"
 	FieldSupportsDerivation                   = "supports_derivation"
 	FieldSupportsSigning                      = "supports_signing"
+	FieldHashFunction                         = "hash_function"
+	FieldAllowRotation                        = "allow_rotation"
+	FieldImportedKeyAllowRotation             = "imported_key_allow_rotation"
+	FieldLatestVersionType                    = "latest_version_type"
+	FieldImportedKey                          = "imported_key"
 	FieldLengths                              = "lengths"
 	FieldExcludeCIDRList                      = "exclude_cidr_list"
 	FieldPort                                 = "port"
@@ -840,6 +887,18 @@ const (
 	FieldValidateAssertionSignature = "validate_assertion_signature"
 	FieldValidateResponseSignature  = "validate_response_signature"
 
+	// TPM auth backend fields
+	FieldCertTTL        = "cert_ttl"
+	FieldCALifetime     = "ca_lifetime"
+	FieldCASoftExpiry   = "ca_soft_expiry"
+	FieldDefaultCertTTL = "default_cert_ttl"
+	FieldTPMEKPublicKey = "tpm_ek_public_key"
+	FieldTPMID          = "tpm_id"
+	FieldTPMGroupID     = "tpm_group_id"
+	FieldTPMIDs         = "tpm_ids"
+	FieldTPMGroupIDs    = "tpmgroup_ids"
+	FieldMemberTPMIDs   = "member_tpm_ids"
+
 	/*
 		agent registry fields
 	*/
@@ -849,6 +908,9 @@ const (
 	FieldCreationTime                 = "creation_time"
 	FieldLastUpdatedTime              = "last_updated_time"
 	FieldOptionalAuthorizationDetails = "optional_authorization_details"
+	FieldAuthorizationDetailsClaim    = "authorization_details_claim"
+	FieldUniqueIDClaim                = "unique_id_claim"
+	FieldActorClaim                   = "actor_claim"
 
 	/*
 		raft snapshot agent config fields
@@ -925,6 +987,14 @@ const (
 	FieldAddGroupAliases            = "add_group_aliases"
 	FieldTokenExplicitMaxTTL        = "token_explicit_max_ttl"
 	FieldTokenNoDefaultPolicy       = "token_no_default_policy"
+	FieldCertificateWO              = "certificate_wo"
+	FieldCertificateWOVersion       = "certificate_wo_version"
+	FieldCiphertextWO               = "ciphertext_wo"
+	FieldCiphertextWOVersion        = "ciphertext_wo_version"
+
+	// Azure seamless rotation
+	FieldSeamlessRotation    = "seamless_rotation"
+	FieldRotationGracePeriod = "rotation_grace_period"
 
 	/*
 		common environment variables
@@ -1005,29 +1075,31 @@ const (
 	/*
 		Vault version constants
 	*/
-	VaultVersion190  = "1.9.0"
-	VaultVersion110  = "1.10.0"
-	VaultVersion111  = "1.11.0"
-	VaultVersion112  = "1.12.0"
-	VaultVersion113  = "1.13.0"
-	VaultVersion114  = "1.14.0"
-	VaultVersion115  = "1.15.0"
-	VaultVersion116  = "1.16.0"
-	VaultVersion117  = "1.17.0"
-	VaultVersion118  = "1.18.0"
-	VaultVersion1185 = "1.18.5"
-	VaultVersion119  = "1.19.0"
-	VaultVersion1192 = "1.19.2"
-	VaultVersion1194 = "1.19.4"
-	VaultVersion120  = "1.20.0"
-	VaultVersion121  = "1.21.0"
-	VaultVersion1215 = "1.21.5"
-	VaultVersion200  = "2.0.0"
-	VaultVersion201  = "2.0.1"
-	VaultVersion203  = "2.0.3"
-	VaultVersion205  = "2.0.5"
-	VaultVersion210  = "2.1.0"
-	VaultVersion220  = "2.2.0"
+	VaultVersion190   = "1.9.0"
+	VaultVersion110   = "1.10.0"
+	VaultVersion111   = "1.11.0"
+	VaultVersion112   = "1.12.0"
+	VaultVersion113   = "1.13.0"
+	VaultVersion114   = "1.14.0"
+	VaultVersion115   = "1.15.0"
+	VaultVersion116   = "1.16.0"
+	VaultVersion117   = "1.17.0"
+	VaultVersion118   = "1.18.0"
+	VaultVersion1185  = "1.18.5"
+	VaultVersion119   = "1.19.0"
+	VaultVersion1192  = "1.19.2"
+	VaultVersion1194  = "1.19.4"
+	VaultVersion11916 = "1.19.16"
+	VaultVersion12010 = "1.20.10"
+	VaultVersion120   = "1.20.0"
+	VaultVersion121   = "1.21.0"
+	VaultVersion1215  = "1.21.5"
+	VaultVersion200   = "2.0.0"
+	VaultVersion201   = "2.0.1"
+	VaultVersion203   = "2.0.3"
+	VaultVersion210   = "2.1.0"
+	VaultVersion211   = "2.1.1"
+	VaultVersion220   = "2.2.0"
 
 	/*
 		CloudFoundry auth backend field names
@@ -1050,6 +1122,31 @@ const (
 	FieldSigningTime              = "signing_time"
 
 	/*
+		Vault SCIM Support
+	*/
+
+	FieldSCIMClientName                  = "client_name"
+	FieldAccessGrantPrincipal            = "access_grant_principal"
+	FieldDefaultSchemaVersion            = "default_schema_version"
+	FieldAllowUserAdoption               = "allow_user_adoption"
+	FieldAllowGroupAdoption              = "allow_group_adoption"
+	FieldAllowedExtraAliasMountAccessors = "allowed_extra_alias_mount_accessors"
+	FieldMaxActiveTokens                 = "max_active_tokens"
+	FieldMaxTokenTTL                     = "max_token_ttl"
+	FieldDeleteLinkedResources           = "delete_linked_resources"
+	FieldDeletionPolicy                  = "deletion_policy"
+	FieldDeleting                        = "deleting"
+	FieldAliasMountAccessor              = "alias_mount_accessor"
+
+	// deletion_policy accepted values (Terraform-facing enum)
+	DeletionPolicyOrphanChildResources = "orphan_child_resources"
+	DeletionPolicyDeleteChildResources = "delete_child_resources"
+
+	// Vault DELETE query param names deletion_policy maps onto
+	SCIMDeleteQueryParamUnlinkResources       = "unlink-resources"
+	SCIMDeleteQueryParamDeleteLinkedResources = "delete-linked-resources"
+
+	/*
 		Vault auth methods
 	*/
 	AuthMethodAWS      = "aws"
@@ -1069,7 +1166,7 @@ const (
 	AuthTypeRootCreds = "root_creds"
 	AuthTypePluginWIF = "plugin_wif"
 	AuthTypeMSI       = "msi"
-	AuthTypeAKSWI     = "aks_wi"
+	AuthTypeAKSWIF    = "aks_wif"
 
 	/*
 		misc. path related constants

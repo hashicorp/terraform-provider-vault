@@ -23,8 +23,10 @@ import (
 	kerberosauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/kerberos"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/radius"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/spiffe"
+	tpmauth "github.com/hashicorp/terraform-provider-vault/internal/vault/auth/tpm"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/auth/userpass"
 	ephemeralgeneric "github.com/hashicorp/terraform-provider-vault/internal/vault/generic"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/identity"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/keymgmt"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/alicloud"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/azure"
@@ -32,8 +34,10 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/gcpkms"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
+	pkibyok "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/transit"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
@@ -241,6 +245,10 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 	return append([]func() resource.Resource{
 		spiffe.NewSpiffeAuthConfigResource,
 		spiffe.NewSpiffeAuthRoleResource,
+		identity.NewIdentityTPMResource,
+		identity.NewIdentityTPMGroupResource,
+		tpmauth.NewTPMAuthBackendConfigResource,
+		tpmauth.NewTPMAuthBackendRoleResource,
 		cloudfoundry.NewCFAuthBackendConfigResource,
 		cloudfoundry.NewCFAuthBackendRoleResource,
 		userpass.NewUserpassAuthUserResource,
@@ -274,6 +282,12 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCAOrderResource,
 		pki_external_ca.NewPKIExternalCAOrderChallengeFulfilledResource,
 		pki_external_ca.NewPKIExternalCAOrderCertificateResource,
+		pki_external_ca.NewPKIExternalCADNSProviderAWSRoute53Resource,
+		pki_external_ca.NewPKIExternalCADNSProviderRFC2136Resource,
+		pki_external_ca.NewPKIExternalCADNSProviderGCPResource,
+		pki_external_ca.NewPKIExternalCADNSProviderAzureResource,
+		pkibyok.NewPKIExportKeyResource,
+		pkibyok.NewPKIWrappedKeyImportResource,
 		sys.NewActivationFlagsResource,
 		keymgmt.NewKeyResource,
 		keymgmt.NewAWSKMSResource,
@@ -287,6 +301,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		kerberosauth.NewKerberosAuthBackendConfigResource,
 		kerberosauth.NewKerberosAuthBackendLDAPConfigResource,
 		kerberosauth.NewKerberosAuthBackendGroupResource,
+		transit.NewTransitImportedKeyResource,
 	}, testResources()...)
 }
 
@@ -297,6 +312,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		ephemeralsecrets.NewGenericEphemeralSecretResource,
 		ephemeralsecrets.NewAzureStaticCredsEphemeralSecretResource,
 		ephemeralsecrets.NewAzureAccessCredentialsEphemeralResource,
+		ephemeralsecrets.NewAzureAccessTokenEphemeralResource,
 		ephemeralsecrets.NewGCPServiceAccountKeyEphemeralResource,
 		ephemeralsecrets.NewGCPOAuth2AccessTokenEphemeralResource,
 		ephemeralsecrets.NewAWSAccessCredentialsEphemeralSecretResource,
@@ -316,6 +332,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		gcpkms.NewGCPKMSReencryptEphemeralResource,
 		gcpkms.NewGCPKMSSignEphemeralResource,
 		kerberosauth.NewKerberosAuthBackendLoginEphemeralResource,
+		pkibyok.NewPKICAKeyExportEphemeralResource,
 	}
 }
 
@@ -331,5 +348,6 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 		gcpkms.NewGCPKMSVerifyDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
+		transit.NewWrappingKeyDataSource,
 	}
 }

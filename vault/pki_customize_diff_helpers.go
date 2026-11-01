@@ -6,6 +6,7 @@ package vault
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -13,8 +14,23 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 )
 
+func pkiValidateKeyTypeField(d *schema.ResourceDiff, meta interface{}) error {
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		return nil
+	}
+	keyType, ok := d.GetOk(consts.FieldKeyType)
+	if !ok {
+		return nil
+	}
+	keyTypeStr := keyType.(string)
+	if strings.ToLower(keyTypeStr) == "ml-dsa" {
+		return fmt.Errorf("ml-dsa is only supported on Vault %s or later", consts.VaultVersion220)
+	}
+	return nil
+}
+
 func pkiValidateFormatField(d *schema.ResourceDiff, meta interface{}) error {
-	if provider.IsAPISupported(meta, provider.VaultVersion205) {
+	if provider.IsAPISupported(meta, provider.VaultVersion210) {
 		return nil
 	}
 
@@ -26,7 +42,7 @@ func pkiValidateFormatField(d *schema.ResourceDiff, meta interface{}) error {
 	formatStr := format.(string)
 	switch formatStr {
 	case "pkcs12_bundle", "jks_bundle":
-		return fmt.Errorf("%q format is only supported on Vault %s or later", formatStr, consts.VaultVersion205)
+		return fmt.Errorf("%q format is only supported on Vault %s or later", formatStr, consts.VaultVersion210)
 	default:
 		return nil
 	}

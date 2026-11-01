@@ -77,6 +77,13 @@ The following arguments are supported:
   Only used when `type` is "tokenization".
   **Note:** This field is immutable and cannot be changed after creation. Changing this value will force recreation of the resource.
 * `convergent` - (Optional) If true, multiple transformations of the same plaintext will produce the same ciphertext. Only used when `type` is "tokenization". Default: `false`
+* `max_tweak_len` - (Optional) The maximum length of a tweak value, in bytes. Only valid when `type` is "fpe". **Note:** This field is immutable and cannot be changed after creation. Changing this value will force recreation of the resource.
+
+## Attributes Reference
+
+In addition to the above arguments, the following attributes are exported:
+
+* `fpe_algorithm` - The FPE algorithm used by this transformation. Either `"ff1"` (default for new FPE transformations) or `"ff3-1"` (legacy). Only populated when `type` is "fpe".
 
 ## Tutorials
 

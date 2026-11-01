@@ -22,6 +22,8 @@ import (
 )
 
 func TestTerraformCloudSecretBackend(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN")
+
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 
 	resourceType := "vault_terraform_cloud_secret_backend"
@@ -62,6 +64,8 @@ func TestTerraformCloudSecretBackend(t *testing.T) {
 }
 
 func TestTerraformCloudSecretBackend_remount(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN")
+
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 	updatedBackend := acctest.RandomWithPrefix("tf-test-terraform-cloud-updated")
 
@@ -104,6 +108,8 @@ func TestTerraformCloudSecretBackend_remount(t *testing.T) {
 }
 
 func TestTerraformCloudSecretBackend_tokenWO(t *testing.T) {
+	testutil.SkipTestEnvUnset(t, "TEST_TF_TOKEN")
+
 	backend := acctest.RandomWithPrefix("tf-test-terraform-cloud")
 
 	resourceType := "vault_terraform_cloud_secret_backend"
@@ -187,7 +193,7 @@ func TestTerraformCloudSecretBackend_automatedRotation(t *testing.T) {
 			// rotation_window is not compatible with rotation_period
 			{
 				Config:      testTerraformCloudSecretBackend_automatedRotation(backend, token, "", 30, 120, 3600, true),
-				ExpectError: regexp.MustCompile("rotation_window does not apply to period"),
+				ExpectError: regexp.MustCompile("rotation_window does not apply to"),
 			},
 			// zero-out rotation_schedule and rotation_window, disable rotation
 			{

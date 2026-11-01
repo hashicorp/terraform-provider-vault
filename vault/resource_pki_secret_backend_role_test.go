@@ -386,6 +386,27 @@ func TestPkiSecretBackendRole_basic(t *testing.T) {
 				Config: testPkiSecretBackendRoleConfig_basic(name, backend, 3600, 7200, "serial_number_source = \"json\""),
 				Check:  resource.TestCheckResourceAttr(resourceName, "serial_number_source", "json"),
 			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion220), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_mldsa(name, backend, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "key_type", "ml-dsa"),
+				),
+			},
+			{
+				SkipFunc: func() (bool, error) {
+					meta := testProvider.Meta().(*provider.ProviderMeta)
+					return !meta.IsAPISupported(provider.VaultVersion220), nil
+				},
+				Config: testPkiSecretBackendRoleConfig_mldsa(name, backend, `parameter_set = "ml-dsa-65"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "key_type", "ml-dsa"),
+					resource.TestCheckResourceAttr(resourceName, "parameter_set", "ml-dsa-65"),
+				),
+			},
 		},
 	})
 }
@@ -449,6 +470,34 @@ resource "vault_pki_secret_backend_role" "test" {
   cn_validations					 = ["email", "hostname"]
 }
 `, path, name, roleTTL, maxTTL, extraConfig)
+}
+
+func testPkiSecretBackendRoleConfig_mldsa(name, path string, extraConfig string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "pki" {
+  path = "%s"
+  type = "pki"
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend     = vault_mount.pki.path
+  type        = "internal"
+  common_name = "test"
+  ttl         = "86400"
+  issuer_name = "root-a"
+}
+
+resource "vault_pki_secret_backend_role" "test" {
+  depends_on            = ["vault_pki_secret_backend_root_cert.test"]
+  backend               = vault_mount.pki.path
+  name                  = "%s"
+  allow_localhost       = true
+  allowed_domains       = ["test.domain"]
+  allow_subdomains      = true
+  key_type              = "ml-dsa"
+  %s
+}
+`, path, name, extraConfig)
 }
 
 func testPkiSecretBackendRoleConfig_updated(name, path string, policyIdentifiers string) string {

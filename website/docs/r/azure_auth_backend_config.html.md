@@ -113,7 +113,7 @@ resource "vault_azure_auth_backend_config" "example" {
 }
 ```
 
-You can configure the Azure auth engine to use AKS Workload Identity with `aks_wi` for a secretless, cross-tenant setup. Requires Vault 2.2.0+:
+You can configure the Azure auth engine to use AKS Workload Identity Federation with `aks_wif` for a secretless, cross-tenant setup. Requires Vault 2.2.0+:
 
 ```hcl
 resource "vault_auth_backend" "example" {
@@ -125,7 +125,7 @@ resource "vault_azure_auth_backend_config" "example" {
   tenant_id = "11111111-2222-3333-4444-555555555555"
   client_id = "11111111-2222-3333-4444-555555555555"
   resource  = "https://management.azure.com"
-  auth_type = "aks_wi"
+  auth_type = "aks_wif"
 }
 ```
 
@@ -166,7 +166,7 @@ The following arguments are supported:
 * `client_id` - (Optional) The client id for credentials to query the Azure APIs.
 	Currently read permissions to query compute resources are required.
 
-* `auth_type` - (Optional) The authentication method used by Vault to access Azure APIs. The following values are supported: `root_creds`, `plugin_wif`, `msi`, `aks_wi`. Requires Vault 2.2.0+.
+* `auth_type` - (Optional) The authentication method used by Vault to access Azure APIs. The following values are supported: `root_creds`, `plugin_wif`, `msi`, `aks_wif`. Requires Vault 2.2.0+.
 
 * `client_secret` - (Optional) The client secret for credentials to query the
 	Azure APIs. Mutually exclusive with `client_secret_wo`. **Note:** This field will be
