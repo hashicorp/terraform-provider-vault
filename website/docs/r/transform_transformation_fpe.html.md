@@ -34,6 +34,7 @@ resource "vault_transform_transformation_fpe" "example" {
   mount    = vault_mount.transform.path
   name     = "ccn-fpe"
   template = "builtin/creditcardnumber"
+  deletion_allowed = true
 }
 ```
 
@@ -90,7 +91,7 @@ The following arguments are supported:
 
 * `max_tweak_len` - (Optional) Maximum tweak size, in bytes, allowed for this transformation.
   Valid values are `0` to `32`; `0` allows a tweak of any length. If not set, Vault uses `0`.
-  Changing this forces a new resource to be created.
+  Changing this forces a new resource to be created. Requires Vault 2.2.0 or later.
 
 ## Attributes Reference
 

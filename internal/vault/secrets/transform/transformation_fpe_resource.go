@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
@@ -25,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/errutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
 	vaultclient "github.com/hashicorp/vault/api"
 )
@@ -114,8 +116,8 @@ func (r *TransformationFPEResource) Schema(_ context.Context, _ resource.SchemaR
 					int64validator.Between(0, 32),
 				},
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
 					int64planmodifier.UseStateForUnknown(),
+					int64planmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldFpeAlgorithm: schema.StringAttribute{
@@ -233,6 +235,16 @@ func (r *TransformationFPEResource) Create(ctx context.Context, req resource.Cre
 	var plan TransformationFPEModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Vault silently ignores max_tweak_len before 2.2.0, which would surface as an inconsistent result after apply.
+	if !plan.MaxTweakLen.IsNull() && !plan.MaxTweakLen.IsUnknown() && !r.Meta().IsAPISupported(provider.VaultVersion220) {
+		resp.Diagnostics.AddAttributeError(
+			path.Root(consts.FieldMaxTweakLen),
+			"Unsupported Vault version",
+			fmt.Sprintf("%s requires Vault version %s or later.", consts.FieldMaxTweakLen, provider.VaultVersion220),
+		)
 		return
 	}
 
