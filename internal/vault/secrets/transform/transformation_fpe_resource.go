@@ -199,8 +199,7 @@ func (r *TransformationFPEResource) readFromVault(ctx context.Context, cli *vaul
 	return true, diags
 }
 
-// requestBody builds the request body for POST transformations/fpe/:name from the plan.
-// max_tweak_len cannot be updated, so it is only sent on create.
+// requestBody builds the request body for POST transformations/fpe/:name from the plan
 func (r *TransformationFPEResource) requestBody(ctx context.Context, plan *TransformationFPEModel, create bool) (map[string]any, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
