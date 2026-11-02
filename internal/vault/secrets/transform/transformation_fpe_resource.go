@@ -167,7 +167,8 @@ func (r *TransformationFPEResource) readFromVault(ctx context.Context, cli *vaul
 
 	if v := util.Int64ValueOrNull(secret.Data[consts.FieldMaxTweakLen]); !v.IsNull() {
 		data.MaxTweakLen = v
-	} else if data.MaxTweakLen.IsUnknown() {
+	} else if data.MaxTweakLen.IsUnknown() || data.MaxTweakLen.IsNull() {
+		// Vault < 2.2.0 does not return max_tweak_len. Null covers import, where no plan value exists.
 		data.MaxTweakLen = types.Int64Value(0)
 	}
 
