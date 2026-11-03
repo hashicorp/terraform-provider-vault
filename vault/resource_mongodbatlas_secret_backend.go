@@ -80,18 +80,23 @@ func mongodbAtlasSecretBackendCreateUpdate(ctx context.Context, d *schema.Resour
 
 	var privateKey string
 
-	// Check if using write-only field (new resource or version changed)
-	if d.IsNewResource() || d.HasChange(consts.FieldPrivateKeyWOVersion) {
-		if _, ok := d.GetOk(consts.FieldPrivateKeyWOVersion); ok {
-			p := cty.GetAttrPath(consts.FieldPrivateKeyWO)
-			woVal, _ := d.GetRawConfigAt(p)
-			if !woVal.IsNull() {
-				privateKey = woVal.AsString()
-			}
+	// Resolve private_key from either the write-only or legacy field.
+	//
+	// NOTE: The `<mount>/config` endpoint is full-replace and rejects an empty
+	// `private_key`. Previously the WO branch only fired on create or when
+	// `private_key_wo_version` changed, so updating an unrelated field (e.g.
+	// `public_key`) caused the apply to fail with `private_key is empty`.
+	// Always re-resolve from config so the WO value is sent on every update.
+	// See https://github.com/hashicorp/terraform-provider-vault/issues/2900.
+	if _, ok := d.GetOk(consts.FieldPrivateKeyWOVersion); ok {
+		p := cty.GetAttrPath(consts.FieldPrivateKeyWO)
+		woVal, _ := d.GetRawConfigAt(p)
+		if !woVal.IsNull() {
+			privateKey = woVal.AsString()
 		}
 	}
 
-	// Fallback to legacy field if write-only not set
+	// Fallback to legacy field if write-only not set.
 	if privateKey == "" {
 		if v, ok := d.GetOk(consts.FieldPrivateKey); ok {
 			privateKey = v.(string)
