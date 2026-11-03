@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
+	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -44,6 +45,8 @@ import (
 )
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
+
+var _ provider.ProviderWithFunctions = &fwprovider{}
 
 // Ensure the implementation satisfies the provider.Provider interface
 var _ provider.Provider = &fwprovider{}
@@ -333,6 +336,13 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		gcpkms.NewGCPKMSSignEphemeralResource,
 		kerberosauth.NewKerberosAuthBackendLoginEphemeralResource,
 		pkibyok.NewPKICAKeyExportEphemeralResource,
+	}
+}
+
+// Functions returns the provider functions.
+func (p *fwprovider) Functions(ctx context.Context) []func() function.Function {
+	return []func() function.Function{
+		NewTimeInSecondsFunction,
 	}
 }
 

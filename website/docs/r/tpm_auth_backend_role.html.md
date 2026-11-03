@@ -15,7 +15,18 @@ from TPM identities and TPM groups to Vault policies and token parameters.
 
 ## Example Usage
 
+`token_ttl` and `token_max_ttl` are integer seconds. The example uses [`time_in_seconds`](/docs/providers/vault/functions/time_in_seconds.html) to write those durations. Provider functions require Terraform 1.8 or later.
+
 ```hcl
+terraform {
+  required_version = ">= 1.8.0"
+  required_providers {
+    vault = {
+      source = "hashicorp/vault"
+    }
+  }
+}
+
 resource "vault_auth_backend" "tpm" {
   type = "tpm"
   path = "tpm"
@@ -37,8 +48,8 @@ resource "vault_tpm_auth_backend_role" "example" {
     "group-2"
   ]
 
-  token_ttl         = 3600
-  token_max_ttl     = 7200
+  token_ttl         = provider::vault::time_in_seconds("1h")
+  token_max_ttl     = provider::vault::time_in_seconds("2h")
   token_policies    = ["default", "tpm-policy"]
   token_bound_cidrs = ["10.0.0.0/8"]
 }
