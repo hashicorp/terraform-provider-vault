@@ -93,7 +93,7 @@ func (r *TransformFPEImportedKeyResource) Schema(_ context.Context, _ resource.S
 		},
 	}
 	attrs[consts.FieldMaxTweakLen] = schema.Int64Attribute{
-		MarkdownDescription: "The maximum tweak length in bytes (0-32). If the value is 0, the tweak length can be any value from 0 to 32 bytes. Vault does not allow this field to be changed after creation, so changing it returns an error from Vault.",
+		MarkdownDescription: "The maximum tweak length in bytes (0-32). If the value is 0, the tweak length can be any value from 0 to 32 bytes. Vault does not allow this field to be changed after creation, so changing it returns an error from Vault. Requires Vault 2.2.0 or later.",
 		Optional:            true,
 		Computed:            true,
 		Validators: []validator.Int64{
@@ -104,7 +104,7 @@ func (r *TransformFPEImportedKeyResource) Schema(_ context.Context, _ resource.S
 		},
 	}
 	attrs[consts.FieldFpeAlgorithm] = schema.StringAttribute{
-		MarkdownDescription: "The FPE algorithm used by this transformation. New transformations use `ff1`. `ff3-1` is deprecated as of Vault 2.2.0 and only appears on existing transformations; migrate its data to an `ff1` transformation with Vault's Rewrap endpoint. Set by Vault at creation time.",
+		MarkdownDescription: "The FPE algorithm used by this transformation. New transformations use `ff1`. `ff3-1` is deprecated as of Vault 2.2.0 and only appears on existing transformations; migrate its data to an `ff1` transformation with Vault's Rewrap endpoint. Set by Vault at creation time. Only returned by Vault 2.2.0 or later.",
 		Computed:            true,
 	}
 
@@ -137,6 +137,11 @@ func (r *TransformFPEImportedKeyResource) Create(ctx context.Context, req resour
 
 	if !provider.IsEnterpriseSupported(r.Meta()) {
 		resp.Diagnostics.AddError("Unsupported Vault edition", "The Transform secrets engine requires Vault Enterprise.")
+		return
+	}
+
+	if !plan.MaxTweakLen.IsNull() && !plan.MaxTweakLen.IsUnknown() && !provider.IsAPISupported(r.Meta(), provider.VaultVersion220) {
+		resp.Diagnostics.AddError("Unsupported Vault Version", "max_tweak_len requires Vault 2.2.0 or later")
 		return
 	}
 
@@ -235,6 +240,11 @@ func (r *TransformFPEImportedKeyResource) Update(ctx context.Context, req resour
 
 	mount := plan.Mount.ValueString()
 	name := plan.Name.ValueString()
+
+	if !plan.MaxTweakLen.IsNull() && !plan.MaxTweakLen.IsUnknown() && !provider.IsAPISupported(r.Meta(), provider.VaultVersion220) {
+		resp.Diagnostics.AddError("Unsupported Vault Version", "max_tweak_len requires Vault 2.2.0 or later")
+		return
+	}
 
 	body, d := plan.updateBody(ctx)
 	resp.Diagnostics.Append(d...)

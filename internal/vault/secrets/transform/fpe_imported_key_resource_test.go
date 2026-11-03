@@ -5,6 +5,7 @@ package transform_test
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
@@ -52,9 +54,8 @@ func TestAccTransformFPEImportedKey_basic(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fpeResourceAddress, "template", builtinTemplate),
 					resource.TestCheckResourceAttr(fpeResourceAddress, "tweak_source", "supplied"),
-					resource.TestCheckResourceAttr(fpeResourceAddress, "max_tweak_len", "0"),
 					resource.TestCheckResourceAttr(fpeResourceAddress, "deletion_allowed", "false"),
-					resource.TestCheckResourceAttr(fpeResourceAddress, "fpe_algorithm", "ff1"),
+					checkFPEVersionGatedAttrs(fpeResourceAddress),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -117,6 +118,94 @@ func TestAccTransformFPEImportedKey_basic(t *testing.T) {
 					consts.FieldCiphertextWOVersion,
 					consts.FieldHashFunction,
 				},
+			},
+		},
+	})
+}
+
+// checkFPEVersionGatedAttrs asserts the defaults for the attributes that Vault only returns from
+// 2.2.0 onwards (max_tweak_len and fpe_algorithm). On older Vault versions it asserts they are
+// absent from state.
+func checkFPEVersionGatedAttrs(addr string) resource.TestCheckFunc {
+	if provider.IsAPISupported(acctestutil.TestProvider.Meta(), provider.VaultVersion220) {
+		return resource.ComposeTestCheckFunc(
+			resource.TestCheckResourceAttr(addr, "max_tweak_len", "0"),
+			resource.TestCheckResourceAttr(addr, "fpe_algorithm", "ff1"),
+		)
+	}
+	return resource.ComposeTestCheckFunc(
+		resource.TestCheckNoResourceAttr(addr, "max_tweak_len"),
+		resource.TestCheckNoResourceAttr(addr, "fpe_algorithm"),
+	)
+}
+
+// TestAccTransformFPEImportedKey_maxTweakLen validates that max_tweak_len can be set on create
+// on Vault versions 2.2.0 onwards.
+func TestAccTransformFPEImportedKey_maxTweakLen(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transform-mount")
+	name := acctest.RandomWithPrefix("transform-fpe")
+	wrappingKey := mountTransformWithWrappingKey(t, mount)
+	ciphertext := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					deletionAllowed:     true,
+					ciphertext:          ciphertext,
+					ciphertextWOVersion: 1,
+					maxTweakLen:         int64Ptr(8),
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fpeResourceAddress, "max_tweak_len", "8"),
+					resource.TestCheckResourceAttr(fpeResourceAddress, "fpe_algorithm", "ff1"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
+// TestAccTransformFPEImportedKey_maxTweakLenUnsupported validates that max_tweak_len is rejected
+// on Vault versions before 2.2.0.
+func TestAccTransformFPEImportedKey_maxTweakLenUnsupported(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transform-mount")
+	name := acctest.RandomWithPrefix("transform-fpe")
+	wrappingKey := mountTransformWithWrappingKey(t, mount)
+	ciphertext := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionGTE(t, provider.VaultVersion220)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					deletionAllowed:     true,
+					ciphertext:          ciphertext,
+					ciphertextWOVersion: 1,
+					maxTweakLen:         int64Ptr(8),
+				}),
+				ExpectError: regexp.MustCompile("max_tweak_len requires Vault 2.2.0 or later"),
 			},
 		},
 	})

@@ -79,13 +79,13 @@ The following arguments are supported:
 
 * `tweak_source` - (Optional) The source of the tweak value: `supplied`, `generated` or `internal`. Can be updated in place.
 
-* `max_tweak_len` - (Optional) The maximum tweak length in bytes, from `0` to `32`. Vault does not allow changes after creation; changing it fails at apply time.
+* `max_tweak_len` - (Optional) The maximum tweak length in bytes, from `0` to `32`. Vault does not allow changes after creation; changing it fails at apply time. Requires Vault 2.2.0 or later.
 
 ## Attributes Reference
 
 In addition to all arguments above, the following attributes are exported:
 
-* `fpe_algorithm` - The FPE algorithm used by this transformation and set by Vault at creation time. New transformations use `ff1`. `ff3-1` is deprecated as of Vault 2.2.0 and only appears on existing transformations; migrate its data to an `ff1` transformation with [the Rewrap endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#rewrap). 
+* `fpe_algorithm` - The FPE algorithm used by this transformation and set by Vault at creation time. Only populated on Vault 2.2.0 or later. New transformations use `ff1`. `ff3-1` is deprecated as of Vault 2.2.0 and only appears on existing transformations; migrate its data to an `ff1` transformation with [the Rewrap endpoint](https://developer.hashicorp.com/vault/api-docs/secret/transform#rewrap).
 
 ## Import
 
