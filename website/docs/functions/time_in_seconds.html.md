@@ -3,16 +3,22 @@ layout: "vault"
 page_title: "Vault: time_in_seconds function"
 sidebar_current: "docs-vault-function-time-in-seconds"
 description: |-
-  Convert a Go duration string to a number of seconds.
+  Convert a Vault duration string to an integer number of seconds.
 ---
 
 # time_in_seconds
 
-Given a [Go duration string](https://pkg.go.dev/time#ParseDuration), `time_in_seconds` returns that duration as a number of seconds.
+`time_in_seconds` converts a Vault duration string into an integer number of seconds.
 
-Provider functions require Terraform 1.8 or later. The units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, and `h`. `"3d"` is not a valid duration string.
+Provider functions require Terraform 1.8 or later.
 
-The result is a number. A whole number, such as `time_in_seconds("1h")`, can be assigned to an integer-seconds argument.
+Accepted formats:
+
+* Go duration units: `ns`, `us` (or `µs`), `ms`, `s`, `m`, and `h`. For example, `"1h"` or `"90m"`.
+* A `d` suffix for days. For example, `"3d"`.
+* A bare integer, which is a number of seconds. For example, `"3600"`.
+
+The result is an integer. A negative duration, or a duration that is not a whole number of seconds, returns an error.
 
 ## Example Usage
 
@@ -39,4 +45,4 @@ time_in_seconds(duration string) number
 
 ## Arguments
 
-1. `duration` (String) Go time package duration string to parse.
+1. `duration` (String) Vault duration string to parse. The result is an integer number of seconds.

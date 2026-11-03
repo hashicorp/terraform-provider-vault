@@ -48,8 +48,10 @@ resource "vault_tpm_auth_backend_role" "example" {
     "group-2"
   ]
 
-  token_ttl         = provider::vault::time_in_seconds("1h")
-  token_max_ttl     = provider::vault::time_in_seconds("2h")
+  # 3600 and 7200 seconds
+  token_ttl     = provider::vault::time_in_seconds("1h")
+  token_max_ttl = provider::vault::time_in_seconds("2h")
+  
   token_policies    = ["default", "tpm-policy"]
   token_bound_cidrs = ["10.0.0.0/8"]
 }
