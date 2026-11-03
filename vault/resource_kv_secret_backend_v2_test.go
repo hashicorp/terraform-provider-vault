@@ -51,6 +51,42 @@ func TestAccKVSecretBackendV2(t *testing.T) {
 	})
 }
 
+func TestAccKVSecretBackendV2Suffix(t *testing.T) {
+	t.Parallel()
+	resourceName := "vault_kv_secret_backend_v2.test"
+	mount := acctest.RandomWithPrefix("tf-kvv2-config")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKVSecretBackendV2Config(mount, false),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, "max_versions", "5"),
+					resource.TestCheckResourceAttr(resourceName, "delete_version_after", "3700"),
+					resource.TestCheckResourceAttr(resourceName, "cas_required", "true"),
+				),
+			},
+			{
+				Config: testKVSecretBackendV2Config(mount, true),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
+					resource.TestCheckResourceAttr(resourceName, "max_versions", "7"),
+					resource.TestCheckResourceAttr(resourceName, "delete_version_after", "87550"),
+					resource.TestCheckResourceAttr(resourceName, "cas_required", "true"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestKVV2SecretNameFromPath(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
