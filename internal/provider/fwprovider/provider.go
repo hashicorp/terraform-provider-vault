@@ -46,6 +46,7 @@ import (
 
 var _ provider.ProviderWithEphemeralResources = &fwprovider{}
 
+// Ensure the implementation satisfies the provider.ProviderWithFunctions interface
 var _ provider.ProviderWithFunctions = &fwprovider{}
 
 // Ensure the implementation satisfies the provider.Provider interface
@@ -340,7 +341,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 }
 
 // Functions returns the provider functions.
-func (p *fwprovider) Functions(ctx context.Context) []func() function.Function {
+func (p *fwprovider) Functions(_ context.Context) []func() function.Function {
 	return []func() function.Function{
 		NewTimeInSecondsFunction,
 	}
