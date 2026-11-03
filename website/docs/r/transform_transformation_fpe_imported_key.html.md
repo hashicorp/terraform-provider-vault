@@ -16,7 +16,7 @@ transformation's ongoing configuration in place. To import key material for a to
 
 ~> **Deletion protection** Terraform can delete this transformation during `terraform destroy` or resource replacement. Deleting and recreating it may interrupt clients, and imported key material may be lost. Keep `deletion_allowed` set to false unless you intentionally want to delete the transformation.
 
-~> **Replacing key material** Vault cannot import new key material into an existing FPE transformation.
+~> **Replacing key material** Vault cannot import new key material into an existing FPE transformation. Changing `ciphertext_wo_version` replaces the entire transformation: Terraform destroys the existing transformation and creates a new one. This can interrupt clients, and data encrypted with the old key cannot be decrypted with the new key. To avoid disruption or loss of access to existing data, create a new transformation with a different `name` instead of changing this value.
 
 For more information, please refer to [the Vault Transform documentation](https://developer.hashicorp.com/vault/api-docs/secret/transform#import-key-for-fpe-transformation).
 
@@ -67,7 +67,9 @@ The following arguments are supported:
 
 * `ciphertext_wo` - (Optional, Sensitive, Write-Only) Base64-encoded wrapped key material. Must be used with `ciphertext_wo_version`. Terraform does not store or read this value back. It is required to create the transformation, but may be omitted when adopting one with `terraform import`. Use an ephemeral variable to keep it out of configuration.
 
-* `ciphertext_wo_version` - (Optional) Version identifier for `ciphertext_wo`. Vault imports ciphertext on create; changing this value replaces the transformation. Removing it does not replace the resource. Required with `ciphertext_wo`.
+* `ciphertext_wo_version` - (Optional) Version identifier for `ciphertext_wo`. Vault imports the ciphertext only when the transformation is created. Required with `ciphertext_wo`.
+  ~> **Note:** Changing `ciphertext_wo_version` **replaces the transformation**, because Vault cannot import new key material into an existing FPE transformation. Removing both `ciphertext_wo` and `ciphertext_wo_version` from your configuration does not replace or modify the transformation; Terraform only clears the version from state.
+  ~> **Recommendation:** Create a new transformation with a different `name` instead of replacing an existing one. 
 
 * `hash_function` - (Optional) Hash function used to unwrap the ciphertext. The provider sends it with the ciphertext on create; Vault does not return it, so Terraform cannot verify it.
 
