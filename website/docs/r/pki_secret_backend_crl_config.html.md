@@ -69,3 +69,13 @@ The following arguments are supported:
 ## Attributes Reference
 
 No additional attributes are exported by this resource.
+
+## Import
+
+The PKI config CRL config can be imported using the resource's `id`. 
+In the case of the example above the `id` would be `%s/config/crl`, 
+where the `%s` component is the resource's `backend`, e.g.
+
+```
+$ terraform import vault_pki_secret_backend_crl_config.crl_config %s/config/crl
+```
