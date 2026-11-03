@@ -58,8 +58,7 @@ func (f *TimeInSecondsFunction) Run(ctx context.Context, req function.RunRequest
 
 	duration, err := parseutil.ParseDurationSecond(input)
 	if err != nil {
-		// Intentionally not including the parse error in the return diagnostic, as the message is based on a Go-specific
-		// reference time that may be unfamiliar to practitioners.
+		// Keep the parser error out of the diagnostic. It is logged here for debugging.
 		tflog.Error(ctx, fmt.Sprintf("failed to parse duration string, underlying error: %s", err.Error()))
 
 		resp.Error = function.NewArgumentFuncError(0, fmt.Sprintf("Error parsing duration string: %q is not a valid duration string", input))
