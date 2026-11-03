@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/base"
 	"github.com/hashicorp/terraform-provider-vault/internal/framework/client"
@@ -40,14 +39,17 @@ type ApproleAuthBackendRoleSecretIDEphemeralModel struct {
 	base.BaseModelEphemeral
 
 	// fields specific to this resource
-	Backend  types.String `tfsdk:"backend"`
-	RoleName types.String `tfsdk:"role_name"`
-	CIDRList types.Set    `tfsdk:"cidr_list"`
-	Metadata types.String `tfsdk:"metadata"`
-	TTL      types.Int64  `tfsdk:"ttl"`
-	NumUses  types.Int64  `tfsdk:"num_uses"`
-	SecretID types.String `tfsdk:"secret_id"`
-	Accessor types.String `tfsdk:"accessor"`
+	Backend          types.String `tfsdk:"backend"`
+	RoleName         types.String `tfsdk:"role_name"`
+	CIDRList         types.Set    `tfsdk:"cidr_list"`
+	Metadata         types.String `tfsdk:"metadata"`
+	TTL              types.Int64  `tfsdk:"ttl"`
+	NumUses          types.Int64  `tfsdk:"num_uses"`
+	SecretID         types.String `tfsdk:"secret_id"`
+	Accessor         types.String `tfsdk:"accessor"`
+	WrappingTTL      types.String `tfsdk:"wrapping_ttl"`
+	WrappingAccessor types.String `tfsdk:"wrapping_accessor"`
+	WrappingToken    types.String `tfsdk:"wrapping_token"`
 }
 
 // ApproleAuthBackendRoleSecretIDAPIModel describes the Vault API data model.
@@ -89,6 +91,10 @@ func (r *ApproleAuthBackendRoleSecretIDEphemeralResource) Schema(_ context.Conte
 				MarkdownDescription: "The number of uses for the secret-id.",
 				Optional:            true,
 			},
+			consts.FieldWrappingTTL: schema.StringAttribute{
+				MarkdownDescription: "The TTL duration of the wrapped SecretID.",
+				Optional:            true,
+			},
 			consts.FieldSecretID: schema.StringAttribute{
 				MarkdownDescription: "The generated SecretID.",
 				Computed:            true,
@@ -96,6 +102,14 @@ func (r *ApproleAuthBackendRoleSecretIDEphemeralResource) Schema(_ context.Conte
 			},
 			consts.FieldAccessor: schema.StringAttribute{
 				MarkdownDescription: "The accessor for the SecretID.",
+				Computed:            true,
+			},
+			consts.FieldWrappingToken: schema.StringAttribute{
+				MarkdownDescription: "The wrapped SecretID token.",
+				Computed:            true,
+			},
+			consts.FieldWrappingAccessor: schema.StringAttribute{
+				MarkdownDescription: "The wrapped SecretID accessor.",
 				Computed:            true,
 			},
 		},
@@ -165,6 +179,23 @@ func (r *ApproleAuthBackendRoleSecretIDEphemeralResource) Open(ctx context.Conte
 		requestData[consts.FieldNumUses] = data.NumUses.ValueInt64()
 	}
 
+	// Handle wrapped TTL
+	var wrappingTTL string
+	if !data.WrappingTTL.IsNull() && !data.WrappingTTL.IsUnknown() {
+		wrappingTTL = data.WrappingTTL.ValueString()
+	}
+	if wrappingTTL != "" {
+		var err error
+
+		if c, err = c.Clone(); err != nil {
+			resp.Diagnostics.AddError("error cloning client", err.Error())
+			return
+		}
+		c.SetWrappingLookupFunc(func(_, _ string) string {
+			return wrappingTTL
+		})
+	}
+
 	secretResp, err := c.Logical().WriteWithContext(ctx, path, requestData)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -174,7 +205,7 @@ func (r *ApproleAuthBackendRoleSecretIDEphemeralResource) Open(ctx context.Conte
 		return
 	}
 
-	if secretResp == nil || secretResp.Data == nil {
+	if secretResp == nil || (wrappingTTL == "" && secretResp.Data == nil) || (wrappingTTL != "" && secretResp.WrapInfo == nil) {
 		resp.Diagnostics.AddError(
 			"Empty response from Vault",
 			fmt.Sprintf("No data returned when generating SecretID at path %s", path),
@@ -182,20 +213,32 @@ func (r *ApproleAuthBackendRoleSecretIDEphemeralResource) Open(ctx context.Conte
 		return
 	}
 
-	var readResp ApproleAuthBackendRoleSecretIDAPIModel
-	err = model.ToAPIModel(secretResp.Data, &readResp)
-	if err != nil {
-		resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
-		return
-	}
+	var secretAccessor, wrappingAccessor string
+	if wrappingTTL != "" {
+		wrappingAccessor = secretResp.WrapInfo.Accessor
+		data.WrappingToken = types.StringValue(secretResp.WrapInfo.Token)
+		data.WrappingAccessor = types.StringValue(wrappingAccessor)
+	} else {
+		var readResp ApproleAuthBackendRoleSecretIDAPIModel
+		err = model.ToAPIModel(secretResp.Data, &readResp)
+		if err != nil {
+			resp.Diagnostics.AddError("Unable to translate Vault response data", err.Error())
+			return
+		}
 
-	data.SecretID = types.StringValue(readResp.SecretID)
-	data.Accessor = types.StringValue(readResp.SecretIDAccessor)
+		secretAccessor = readResp.SecretIDAccessor
+		data.SecretID = types.StringValue(readResp.SecretID)
+		data.Accessor = types.StringValue(secretAccessor)
+	}
 
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
 
 	// Store the accessor and backend info for cleanup in Close
-	resp.Private.SetKey(ctx, consts.FieldAccessor, []byte(readResp.SecretIDAccessor))
+	if wrappingAccessor != "" {
+		resp.Private.SetKey(ctx, consts.FieldWrappingAccessor, []byte(wrappingAccessor))
+	} else {
+		resp.Private.SetKey(ctx, consts.FieldAccessor, []byte(secretAccessor))
+	}
 	resp.Private.SetKey(ctx, consts.FieldBackend, []byte(backend))
 	resp.Private.SetKey(ctx, consts.FieldRole, []byte(role))
 	resp.Private.SetKey(ctx, consts.FieldNamespace, []byte(data.Namespace.ValueString()))
