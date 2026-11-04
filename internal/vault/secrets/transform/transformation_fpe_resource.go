@@ -148,6 +148,14 @@ func (r *TransformationFPEResource) readFromVault(ctx context.Context, cli *vaul
 		return false, diags
 	}
 
+	if t, ok := secret.Data[consts.FieldType].(string); ok && t != typeFPE {
+		diags.AddError(
+			"Transformation is not an FPE transformation",
+			fmt.Sprintf("Transformation %q on mount %q has type %q and cannot be managed by vault_transform_transformation_fpe.", data.Name.ValueString(), data.Mount.ValueString(), t),
+		)
+		return false, diags
+	}
+
 	if v, ok := secret.Data[consts.FieldTemplate].(string); ok {
 		data.Template = types.StringValue(v)
 	}
@@ -403,24 +411,6 @@ func (r *TransformationFPEResource) ImportState(ctx context.Context, req resourc
 	cli, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
-		return
-	}
-
-	// Only FPE transformations can be managed by this resource.
-	secret, err := cli.Logical().ReadWithContext(ctx, readPath(parsed.Mount, parsed.Name))
-	if err != nil {
-		resp.Diagnostics.AddError(errutil.VaultReadErr(err))
-		return
-	}
-	if secret == nil || secret.Data == nil {
-		resp.Diagnostics.AddError("Resource not found", fmt.Sprintf("Transformation %q not found on mount %q", parsed.Name, parsed.Mount))
-		return
-	}
-	if t, ok := secret.Data[consts.FieldType].(string); ok && t != typeFPE {
-		resp.Diagnostics.AddError(
-			"Transformation is not an FPE transformation",
-			fmt.Sprintf("Transformation %q on mount %q has type %q and cannot be managed by vault_transform_transformation_fpe.", parsed.Name, parsed.Mount, t),
-		)
 		return
 	}
 
