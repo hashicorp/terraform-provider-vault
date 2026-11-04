@@ -50,6 +50,7 @@ func TestAccTransformationFPE_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldTweakSource, "supplied"),
 					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldDeletionAllowed, "true"),
 					resource.TestCheckNoResourceAttr(fpeResourceAddress, consts.FieldAllowedRoles+".#"),
+					checkFPEVersionGatedAttrs(fpeResourceAddress),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{
@@ -154,9 +155,8 @@ func TestAccTransformationFPE_optionalFields(t *testing.T) {
 
 // TestAccTransformationFPE_maxTweakLen validates max_tweak_len and fpe_algorithm, which Vault
 // returns as of 2.2.0 (new transformations use FF1):
-//   - Step 1: Create with max_tweak_len = 8
-//   - Step 2: Change max_tweak_len -> forces resource replacement
-//   - Step 3: Import state verification
+//   - Step 1: Create with max_tweak_len = 8, verify both fields are populated
+//   - Step 2: Import state verification
 func TestAccTransformationFPE_maxTweakLen(t *testing.T) {
 	mount := acctest.RandomWithPrefix("transform")
 	name := acctest.RandomWithPrefix("fpe")
@@ -181,24 +181,11 @@ func TestAccTransformationFPE_maxTweakLen(t *testing.T) {
 					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldMaxTweakLen, "8"),
 					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldFpeAlgorithm, "ff1"),
 				),
-			},
-			{
-				Config: fpeConfig(fpeFields{
-					mount:       mount,
-					name:        name,
-					template:    templateCreditCard,
-					tweakSource: "supplied",
-					maxTweakLen: int64Ptr(16),
-				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(fpeResourceAddress, plancheck.ResourceActionReplace),
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
 					},
 				},
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldMaxTweakLen, "16"),
-					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldFpeAlgorithm, "ff1"),
-				),
 			},
 			{
 				ResourceName:                         fpeResourceAddress,
@@ -284,6 +271,103 @@ func TestAccTransformationFPE_remount(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldMount, mountB),
 				),
+			},
+		},
+	})
+}
+
+// checkFPEVersionGatedAttrs asserts the defaults for max_tweak_len and fpe_algorithm, which Vault
+// only returns from 2.2.0 onwards. On older Vault versions it asserts they are absent from state.
+// The check is wrapped in a closure so the version comparison runs at check time (after PreCheck
+// has configured the provider), not when the TestCase struct is built.
+func checkFPEVersionGatedAttrs(addr string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		if provider.IsAPISupported(acctestutil.TestProvider.Meta(), provider.VaultVersion220) {
+			return resource.ComposeTestCheckFunc(
+				resource.TestCheckResourceAttr(addr, consts.FieldMaxTweakLen, "0"),
+				resource.TestCheckResourceAttr(addr, consts.FieldFpeAlgorithm, "ff1"),
+			)(s)
+		}
+		return resource.ComposeTestCheckFunc(
+			resource.TestCheckNoResourceAttr(addr, consts.FieldMaxTweakLen),
+			resource.TestCheckNoResourceAttr(addr, consts.FieldFpeAlgorithm),
+		)(s)
+	}
+}
+
+// TestAccTransformationFPE_vaultManagedImport validates adopting an FPE transformation that was
+// created directly in Vault (outside of Terraform):
+//   - Step 1: Import the pre-existing transformation into Terraform state
+//   - Step 2: Apply the config and expect an empty plan — verifies that all computed fields
+//     (tweak_source, deletion_allowed, max_tweak_len, fpe_algorithm) are correctly populated
+//     when only mount and name are present in state at import time.
+func TestAccTransformationFPE_vaultManagedImport(t *testing.T) {
+	mount := acctest.RandomWithPrefix("transform")
+	name := acctest.RandomWithPrefix("fpe")
+
+	// Create the transform mount and FPE transformation directly in Vault before any
+	// Terraform steps run.
+	acctestutil.TestEntPreCheck(t)
+	cli := acctestutil.TestProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+	if _, err := cli.Logical().Write("sys/mounts/"+mount, map[string]any{"type": "transform"}); err != nil {
+		t.Fatalf("failed to mount transform engine at %q: %s", mount, err)
+	}
+	t.Cleanup(func() {
+		cli.Logical().Delete("sys/mounts/" + mount) //nolint:errcheck
+	})
+	if _, err := cli.Logical().Write(
+		fmt.Sprintf("%s/transformations/fpe/%s", mount, name),
+		map[string]any{
+			"template":         templateCreditCard,
+			"tweak_source":     "supplied",
+			"deletion_allowed": true,
+		},
+	); err != nil {
+		t.Fatalf("failed to create FPE transformation %q in Vault: %s", name, err)
+	}
+
+	// Use a config without a vault_mount resource — the mount was created directly in Vault
+	// and is not managed by Terraform. fpeConfig would include vault_mount.test which would
+	// appear as unmanaged after the import step and trigger a spurious create in step 2.
+	adoptConfig := fmt.Sprintf(`
+resource "vault_transform_transformation_fpe" "test" {
+	 mount            = %q
+	 name             = %q
+	 template         = %q
+	 deletion_allowed = true
+}
+`, mount, name, templateCreditCard)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccTransformationFPECheckDestroy,
+		Steps: []resource.TestStep{
+			// Step 1: Import the Vault-created transformation into Terraform state.
+			{
+				Config:            adoptConfig,
+				ResourceName:      fpeResourceAddress,
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("%s/%s", mount, name),
+				ImportStatePersist: true,
+			},
+			// Step 2: Apply the same config and expect an empty plan. This confirms that
+			// readFromVault correctly handles the null-vs-unknown state for computed fields
+			// when only mount and name were present at import time.
+			{
+				Config: adoptConfig,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldTemplate, templateCreditCard),
+					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldTweakSource, "supplied"),
+					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldDeletionAllowed, "true"),
+					checkFPEVersionGatedAttrs(fpeResourceAddress),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
 			},
 		},
 	})
