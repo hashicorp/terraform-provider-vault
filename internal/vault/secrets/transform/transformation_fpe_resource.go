@@ -109,7 +109,7 @@ func (r *TransformationFPEResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 			},
 			consts.FieldMaxTweakLen: schema.Int64Attribute{
-				MarkdownDescription: "Maximum tweak size, in bytes, allowed for this transformation. Valid values are 0 to 32; 0 allows a tweak of any length. Changing this field replaces this resource.",
+				MarkdownDescription: "Maximum tweak size, in bytes, allowed for this transformation. Valid values are 0 to 32; 0 allows a tweak of any length. Changing this field replaces this resource. Requires Vault 2.2.0 or later.",
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.Int64{
@@ -117,7 +117,6 @@ func (r *TransformationFPEResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
-					int64planmodifier.RequiresReplace(),
 				},
 			},
 			consts.FieldFpeAlgorithm: schema.StringAttribute{
@@ -149,18 +148,11 @@ func (r *TransformationFPEResource) readFromVault(ctx context.Context, cli *vaul
 		return false, diags
 	}
 
-	// Vault accepts a single `template` on write but returns a `templates` list on read.
-	if templates, ok := secret.Data[consts.FieldTemplates].([]any); ok && len(templates) > 0 {
-		if v, ok := templates[0].(string); ok {
-			data.Template = types.StringValue(v)
-		}
+	if v, ok := secret.Data[consts.FieldTemplate].(string); ok {
+		data.Template = types.StringValue(v)
 	}
 
-	if v, ok := secret.Data[consts.FieldTweakSource].(string); ok {
-		data.TweakSource = types.StringValue(v)
-	} else if data.TweakSource.IsUnknown() {
-		data.TweakSource = types.StringNull()
-	}
+	data.TweakSource = util.StringValueOrNull(secret.Data[consts.FieldTweakSource])
 
 	if v, ok := secret.Data[consts.FieldDeletionAllowed].(bool); ok {
 		data.DeletionAllowed = types.BoolValue(v)
@@ -168,18 +160,9 @@ func (r *TransformationFPEResource) readFromVault(ctx context.Context, cli *vaul
 		data.DeletionAllowed = types.BoolValue(false)
 	}
 
-	if v := util.Int64ValueOrNull(secret.Data[consts.FieldMaxTweakLen]); !v.IsNull() {
-		data.MaxTweakLen = v
-	} else if data.MaxTweakLen.IsUnknown() || data.MaxTweakLen.IsNull() {
-		// Vault < 2.2.0 does not return max_tweak_len. Null covers import, where no plan value exists.
-		data.MaxTweakLen = types.Int64Value(0)
-	}
+	data.MaxTweakLen = util.Int64ValueOrNull(secret.Data[consts.FieldMaxTweakLen])
 
-	if v, ok := secret.Data[consts.FieldFpeAlgorithm].(string); ok {
-		data.FPEAlgorithm = types.StringValue(v)
-	} else if data.FPEAlgorithm.IsUnknown() {
-		data.FPEAlgorithm = types.StringNull()
-	}
+	data.FPEAlgorithm = util.StringValueOrNull(secret.Data[consts.FieldFpeAlgorithm])
 
 	// Vault returns an empty list when no roles are set. Keep null in that case when the
 	// config omitted allowed_roles, otherwise Terraform sees null become [] after apply.
@@ -239,6 +222,14 @@ func (r *TransformationFPEResource) Create(ctx context.Context, req resource.Cre
 	var plan TransformationFPEModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !provider.IsEnterpriseSupported(r.Meta()) {
+		resp.Diagnostics.AddError(
+			"Enterprise feature required",
+			"The Transform secrets engine is only available in Vault Enterprise.",
+		)
 		return
 	}
 
