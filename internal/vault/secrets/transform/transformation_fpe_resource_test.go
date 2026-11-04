@@ -5,6 +5,7 @@ package transform_test
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -210,6 +211,52 @@ func TestAccTransformationFPE_maxTweakLen(t *testing.T) {
 	})
 }
 
+// TestAccTransformationFPE_deletionProtection validates the deletion_allowed default and the
+// protection it gives. Deleting an FPE transformation destroys its encryption key, so Vault
+// refuses to do it unless deletion_allowed is true:
+//   - Step 1: Create without deletion_allowed -> reads back as false
+//   - Step 2: Destroy is rejected by Vault and the transformation stays in state
+//   - Step 3: Enable deletion_allowed in place so the test can clean up
+func TestAccTransformationFPE_deletionProtection(t *testing.T) {
+	mount := acctest.RandomWithPrefix("transform")
+	name := acctest.RandomWithPrefix("fpe")
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccTransformationFPECheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: fpeConfig(fpeFields{mount: mount, name: name, template: templateCreditCard, omitDeletionAllowed: true}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldDeletionAllowed, "false"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			{
+				Config:      fpeConfig(fpeFields{mount: mount, name: name, template: templateCreditCard, omitDeletionAllowed: true}),
+				Destroy:     true,
+				ExpectError: regexp.MustCompile(`deletion_allowed is false`),
+			},
+			{
+				Config: fpeConfig(fpeFields{mount: mount, name: name, template: templateCreditCard}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fpeResourceAddress, consts.FieldDeletionAllowed, "true"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(fpeResourceAddress, plancheck.ResourceActionUpdate),
+					},
+				},
+			},
+		},
+	})
+}
+
 // TestAccTransformationFPE_remount validates that changing mount replaces the resource.
 func TestAccTransformationFPE_remount(t *testing.T) {
 	mountA := acctest.RandomWithPrefix("transform-a")
@@ -251,16 +298,21 @@ type fpeFields struct {
 	tweakSource  string
 	allowedRoles []string
 	maxTweakLen  *int64
+	// omitDeletionAllowed leaves deletion_allowed out of the config so the default applies.
+	omitDeletionAllowed bool
 }
 
 func int64Ptr(v int64) *int64 {
 	return &v
 }
 
-// fpeConfig renders a transform mount and an FPE transformation. deletion_allowed is always
-// true so that the transformation can be destroyed at the end of each test.
+// fpeConfig renders a transform mount and an FPE transformation. deletion_allowed is true
+// unless omitDeletionAllowed is set, so that the transformation can be destroyed at the end of each test.
 func fpeConfig(f fpeFields) string {
 	var optional strings.Builder
+	if !f.omitDeletionAllowed {
+		optional.WriteString("  deletion_allowed = true\n")
+	}
 	if f.tweakSource != "" {
 		fmt.Fprintf(&optional, "  tweak_source     = %q\n", f.tweakSource)
 	}
@@ -285,7 +337,6 @@ resource "vault_transform_transformation_fpe" "test" {
   mount            = vault_mount.test.path
   name             = %q
   template         = %q
-  deletion_allowed = true
 %s}
 `, f.mount, f.name, f.template, optional.String())
 }

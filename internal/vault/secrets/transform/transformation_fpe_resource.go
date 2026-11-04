@@ -139,6 +139,9 @@ func (r *TransformationFPEResource) readFromVault(ctx context.Context, cli *vaul
 
 	secret, err := cli.Logical().ReadWithContext(ctx, readPath(data.Mount.ValueString(), data.Name.ValueString()))
 	if err != nil {
+		if util.Is404(err) {
+			return false, diags
+		}
 		diags.AddError(errutil.VaultReadErr(err))
 		return false, diags
 	}
@@ -266,6 +269,16 @@ func (r *TransformationFPEResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
+	// The transformation (and its encryption key) now exists in Vault. Persist the identifying
+	// attributes before reading back. If the readback fails, Terraform keeps this as a tainted
+	// resource, so a later destroy can clean it up instead of leaving an untracked orphan.
+	recoverable := plan
+	clearUnknownComputed(&recoverable)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &recoverable)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	found, d := r.readFromVault(ctx, cli, &plan)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
@@ -277,6 +290,22 @@ func (r *TransformationFPEResource) Create(ctx context.Context, req resource.Cre
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+// clearUnknownComputed replaces unknown computed attributes with null, as state cannot hold unknown values.
+func clearUnknownComputed(m *TransformationFPEModel) {
+	if m.TweakSource.IsUnknown() {
+		m.TweakSource = types.StringNull()
+	}
+	if m.DeletionAllowed.IsUnknown() {
+		m.DeletionAllowed = types.BoolNull()
+	}
+	if m.MaxTweakLen.IsUnknown() {
+		m.MaxTweakLen = types.Int64Null()
+	}
+	if m.FPEAlgorithm.IsUnknown() {
+		m.FPEAlgorithm = types.StringNull()
+	}
 }
 
 func (r *TransformationFPEResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -357,7 +386,7 @@ func (r *TransformationFPEResource) Delete(ctx context.Context, req resource.Del
 	}
 
 	// Vault blocks deletion while deletion_allowed is false; the error is surfaced as-is.
-	if _, err := cli.Logical().DeleteWithContext(ctx, readPath(state.Mount.ValueString(), state.Name.ValueString())); err != nil {
+	if _, err := cli.Logical().DeleteWithContext(ctx, readPath(state.Mount.ValueString(), state.Name.ValueString())); err != nil && !util.Is404(err) {
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 		return
 	}
