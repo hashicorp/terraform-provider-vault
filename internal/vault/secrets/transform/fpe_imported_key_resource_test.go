@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-const fpeResourceAddress = "vault_transform_transformation_fpe_imported_key.test"
+const fpeImportedKeyResourceAddress = "vault_transform_transformation_fpe_imported_key.test"
 
 // TestAccTransformFPEImportedKey_basic validates the lifecycle of an FPE transformation:
 //   - Step 1: Create with an imported key and only the required values
@@ -52,10 +52,10 @@ func TestAccTransformFPEImportedKey_basic(t *testing.T) {
 					ciphertextWOVersion: 1,
 				}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fpeResourceAddress, "template", builtinTemplate),
-					resource.TestCheckResourceAttr(fpeResourceAddress, "tweak_source", "supplied"),
-					resource.TestCheckResourceAttr(fpeResourceAddress, "deletion_allowed", "false"),
-					checkFPEVersionGatedAttrs(fpeResourceAddress),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "template", builtinTemplate),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "tweak_source", "supplied"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "deletion_allowed", "false"),
+					checkFPEVersionGatedAttrs(fpeImportedKeyResourceAddress),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -75,14 +75,14 @@ func TestAccTransformFPEImportedKey_basic(t *testing.T) {
 				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(fpeResourceAddress, plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionUpdate),
 					},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fpeResourceAddress, "tweak_source", "internal"),
-					resource.TestCheckResourceAttr(fpeResourceAddress, "deletion_allowed", "true"),
-					resource.TestCheckResourceAttr(fpeResourceAddress, "allowed_roles.#", "1"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "tweak_source", "internal"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "allowed_roles.#", "1"),
 				),
 			},
 			// Step 3: Vault has no import_version endpoint for FPE, so a new version replaces the
@@ -100,15 +100,15 @@ func TestAccTransformFPEImportedKey_basic(t *testing.T) {
 				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(fpeResourceAddress, plancheck.ResourceActionDestroyBeforeCreate),
+						plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionDestroyBeforeCreate),
 					},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
-				Check: resource.TestCheckResourceAttr(fpeResourceAddress, "ciphertext_wo_version", "2"),
+				Check: resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version", "2"),
 			},
 			// Step 4: Import state verification.
 			{
-				ResourceName:                         fpeResourceAddress,
+				ResourceName:                         fpeImportedKeyResourceAddress,
 				ImportState:                          true,
 				ImportStateId:                        fmt.Sprintf("%s/%s", mount, name),
 				ImportStateVerify:                    true,
@@ -167,8 +167,8 @@ func TestAccTransformFPEImportedKey_maxTweakLen(t *testing.T) {
 					maxTweakLen:         int64Ptr(8),
 				}),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fpeResourceAddress, "max_tweak_len", "8"),
-					resource.TestCheckResourceAttr(fpeResourceAddress, "fpe_algorithm", "ff1"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "max_tweak_len", "8"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "fpe_algorithm", "ff1"),
 				),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
@@ -243,10 +243,10 @@ func TestAccTransformFPEImportedKey_ciphertextWOVersionReplace(t *testing.T) {
 					ciphertextWOVersion: 1,
 				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeResourceAddress, plancheck.ResourceActionCreate)},
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionCreate)},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
-				Check: resource.TestCheckResourceAttr(fpeResourceAddress, "ciphertext_wo_version", "1"),
+				Check: resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version", "1"),
 			},
 			// Step 2: Remove the version -> In-place update
 			{
@@ -258,10 +258,10 @@ func TestAccTransformFPEImportedKey_ciphertextWOVersionReplace(t *testing.T) {
 					deletionAllowed: true,
 				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeResourceAddress, plancheck.ResourceActionUpdate)},
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionUpdate)},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
-				Check: resource.TestCheckNoResourceAttr(fpeResourceAddress, "ciphertext_wo_version"),
+				Check: resource.TestCheckNoResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version"),
 			},
 			// Step 3: Set the version again -> DestroyBeforeCreate replacement
 			{
@@ -275,10 +275,10 @@ func TestAccTransformFPEImportedKey_ciphertextWOVersionReplace(t *testing.T) {
 					ciphertextWOVersion: 3,
 				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeResourceAddress, plancheck.ResourceActionDestroyBeforeCreate)},
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionDestroyBeforeCreate)},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
-				Check: resource.TestCheckResourceAttr(fpeResourceAddress, "ciphertext_wo_version", "3"),
+				Check: resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version", "3"),
 			},
 		},
 	})
@@ -314,7 +314,7 @@ func TestAccTransformFPEImportedKey_terraformImport(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:             adoptConfig,
-				ResourceName:       fpeResourceAddress,
+				ResourceName:       fpeImportedKeyResourceAddress,
 				ImportState:        true,
 				ImportStateId:      fmt.Sprintf("%s/%s", mount, name),
 				ImportStatePersist: true,
@@ -325,7 +325,7 @@ func TestAccTransformFPEImportedKey_terraformImport(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(fpeResourceAddress, "template", builtinTemplate),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "template", builtinTemplate),
 				),
 			},
 			// Setting the version on an adopted transformation replaces it, created from the
@@ -342,11 +342,11 @@ func TestAccTransformFPEImportedKey_terraformImport(t *testing.T) {
 				}),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(fpeResourceAddress, plancheck.ResourceActionDestroyBeforeCreate),
+						plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionDestroyBeforeCreate),
 					},
 					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
 				},
-				Check: resource.TestCheckResourceAttr(fpeResourceAddress, "ciphertext_wo_version", "1"),
+				Check: resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version", "1"),
 			},
 		},
 	})
