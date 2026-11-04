@@ -363,7 +363,7 @@ func (r *TransformTokenizationImportedKeyResource) Delete(ctx context.Context, r
 	}
 
 	p := typedPath(state.Mount.ValueString(), typeTokenization, state.Name.ValueString())
-	if _, err := cli.Logical().DeleteWithContext(ctx, p); err != nil && !util.Is404(err) {
+	if _, err := cli.Logical().DeleteWithContext(ctx, p); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 		return
 	}

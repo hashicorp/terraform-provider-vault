@@ -295,7 +295,7 @@ func (r *TransformFPEImportedKeyResource) Delete(ctx context.Context, req resour
 	}
 
 	p := typedPath(state.Mount.ValueString(), typeFPE, state.Name.ValueString())
-	if _, err := cli.Logical().DeleteWithContext(ctx, p); err != nil && !util.Is404(err) {
+	if _, err := cli.Logical().DeleteWithContext(ctx, p); err != nil {
 		resp.Diagnostics.AddError(errutil.VaultDeleteErr(err))
 		return
 	}
