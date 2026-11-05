@@ -1,0 +1,353 @@
+// Copyright IBM Corp. 2016, 2026
+// SPDX-License-Identifier: MPL-2.0
+
+package transform_test
+
+import (
+	"fmt"
+	"regexp"
+	"testing"
+
+	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
+	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
+)
+
+const fpeImportedKeyResourceAddress = "vault_transform_transformation_fpe_imported_key.test"
+
+// TestAccTransformFPEImportedKey_basic validates the lifecycle of an FPE transformation:
+//   - Step 1: Create with an imported key and only the required values
+//   - Step 2: In-place update of deletion_allowed, allowed_roles and tweak_source
+//   - Step 3: Bumping ciphertext_wo_version replaces the transformation, since Vault cannot import FPE key versions
+//   - Step 4: Import state verification
+func TestAccTransformFPEImportedKey_basic(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transform-mount")
+	name := acctest.RandomWithPrefix("transform-fpe")
+
+	wrappingKey := mountTransformWithWrappingKey(t, mount)
+	ciphertext1 := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+	ciphertext2 := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			// Step 1: Create with only the required values. This checks that the provider leaves
+			// the default values returned for the omitted optional attributes intact in state
+			// and plans no diff afterwards.
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					ciphertext:          ciphertext1,
+					ciphertextWOVersion: 1,
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "template", builtinTemplate),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "tweak_source", "supplied"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "deletion_allowed", "false"),
+					checkFPEVersionGatedAttrs(fpeImportedKeyResourceAddress),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+			// Step 2: In-place update of settings Vault allows to change.
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					ciphertext:          ciphertext1,
+					ciphertextWOVersion: 1,
+					tweakSource:         "internal",
+					deletionAllowed:     true,
+					allowedRoles:        `["role-a"]`,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "tweak_source", "internal"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "deletion_allowed", "true"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "allowed_roles.#", "1"),
+				),
+			},
+			// Step 3: Vault has no import_version endpoint for FPE, so a new version replaces the
+			// transformation with one created from the new ciphertext.
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					ciphertext:          ciphertext2,
+					ciphertextWOVersion: 2,
+					tweakSource:         "internal",
+					deletionAllowed:     true,
+					allowedRoles:        `["role-a"]`,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version", "2"),
+			},
+			// Step 4: Import state verification.
+			{
+				ResourceName:                         fpeImportedKeyResourceAddress,
+				ImportState:                          true,
+				ImportStateId:                        fmt.Sprintf("%s/%s", mount, name),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldCiphertextWO,
+					consts.FieldCiphertextWOVersion,
+					consts.FieldHashFunction,
+				},
+			},
+		},
+	})
+}
+
+// checkFPEVersionGatedAttrs asserts the defaults for the attributes that Vault only returns from
+// 2.2.0 onwards (max_tweak_len and fpe_algorithm). On older Vault versions it asserts they are
+// absent from state.
+func checkFPEVersionGatedAttrs(addr string) resource.TestCheckFunc {
+	if provider.IsAPISupported(acctestutil.TestProvider.Meta(), provider.VaultVersion220) {
+		return resource.ComposeTestCheckFunc(
+			resource.TestCheckResourceAttr(addr, "max_tweak_len", "0"),
+			resource.TestCheckResourceAttr(addr, "fpe_algorithm", "ff1"),
+		)
+	}
+	return resource.ComposeTestCheckFunc(
+		resource.TestCheckNoResourceAttr(addr, "max_tweak_len"),
+		resource.TestCheckNoResourceAttr(addr, "fpe_algorithm"),
+	)
+}
+
+// TestAccTransformFPEImportedKey_maxTweakLen validates that max_tweak_len can be set on create
+// on Vault versions 2.2.0 onwards.
+func TestAccTransformFPEImportedKey_maxTweakLen(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transform-mount")
+	name := acctest.RandomWithPrefix("transform-fpe")
+	wrappingKey := mountTransformWithWrappingKey(t, mount)
+	ciphertext := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion220)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					deletionAllowed:     true,
+					ciphertext:          ciphertext,
+					ciphertextWOVersion: 1,
+					maxTweakLen:         int64Ptr(8),
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "max_tweak_len", "8"),
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "fpe_algorithm", "ff1"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
+// TestAccTransformFPEImportedKey_maxTweakLenUnsupported validates that max_tweak_len is rejected
+// on Vault versions before 2.2.0.
+func TestAccTransformFPEImportedKey_maxTweakLenUnsupported(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transform-mount")
+	name := acctest.RandomWithPrefix("transform-fpe")
+	wrappingKey := mountTransformWithWrappingKey(t, mount)
+	ciphertext := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionGTE(t, provider.VaultVersion220)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					deletionAllowed:     true,
+					ciphertext:          ciphertext,
+					ciphertextWOVersion: 1,
+					maxTweakLen:         int64Ptr(8),
+				}),
+				ExpectError: regexp.MustCompile("max_tweak_len requires Vault 2.2.0 or later"),
+			},
+		},
+	})
+}
+
+// TestAccTransformFPEImportedKey_ciphertextWOVersionReplace validates when ciphertext_wo_version
+// replaces an FPE transformation. Vault cannot import a key into an existing FPE transformation,
+// so setting the version replaces it, while removing the version does not:
+//   - Step 1: Create with version 1
+//   - Step 2: Remove the version -> in-place update
+//   - Step 3: Set the version again -> replaced, created from the new ciphertext
+func TestAccTransformFPEImportedKey_ciphertextWOVersionReplace(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transform-mount")
+	name := acctest.RandomWithPrefix("transform-fpe")
+	wrappingKey := mountTransformWithWrappingKey(t, mount)
+	ciphertext1 := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+	ciphertext2 := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+
+	// An FPE transformation exposes no key version, so the PreApply PlanCheck is what we're asserting in each step.
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			// Step 1: Create with version 1 -> ResourceActionCreate
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					tweakSource:         "internal",
+					deletionAllowed:     true,
+					ciphertext:          ciphertext1,
+					ciphertextWOVersion: 1,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionCreate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version", "1"),
+			},
+			// Step 2: Remove the version -> In-place update
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:           mount,
+					name:            name,
+					template:        builtinTemplate,
+					tweakSource:     "internal",
+					deletionAllowed: true,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionUpdate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.TestCheckNoResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version"),
+			},
+			// Step 3: Set the version again -> DestroyBeforeCreate replacement
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					tweakSource:         "internal",
+					deletionAllowed:     true,
+					ciphertext:          ciphertext2,
+					ciphertextWOVersion: 3,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply:             []plancheck.PlanCheck{plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionDestroyBeforeCreate)},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version", "3"),
+			},
+		},
+	})
+}
+
+// TestAccTransformFPEImportedKey_terraformImport validates adopting an FPE transformation that was
+// imported into Vault outside of Terraform.
+func TestAccTransformFPEImportedKey_terraformImport(t *testing.T) {
+	acctestutil.TestEntPreCheck(t)
+
+	mount := acctest.RandomWithPrefix("transform-mount")
+	name := acctest.RandomWithPrefix("transform-fpe")
+	wrappingKey := mountTransformWithWrappingKey(t, mount)
+	ciphertext := testutil.CreateBYOKCiphertext(t, wrappingKey, testutil.RandomAESKey(t), "SHA256")
+
+	importTransformationVaultSetup(t, mount, "fpe", name, map[string]any{
+		"ciphertext":   ciphertext,
+		"template":     builtinTemplate,
+		"tweak_source": "supplied",
+	})
+
+	adoptConfig := importedKeyConfig("fpe", importedKeyFields{
+		mount:           mount,
+		name:            name,
+		template:        builtinTemplate,
+		tweakSource:     "supplied",
+		deletionAllowed: true,
+	})
+
+	resource.ParallelTest(t, resource.TestCase{
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config:             adoptConfig,
+				ResourceName:       fpeImportedKeyResourceAddress,
+				ImportState:        true,
+				ImportStateId:      fmt.Sprintf("%s/%s", mount, name),
+				ImportStatePersist: true,
+			},
+			{
+				Config: adoptConfig,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "template", builtinTemplate),
+				),
+			},
+			// Setting the version on an adopted transformation replaces it, created from the
+			// ciphertext.
+			{
+				Config: importedKeyConfig("fpe", importedKeyFields{
+					mount:               mount,
+					name:                name,
+					template:            builtinTemplate,
+					tweakSource:         "supplied",
+					deletionAllowed:     true,
+					ciphertext:          ciphertext,
+					ciphertextWOVersion: 1,
+				}),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(fpeImportedKeyResourceAddress, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+				Check: resource.TestCheckResourceAttr(fpeImportedKeyResourceAddress, "ciphertext_wo_version", "1"),
+			},
+		},
+	})
+}

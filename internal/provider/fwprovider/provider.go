@@ -37,6 +37,7 @@ import (
 	pkibyok "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/transform"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/transit"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
@@ -301,6 +302,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		kerberosauth.NewKerberosAuthBackendConfigResource,
 		kerberosauth.NewKerberosAuthBackendLDAPConfigResource,
 		kerberosauth.NewKerberosAuthBackendGroupResource,
+		transform.NewTransformTokenizationImportedKeyResource,
+		transform.NewTransformFPEImportedKeyResource,
 		transit.NewTransitImportedKeyResource,
 	}, testResources()...)
 }
@@ -349,5 +352,6 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
 		transit.NewWrappingKeyDataSource,
+		transform.NewWrappingKeyDataSource,
 	}
 }
