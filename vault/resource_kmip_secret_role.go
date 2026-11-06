@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
+	"github.com/hashicorp/terraform-provider-vault/util"
 )
 
 var kmipRoleAPIBooleanFields = []string{
@@ -77,6 +78,15 @@ func kmipSecretRoleResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Description: "Name of the ca to use, if absent use legacy ca",
+			},
+			consts.FieldDeactivatedObjectOperations: {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Computed:    true,
+				Description: "List of operations allowed on deactivated objects.",
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 			consts.FieldTLSClientKeyType: {
 				Type:        schema.TypeString,
@@ -336,6 +346,12 @@ func kmipSecretRoleRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
+	if v, ok := resp.Data[consts.FieldDeactivatedObjectOperations]; ok && v != nil {
+		if err := d.Set(consts.FieldDeactivatedObjectOperations, v); err != nil {
+			return fmt.Errorf("error setting state key %q on KMIP role, err=%w", consts.FieldDeactivatedObjectOperations, err)
+		}
+	}
+
 	return nil
 }
 
@@ -428,6 +444,18 @@ func kmipSecretRoleRequestData(d *schema.ResourceData) map[string]interface{} {
 			}
 		} else if d.HasChange(k) {
 			data[k] = d.Get(k)
+		}
+	}
+
+	if d.IsNewResource() {
+		if v, ok := d.GetOk(consts.FieldDeactivatedObjectOperations); ok {
+			data[consts.FieldDeactivatedObjectOperations] = util.TerraformSetToStringArray(v)
+		}
+	} else if d.HasChange(consts.FieldDeactivatedObjectOperations) {
+		if v, ok := d.GetOk(consts.FieldDeactivatedObjectOperations); ok {
+			data[consts.FieldDeactivatedObjectOperations] = util.TerraformSetToStringArray(v)
+		} else {
+			data[consts.FieldDeactivatedObjectOperations] = []string{}
 		}
 	}
 
