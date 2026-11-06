@@ -57,8 +57,8 @@ The following arguments are supported:
 
 * `role` - (Required) Name of the role.
 
-* `deactivated_object_operations` - (Optional) List of operations allowed on deactivated objects.
-  Supported values are operation names without the `operation_` prefix (e.g. `get`, `locate`, `destroy`, `get_attributes`).
+* `deactivated_object_operations` - (Optional) List of operations allowed on deactivated objects. These operations are allowed in addition to `locate`, `get_attributes`, `get_attribute_list`, `revoke`, and `destroy`, which are always allowed.
+  Supported values are operation names without the `operation_` prefix (e.g. `get`, `encrypt`, `decrypt`).
   Every listed operation must also be permitted by the role via its corresponding `operation_*` setting.
 
 * `tls_client_key_type` - (Optional) Client certificate key type, `rsa` or `ec`.
