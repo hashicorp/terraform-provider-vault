@@ -22,7 +22,7 @@ IMPROVEMENTS:
 
 * `vault_managed_keys`: Add `encryption_mode` field to Azure configuration block to control AES-GCM envelope vs. direct KMS encryption. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
 
-* `vault_kmip_secret_role`: Add `deactivated_object_operations` parameter to allow specifying KMIP operations permitted on deactivated objects.
+* `vault_kmip_secret_role`: Add `deactivated_object_operations` parameter to allow specifying KMIP operations permitted on deactivated objects. ([#3113](https://github.com/hashicorp/terraform-provider-vault/pull/3113))
 
 BUG FIXES:
 
