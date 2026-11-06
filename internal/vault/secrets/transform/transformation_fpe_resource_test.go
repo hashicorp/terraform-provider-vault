@@ -33,6 +33,10 @@ const (
 //   - Step 2: In-place update of template, tweak_source and allowed_roles.
 //   - Step 3: Import state verification.
 func TestAccTransformationFPE_basic(t *testing.T) {
+	// checkFPEVersionGatedAttrs inspects the provider's Vault version while the TestCase
+	// is built, so the provider must already be configured.
+	acctestutil.TestEntPreCheck(t)
+
 	mount := acctest.RandomWithPrefix("transform")
 	name := acctest.RandomWithPrefix("fpe")
 
@@ -276,25 +280,6 @@ func TestAccTransformationFPE_remount(t *testing.T) {
 	})
 }
 
-// checkFPEVersionGatedAttrs asserts the defaults for max_tweak_len and fpe_algorithm, which Vault
-// only returns from 2.2.0 onwards. On older Vault versions it asserts they are absent from state.
-// The check is wrapped in a closure so the version comparison runs at check time (after PreCheck
-// has configured the provider), not when the TestCase struct is built.
-func checkFPEVersionGatedAttrs(addr string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		if provider.IsAPISupported(acctestutil.TestProvider.Meta(), provider.VaultVersion220) {
-			return resource.ComposeTestCheckFunc(
-				resource.TestCheckResourceAttr(addr, consts.FieldMaxTweakLen, "0"),
-				resource.TestCheckResourceAttr(addr, consts.FieldFpeAlgorithm, "ff1"),
-			)(s)
-		}
-		return resource.ComposeTestCheckFunc(
-			resource.TestCheckNoResourceAttr(addr, consts.FieldMaxTweakLen),
-			resource.TestCheckNoResourceAttr(addr, consts.FieldFpeAlgorithm),
-		)(s)
-	}
-}
-
 // TestAccTransformationFPE_vaultManagedImport validates adopting an FPE transformation that was
 // created directly in Vault (outside of Terraform):
 //   - Step 1: Import the pre-existing transformation into Terraform state
@@ -384,10 +369,6 @@ type fpeFields struct {
 	maxTweakLen  *int64
 	// omitDeletionAllowed leaves deletion_allowed out of the config so the default applies.
 	omitDeletionAllowed bool
-}
-
-func int64Ptr(v int64) *int64 {
-	return &v
 }
 
 // fpeConfig renders a transform mount and an FPE transformation. deletion_allowed is true
