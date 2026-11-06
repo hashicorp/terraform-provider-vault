@@ -346,10 +346,10 @@ resource "vault_transform_transformation_fpe" "test" {
 		Steps: []resource.TestStep{
 			// Step 1: Import the Vault-created transformation into Terraform state.
 			{
-				Config:            adoptConfig,
-				ResourceName:      fpeResourceAddress,
-				ImportState:       true,
-				ImportStateId:     fmt.Sprintf("%s/%s", mount, name),
+				Config:             adoptConfig,
+				ResourceName:       fpeResourceAddress,
+				ImportState:        true,
+				ImportStateId:      fmt.Sprintf("%s/%s", mount, name),
 				ImportStatePersist: true,
 			},
 			// Step 2: Apply the same config and expect an empty plan. This confirms that
