@@ -62,6 +62,40 @@ resource "vault_database_secret_backend_static_role" "password_role" {
   rotation_period     = "3600"
   rotation_statements = ["ALTER USER \"{{name}}\" WITH PASSWORD '{{password}}';"]
 }
+
+# configure a static role that generates passwords using a custom password policy
+resource "vault_database_secret_backend_static_role" "policy_role" {
+  backend             = vault_mount.db.path
+  name                = "my-policy-role"
+  db_name             = vault_database_secret_backend_connection.postgres.name
+  username            = "example"
+  rotation_period     = "3600"
+  rotation_statements = ["ALTER USER \"{{name}}\" WITH PASSWORD '{{password}}';"]
+
+  credential_type = "password"
+  credential_config = {
+    password_policy = "my-password-policy"
+  }
+}
+```
+
+A static role can also manage an RSA key pair instead of a password, for example
+for Snowflake key-pair authentication:
+
+```hcl
+resource "vault_database_secret_backend_static_role" "rsa_role" {
+  backend         = vault_mount.db.path
+  name            = "my-rsa-role"
+  db_name         = vault_database_secret_backend_connection.snowflake.name
+  username        = "EXAMPLE_USER"
+  rotation_period = "86400"
+
+  credential_type = "rsa_private_key"
+  credential_config = {
+    key_bits = "4096"
+    format   = "pkcs8"
+  }
+}
 ```
 
 ## Argument Reference
@@ -110,6 +144,45 @@ mutually exclusive. One of them must be set but not both.
   from a given `rotation_schedule`.
 
 * `rotation_statements` - (Optional) Database statements to execute to rotate the password for the configured database user.
+
+* `credential_type` - (Optional) Specifies the type of credential that
+  will be generated for the role. Options include: `password`, `rsa_private_key`, `client_certificate`.
+  Defaults to `password` in Vault. See the plugin's API page for credential types supported by individual databases.
+
+* `credential_config` - (Optional) A map of string key/value pairs that specifies the configuration
+  for the given `credential_type`. Note that this is a map argument (`credential_config = { ... }`),
+  not a nested block. See the [Vault API documentation](https://developer.hashicorp.com/vault/api-docs/secret/databases#create-static-role)
+  for more details.
+
+  The following options are available for each `credential_type` value:
+
+  * `password`
+      * `password_policy` (Optional) - The [policy](https://developer.hashicorp.com/vault/docs/concepts/password-policies)
+        used for password generation. If not provided, defaults to the password policy of the
+        database [configuration](https://developer.hashicorp.com/vault/api-docs/secret/databases#password_policy).
+
+  * `rsa_private_key`
+      * `key_bits` (Optional) - The bit size of the RSA key to generate. Options include:
+        `2048` (default), `3072`, `4096`.
+      * `format` (Optional) - The output format of the generated private key
+        credential. The private key will be returned from the API in PEM encoding. Options
+        include: `pkcs8` (default).
+
+  * `client_certificate`
+      * `common_name_template` (Optional) - A [username template](https://developer.hashicorp.com/vault/docs/concepts/username-templating)
+        to be used for the client certificate common name.
+      * `ca_cert` (Optional) - The PEM-encoded CA certificate.
+      * `ca_private_key` (Optional) - The PEM-encoded private key for the given `ca_cert`.
+      * `key_type` (Required) - Specifies the desired key type. Options include:
+        `rsa`, `ed25519`, `ec`.
+      * `key_bits` (Optional) - Number of bits to use for the generated keys. Options include:
+        `2048` (default), `3072`, `4096`; with `key_type=ec`, allowed values are: `224`, `256` (default),
+        `384`, `521`; ignored with `key_type=ed25519`.
+      * `signature_bits` (Optional) - The number of bits to use in the signature algorithm. Options include:
+        `256` (default), `384`, `512`.
+
+  ~> **Note:** All values in `credential_config` are strings, so numeric options such as
+  `key_bits` must be quoted, e.g. `key_bits = "4096"`.
 
 ## Attributes Reference
 
