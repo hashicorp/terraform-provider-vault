@@ -302,6 +302,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		kerberosauth.NewKerberosAuthBackendConfigResource,
 		kerberosauth.NewKerberosAuthBackendLDAPConfigResource,
 		kerberosauth.NewKerberosAuthBackendGroupResource,
+		transform.NewTransformTokenizationImportedKeyResource,
+		transform.NewTransformFPEImportedKeyResource,
 		transit.NewTransitImportedKeyResource,
 		transform.NewTransformationFPEResource,
 	}, testResources()...)
@@ -351,5 +353,6 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
 		transit.NewWrappingKeyDataSource,
+		transform.NewWrappingKeyDataSource,
 	}
 }
