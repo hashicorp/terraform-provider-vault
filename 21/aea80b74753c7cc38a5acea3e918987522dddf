@@ -1,0 +1,1 @@
+{"id":"41f79ddd-e76c-41b1-9dec-a59c3bb985fc","fileUri":"file:///Users/saarthchaturvedi/Vault/terraform-provider-vault/internal/vault/secrets/pki-external-ca/role_resource.go","repoName":"hashicorp/terraform-provider-vault","branchName":"schaturvedi/VAULT-44361/tfvp_support_external_ca","toolName":"apply_diff","startLine":308,"endLine":309,"taskId":null,"createdAt":1788976313301}
