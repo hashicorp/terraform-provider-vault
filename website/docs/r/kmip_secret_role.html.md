@@ -84,9 +84,9 @@ The following arguments are supported:
 
 * `operation_get` - (Optional) Grant permission to use the KMIP Get operation.
 
-* `operation_get_attribute_list` - (Optional) Grant permission to use the KMIP Get Atrribute List operation.
+* `operation_get_attribute_list` - (Optional) Grant permission to use the KMIP Get Attribute List operation.
 
-* `operation_get_attributes` - (Optional) Grant permission to use the KMIP Get Atrributes operation.
+* `operation_get_attributes` - (Optional) Grant permission to use the KMIP Get Attributes operation.
 
 * `operation_import` - (Optional) Grant permission to use the KMIP Import operation.
 
