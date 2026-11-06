@@ -26,6 +26,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
+* `vault_identity_group_alias`: Fix "Provider produced inconsistent result after apply" when the post-create Read hits a stale performance-replica; the Read now goes through the Client Controlled Consistency retry client (honors `max_retries_ccc`), matching `vault_identity_entity_alias`. ([#2959](https://github.com/hashicorp/terraform-provider-vault/pull/3111))
+
 
 
 ## 5.13.0 (October 14, 2026)
