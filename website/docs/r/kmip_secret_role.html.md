@@ -27,16 +27,17 @@ resource "vault_kmip_secret_scope" "dev" {
 }
 
 resource "vault_kmip_secret_role" "admin" {
-  path                     = vault_kmip_secret_scope.dev.path
-  scope                    = vault_kmip_secret_scope.dev.scope
-  role                     = "admin"
-  tls_client_key_type      = "ec"
-  tls_client_key_bits      = 256
-  operation_activate       = true
-  operation_get            = true
-  operation_get_attributes = true
-  operation_create         = true
-  operation_destroy        = true
+  path                          = vault_kmip_secret_scope.dev.path
+  scope                         = vault_kmip_secret_scope.dev.scope
+  role                          = "admin"
+  tls_client_key_type           = "ec"
+  tls_client_key_bits           = 256
+  operation_activate            = true
+  operation_get                 = true
+  operation_get_attributes      = true
+  operation_create              = true
+  operation_destroy             = true
+  deactivated_object_operations = ["get", "locate"]
 }
 ```
 
@@ -55,6 +56,10 @@ The following arguments are supported:
 * `scope` - (Required) Name of the scope.
 
 * `role` - (Required) Name of the role.
+
+* `deactivated_object_operations` - (Optional) List of operations allowed on deactivated objects. These operations are allowed in addition to `locate`, `get_attributes`, `get_attribute_list`, `revoke`, and `destroy`, which are always allowed.
+  Supported values are operation names without the `operation_` prefix (e.g. `get`, `encrypt`, `decrypt`).
+  Every listed operation must also be permitted by the role via its corresponding `operation_*` setting.
 
 * `tls_client_key_type` - (Optional) Client certificate key type, `rsa` or `ec`.
 
