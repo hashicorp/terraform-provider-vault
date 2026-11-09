@@ -305,6 +305,7 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		transform.NewTransformTokenizationImportedKeyResource,
 		transform.NewTransformFPEImportedKeyResource,
 		transit.NewTransitImportedKeyResource,
+		transform.NewTransformationFPEResource,
 	}, testResources()...)
 }
 
