@@ -91,7 +91,8 @@ The following arguments are supported:
 
 * `max_tweak_len` - (Optional) Maximum tweak size, in bytes, allowed for this transformation.
   Valid values are `0` to `32`; `0` allows a tweak of any length. If not set, Vault uses `0`.
-  Changing this forces a new resource to be created. Requires Vault 2.2.0 or later.
+  Vault does not allow this value to be changed after creation, so changing it fails at apply
+  time. Requires Vault 2.2.0 or later.
 
 ## Attributes Reference
 

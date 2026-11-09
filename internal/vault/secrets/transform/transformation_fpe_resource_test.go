@@ -160,7 +160,10 @@ func TestAccTransformationFPE_optionalFields(t *testing.T) {
 // TestAccTransformationFPE_maxTweakLen validates max_tweak_len and fpe_algorithm, which Vault
 // returns as of 2.2.0 (new transformations use FF1):
 //   - Step 1: Create with max_tweak_len = 8, verify both fields are populated
-//   - Step 2: Import state verification
+//   - Step 2: Change max_tweak_len. Vault does not allow updating it, so the new value must be
+//     sent and rejected by Vault rather than silently dropped, which would surface as
+//     "Provider produced inconsistent result after apply"
+//   - Step 3: Import state verification
 func TestAccTransformationFPE_maxTweakLen(t *testing.T) {
 	mount := acctest.RandomWithPrefix("transform")
 	name := acctest.RandomWithPrefix("fpe")
@@ -191,6 +194,17 @@ func TestAccTransformationFPE_maxTweakLen(t *testing.T) {
 					},
 				},
 			},
+			{
+				Config: fpeConfig(fpeFields{
+					mount:       mount,
+					name:        name,
+					template:    templateCreditCard,
+					tweakSource: "supplied",
+					maxTweakLen: int64Ptr(16),
+				}),
+				ExpectError: regexp.MustCompile(`max_tweak_len cannot be updated`),
+			},
+
 			{
 				ResourceName:                         fpeResourceAddress,
 				ImportState:                          true,

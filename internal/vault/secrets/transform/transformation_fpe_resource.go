@@ -109,7 +109,7 @@ func (r *TransformationFPEResource) Schema(_ context.Context, _ resource.SchemaR
 				},
 			},
 			consts.FieldMaxTweakLen: schema.Int64Attribute{
-				MarkdownDescription: "Maximum tweak size, in bytes, allowed for this transformation. Valid values are 0 to 32; 0 allows a tweak of any length. Changing this field replaces this resource. Requires Vault 2.2.0 or later.",
+				MarkdownDescription: "Maximum tweak size, in bytes, allowed for this transformation. Valid values are 0 to 32; 0 allows a tweak of any length. Vault does not allow this value to be changed after creation, so changing it fails at apply time. Requires Vault 2.2.0 or later.",
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.Int64{
@@ -196,8 +196,12 @@ func (r *TransformationFPEResource) readFromVault(ctx context.Context, cli *vaul
 	return true, diags
 }
 
-// requestBody builds the request body for POST transformations/fpe/:name from the plan
-func (r *TransformationFPEResource) requestBody(ctx context.Context, plan *TransformationFPEModel, create bool) (map[string]any, diag.Diagnostics) {
+// requestBody builds the request body for POST transformations/fpe/:name from the plan.
+// state is nil on create. On update max_tweak_len is only sent when it differs from state,
+// because Vault rejects the field on any update, even when the value is unchanged. Sending a
+// changed value lets Vault return its error instead of the change being silently dropped.
+func (r *TransformationFPEResource) requestBody(ctx context.Context, plan, state *TransformationFPEModel) (map[string]any, diag.Diagnostics) {
+	create := state == nil
 	var diags diag.Diagnostics
 
 	body := map[string]any{
@@ -209,7 +213,7 @@ func (r *TransformationFPEResource) requestBody(ctx context.Context, plan *Trans
 	if !plan.DeletionAllowed.IsNull() && !plan.DeletionAllowed.IsUnknown() {
 		body[consts.FieldDeletionAllowed] = plan.DeletionAllowed.ValueBool()
 	}
-	if create && !plan.MaxTweakLen.IsNull() && !plan.MaxTweakLen.IsUnknown() {
+	if !plan.MaxTweakLen.IsNull() && !plan.MaxTweakLen.IsUnknown() && (create || !plan.MaxTweakLen.Equal(state.MaxTweakLen)) {
 		body[consts.FieldMaxTweakLen] = plan.MaxTweakLen.ValueInt64()
 	}
 
@@ -257,7 +261,7 @@ func (r *TransformationFPEResource) Create(ctx context.Context, req resource.Cre
 		return
 	}
 
-	body, d := r.requestBody(ctx, &plan, true)
+	body, d := r.requestBody(ctx, &plan, nil)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -335,8 +339,9 @@ func (r *TransformationFPEResource) Read(ctx context.Context, req resource.ReadR
 }
 
 func (r *TransformationFPEResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan TransformationFPEModel
+	var plan, state TransformationFPEModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -347,7 +352,7 @@ func (r *TransformationFPEResource) Update(ctx context.Context, req resource.Upd
 		return
 	}
 
-	body, d := r.requestBody(ctx, &plan, false)
+	body, d := r.requestBody(ctx, &plan, &state)
 	resp.Diagnostics.Append(d...)
 	if resp.Diagnostics.HasError() {
 		return
