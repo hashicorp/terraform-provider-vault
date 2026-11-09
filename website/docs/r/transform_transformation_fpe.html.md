@@ -17,9 +17,6 @@ Protection module. Deleting an FPE transformation deletes its underlying key, wh
 encoded by it impossible to decode without restoring from a backup. Vault blocks deletion
 until `deletion_allowed` is `true`.
 
-~> **Note** Use either this resource or [`vault_transform_transformation`](transform_transformation.html)
-to manage a given FPE transformation, not both.
-
 ## Example Usage
 
 ### Basic Example
@@ -57,9 +54,6 @@ resource "vault_transform_transformation_fpe" "example" {
 
   # Maximum tweak size in bytes (Vault 2.2.0 and later). Cannot be changed after creation.
   max_tweak_len = 8
-
-  # Required before Terraform can destroy the transformation.
-  deletion_allowed = true
 }
 ```
 
@@ -70,7 +64,6 @@ The following arguments are supported:
 * `namespace` - (Optional) The namespace to provision the resource in.
   The value should not contain leading or trailing forward slashes.
   The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
-  *Available only for Vault Enterprise*.
 
 * `mount` - (Required) Path where the Transform secrets engine is mounted.
   Changing this forces a new resource to be created.
@@ -84,10 +77,11 @@ The following arguments are supported:
   and `internal`. If not set, Vault uses `supplied`.
 
 * `allowed_roles` - (Optional) List of roles allowed to use this transformation. A role using this
-  transformation must be in this list for encode and decode operations to work.
+  transformation must be in this list for encode and decode operations to work. 
 
 * `deletion_allowed` - (Optional) If `true`, this transformation can be deleted. Otherwise deletion
   is blocked while this value is `false`. Defaults to `false`.
+*Note* deleting the transform deletes the underlying key, which makes decoding of FPE encoded values impossible without restoring from a backup.
 
 * `max_tweak_len` - (Optional) Maximum tweak size, in bytes, allowed for this transformation.
   Valid values are `0` to `32`; `0` allows a tweak of any length. If not set, Vault uses `0`.
