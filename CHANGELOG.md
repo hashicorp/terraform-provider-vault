@@ -9,6 +9,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_jwt_auth_backend`: Add support for write-only `oidc_client_id_wo` and `oidc_client_id_wo_version` fields so the OIDC client ID can be set from ephemeral values.
+* docs: Document the `namespace` argument on the ephemeral resource `vault_kv_secret_v2`.
 * `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#3093](https://github.com/hashicorp/terraform-provider-vault/pull/3093))
 
 
