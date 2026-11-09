@@ -83,7 +83,7 @@ func kmipSecretRoleResource() *schema.Resource {
 				Type:        schema.TypeSet,
 				Optional:    true,
 				Computed:    true,
-				Description: "List of operations allowed on deactivated objects. Requires Vault 2.3 or later.",
+				Description: "List of additional operations allowed on deactivated managed objects. Requires Vault 2.3 or later.",
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
