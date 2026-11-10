@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-const maskingResourceAddress = "vault_transform_masking_transformation.test"
+const maskingResourceAddress = "vault_transform_transformation_masking.test"
 
 // TestAccTransformMaskingTransformation_basic validates the lifecycle of a masking transformation:
 //   - Step 1: Create with only the required values; the omitted optional attributes must hold the expected default values in state with no drift
@@ -206,7 +206,7 @@ func TestAccTransformMaskingTransformation_terraformImportWrongType(t *testing.T
 // that already exists outside of the config, referencing it by literal path.
 func testConfigMaskingTransformationExistingMount(mount, name, template, extra string) string {
 	return fmt.Sprintf(`
-resource "vault_transform_masking_transformation" "test" {
+resource "vault_transform_transformation_masking" "test" {
   mount    = %q
   name     = %q
   template = %q
@@ -222,7 +222,7 @@ resource "vault_mount" "test" {
   type = "transform"
 }
 
-resource "vault_transform_masking_transformation" "test" {
+resource "vault_transform_transformation_masking" "test" {
   mount    = vault_mount.test.path
   name     = %q
   template = %q

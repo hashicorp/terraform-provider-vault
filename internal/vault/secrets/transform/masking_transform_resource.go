@@ -59,7 +59,7 @@ type MaskingTransformationResourceModel struct {
 }
 
 func (r *MaskingTransformationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_transform_masking_transformation"
+	resp.TypeName = req.ProviderTypeName + "_transform_transformation_masking"
 }
 
 func (r *MaskingTransformationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
