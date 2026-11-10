@@ -12,10 +12,9 @@ Manages tune settings on an auth mount created by `vault_auth_backend` or anothe
 
 Terraform manages only the arguments you set; other settings keep their current value. Removing an argument resets it to Vault's default, and destroying the resource resets everything it managed.
 
-~> **Important** Do not combine this resource with a `tune` block on the auth
-resource for the same mount. They overwrite each other's settings.
+~> **Important** Omit the `tune` block on the auth resource for this mount. Do not set `tune` and `vault_auth_tune` together. An empty `tune {}` block, or a `dynamic "tune"` block that expands to nothing, is still sent and clears the settings this resource manages. Leaving the block out sends no tune configuration.
 
-To migrate, delete the `tune` block and add `vault_auth_tune` with the same values. Deleting the block doesn't recreate the mount or change its settings.
+To migrate, delete the `tune` block and add `vault_auth_tune` with the same values. Deleting the block does not recreate the mount or change its settings.
 
 ## Example Usage
 
