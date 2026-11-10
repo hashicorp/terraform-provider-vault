@@ -20,6 +20,19 @@ resource "vault_github_auth_backend" "example" {
 }
 ```
 
+Manage tune settings with [`vault_auth_tune`](auth_tune.html). Omit `tune` on the auth resource:
+
+```hcl
+resource "vault_github_auth_backend" "example" {
+  organization = "myorg"
+}
+
+resource "vault_auth_tune" "example" {
+  path               = vault_github_auth_backend.example.path
+  listing_visibility = "unauth"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -46,7 +59,7 @@ The following arguments are supported:
 * `description` - (Optional) Specifies the description of the mount.
   This overrides the current stored value, if any.
 
-* `tune` - (Optional) Extra configuration block. Structure is documented below.
+* `tune` - (Optional) Extra configuration block. Structure is documented below. Omit this block to manage these settings with [`vault_auth_tune`](auth_tune.html).
 
 The `tune` block is used to tune the auth backend:
 

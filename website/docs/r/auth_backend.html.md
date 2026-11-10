@@ -23,6 +23,19 @@ resource "vault_auth_backend" "example" {
 }
 ```
 
+Manage tune settings with [`vault_auth_tune`](auth_tune.html). Omit `tune` on the auth resource:
+
+```hcl
+resource "vault_auth_backend" "userpass" {
+  type = "userpass"
+}
+
+resource "vault_auth_tune" "userpass" {
+  path               = vault_auth_backend.userpass.path
+  listing_visibility = "unauth"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -43,7 +56,7 @@ The following arguments are supported:
 
 * `local` - (Optional) Specifies if the auth method is local only.
 
-* `tune` - (Optional) Extra configuration block. Structure is documented below.
+* `tune` - (Optional) Extra configuration block. Structure is documented below. Omit this block to manage these settings with [`vault_auth_tune`](auth_tune.html).
 
 The `tune` block is used to tune the auth backend:
 

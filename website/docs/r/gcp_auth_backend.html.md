@@ -38,6 +38,19 @@ resource "vault_gcp_auth_backend" "gcp" {
 }
 ```
 
+Manage tune settings with [`vault_auth_tune`](auth_tune.html). Omit `tune` on the auth resource:
+
+```hcl
+resource "vault_gcp_auth_backend" "gcp" {
+  credentials = file("vault-gcp-credentials.json")
+}
+
+resource "vault_auth_tune" "gcp" {
+  path               = vault_gcp_auth_backend.gcp.path
+  listing_visibility = "unauth"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -111,7 +124,7 @@ The following arguments are supported:
 
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the root credential until unset. Requires Vault Enterprise 1.19+.
 
-* `tune` - (Optional) Extra configuration block. Structure is documented below.
+* `tune` - (Optional) Extra configuration block. Structure is documented below. Omit this block to manage these settings with [`vault_auth_tune`](auth_tune.html).
 
 The `tune` block is used to tune the auth backend:
 
