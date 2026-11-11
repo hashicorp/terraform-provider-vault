@@ -19,8 +19,8 @@ import (
 // TestAccTPMAuthBackendConfig validates the complete lifecycle of the TPM auth
 // backend config resource:
 //   - Step 1: Create with only mount set to verify Vault-computed defaults
-//   - Step 2: Set all three duration fields explicitly
-//   - Step 3: Set default_cert_ttl to 0 which should unset the field
+//   - Step 2: Set all three duration fields and alias mode explicitly
+//   - Step 3: Set default_cert_ttl to 0 which should unset the field and verify alias mode is preserved
 //   - Step 4: Import to verify zero drift
 func TestAccTPMAuthBackendConfig(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tpm-mount")
@@ -108,6 +108,40 @@ func TestAccTPMAuthBackendConfig(t *testing.T) {
 	})
 }
 
+// TestAccTPMAuthBackendConfigAliasMode validates alias_mode, which requires Vault 2.2.2+.
+func TestAccTPMAuthBackendConfigAliasMode(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tpm-mount")
+	resourceName := "vault_tpm_auth_backend_config.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion222)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTPMAuthBackendConfigConfig(tpmAuthConfigFields{
+					mount:     mount,
+					aliasMode: "role_id",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "alias_mode", "role_id"),
+				),
+			},
+			{
+				Config: testAccTPMAuthBackendConfigConfig(tpmAuthConfigFields{
+					mount:     mount,
+					aliasMode: "tpm_id",
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "alias_mode", "tpm_id"),
+				),
+			},
+		},
+	})
+}
+
 func testAccTPMAuthBackendConfigImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {
 	return func(s *terraform.State) (string, error) {
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -124,6 +158,7 @@ type tpmAuthConfigFields struct {
 	caSoftExpiry          int64
 	defaultCertTTL        int64
 	specifyDefaultCertTTL bool
+	aliasMode             string
 }
 
 func testAccTPMAuthBackendConfigConfig(c tpmAuthConfigFields) string {
@@ -145,6 +180,9 @@ resource "vault_tpm_auth_backend_config" "test" {
 	}
 	if c.specifyDefaultCertTTL {
 		body += fmt.Sprintf("  default_cert_ttl = %d\n", c.defaultCertTTL)
+	}
+	if c.aliasMode != "" {
+		body += fmt.Sprintf("  alias_mode       = %q\n", c.aliasMode)
 	}
 
 	body += "}\n"

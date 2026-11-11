@@ -27,6 +27,7 @@ resource "vault_tpm_auth_backend_config" "tpm_config" {
   ca_lifetime      = 315360000  # 10 years
   ca_soft_expiry   = 31536000   # 1 year before hard expiry
   default_cert_ttl = 2592000    # 30 days
+  alias_mode       = "tpm_id"
 }
 ```
 
@@ -45,6 +46,8 @@ The following arguments are supported:
 * `ca_soft_expiry` - (Optional) How long before hard expiry the active CA stops signing new certificates, in seconds. If not specified, uses Vault's default.
 
 * `default_cert_ttl` - (Optional) Default lifetime for issued client certificates, in seconds. If not specified, uses Vault's default.
+
+* `alias_mode` - (Optional) The identity alias name mode used at login. Valid values are `tpm_id` and `role_id`. Requires Vault Enterprise 2.2.2 or later. If not specified, uses Vault's default.
 
 ## Attributes Reference
 
