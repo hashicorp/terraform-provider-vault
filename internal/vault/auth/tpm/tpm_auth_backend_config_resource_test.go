@@ -19,8 +19,8 @@ import (
 // TestAccTPMAuthBackendConfig validates the complete lifecycle of the TPM auth
 // backend config resource:
 //   - Step 1: Create with only mount set to verify Vault-computed defaults
-//   - Step 2: Set all three duration fields and alias mode explicitly
-//   - Step 3: Set default_cert_ttl to 0 which should unset the field and verify alias mode is preserved
+//   - Step 2: Set all three duration fields explicitly
+//   - Step 3: Set default_cert_ttl to 0 which should unset the field
 //   - Step 4: Import to verify zero drift
 func TestAccTPMAuthBackendConfig(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tpm-mount")
