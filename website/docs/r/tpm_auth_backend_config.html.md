@@ -47,7 +47,7 @@ The following arguments are supported:
 
 * `default_cert_ttl` - (Optional) Default lifetime for issued client certificates, in seconds. If not specified, uses Vault's default.
 
-* `alias_mode` - (Optional) The identity alias name mode used at login. Valid values are `tpm_id` and `role_id`. Requires Vault Enterprise 2.2.2 or later. If not specified, uses Vault's default.
+* `alias_mode` - (Optional) The identity alias name mode used at login. Valid values are `tpm_id` and `role_id`. Requires Vault Enterprise 2.2.3 or later. If not specified, uses Vault's default.
 
 ## Attributes Reference
 

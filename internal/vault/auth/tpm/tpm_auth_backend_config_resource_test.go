@@ -108,7 +108,7 @@ func TestAccTPMAuthBackendConfig(t *testing.T) {
 	})
 }
 
-// TestAccTPMAuthBackendConfigAliasMode validates alias_mode, which requires Vault 2.2.2+.
+// TestAccTPMAuthBackendConfigAliasMode validates alias_mode, which requires Vault 2.2.3+.
 func TestAccTPMAuthBackendConfigAliasMode(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tpm-mount")
 	resourceName := "vault_tpm_auth_backend_config.test"
@@ -116,7 +116,7 @@ func TestAccTPMAuthBackendConfigAliasMode(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion222)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion223)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{

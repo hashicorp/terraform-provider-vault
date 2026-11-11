@@ -123,7 +123,7 @@ func (r *TPMAuthBackendConfigResource) Create(ctx context.Context, req resource.
 		resp.Diagnostics.AddError(
 			"Feature Not Supported",
 			fmt.Sprintf("alias_mode requires Vault %s or later (detected %s).",
-				provider.VaultVersion222, r.Meta().GetVaultVersion()),
+				provider.VaultVersion223, r.Meta().GetVaultVersion()),
 		)
 		return
 	}
@@ -213,7 +213,7 @@ func (r *TPMAuthBackendConfigResource) Update(ctx context.Context, req resource.
 		resp.Diagnostics.AddError(
 			"Feature Not Supported",
 			fmt.Sprintf("alias_mode requires Vault %s or later (detected %s).",
-				provider.VaultVersion222, r.Meta().GetVaultVersion()),
+				provider.VaultVersion223, r.Meta().GetVaultVersion()),
 		)
 		return
 	}
@@ -341,5 +341,5 @@ func aliasModeSupported(meta *provider.ProviderMeta, aliasMode types.String) boo
 	if aliasMode.IsNull() || aliasMode.IsUnknown() {
 		return true
 	}
-	return meta.IsAPISupported(provider.VaultVersion222)
+	return meta.IsAPISupported(provider.VaultVersion223)
 }
