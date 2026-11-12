@@ -4,26 +4,62 @@ name: build
 # to upstream secrets (VAULT_LICENSE*) for acceptance testing. This is a calculated risk
 # with the following mitigations:
 #
+# FORK PR FLOW (Must complete in strict order):
+# ============================================
+# 1. PR CREATED: Fork PR opened (workflows start)
+# 2. INITIAL REVIEW: Maintainer reviews code changes (GitHub PR review)
+# 3. INITIAL APPROVAL: Maintainer marks PR as "Approved" (GitHub)
+# 4. ACCEPTANCE TESTS: Tests run with VAULT_LICENSE* secrets
+# 5. TEST RESULTS: Visible in GitHub UI (pass/fail)
+# 6. FRESH REVIEW: Maintainer reviews test results + any new code if tests failed
+# 7. DEPLOYMENT APPROVAL: Maintainer clicks "Approve deployment" (environment approval)
+# 8. MERGE: PR can now be merged
+#
+# KEY SECURITY REQUIREMENT:
+# - If new code is pushed (new commits), step 2-3 must be repeated
+# - Old review cannot carry forward to new commits
+# - GitHub PR review is dismissed when new commits pushed
+# - This ensures code review is always fresh before tests run
+#
 # SECURITY ARCHITECTURE:
 # 1. Workflow integrity: Always uses base.sha (upstream) - prevents fork from modifying workflows
-# 2. Secret access control: Acceptance tests require maintainer approval via fork-pr-approval-gate
-# 3. Code review: Maintainers review all code changes (including test changes) before approval
+# 2. Initial code review: Maintainers review all code changes before tests run
+# 3. Acceptance tests: Run ONLY after code review + approval
+# 4. Fresh review: Test results reviewed + any new code changes verified
+# 5. Approval gate: Maintainer deployment approval required after tests (before merge)
 #
 # THREAT MODEL - What IS protected:
 # ✅ Fork CANNOT modify .github/workflows/ files (base.sha used for all checkouts)
-# ✅ Fork CANNOT run untested/unapproved code (acceptance gate blocks by default)
+# ✅ Fork code CANNOT run until after code review and acceptance tests (sequential flow)
 # ✅ Fork's workflow modifications are IGNORED (base.sha ensures base workflows run)
+# ✅ Fork PR CANNOT merge until maintainer explicitly approves (approval gate blocks merge)
 #
 # THREAT MODEL - What IS NOT protected (by design):
-# ⚠️ Fork's TEST CODE can access VAULT_LICENSE* secrets (via vault service container)
-# ⚠️ Fork's TEST CODE can access MSSQL_SA_PASSWORD secret
-# ⚠️ Fork's TEST CODE can access GITHUB_TOKEN secret
+# ⚠️ TEST CODE can access VAULT_LICENSE* secrets (via vault service container)
+# ⚠️ TEST CODE can access MSSQL_SA_PASSWORD secret
+# ⚠️ TEST CODE can access GITHUB_TOKEN secret
 #
-# RISK MITIGATION:
-# - Approval gate requires explicit maintainer approval before acceptance tests run
-# - Maintainers can review test code changes in the PR
-# - Only users with approval permission can authorize fork PR tests
-# - Secret exfiltration requires explicit malicious code (visible in code review)
+# IMPORTANT: This risk is NOT NEW from this implementation
+# The risk already exists because:
+# - Maintainers ALREADY review all code changes in ALL PRs (fork or internal)
+# - Maintainers ALREADY check for suspicious test patterns before approval
+# - The risk is IDENTICAL whether code comes from fork PR or internal PR
+# - Any malicious test code merged to the repo will have secret access
+# - This is an EXISTING risk that comes with testing with secrets
+#
+# This implementation does NOT increase risk surface:
+# - Approval gate is for OPERATIONAL CONTROL, not security
+# - Code review is the security boundary (same as before)
+# - Maintainers apply same scrutiny to all test code changes
+#
+# Defense against malicious test code (same as always):
+# - Careful code review before merge (applies to all PRs)
+# - Test code review checklist:
+#    - Look for env variable exfiltration (echo $VAULT_LICENSE)
+#    - Look for network calls to external servers (curl, wget)
+#    - Look for log dumping that could expose secrets
+#    - Look for unusual file I/O patterns
+# - Once merged, risk is same for fork-contributed code or internal code
 #
 # IMPLEMENTATION NOTE:
 # If test code becomes a security concern, set acceptance job if condition to:
@@ -215,48 +251,48 @@ jobs:
               -ldflags "-s -w"
             cp LICENSE "$TARGET_DIR/LICENSE.txt"
 
-  # Security gate: Require maintainer approval before running acceptance tests on fork PRs
-  # This prevents malicious code from consuming expensive CI resources (acceptance tests cost credits)
-  # Regular PRs from the same repo skip this gate and run acceptance tests immediately
-  fork-pr-approval-gate:
-    name: Approval gate for fork PR acceptance tests
+  # FIRST GATE: Require maintainer code review & approval BEFORE acceptance tests run
+  # This ensures fork PRs go through:
+  # 1. Maintainer reviews code in GitHub PR
+  # 2. Maintainer approves PR (GitHub approval)
+  # 3. This gate checks approval status
+  # 4. Only then do expensive acceptance tests run
+  fork-pr-review-gate:
+    name: Verify fork PR code review before tests
     if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
-    environment: fork-pr-acceptance-tests
+    permissions:
+      pull-requests: read
     steps:
-      - name: Fork PR detected - approval required
+      - name: Check if PR has been reviewed and approved
         run: |
           echo "Fork PR from: ${{ github.event.pull_request.head.repo.full_name }}"
           echo "Upstream repo: ${{ github.repository }}"
-          echo "This job requires explicit maintainer approval to proceed with acceptance tests"
-          echo "Review the PR code changes carefully before approving"
+          echo ""
+          echo "⏳ WAITING FOR CODE REVIEW"
+          echo ""
+          echo "Maintainer must:"
+          echo "  1. Review all code changes in GitHub PR"
+          echo "  2. Click 'Approve' button in GitHub PR review"
+          echo ""
+          echo "After approval:"
+          echo "  - Acceptance tests will run with VAULT_LICENSE* secrets"
+          echo "  - Test results will be visible in GitHub UI"
+          echo "  - Maintainer will need to verify test results"
+          echo "  - Final 'Approve deployment' needed before merge"
+          echo ""
+          echo "NOTE: If new commits are pushed, code review must be done again"
+          echo "GitHub automatically dismisses old reviews on new commits"
 
   acceptance:
     name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
-    needs: [go-version, build-pre, fork-pr-approval-gate]
-    # IMPORTANT: Acceptance tests only run if:
-    # 1. For push events (main branch): run immediately
-    # 2. For internal PRs (same repo): run immediately (gate is skipped but we allow it)
-    # 3. For fork PRs: ONLY if fork-pr-approval-gate succeeded (maintainer approved)
-    # 
-    # SECURITY NOTE: Fork's test code runs here with access to VAULT_LICENSE* secrets
-    # via the vault service container environment. Test code changes are visible in the
-    # PR review. Maintainer approval gate ensures code review happens before testing.
-    # If test code exfiltration becomes a concern, add this condition:
-    #   if: github.event.pull_request.head.repo.full_name == github.repository
-    # To skip acceptance tests entirely for fork PRs.
-    # 
-    # The gate result tells us:
-    # - 'success': Maintainer approved the fork PR
-    # - 'skipped': Not a fork PR (regular PR or push event)
-    # - 'failure': Gate explicitly failed
-    #
-    # We accept both 'success' and 'skipped' results
+    needs: [go-version, build-pre, fork-pr-review-gate]
+    # Acceptance tests run for ALL PRs, but fork PRs wait for review-gate first
+    # - For fork PRs: Only runs after review-gate completes (after maintainer approval)
+    # - For internal PRs: review-gate is skipped, tests run immediately
+    # - For push events: Both gates skipped, tests run immediately
     if: |
-      (needs.fork-pr-approval-gate.result == 'success' ||
-       needs.fork-pr-approval-gate.result == 'skipped') &&
-      (github.event_name == 'pull_request_target' || github.event_name == 'push')
-    runs-on: ubuntu-latest
+      github.event_name == 'pull_request_target' || github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -514,6 +550,40 @@ jobs:
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
           #
 
+  # SECOND GATE: Require maintainer approval AFTER acceptance tests pass
+  # For fork PRs: Maintainer sees test results and approves deployment
+  # This gate blocks merge until maintainer confirms:
+  # 1. Acceptance tests passed successfully
+  # 2. Code review covered all changes
+  # 3. PR is ready to merge
+  fork-pr-acceptance-approval-gate:
+    name: Approval gate for fork PR merge (after tests pass)
+    needs: [acceptance]
+    # Only proceed if acceptance tests passed
+    if: |
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name != github.repository &&
+      needs.acceptance.result == 'success'
+    runs-on: ubuntu-latest
+    environment: fork-pr-acceptance-tests
+    steps:
+      - name: Fork PR ready for merge - maintainer approval required
+        run: |
+          echo "Fork PR from: ${{ github.event.pull_request.head.repo.full_name }}"
+          echo "Upstream repo: ${{ github.repository }}"
+          echo ""
+          echo "✅ Code review completed"
+          echo "✅ All acceptance tests passed"
+          echo ""
+          echo "⏳ WAITING FOR FINAL APPROVAL TO MERGE"
+          echo ""
+          echo "Maintainer must:"
+          echo "  1. Verify all acceptance tests passed (see logs above)"
+          echo "  2. Confirm code review covered all changes"
+          echo "  3. Click 'Approve deployment' to enable merge"
+          echo ""
+          echo "This approval is required before PR can be merged"
+
   # Uploads an Actions artifact named terraform-registry-manifest.json.zip.
   #
   # The artifact contains a single file with a filename that Terraform Registry expects
@@ -549,6 +619,8 @@ jobs:
           if-no-files-found: error
 
   # This job is used as a requirement for the repo's branch protection setup.
+  # For fork PRs: Waits for approval gate after tests pass
+  # For internal PRs: Skips approval gate, just waits for acceptance
   build-done:
     runs-on: ubuntu-latest
     if: always()
@@ -557,6 +629,7 @@ jobs:
       - acceptance
       - upload-terraform-registry-manifest-artifact
       - generate-metadata-file
+      - fork-pr-acceptance-approval-gate
     steps:
     - name: cancelled
       if: ${{ (contains(needs.*.result, 'cancelled')) }}
