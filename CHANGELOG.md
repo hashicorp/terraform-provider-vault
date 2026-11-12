@@ -24,6 +24,8 @@ IMPROVEMENTS:
 
 * `vault_managed_keys`: Add `encryption_mode` field to Azure configuration block to control AES-GCM envelope vs. direct KMS encryption. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
 
+* `vault_kmip_secret_role`: Add `deactivated_object_operations` parameter to allow specifying KMIP operations permitted on deactivated objects. Requires Vault 2.3 or later. ([#3113](https://github.com/hashicorp/terraform-provider-vault/pull/3113))
+
 BUG FIXES:
 
 * `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
