@@ -26,6 +26,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* `vault_ldap_secret_backend_static_role`: Fix `mount` and `role_name` not being populated in state when importing a role.
 * `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
 
 
