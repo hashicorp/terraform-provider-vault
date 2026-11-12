@@ -1267,7 +1267,10 @@ func getConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, res
 }
 
 func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) (map[string]interface{}, error) {
-	result := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+	result, err := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+	if err != nil {
+		return nil, err
+	}
 	if result == nil {
 		return nil, nil
 	}
@@ -1284,12 +1287,15 @@ func getMSSQLConnectionDetailsFromResponse(d *schema.ResourceData, prefix string
 	return result, nil
 }
 
-func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) map[string]interface{} {
-	result := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret, meta interface{}) (map[string]interface{}, error) {
+	result, err := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+	if err != nil {
+		return nil, err
+	}
 	details := resp.Data["connection_details"]
 	data, ok := details.(map[string]interface{})
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	// cloud specific
@@ -1328,21 +1334,25 @@ func getPostgresConnectionDetailsFromResponse(d *schema.ResourceData, prefix str
 			result["self_managed"] = v.(bool)
 		}
 	}
-	return result
+	return result, nil
 }
 
-func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
+func getConnectionDetailsFromResponseWithDisableEscaping(d *schema.ResourceData, prefix string, resp *api.Secret) (map[string]interface{}, error) {
 	result := getConnectionDetailsFromResponseWithUserPass(d, prefix, resp)
 	if result == nil {
-		return nil
+		return nil, nil
 	}
 
 	details := resp.Data["connection_details"].(map[string]interface{})
 	if v, ok := details["disable_escaping"]; ok {
-		result["disable_escaping"] = v.(bool)
+		disableEscaping, err := parseutil.ParseBool(v)
+		if err != nil {
+			return nil, fmt.Errorf(`unsupported type for field "disable_escaping", err=%w`, err)
+		}
+		result["disable_escaping"] = disableEscaping
 	}
 
-	return result
+	return result, nil
 }
 
 func getMongoDBConnectionDetailsFromResponse(d *schema.ResourceData, prefix string, resp *api.Secret) map[string]interface{} {
@@ -2318,7 +2328,11 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineInfluxDB:
 		result = getInfluxDBConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineHana:
-		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+		values, err := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+		if err != nil {
+			return nil, err
+		}
+		result = values
 	case dbEngineMongoDB:
 		result = getMongoDBConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineMongoDBAtlas:
@@ -2340,7 +2354,11 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineOracle:
 		result = getOracleConnectionDetailsFromResponse(d, prefix, resp, meta)
 	case dbEnginePostgres:
-		result = getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
+		values, err := getPostgresConnectionDetailsFromResponse(d, prefix, resp, meta)
+		if err != nil {
+			return nil, err
+		}
+		result = values
 	case dbEngineElasticSearch:
 		result = getElasticsearchConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineSnowflake:
@@ -2350,7 +2368,11 @@ func getDBConnectionConfig(d *schema.ResourceData, engine *dbEngine, idx int,
 	case dbEngineRedisElastiCache:
 		result = getRedisElastiCacheConnectionDetailsFromResponse(d, prefix, resp)
 	case dbEngineRedshift:
-		result = getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+		values, err := getConnectionDetailsFromResponseWithDisableEscaping(d, prefix, resp)
+		if err != nil {
+			return nil, err
+		}
+		result = values
 	default:
 		return nil, fmt.Errorf("no response handler for dbEngine: %s", engine)
 	}
