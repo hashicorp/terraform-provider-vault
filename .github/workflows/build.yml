@@ -15,31 +15,15 @@ name: build
 # ✅ Fork's workflow modifications are IGNORED (base.sha ensures base workflows run)
 #
 # THREAT MODEL - What IS NOT protected (by design):
-# ⚠️ TEST CODE (fork or merged) can access VAULT_LICENSE* secrets (via vault service container)
-# ⚠️ TEST CODE (fork or merged) can access MSSQL_SA_PASSWORD secret
-# ⚠️ TEST CODE (fork or merged) can access GITHUB_TOKEN secret
+# ⚠️ Fork's TEST CODE can access VAULT_LICENSE* secrets (via vault service container)
+# ⚠️ Fork's TEST CODE can access MSSQL_SA_PASSWORD secret
+# ⚠️ Fork's TEST CODE can access GITHUB_TOKEN secret
 #
-# CRITICAL INSIGHT: Risk persists AFTER merge
-# Once malicious test code is merged into parent repo, it executes with secret access on:
-# - All future PR events (pull_request_target runs in upstream context)
-# - All push events to main branch
-# - The risk is IDENTICAL whether code is in fork or parent repo
-#
-# REAL DEFENSE IS CODE REVIEW AT MERGE TIME:
-# - Approval gate is a speed bump, not the security boundary
-# - Code review before merge is the actual security control
-# - Malicious test patterns must be caught during PR review
-# - Once merged, test code runs with permanent secret access
-# - This applies equally to internal PRs and fork PRs
-#
-# RISK MITIGATION LAYERS:
-# 1. Approval gate: Slows down fork PRs (requires explicit maintainer action)
-# 2. Code review: CRITICAL - Maintainers must review test code for suspicious patterns
-#    - Look for env variable exfiltration
-#    - Look for network calls to external servers
-#    - Look for log dumping of secrets
-#    - Look for curl/wget to send data externally
-# 3. Once merged: Same risk as any test code in the repo (inherent to testing with secrets)
+# RISK MITIGATION:
+# - Approval gate requires explicit maintainer approval before acceptance tests run
+# - Maintainers can review test code changes in the PR
+# - Only users with approval permission can authorize fork PR tests
+# - Secret exfiltration requires explicit malicious code (visible in code review)
 #
 # IMPLEMENTATION NOTE:
 # If test code becomes a security concern, set acceptance job if condition to:
