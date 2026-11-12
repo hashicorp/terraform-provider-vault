@@ -6,6 +6,7 @@ FEATURES:
 * **New Resources**: Add support for Transit BYOK key import with the `vault_transit_secret_backend_imported_key` resource and `vault_transit_wrapping_key` data source. ([#3090](https://github.com/hashicorp/terraform-provider-vault/pull/3090))
 * **New Resources**: Add support for Transform BYOK key import with the `vault_transform_transformation_tokenization_imported_key` and `vault_transform_transformation_fpe_imported_key` resources and the `vault_transform_wrapping_key` data source. Requires Vault Enterprise. ([#3106](https://github.com/hashicorp/terraform-provider-vault/pull/3106))
 * **New Resource**: Manage FPE transformations in the Transform secrets engine with the `vault_transform_transformation_fpe` resource. ([#3108](https://github.com/hashicorp/terraform-provider-vault/pull/3108))
+* **New Resource**: Add `vault_secrets_sync_aws_acm_destination` to sync PKI certificates to AWS Certificate Manager. Requires Vault Enterprise 2.3.0+.
 
 IMPROVEMENTS:
 
