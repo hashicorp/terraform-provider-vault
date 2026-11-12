@@ -4,35 +4,32 @@ name: build
 # to upstream secrets (VAULT_LICENSE*) for acceptance testing. This is a calculated risk
 # with the following mitigations:
 #
-# FORK PR FLOW (Must complete in strict order):
-# ============================================
-# 1. PR CREATED: Fork PR opened (workflows start)
-# 2. INITIAL REVIEW: Maintainer reviews code changes (GitHub PR review)
-# 3. INITIAL APPROVAL: Maintainer marks PR as "Approved" (GitHub)
-# 4. ACCEPTANCE TESTS: Tests run with VAULT_LICENSE* secrets
-# 5. TEST RESULTS: Visible in GitHub UI (pass/fail)
-# 6. FRESH REVIEW: Maintainer reviews test results + any new code if tests failed
-# 7. DEPLOYMENT APPROVAL: Maintainer clicks "Approve deployment" (environment approval)
-# 8. MERGE: PR can now be merged
+# FORK PR FLOW (Simple, secure sequence):
+# =======================================
+# 1. PR CREATED: Fork PR opened
+# 2. APPROVAL GATE: fork-pr-review-gate blocks until maintainer approves
+#    - Maintainer reviews code changes in GitHub PR
+#    - Maintainer clicks "Approve" button in GitHub
+#    - Maintainer clicks "Approve deployment" in this gate
+# 3. ACCEPTANCE TESTS: Run with VAULT_LICENSE* secrets (only after approval)
+# 4. MERGE: PR can be merged (tests must pass)
 #
 # KEY SECURITY REQUIREMENT:
-# - If new code is pushed (new commits), step 2-3 must be repeated
-# - Old review cannot carry forward to new commits
-# - GitHub PR review is dismissed when new commits pushed
+# - If new code is pushed (new commits), code review must be done again
+# - Old review is dismissed by GitHub when new commits added
 # - This ensures code review is always fresh before tests run
 #
 # SECURITY ARCHITECTURE:
 # 1. Workflow integrity: Always uses base.sha (upstream) - prevents fork from modifying workflows
-# 2. Initial code review: Maintainers review all code changes before tests run
-# 3. Acceptance tests: Run ONLY after code review + approval
-# 4. Fresh review: Test results reviewed + any new code changes verified
-# 5. Approval gate: Maintainer deployment approval required after tests (before merge)
+# 2. Code review gate: Maintainers review code before tests run
+# 3. Acceptance tests: Run ONLY after approval gate passes
+# 4. Fresh review required: New commits dismiss old reviews (GitHub behavior)
 #
 # THREAT MODEL - What IS protected:
 # ✅ Fork CANNOT modify .github/workflows/ files (base.sha used for all checkouts)
-# ✅ Fork code CANNOT run until after code review and acceptance tests (sequential flow)
+# ✅ Fork code CANNOT run acceptance tests until maintainer approves
 # ✅ Fork's workflow modifications are IGNORED (base.sha ensures base workflows run)
-# ✅ Fork PR CANNOT merge until maintainer explicitly approves (approval gate blocks merge)
+# ✅ Code review enforced before expensive tests run (saves resources)
 #
 # THREAT MODEL - What IS NOT protected (by design):
 # ⚠️ TEST CODE can access VAULT_LICENSE* secrets (via vault service container)
@@ -261,28 +258,28 @@ jobs:
     name: Verify fork PR code review before tests
     if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
+    environment: fork-pr-review-approval
     permissions:
       pull-requests: read
     steps:
-      - name: Check if PR has been reviewed and approved
+      - name: Waiting for code review and approval
         run: |
           echo "Fork PR from: ${{ github.event.pull_request.head.repo.full_name }}"
           echo "Upstream repo: ${{ github.repository }}"
           echo ""
-          echo "⏳ WAITING FOR CODE REVIEW"
+          echo "✅ REVIEW GATE ACTIVE"
           echo ""
           echo "Maintainer must:"
           echo "  1. Review all code changes in GitHub PR"
           echo "  2. Click 'Approve' button in GitHub PR review"
+          echo "  3. Click 'Approve deployment' button in this gate"
           echo ""
-          echo "After approval:"
+          echo "Only after approval:"
           echo "  - Acceptance tests will run with VAULT_LICENSE* secrets"
           echo "  - Test results will be visible in GitHub UI"
-          echo "  - Maintainer will need to verify test results"
-          echo "  - Final 'Approve deployment' needed before merge"
+          echo "  - Final merge approval will be needed"
           echo ""
-          echo "NOTE: If new commits are pushed, code review must be done again"
-          echo "GitHub automatically dismisses old reviews on new commits"
+          echo "NOTE: New commits dismiss old reviews - review again if code changes"
 
   acceptance:
     name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
@@ -550,39 +547,15 @@ jobs:
           go run cmd/coverage/main.go -openapi-doc=./testdata/openapi.json
           #
 
-  # SECOND GATE: Require maintainer approval AFTER acceptance tests pass
-  # For fork PRs: Maintainer sees test results and approves deployment
-  # This gate blocks merge until maintainer confirms:
-  # 1. Acceptance tests passed successfully
-  # 2. Code review covered all changes
-  # 3. PR is ready to merge
-  fork-pr-acceptance-approval-gate:
-    name: Approval gate for fork PR merge (after tests pass)
-    needs: [acceptance]
-    # Only proceed if acceptance tests passed
-    if: |
-      github.event_name == 'pull_request_target' &&
-      github.event.pull_request.head.repo.full_name != github.repository &&
-      needs.acceptance.result == 'success'
-    runs-on: ubuntu-latest
-    environment: fork-pr-acceptance-tests
-    steps:
-      - name: Fork PR ready for merge - maintainer approval required
-        run: |
-          echo "Fork PR from: ${{ github.event.pull_request.head.repo.full_name }}"
-          echo "Upstream repo: ${{ github.repository }}"
-          echo ""
-          echo "✅ Code review completed"
-          echo "✅ All acceptance tests passed"
-          echo ""
-          echo "⏳ WAITING FOR FINAL APPROVAL TO MERGE"
-          echo ""
-          echo "Maintainer must:"
-          echo "  1. Verify all acceptance tests passed (see logs above)"
-          echo "  2. Confirm code review covered all changes"
-          echo "  3. Click 'Approve deployment' to enable merge"
-          echo ""
-          echo "This approval is required before PR can be merged"
+  # SECOND GATE REMOVED: Keeping workflow simple
+  # After code review gate passes and tests run, merge is allowed
+  # No additional approval gate needed after tests
+  #
+  # Rationale:
+  # - Code review already happened in gate #1 (before tests)
+  # - Tests must pass to allow merge (GitHub branch protection)
+  # - Maintainer can see test results before merging
+  # - Adding another gate doesn't add security, just friction
 
   # Uploads an Actions artifact named terraform-registry-manifest.json.zip.
   #
@@ -619,8 +592,6 @@ jobs:
           if-no-files-found: error
 
   # This job is used as a requirement for the repo's branch protection setup.
-  # For fork PRs: Waits for approval gate after tests pass
-  # For internal PRs: Skips approval gate, just waits for acceptance
   build-done:
     runs-on: ubuntu-latest
     if: always()
@@ -629,7 +600,6 @@ jobs:
       - acceptance
       - upload-terraform-registry-manifest-artifact
       - generate-metadata-file
-      - fork-pr-acceptance-approval-gate
     steps:
     - name: cancelled
       if: ${{ (contains(needs.*.result, 'cancelled')) }}
