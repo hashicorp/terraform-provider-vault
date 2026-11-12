@@ -130,7 +130,7 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 		return fmt.Errorf("error writing IdentityEntity to %q: %s", name, err)
 	}
 
-	if resp == nil {
+	if resp == nil || resp.Data == nil {
 		path := identityEntityNamePath(name)
 		entityMsg := "Unable to determine entity id."
 
@@ -139,11 +139,16 @@ func identityEntityCreate(d *schema.ResourceData, meta interface{}) error {
 		}
 
 		return fmt.Errorf("Identity Entity %q already exists. %s", name, entityMsg)
-	} else {
-		log.Printf("[DEBUG] Wrote IdentityEntity %q", name)
+	}
+	log.Printf("[DEBUG] Wrote IdentityEntity %q", name)
+
+	// Guard against an unexpected/malformed response to avoid a panic.
+	id, ok := resp.Data["id"].(string)
+	if !ok || id == "" {
+		return fmt.Errorf("unable to determine entity id for IdentityEntity %q", name)
 	}
 
-	d.SetId(resp.Data["id"].(string))
+	d.SetId(id)
 
 	return identityEntityRead(d, meta)
 }
