@@ -34,8 +34,8 @@ var (
 	_ resource.ResourceWithImportState = &MaskingTransformationResource{}
 )
 
-// NewMaskingTransformationResource returns the implementation for this resource.
-func NewMaskingTransformationResource() resource.Resource {
+// NewTransformationMaskingResource returns the implementation for this resource.
+func NewTransformationMaskingResource() resource.Resource {
 	return &MaskingTransformationResource{}
 }
 
