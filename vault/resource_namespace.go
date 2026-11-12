@@ -118,7 +118,7 @@ func namespaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface
 	for k, v := range newMap {
 		merged[k] = v
 	}
-	
+
 	for k := range oldMap {
 		if _, exists := newMap[k]; !exists {
 			merged[k] = nil
