@@ -5,6 +5,9 @@ on:
       - 'website/**'
       - 'CHANGELOG.md'
   pull_request_target:
+    # opened: initial PR creation
+    # synchronize: new commits pushed to PR (covers multi-push scenarios)
+    # reopened: closed PR is reopened
     types: [opened, synchronize, reopened]
     paths-ignore:
       - 'website/**'
