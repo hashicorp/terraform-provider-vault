@@ -105,18 +105,34 @@ func namespaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface
 
 	path := d.Get(consts.FieldPath).(string)
 
+	if !d.HasChange(consts.FieldCustomMetadata) {
+		return namespaceRead(ctx, d, meta)
+	}
+
 	var data map[string]interface{}
-	if v, ok := d.GetOk(consts.FieldCustomMetadata); ok {
-		data = map[string]interface{}{
-			consts.FieldCustomMetadata: v,
+	oldRaw, newRaw := d.GetChange(consts.FieldCustomMetadata)
+	oldMap, _ := oldRaw.(map[string]interface{})
+	newMap, _ := newRaw.(map[string]interface{})
+
+	merged := make(map[string]interface{})
+	for k, v := range newMap {
+		merged[k] = v
+	}
+	
+	for k := range oldMap {
+		if _, exists := newMap[k]; !exists {
+			merged[k] = nil
 		}
 	}
 
-	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
+	data = map[string]interface{}{
+		consts.FieldCustomMetadata: merged,
+	}
+
+	log.Printf("[DEBUG] Updating namespace %s in Vault", path)
 	if _, err := client.Logical().JSONMergePatch(ctx, consts.SysNamespaceRoot+path, data); err != nil {
 		return diag.Errorf("error writing to Vault: %s", err)
 	}
-
 	return namespaceRead(ctx, d, meta)
 }
 
