@@ -1,5 +1,35 @@
 name: build
 
+# SECURITY NOTICE: This workflow uses pull_request_target to provide fork PRs with access
+# to upstream secrets (VAULT_LICENSE*) for acceptance testing. This is a calculated risk
+# with the following mitigations:
+#
+# SECURITY ARCHITECTURE:
+# 1. Workflow integrity: Always uses base.sha (upstream) - prevents fork from modifying workflows
+# 2. Secret access control: Acceptance tests require maintainer approval via fork-pr-approval-gate
+# 3. Code review: Maintainers review all code changes (including test changes) before approval
+#
+# THREAT MODEL - What IS protected:
+# ✅ Fork CANNOT modify .github/workflows/ files (base.sha used for all checkouts)
+# ✅ Fork CANNOT run untested/unapproved code (acceptance gate blocks by default)
+# ✅ Fork's workflow modifications are IGNORED (base.sha ensures base workflows run)
+#
+# THREAT MODEL - What IS NOT protected (by design):
+# ⚠️ Fork's TEST CODE can access VAULT_LICENSE* secrets (via vault service container)
+# ⚠️ Fork's TEST CODE can access MSSQL_SA_PASSWORD secret
+# ⚠️ Fork's TEST CODE can access GITHUB_TOKEN secret
+#
+# RISK MITIGATION:
+# - Approval gate requires explicit maintainer approval before acceptance tests run
+# - Maintainers can review test code changes in the PR
+# - Only users with approval permission can authorize fork PR tests
+# - Secret exfiltration requires explicit malicious code (visible in code review)
+#
+# IMPLEMENTATION NOTE:
+# If test code becomes a security concern, set acceptance job if condition to:
+#   if: github.event.pull_request.head.repo.full_name == github.repository
+# This would skip acceptance tests for fork PRs entirely.
+
 on:
   # Test on push to any branch (including main)
   # Ensures main branch always has passing tests after merge
@@ -208,6 +238,13 @@ jobs:
     # 1. For push events (main branch): run immediately
     # 2. For internal PRs (same repo): run immediately (gate is skipped but we allow it)
     # 3. For fork PRs: ONLY if fork-pr-approval-gate succeeded (maintainer approved)
+    # 
+    # SECURITY NOTE: Fork's test code runs here with access to VAULT_LICENSE* secrets
+    # via the vault service container environment. Test code changes are visible in the
+    # PR review. Maintainer approval gate ensures code review happens before testing.
+    # If test code exfiltration becomes a concern, add this condition:
+    #   if: github.event.pull_request.head.repo.full_name == github.repository
+    # To skip acceptance tests entirely for fork PRs.
     # 
     # The gate result tells us:
     # - 'success': Maintainer approved the fork PR
