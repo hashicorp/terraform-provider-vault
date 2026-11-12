@@ -183,9 +183,40 @@ jobs:
               -ldflags "-s -w"
             cp LICENSE "$TARGET_DIR/LICENSE.txt"
 
+  # Security gate: Require maintainer approval before running acceptance tests on fork PRs
+  # This prevents malicious code from consuming expensive CI resources (acceptance tests cost credits)
+  # Regular PRs from the same repo skip this gate and run acceptance tests immediately
+  fork-pr-approval-gate:
+    name: Approval gate for fork PR acceptance tests
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    environment: fork-pr-acceptance-tests
+    steps:
+      - name: Fork PR detected - approval required
+        run: |
+          echo "Fork PR from: ${{ github.event.pull_request.head.repo.full_name }}"
+          echo "Upstream repo: ${{ github.repository }}"
+          echo "This job requires explicit maintainer approval to proceed with acceptance tests"
+          echo "Review the PR code changes carefully before approving"
+
   acceptance:
     name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
-    needs: [go-version, build-pre]
+    needs: [go-version, build-pre, fork-pr-approval-gate]
+    # IMPORTANT: Acceptance tests only run if:
+    # 1. For push events (main branch): run immediately
+    # 2. For internal PRs (same repo): run immediately (gate is skipped but we allow it)
+    # 3. For fork PRs: ONLY if fork-pr-approval-gate succeeded (maintainer approved)
+    # 
+    # The gate result tells us:
+    # - 'success': Maintainer approved the fork PR
+    # - 'skipped': Not a fork PR (regular PR or push event)
+    # - 'failure': Gate explicitly failed
+    #
+    # We accept both 'success' and 'skipped' results
+    if: |
+      (needs.fork-pr-approval-gate.result == 'success' ||
+       needs.fork-pr-approval-gate.result == 'skipped') &&
+      (github.event_name == 'pull_request_target' || github.event_name == 'push')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
