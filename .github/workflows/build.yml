@@ -2,7 +2,12 @@ name: build
 
 on:
   push:
+  pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   # Permission for checking out code

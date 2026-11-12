@@ -3,6 +3,14 @@ on:
   push:
     paths:
     - '.github/**'
+  pull_request:
+    paths:
+    - '.github/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   actionlint:
     # using `main` as the ref will keep your workflow up-to-date
