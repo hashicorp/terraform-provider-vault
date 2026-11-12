@@ -1,15 +1,28 @@
 name: build
 
 on:
+  # Test on push to any branch (including main)
+  # Ensures main branch always has passing tests after merge
   push:
+  # Test on PR events with access to upstream secrets (VAULT_LICENSE*)
+  # Required for fork PRs to run acceptance tests on enterprise Vault versions
+  # - opened: initial PR creation
+  # - synchronize: new commits pushed to PR (guarantees all commits tested)
+  # - reopened: closed PR is reopened
+  # Concurrency groups with cancel-in-progress prevent duplicate runs when
+  # both push and pull_request_target events are triggered
   pull_request_target:
-    # opened: initial PR creation
-    # synchronize: new commits pushed to PR (covers multi-push scenarios)
-    # reopened: closed PR is reopened
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 concurrency:
+  # Concurrency groups deduplicate runs across push and pull_request_target events
+  # Example:
+  #   - PR #123 created on feature/VAULT-52258
+  #     → pull_request_target fires (group: build-VAULT-52258)
+  #     → push event also fires (group: build-VAULT-52258)
+  #     → GitHub cancels the duplicate, keeping only the latest run
+  # Result: Tests run once per commit instead of twice, cutting CI minutes in half
   group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 

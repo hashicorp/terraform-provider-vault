@@ -1,19 +1,27 @@
 name: Go checks
 on:
+  # Test on push to any branch (including main)
+  # Ensures main branch always has passing Go checks after merge
   push:
     paths-ignore:
       - 'website/**'
       - 'CHANGELOG.md'
+  # Test on PR events with access to upstream secrets
+  # Required for fork PRs to run checks with full environment
+  # - opened: initial PR creation
+  # - synchronize: new commits pushed to PR (guarantees all commits tested)
+  # - reopened: closed PR is reopened
+  # Concurrency groups with cancel-in-progress prevent duplicate runs when
+  # both push and pull_request_target events are triggered
   pull_request_target:
-    # opened: initial PR creation
-    # synchronize: new commits pushed to PR (covers multi-push scenarios)
-    # reopened: closed PR is reopened
     types: [opened, synchronize, reopened]
     paths-ignore:
       - 'website/**'
       - 'CHANGELOG.md'
 
 concurrency:
+  # Concurrency groups deduplicate runs across push and pull_request_target events
+  # Prevents wasteful duplicate CI runs, cutting CI minutes in half
   group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
