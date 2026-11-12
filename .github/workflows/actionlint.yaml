@@ -3,12 +3,13 @@ on:
   push:
     paths:
     - '.github/**'
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
     paths:
     - '.github/**'
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
