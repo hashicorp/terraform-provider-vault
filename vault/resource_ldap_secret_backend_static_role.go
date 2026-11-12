@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/hashicorp/go-cty/cty"
 	automatedrotationutil "github.com/hashicorp/terraform-provider-vault/internal/rotation"
@@ -122,6 +123,16 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 
 	mount := d.Get(consts.FieldMount).(string)
 	role := d.Get(consts.FieldRoleName).(string)
+	if role == "" && d.Id() != "" {
+		// role_name is empty in state after an import; recover it from the ID.
+		var ok bool
+		if mount, role, ok = parseLDAPStaticRolePath(d.Id()); !ok {
+			return diag.Errorf("unable to determine the role name from ID %q", d.Id())
+		}
+	}
+	if role == "" {
+		return diag.Errorf("%q must not be empty", consts.FieldRoleName)
+	}
 	rolePath := fmt.Sprintf("%s/static-role/%s", mount, role)
 	log.Printf("[DEBUG] Creating LDAP static role at %q", rolePath)
 	data := map[string]interface{}{}
@@ -189,6 +200,32 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 	return readLDAPStaticRoleResource(ctx, d, meta)
 }
 
+// parseLDAPStaticRolePath splits "<mount>/static-role/<role>" on the first "/static-role/".
+func parseLDAPStaticRolePath(p string) (mount, role string, ok bool) {
+	const sep = "/static-role/"
+	i := strings.Index(p, sep)
+	if i <= 0 || i+len(sep) >= len(p) {
+		return "", "", false
+	}
+	return p[:i], p[i+len(sep):], true
+}
+
+// setLDAPStaticRoleIdentityFromID sets mount and role_name from the ID only when
+// role_name is empty (import or broken state), since the ID can be ambiguous.
+func setLDAPStaticRoleIdentityFromID(d *schema.ResourceData) error {
+	if d.Get(consts.FieldRoleName).(string) != "" {
+		return nil
+	}
+	mount, role, ok := parseLDAPStaticRolePath(d.Id())
+	if !ok {
+		return nil
+	}
+	if err := d.Set(consts.FieldMount, mount); err != nil {
+		return err
+	}
+	return d.Set(consts.FieldRoleName, role)
+}
+
 func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client, err := provider.GetClient(d, meta)
 	if err != nil {
@@ -208,6 +245,11 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		d.SetId("")
 		return nil
 	}
+
+	if err := setLDAPStaticRoleIdentityFromID(d); err != nil {
+		return diag.FromErr(err)
+	}
+
 	for _, field := range ldapSecretBackendStaticRoleFields {
 		if field == consts.FieldSkipImportRotation && !provider.IsAPISupported(meta, provider.VaultVersion116) {
 			continue
