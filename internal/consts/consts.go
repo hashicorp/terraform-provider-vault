@@ -973,6 +973,8 @@ const (
 	FieldUnactivatedFlags           = "unactivated_flags"
 	FieldOIDCClientSecretWO         = "oidc_client_secret_wo"
 	FieldOIDCClientSecretWOVersion  = "oidc_client_secret_wo_version"
+	FieldOIDCClientIDWO             = "oidc_client_id_wo"
+	FieldOIDCClientIDWOVersion      = "oidc_client_id_wo_version"
 	FieldServiceAccountJWTWO        = "service_account_jwt_wo"
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
 	FieldBindPassWO                 = "bindpass_wo"
