@@ -109,6 +109,20 @@ resource "vault_jwt_auth_backend" "example" {
 }
 ```
 
+Manage tune settings with [`vault_auth_tune`](auth_tune.html). Omit `tune` on the auth resource:
+
+```hcl
+resource "vault_jwt_auth_backend" "example" {
+  path               = "jwt"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  bound_issuer       = "https://myco.auth0.com/"
+}
+
+resource "vault_auth_tune" "example" {
+  path               = vault_jwt_auth_backend.example.path
+  listing_visibility = "unauth"
+}
+```
 
 ## Argument Reference
 
@@ -164,7 +178,7 @@ The following arguments are supported:
 
 * `unsupported_critical_cert_extensions` - (Optional) A list of ASN1 OIDs of certificate extensions marked Critical that are unsupported by Vault and should be ignored. This option should very rarely be needed except in specialized PKI environments. Requires Vault 1.18+.
 
-* tune - (Optional) Extra configuration block. Structure is documented below.
+* tune - (Optional) Extra configuration block. Structure is documented below. Omit this block to manage these settings with [`vault_auth_tune`](auth_tune.html).
 
 The `tune` block is used to tune the auth backend:
 

@@ -31,6 +31,20 @@ resource "vault_okta_auth_backend" "example" {
 }
 ```
 
+Manage tune settings with [`vault_auth_tune`](auth_tune.html). Omit `tune` on the auth resource:
+
+```hcl
+resource "vault_okta_auth_backend" "example" {
+  organization = "example"
+  token        = "something that should be kept secret"
+}
+
+resource "vault_auth_tune" "example" {
+  path               = vault_okta_auth_backend.example.path
+  listing_visibility = "unauth"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -88,7 +102,7 @@ The following arguments are supported:
 
 * `policies` - (Optional) List of Vault policies to associate with this user
 
-* `tune` - (Optional) Extra configuration block. Structure is documented below.
+* `tune` - (Optional) Extra configuration block. Structure is documented below. Omit this block to manage these settings with [`vault_auth_tune`](auth_tune.html).
 
 The `tune` block is used to tune the auth backend:
 
