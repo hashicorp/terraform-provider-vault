@@ -43,6 +43,19 @@ func kvSecretV2DisableReadDiff(ctx context.Context, diff *schema.ResourceDiff, m
 		diff.Clear(consts.FieldData)
 		diff.Clear(consts.FieldMetadata)
 	}
+
+	// When the secret data is (re)written, Vault assigns a new version. Mark the
+	// computed version attribute as "known after apply" so the new value is
+	// resolved during the same apply (e.g. for dependent resources and outputs)
+	// rather than lagging until the next refresh. A new resource always writes,
+	// and data_json / data_json_wo (tracked via its version counter) changes
+	// trigger a write as well.
+	if diff.Id() == "" || diff.HasChange(consts.FieldDataJSON) || diff.HasChange(consts.FieldDataJSONWOVersion) {
+		if err := diff.SetNewComputed(consts.FieldVersion); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -143,6 +156,14 @@ func kvSecretV2Resource(name string) *schema.Resource {
 				Description: "Metadata associated with this secret read from Vault.",
 			},
 
+			consts.FieldVersion: {
+				Type:     schema.TypeInt,
+				Computed: true,
+				Description: "Version of the secret. Set from the version returned by " +
+					"Vault on the most recent write, so it reflects the version produced " +
+					"by the current apply.",
+			},
+
 			"delete_all_versions": {
 				Type:        schema.TypeBool,
 				Optional:    true,
@@ -241,11 +262,25 @@ func kvSecretV2Write(ctx context.Context, d *schema.ResourceData, meta interface
 		data[k] = d.Get(k)
 	}
 
-	if _, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts()); err != nil {
+	resp, err := util.RetryWrite(client, path, data, util.DefaultRequestOpts())
+	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	d.SetId(path)
+
+	// The KV-V2 data write response returns the version that Vault assigned to
+	// this write. Set it here so the attribute is populated even when
+	// disable_read is true. When disable_read is false, the kvSecretV2Read call
+	// below refreshes it from the secret's metadata.
+	if resp != nil {
+		if v, ok := resp.Data[consts.FieldVersion]; ok {
+			version, _ := v.(json.Number).Int64()
+			if err := d.Set(consts.FieldVersion, version); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
 
 	// Write custom metadata for secret if provided
 	if _, ok := d.GetOk(consts.FieldCustomMetadata); ok {
@@ -318,6 +353,15 @@ func kvSecretV2Read(_ context.Context, d *schema.ResourceData, meta interface{})
 			if v, ok := metadata.(map[string]interface{}); ok {
 				if err := d.Set(consts.FieldMetadata, serializeDataMapToString(v)); err != nil {
 					return diag.FromErr(err)
+				}
+
+				// Keep the typed version attribute populated on read (e.g.
+				// refresh and import), reusing the metadata already fetched.
+				if rawVersion, ok := v[consts.FieldVersion]; ok {
+					version, _ := rawVersion.(json.Number).Int64()
+					if err := d.Set(consts.FieldVersion, version); err != nil {
+						return diag.FromErr(err)
+					}
 				}
 
 				// Read & Set custom metadata
