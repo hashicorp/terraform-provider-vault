@@ -34,8 +34,11 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/gcpkms"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/kmip"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/os"
+	pkibyok "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki"
 	pki_external_ca "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/pki-external-ca"
 	spiffesec "github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/spiffe"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/transform"
+	"github.com/hashicorp/terraform-provider-vault/internal/vault/secrets/transit"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys"
 	"github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
 	sysconfig "github.com/hashicorp/terraform-provider-vault/internal/vault/sys/config"
@@ -284,6 +287,8 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		pki_external_ca.NewPKIExternalCADNSProviderRFC2136Resource,
 		pki_external_ca.NewPKIExternalCADNSProviderGCPResource,
 		pki_external_ca.NewPKIExternalCADNSProviderAzureResource,
+		pkibyok.NewPKIExportKeyResource,
+		pkibyok.NewPKIWrappedKeyImportResource,
 		sys.NewActivationFlagsResource,
 		keymgmt.NewKeyResource,
 		keymgmt.NewAWSKMSResource,
@@ -297,6 +302,10 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		kerberosauth.NewKerberosAuthBackendConfigResource,
 		kerberosauth.NewKerberosAuthBackendLDAPConfigResource,
 		kerberosauth.NewKerberosAuthBackendGroupResource,
+		transform.NewTransformTokenizationImportedKeyResource,
+		transform.NewTransformFPEImportedKeyResource,
+		transit.NewTransitImportedKeyResource,
+		transform.NewTransformationFPEResource,
 	}, testResources()...)
 }
 
@@ -327,6 +336,7 @@ func (p *fwprovider) EphemeralResources(_ context.Context) []func() ephemeral.Ep
 		gcpkms.NewGCPKMSReencryptEphemeralResource,
 		gcpkms.NewGCPKMSSignEphemeralResource,
 		kerberosauth.NewKerberosAuthBackendLoginEphemeralResource,
+		pkibyok.NewPKICAKeyExportEphemeralResource,
 	}
 }
 
@@ -342,5 +352,7 @@ func (p *fwprovider) DataSources(ctx context.Context) []func() datasource.DataSo
 		gcpkms.NewGCPKMSVerifyDataSource,
 		sys.NewPluginRuntimesDataSource,
 		config.NewSysConfigCORSDataSource,
+		transit.NewWrappingKeyDataSource,
+		transform.NewWrappingKeyDataSource,
 	}
 }

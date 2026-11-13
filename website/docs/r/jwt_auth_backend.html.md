@@ -94,6 +94,21 @@ resource "vault_jwt_auth_backend" "okta" {
 }
 ```
 
+Configuring the auth backend with custom/unsupported critical certificate extensions:
+
+```hcl
+resource "vault_jwt_auth_backend" "example" {
+    description                          = "OIDC backend in custom PKI environment"
+    path                                 = "oidc"
+    type                                 = "oidc"
+    oidc_discovery_url                   = "https://custom-idp.example.com"
+    oidc_client_id                       = "1234567890"
+    oidc_client_secret                   = "secret123456"
+    bound_issuer                         = "https://custom-idp.example.com"
+    unsupported_critical_cert_extensions = ["1.3.6.1.4.1.55813.1.2.1", "2.5.29.14"]
+}
+```
+
 
 ## Argument Reference
 
@@ -146,6 +161,8 @@ The following arguments are supported:
 * `local` - (Optional) Specifies if the auth method is local only.
 
 * `namespace_in_state` - (Optional) Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the OIDC provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs
+
+* `unsupported_critical_cert_extensions` - (Optional) A list of ASN1 OIDs of certificate extensions marked Critical that are unsupported by Vault and should be ignored. This option should very rarely be needed except in specialized PKI environments. Requires Vault 1.18+.
 
 * tune - (Optional) Extra configuration block. Structure is documented below.
 

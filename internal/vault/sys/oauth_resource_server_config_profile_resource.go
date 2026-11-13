@@ -91,6 +91,8 @@ type OAuthResourceServerConfigProfileModel struct {
 	Enabled                      types.Bool   `tfsdk:"enabled"`
 	OptionalAuthorizationDetails types.Bool   `tfsdk:"optional_authorization_details"`
 	AuthorizationDetailsClaim    types.String `tfsdk:"authorization_details_claim"`
+	UniqueIDClaim                types.String `tfsdk:"unique_id_claim"`
+	ActorClaim                   types.String `tfsdk:"actor_claim"`
 	Local                        types.Bool   `tfsdk:"local"`
 }
 
@@ -112,6 +114,8 @@ type OAuthResourceServerConfigProfileAPIModel struct {
 	Enabled                      bool                `json:"enabled" mapstructure:"enabled"`
 	OptionalAuthorizationDetails bool                `json:"optional_authorization_details" mapstructure:"optional_authorization_details"`
 	AuthorizationDetailsClaim    string              `json:"authorization_details_claim" mapstructure:"authorization_details_claim"`
+	UniqueIDClaim                string              `json:"unique_id_claim" mapstructure:"unique_id_claim"`
+	ActorClaim                   string              `json:"actor_claim" mapstructure:"actor_claim"`
 	Local                        bool                `json:"local" mapstructure:"local"`
 }
 
@@ -235,6 +239,23 @@ func (r *OAuthResourceServerConfigProfileResource) Schema(ctx context.Context, r
 				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "The claim to use for RAR (Rich Authorization Requests) authorization details. Defaults to 'authorization_details'. Requires Vault 2.2.0 or later when set.",
+			},
+			consts.FieldUniqueIDClaim: schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.String{
+					// Keep the state value when the field is omitted so unrelated
+					// updates do not plan an unknown value and trigger a replace.
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
+				},
+				MarkdownDescription: "The JWT claim to use as the unique identifier for the token. If unset, Vault uses the `jti` claim. " +
+					"This field is immutable after creation; changing it forces a new resource. Requires Vault 2.2.0 or later.",
+			},
+			consts.FieldActorClaim: schema.StringAttribute{
+				Optional:            true,
+				Computed:            true,
+				MarkdownDescription: "The JWT claim to use as the actor identifier for delegation/chained-token scenarios (RFC 8693 `act` claim). Requires Vault 2.2.0 or later.",
 			},
 			consts.FieldLocal: schema.BoolAttribute{
 				Optional: true,
@@ -612,6 +633,20 @@ func (r *OAuthResourceServerConfigProfileResource) readFromVault(ctx context.Con
 	// RAR support
 	data.OptionalAuthorizationDetails = types.BoolValue(apiModel.OptionalAuthorizationDetails)
 
+	// Unique ID claim
+	if apiModel.UniqueIDClaim != "" {
+		data.UniqueIDClaim = types.StringValue(apiModel.UniqueIDClaim)
+	} else {
+		data.UniqueIDClaim = types.StringNull()
+	}
+
+	// Actor claim
+	if apiModel.ActorClaim != "" {
+		data.ActorClaim = types.StringValue(apiModel.ActorClaim)
+	} else {
+		data.ActorClaim = types.StringNull()
+	}
+
 	data.Local = types.BoolValue(apiModel.Local)
 
 	return true
@@ -719,9 +754,20 @@ func (r *OAuthResourceServerConfigProfileResource) buildVaultRequest(ctx context
 		vaultRequest[consts.FieldOptionalAuthorizationDetails] = data.OptionalAuthorizationDetails.ValueBool()
 	}
 
+	// Unique ID claim
+	if !data.UniqueIDClaim.IsNull() && !data.UniqueIDClaim.IsUnknown() {
+		vaultRequest[consts.FieldUniqueIDClaim] = data.UniqueIDClaim.ValueString()
+	}
+
+	// Actor claim
+	if !data.ActorClaim.IsNull() && !data.ActorClaim.IsUnknown() {
+		vaultRequest[consts.FieldActorClaim] = data.ActorClaim.ValueString()
+	}
+
 	if !data.Local.IsNull() && !data.Local.IsUnknown() {
 		vaultRequest[consts.FieldLocal] = data.Local.ValueBool()
 	}
+
 	return vaultRequest
 }
 

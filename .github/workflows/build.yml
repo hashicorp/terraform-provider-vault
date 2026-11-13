@@ -159,11 +159,12 @@ jobs:
       fail-fast: false
       matrix:
         image:
-        - "vault-enterprise:1.19.22-ent"
-        - "vault-enterprise:1.20.16-ent"
-        - "vault-enterprise:1.21.11-ent"
+        - "vault-enterprise:1.19.24-ent"
+        - "vault-enterprise:1.20.17-ent"
+        - "vault-enterprise:1.21.13-ent"
         - "vault-enterprise:2.0.4-ent"
-        - "vault-enterprise:2.1.1-ent"
+        - "vault-enterprise:2.1.2-ent"
+        - "vault-enterprise:2.2.1-ent"
         - "vault:latest"
         terraform_version:
         - "latest" # always test against the latest stable, which might be a duplicate matrix member.
@@ -350,6 +351,12 @@ jobs:
           key: ${{ runner.os }}-golang-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-golang-
+
+      # plugin_directory is this workspace bind-mounted at /vault/plugins. The
+      # Vault process runs as the vault user, which cannot create
+      # /vault/plugins/.cache unless the directory is writable by others.
+      - name: Allow Vault to write into plugin_directory
+        run: chmod a+rwx "${GITHUB_WORKSPACE}"
 
       - name: Acceptance Tests
         env:

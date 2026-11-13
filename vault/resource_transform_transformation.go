@@ -97,13 +97,13 @@ func transformTransformationResource() *schema.Resource {
 		consts.FieldFpeAlgorithm: {
 			Type:        schema.TypeString,
 			Computed:    true,
-			Description: `The FPE algorithm used by this transformation. Only used when type is "fpe".`,
+			Description: `The FPE algorithm used by this transformation. Only used when type is "fpe". Requires Vault 2.2.0 or later.`,
 		},
 		consts.FieldMaxTweakLen: {
 			Type:        schema.TypeInt,
 			Optional:    true,
 			ForceNew:    true,
-			Description: `The maximum tweak size, in bytes. Only used when type is "fpe". Cannot be changed after creation.`,
+			Description: `The maximum tweak size, in bytes. Only used when type is "fpe". Cannot be changed after creation. Requires Vault 2.2.0 or later.`,
 		},
 	}
 	return &schema.Resource{
@@ -143,8 +143,10 @@ func createTransformTransformationResource(d *schema.ResourceData, meta interfac
 	if v, ok := d.GetOkExists(consts.FieldTweakSource); ok {
 		data[consts.FieldTweakSource] = v
 	}
-	if v, ok := d.GetOk(consts.FieldMaxTweakLen); ok {
-		data[consts.FieldMaxTweakLen] = v
+	if provider.IsAPISupported(meta, provider.VaultVersion220) {
+		if v, ok := d.GetOk(consts.FieldMaxTweakLen); ok {
+			data[consts.FieldMaxTweakLen] = v
+		}
 	}
 	if v, ok := d.GetOkExists(consts.FieldType); ok {
 		data[consts.FieldType] = v

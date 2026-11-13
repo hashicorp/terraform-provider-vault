@@ -657,6 +657,66 @@ resource "vault_pki_secret_backend_root_cert" "test" {
 	return config
 }
 
+func TestPkiSecretBackendRootCertificate_mldsa(t *testing.T) {
+	path := "pki-" + strconv.Itoa(acctest.RandInt())
+	resourceName := "vault_pki_secret_backend_root_cert.test"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion220)
+		},
+		CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testPkiSecretBackendRootCertificateConfig_mldsa(path, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCertificate),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuingCA),
+				),
+			},
+			{
+				Config: testPkiSecretBackendRootCertificateConfig_mldsa(path, `parameter_set = "ml-dsa-65"`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "internal"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldCommonName, "test Root CA"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldKeyType, "ml-dsa"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldParameterSet, "ml-dsa-65"),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldCertificate),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldIssuingCA),
+				),
+			},
+		},
+	})
+}
+
+func testPkiSecretBackendRootCertificateConfig_mldsa(path, extraConfig string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test"
+  default_lease_ttl_seconds = 86400
+  max_lease_ttl_seconds     = 86400
+}
+
+resource "vault_pki_secret_backend_root_cert" "test" {
+  backend     = vault_mount.test.path
+  type        = "internal"
+  common_name = "test Root CA"
+  ttl         = "86400"
+  key_type    = "ml-dsa"
+  %s
+}
+`, path, extraConfig)
+}
+
 func testPkiSecretBackendRootCertificateConfig_name_constraints(path string) string {
 	config := fmt.Sprintf(`
 resource "vault_mount" "test" {

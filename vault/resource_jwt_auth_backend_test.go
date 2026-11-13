@@ -1054,3 +1054,81 @@ resource "vault_jwt_auth_backend" "test" {
 }
 `, path)
 }
+
+func TestAccJWTAuthBackend_UnsupportedCriticalCertExtensions(t *testing.T) {
+	t.Parallel()
+	path := acctest.RandomWithPrefix("jwt-cert-ext")
+	resourceType := "vault_jwt_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestAccPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion118)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeJWT, consts.FieldPath),
+		Steps: []resource.TestStep{
+			// Step 1: Create with multiple OIDs
+			{
+				Config: testAccJWTAuthBackendConfig_UnsupportedCriticalCertExtensions(path, []string{"1.2.3.4", "1.2.840.113549.1.9.1"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldType, "oidc"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUnsupportedCriticalCertExtensions+".#", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUnsupportedCriticalCertExtensions+".0", "1.2.3.4"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUnsupportedCriticalCertExtensions+".1", "1.2.840.113549.1.9.1"),
+				),
+			},
+			// Step 2: Update to a single OID
+			{
+				Config: testAccJWTAuthBackendConfig_UnsupportedCriticalCertExtensions(path, []string{"1.3.6.1.4.1.55813.1.2.1"}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUnsupportedCriticalCertExtensions+".#", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUnsupportedCriticalCertExtensions+".0", "1.3.6.1.4.1.55813.1.2.1"),
+				),
+			},
+			// Step 3: Import state verification
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					consts.FieldOIDCClientSecret,
+					consts.FieldDescription,
+					consts.FieldDisableRemount,
+				},
+			},
+			// Step 4: Update to remove unsupported_critical_cert_extensions
+			{
+				Config: testAccJWTAuthBackendConfig_UnsupportedCriticalCertExtensions(path, nil),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldUnsupportedCriticalCertExtensions+".#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func testAccJWTAuthBackendConfig_UnsupportedCriticalCertExtensions(path string, oids []string) string {
+	var oidsConfig string
+	if len(oids) > 0 {
+		var quoted []string
+		for _, oid := range oids {
+			quoted = append(quoted, fmt.Sprintf("%q", oid))
+		}
+		oidsConfig = fmt.Sprintf("unsupported_critical_cert_extensions = [%s]", strings.Join(quoted, ", "))
+	}
+	return fmt.Sprintf(`
+resource "vault_jwt_auth_backend" "test" {
+  path               = "%s"
+  type               = "oidc"
+  description        = "OIDC backend with unsupported critical cert extensions"
+  oidc_discovery_url = "https://myco.auth0.com/"
+  oidc_client_id     = "test-client-id"
+  oidc_client_secret = "test-client-secret"
+  default_role       = "test-role"
+  %s
+}
+`, path, oidsConfig)
+}

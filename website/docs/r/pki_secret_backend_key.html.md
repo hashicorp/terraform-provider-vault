@@ -45,7 +45,9 @@ The following arguments are supported:
 * `key_name` - (Optional) When a new key is created with this request, optionally specifies the name for this. 
   The global ref `default` may not be used as a name.
 
-* `key_type` - (Optional) Specifies the desired key type; must be `rsa`, `ed25519` or `ec`.
+* `key_type` - (Optional) Specifies the desired key type; must be `rsa`, `ed25519`, `ec`, or `ml-dsa`.
+
+* `parameter_set` - (Optional) For ML-DSA keys, specifies the parameter set; must be `ml-dsa-44` (default), `ml-dsa-65`, or `ml-dsa-87`
 
 * `key_bits` - (Optional) Specifies the number of bits to use for the generated keys. 
   Allowed values are 0 (universal default); with `key_type=rsa`, allowed values are:

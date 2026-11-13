@@ -108,6 +108,9 @@ func pkiSecretBackendRootCertResource() *schema.Resource {
 
 			}
 
+			if err := pkiValidateKeyTypeField(d, meta); err != nil {
+				return err
+			}
 			return nil
 		},
 
@@ -233,7 +236,15 @@ integrity format (PBMAC1).`,
 				Description:  "The desired key type.",
 				ForceNew:     true,
 				Default:      "rsa",
-				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519"}, false),
+				ValidateFunc: validation.StringInSlice([]string{"rsa", "ec", "ed25519", "ml-dsa"}, false),
+			},
+			consts.FieldParameterSet: {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				Description:  "The parameter set for ml-dsa.",
+				ForceNew:     true,
+				ValidateFunc: validation.StringInSlice([]string{"ml-dsa-44", "ml-dsa-65", "ml-dsa-87"}, false),
 			},
 			consts.FieldKeyBits: {
 				Type:        schema.TypeInt,
@@ -533,6 +544,10 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	// Fields only used when we are generating a key
 	if !(rootType == keyTypeKMS || rootType == consts.FieldExisting) {
 		rootCertAPIFields = append(rootCertAPIFields, consts.FieldKeyType, consts.FieldKeyBits)
+		// For parameter set, this is only supported in Vault 2.2.0+
+		if provider.IsAPISupported(meta, provider.VaultVersion220) {
+			rootCertAPIFields = append(rootCertAPIFields, consts.FieldParameterSet)
+		}
 	}
 
 	if isIssuerAPISupported {
