@@ -304,8 +304,9 @@ func (p *fwprovider) Resources(ctx context.Context) []func() resource.Resource {
 		kerberosauth.NewKerberosAuthBackendGroupResource,
 		transform.NewTransformTokenizationImportedKeyResource,
 		transform.NewTransformFPEImportedKeyResource,
-		transit.NewTransitImportedKeyResource,
+		transform.NewTransformationMaskingResource,
 		transform.NewTransformationFPEResource,
+		transit.NewTransitImportedKeyResource,
 	}, testResources()...)
 }
 
