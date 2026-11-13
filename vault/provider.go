@@ -831,6 +831,10 @@ var (
 			Resource:      UpdateSchemaResource(awsSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/aws-sm/{name}"},
 		},
+		"vault_secrets_sync_aws_acm_destination": {
+			Resource:      UpdateSchemaResource(awsAcmSecretsSyncDestinationResource()),
+			PathInventory: []string{"/sys/sync/destinations/aws-acm/{name}"},
+		},
 		"vault_secrets_sync_azure_destination": {
 			Resource:      UpdateSchemaResource(azureSecretsSyncDestinationResource()),
 			PathInventory: []string{"/sys/sync/destinations/azure-kv/{name}"},
