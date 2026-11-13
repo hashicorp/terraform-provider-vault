@@ -7,6 +7,10 @@ FEATURES:
 * **New Resources**: Add support for Transform BYOK key import with the `vault_transform_transformation_tokenization_imported_key` and `vault_transform_transformation_fpe_imported_key` resources and the `vault_transform_wrapping_key` data source. Requires Vault Enterprise. ([#3106](https://github.com/hashicorp/terraform-provider-vault/pull/3106))
 * **New Resource**: Manage FPE transformations in the Transform secrets engine with the `vault_transform_transformation_fpe` resource. ([#3108](https://github.com/hashicorp/terraform-provider-vault/pull/3108))
 
+FEATURES:
+
+* `resource/vault_identity_mfa_totp`: Add support for the `enable_self_enrollment` field, allowing users to control whether end users can self-enroll in the TOTP MFA method. Requires Vault Enterpise. ([#2919](https://github.com/hashicorp/terraform-provider-vault/pull/2920))
+
 IMPROVEMENTS:
 
 * `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#3093](https://github.com/hashicorp/terraform-provider-vault/pull/3093))
