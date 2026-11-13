@@ -54,7 +54,9 @@ The following arguments are supported:
   To write data into the "generic" secret backend mounted in Vault by default,
   this should be prefixed with `secret/`. Writing to other backends with this
   resource is possible; consult each backend's documentation to see which
-  endpoints support the `PUT` and `DELETE` methods.
+  endpoints support the `PUT` and `DELETE` methods. For KV v2 mounts the
+  `data/` API prefix is added automatically, unless the path already contains
+  the `data/` or `metadata/` prefix.
 
 * `data_json` - (Required) String containing a JSON-encoded object that will be
   written as the secret data at the given path.
