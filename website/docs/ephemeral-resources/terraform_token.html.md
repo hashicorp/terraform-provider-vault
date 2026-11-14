@@ -60,6 +60,12 @@ ephemeral "vault_terraform_token" "tf_token" {
 
 The following arguments are supported:
 
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's
+  configured [namespace](/docs/providers/vault/index.html#namespace).
+  *Available only for Vault Enterprise*.
+
 * `role_name` - (Required) Name of the terraform role without trailing or leading slashes.
 * `mount` - (Optional) Mount path for the TF engine in Vault without trailing or leading slashes. Defaults to `terraform`
 * `mount_id` - (Optional) ID of the mount path. This argument is only helpful if you're calling the ephemeral resource in the same terraform run as the dependencies are created. It should be omitted if your role is created in other runs.
