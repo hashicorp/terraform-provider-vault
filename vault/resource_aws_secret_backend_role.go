@@ -66,7 +66,6 @@ func awsSecretBackendRoleResource(name string) *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Optional:    true,
-				ForceNew:    true,
 				Description: "ARNs of AWS roles allowed to be assumed. Only valid when credential_type is 'assumed_role'",
 			},
 			"iam_groups": {
