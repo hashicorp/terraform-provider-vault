@@ -284,6 +284,7 @@ jobs:
   acceptance:
     name: vault_image:${{ matrix.image }} tf_version:${{ matrix.terraform_version }}
     needs: [go-version, build-pre, fork-pr-review-gate]
+    runs-on: ubuntu-latest
     # Acceptance tests run for ALL PRs, but fork PRs wait for review-gate first
     # - For fork PRs: Only runs after review-gate completes (after maintainer approval)
     # - For internal PRs: review-gate is skipped, tests run immediately
