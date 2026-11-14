@@ -129,6 +129,11 @@ func awsAccessCredentialsDataSource() *schema.Resource {
 				Optional:    true,
 				Description: "User specified Time-To-Live for the STS token. Uses the Role defined default_sts_ttl when not specified",
 			},
+			"role_session_name": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "The role session name to attach to the assumed role ARN.",
+			},
 		},
 	}
 }
@@ -152,6 +157,10 @@ func awsAccessCredentialsDataSourceRead(ctx context.Context, d *schema.ResourceD
 
 	if v, ok := d.GetOk("ttl"); ok {
 		data["ttl"] = []string{v.(string)}
+	}
+
+	if v, ok := d.GetOk("role_session_name"); ok {
+		data["role_session_name"] = []string{v.(string)}
 	}
 
 	log.Printf("[DEBUG] Reading %q from Vault with data %#v", path, data)
