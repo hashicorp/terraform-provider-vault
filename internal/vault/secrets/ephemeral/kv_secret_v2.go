@@ -181,7 +181,7 @@ func (r *KVV2EphemeralSecretResource) Open(ctx context.Context, req ephemeral.Op
 	resp.Diagnostics.Append(diag...)
 	data.Data = secretData
 
-	jsonData, err := json.Marshal(data.Data)
+	jsonData, err := json.Marshal(readResp.Data)
 	if err != nil {
 		resp.Diagnostics.AddError("Error marshalling data to JSON", err.Error())
 	}
