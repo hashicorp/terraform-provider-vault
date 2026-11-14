@@ -1400,6 +1400,50 @@ func TestAccDatabaseSecretBackendConnection_postgresql_password_wo(t *testing.T)
 	})
 }
 
+// TestAccDatabaseSecretBackendConnection_elasticsearch_password_wo asserts that the
+// write-only attribute `password_wo` works as expected for the elasticsearch engine.
+//
+// To run locally you will need to set ELASTIC_URL / ELASTIC_USERNAME / ELASTIC_PASSWORD.
+func TestAccDatabaseSecretBackendConnection_elasticsearch_password_wo(t *testing.T) {
+	MaybeSkipDBTests(t, dbEngineElasticSearch)
+
+	values := testutil.SkipTestEnvUnset(t, "ELASTIC_URL")
+	connURL := values[0]
+	username := os.Getenv("ELASTIC_USERNAME")
+	password := os.Getenv("ELASTIC_PASSWORD")
+	backend := acctest.RandomWithPrefix("tf-test-db")
+	pluginName := dbEngineElasticSearch.DefaultPluginName()
+	name := acctest.RandomWithPrefix("db")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		CheckDestroy:             testAccDatabaseSecretBackendConnectionCheckDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch_writeOnly(name, backend, connURL, username, password, 1),
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.url", connURL),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.username", username),
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password_wo_version", "1"),
+				),
+			},
+			{
+				Config: testAccDatabaseSecretBackendConnectionConfig_elasticsearch_writeOnly(name, backend, connURL, username, password, 2),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(testDefaultDatabaseSecretBackendResource, plancheck.ResourceActionUpdate),
+					},
+				},
+				// a successful connection after bumping the version guarantees password_wo was re-sent
+				Check: testComposeCheckFuncCommonDatabaseSecretBackend(name, backend, pluginName,
+					resource.TestCheckResourceAttr(testDefaultDatabaseSecretBackendResource, "elasticsearch.0.password_wo_version", "2"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccDatabaseSecretBackendConnection_elasticsearch(t *testing.T) {
 	MaybeSkipDBTests(t, dbEngineElasticSearch)
 
@@ -2838,6 +2882,28 @@ resource "vault_database_secret_backend_connection" "test" {
   }
 }
 `, path, name, connUrl, username, password, version)
+}
+
+func testAccDatabaseSecretBackendConnectionConfig_elasticsearch_writeOnly(name, path, host, username, password string, version int) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "db" {
+  path = "%s"
+  type = "database"
+}
+
+resource "vault_database_secret_backend_connection" "test" {
+  backend = vault_mount.db.path
+  name = "%s"
+  allowed_roles = ["dev", "prod"]
+
+  elasticsearch {
+    url                 = "%s"
+    username            = "%s"
+    password_wo         = "%s"
+    password_wo_version = %d
+  }
+}
+`, path, name, host, username, password, version)
 }
 
 func testAccDatabaseSecretBackendConnectionConfig_snowflake_userpass(name, path, url, username, password, userTempl string) string {
