@@ -48,7 +48,6 @@ func namespaceResource() *schema.Resource {
 			consts.FieldPathFQ: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Optional:    true,
 				Description: "The fully qualified namespace path.",
 			},
 			consts.FieldCustomMetadata: {
