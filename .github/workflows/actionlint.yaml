@@ -1,8 +1,28 @@
 name: Lint GitHub Actions Workflows
 on:
+  # Test on push to any branch (including main)
+  # Ensures main branch always has valid workflow syntax after merge
   push:
     paths:
     - '.github/**'
+  # Test on PR events with access to upstream secrets
+  # Required for fork PRs to validate workflow changes with full context
+  # - opened: initial PR creation
+  # - synchronize: new commits pushed to PR (guarantees all commits tested)
+  # - reopened: closed PR is reopened
+  # Concurrency groups with cancel-in-progress prevent duplicate runs when
+  # both push and pull_request_target events are triggered
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    paths:
+    - '.github/**'
+
+concurrency:
+  # Concurrency groups deduplicate runs across push and pull_request_target events
+  # Prevents wasteful duplicate CI runs, cutting CI minutes in half
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   actionlint:
     # using `main` as the ref will keep your workflow up-to-date
