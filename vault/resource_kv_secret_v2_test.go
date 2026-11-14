@@ -6,15 +6,16 @@ package vault
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-testing/plancheck"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/vault/api"
 
+	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
@@ -314,6 +315,34 @@ func TestAccKVSecretV2_WriteOnlyMigration(t *testing.T) {
 	})
 }
 
+// TestAccKVSecretV2_customMetadataUpdateZero verifies that updating
+// custom_metadata.delete_version_after to 0 is actually written to Vault.
+// Regression test: the write path used d.GetOk, which drops zero values, so
+// Vault kept the old value and the Provider silently did nothing.
+func TestAccKVSecretV2_customMetadataUpdateZero(t *testing.T) {
+	t.Parallel()
+	resourceName := "vault_kv_secret_v2.test"
+	mount := acctest.RandomWithPrefix("tf-kvv2")
+	name := acctest.RandomWithPrefix("secret")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck:                 func() { acctestutil.TestEntPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testKVSecretV2Config_delete_version_after(mount, name, 3600),
+				Check: resource.TestCheckResourceAttr(
+					resourceName, "custom_metadata.0.delete_version_after", "3600"),
+			},
+			{
+				Config: testKVSecretV2Config_delete_version_after(mount, name, 0),
+				Check: resource.TestCheckResourceAttr(
+					resourceName, "custom_metadata.0.delete_version_after", "0"),
+			},
+		},
+	})
+}
+
 func readKVData(t *testing.T, mount, name string) {
 	t.Helper()
 	client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
@@ -498,4 +527,18 @@ resource "vault_kv_secret_v2" "test" {
 }`, name, version)
 
 	return ret
+}
+
+func testKVSecretV2Config_delete_version_after(mount, name string, deleteVersionAfter int) string {
+	return fmt.Sprintf(`
+%s
+resource "vault_kv_secret_v2" "test" {
+  mount     = vault_mount.kvv2.path
+  name      = "%s"
+  data_json = jsonencode({ foo = "bar" })
+  custom_metadata {
+    max_versions         = 5
+    delete_version_after = %d
+  }
+}`, kvV2MountConfig(mount), name, deleteVersionAfter)
 }
