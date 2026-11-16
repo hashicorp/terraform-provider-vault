@@ -210,14 +210,17 @@ func parseLDAPStaticRolePath(p string) (mount, role string, ok bool) {
 	return p[:i], p[i+len(sep):], true
 }
 
-// setLDAPStaticRoleIdentityFromID sets mount and role_name from the ID only when
-// role_name is empty (import or broken state), since the ID can be ambiguous.
+// setLDAPStaticRoleIdentityFromID restores mount and role_name from the ID, as Vault's read omits them.
 func setLDAPStaticRoleIdentityFromID(d *schema.ResourceData) error {
-	if d.Get(consts.FieldRoleName).(string) != "" {
+	mount, role, ok := parseLDAPStaticRolePath(d.Id())
+	// Leave unparsable IDs alone; the write path rejects them.
+	if !ok {
 		return nil
 	}
-	mount, role, ok := parseLDAPStaticRolePath(d.Id())
-	if !ok {
+	currentMount := d.Get(consts.FieldMount).(string)
+	currentRole := d.Get(consts.FieldRoleName).(string)
+	// Keep values that already rebuild the ID, since a mount containing "/static-role/" would be mis-split.
+	if currentRole != "" && fmt.Sprintf("%s/static-role/%s", currentMount, currentRole) == d.Id() {
 		return nil
 	}
 	if err := d.Set(consts.FieldMount, mount); err != nil {
