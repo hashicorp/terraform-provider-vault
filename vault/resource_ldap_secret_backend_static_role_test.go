@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+// TestParseLDAPStaticRolePath checks the ID split, since an empty mount or role would make updates write to the wrong path.
 func TestParseLDAPStaticRolePath(t *testing.T) {
 	tests := []struct {
 		in          string
@@ -40,6 +41,7 @@ func TestParseLDAPStaticRolePath(t *testing.T) {
 	}
 }
 
+// TestSetLDAPStaticRoleIdentityFromID checks mount and role_name are repaired from the ID, since Vault's read omits them.
 func TestSetLDAPStaticRoleIdentityFromID(t *testing.T) {
 	tests := []struct {
 		name                string
@@ -47,9 +49,16 @@ func TestSetLDAPStaticRoleIdentityFromID(t *testing.T) {
 		mount, role         string
 		wantMount, wantRole string
 	}{
+		// Import leaves both fields empty, which otherwise forces a replace.
 		{"import populates both", "ldap-users/static-role/alice", "", "", "ldap-users", "alice"},
 		{"broken state with default mount is repaired", "ldap-users/static-role/alice", "ldap", "", "ldap-users", "alice"},
-		{"existing role_name is preserved", "a/static-role/b/static-role/r", "a/static-role/b", "r", "a/static-role/b", "r"},
+		// Guards against only checking role_name, which left a wrong mount unrepaired.
+		{"wrong mount with role_name set is repaired", "ldap-users/static-role/alice", "ldap", "alice", "ldap-users", "alice"},
+		// Healthy state must not change on refresh.
+		{"matching values are preserved", "ldap-users/static-role/alice", "ldap-users", "alice", "ldap-users", "alice"},
+		// The first "/static-role/" split would be wrong here, so correct values must be kept.
+		{"ambiguous mount that matches the id is preserved", "a/static-role/b/static-role/r", "a/static-role/b", "r", "a/static-role/b", "r"},
+		// Read must not fail on bad IDs; the write path rejects them.
 		{"unparsable id is left untouched", "garbage", "ldap", "", "ldap", ""},
 	}
 	for _, tt := range tests {
