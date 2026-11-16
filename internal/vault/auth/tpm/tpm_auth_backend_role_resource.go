@@ -48,21 +48,25 @@ type TPMAuthBackendRoleResource struct {
 type TPMAuthBackendRoleModel struct {
 	token.TokenModel
 
-	Mount       types.String `tfsdk:"mount"`
-	Name        types.String `tfsdk:"name"`
-	DisplayName types.String `tfsdk:"display_name"`
-	CertTTL     types.Int64  `tfsdk:"cert_ttl"`
-	TPMIDs      types.Set    `tfsdk:"tpm_ids"`
-	TPMGroupIDs types.Set    `tfsdk:"tpmgroup_ids"`
+	Mount         types.String `tfsdk:"mount"`
+	Name          types.String `tfsdk:"name"`
+	DisplayName   types.String `tfsdk:"display_name"`
+	CertTTL       types.Int64  `tfsdk:"cert_ttl"`
+	TPMIDs        types.Set    `tfsdk:"tpm_ids"`
+	TPMNames      types.Set    `tfsdk:"tpm_names"`
+	TPMGroupIDs   types.Set    `tfsdk:"tpmgroup_ids"`
+	TPMGroupNames types.Set    `tfsdk:"tpmgroup_names"`
 }
 
 type tpmRoleAPIModel struct {
 	token.TokenAPIModel `mapstructure:",squash"`
 
-	DisplayName string   `json:"display_name" mapstructure:"display_name"`
-	CertTTL     int64    `json:"cert_ttl" mapstructure:"cert_ttl"`
-	TPMIDs      []string `json:"tpm_ids" mapstructure:"tpm_ids"`
-	TPMGroupIDs []string `json:"tpmgroup_ids" mapstructure:"tpmgroup_ids"`
+	DisplayName   string   `json:"display_name" mapstructure:"display_name"`
+	CertTTL       int64    `json:"cert_ttl" mapstructure:"cert_ttl"`
+	TPMIDs        []string `json:"tpm_ids,omitempty" mapstructure:"tpm_ids,omitempty"`
+	TPMNames      []string `json:"tpm_names,omitempty" mapstructure:"tpm_names,omitempty"`
+	TPMGroupIDs   []string `json:"tpmgroup_ids,omitempty" mapstructure:"tpmgroup_ids,omitempty"`
+	TPMGroupNames []string `json:"tpmgroup_names,omitempty" mapstructure:"tpmgroup_names,omitempty"`
 }
 
 func (r *TPMAuthBackendRoleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -100,25 +104,61 @@ func (r *TPMAuthBackendRoleResource) Schema(_ context.Context, _ resource.Schema
 				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
+					setvalidator.ConflictsWith(path.MatchRoot(consts.FieldTPMNames)),
 					setvalidator.AtLeastOneOf(
 						path.MatchRoot(consts.FieldTPMIDs),
+						path.MatchRoot(consts.FieldTPMNames),
 						path.MatchRoot(consts.FieldTPMGroupIDs),
+						path.MatchRoot(consts.FieldTPMGroupNames),
 					),
 					setvalidator.SizeAtLeast(1),
 				},
 				Description: "Set of TPM record IDs authorized to authenticate with this role.",
 			},
+			consts.FieldTPMNames: schema.SetAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Validators: []validator.Set{
+					setvalidator.ConflictsWith(path.MatchRoot(consts.FieldTPMIDs)),
+					setvalidator.AtLeastOneOf(
+						path.MatchRoot(consts.FieldTPMIDs),
+						path.MatchRoot(consts.FieldTPMNames),
+						path.MatchRoot(consts.FieldTPMGroupIDs),
+						path.MatchRoot(consts.FieldTPMGroupNames),
+					),
+					setvalidator.SizeAtLeast(1),
+				},
+				Description: "Set of TPM record names authorized to authenticate with this role.",
+			},
 			consts.FieldTPMGroupIDs: schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 				Validators: []validator.Set{
+					setvalidator.ConflictsWith(path.MatchRoot(consts.FieldTPMGroupNames)),
 					setvalidator.AtLeastOneOf(
 						path.MatchRoot(consts.FieldTPMIDs),
+						path.MatchRoot(consts.FieldTPMNames),
 						path.MatchRoot(consts.FieldTPMGroupIDs),
+						path.MatchRoot(consts.FieldTPMGroupNames),
 					),
 					setvalidator.SizeAtLeast(1),
 				},
 				Description: "Set of TPM group IDs authorized to authenticate with this role.",
+			},
+			consts.FieldTPMGroupNames: schema.SetAttribute{
+				ElementType: types.StringType,
+				Optional:    true,
+				Validators: []validator.Set{
+					setvalidator.ConflictsWith(path.MatchRoot(consts.FieldTPMGroupIDs)),
+					setvalidator.AtLeastOneOf(
+						path.MatchRoot(consts.FieldTPMIDs),
+						path.MatchRoot(consts.FieldTPMNames),
+						path.MatchRoot(consts.FieldTPMGroupIDs),
+						path.MatchRoot(consts.FieldTPMGroupNames),
+					),
+					setvalidator.SizeAtLeast(1),
+				},
+				Description: "Set of TPM group names authorized to authenticate with this role.",
 			},
 		},
 	}
@@ -144,6 +184,15 @@ func (r *TPMAuthBackendRoleResource) Create(ctx context.Context, req resource.Cr
 			fmt.Sprintf("TPM auth backend requires Vault version %s or later.", provider.VaultVersion220),
 		)
 		return
+	}
+	if (!data.TPMNames.IsNull() && !data.TPMNames.IsUnknown()) || (!data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown()) {
+		if !r.Meta().IsAPISupported(provider.VaultVersion230) {
+			resp.Diagnostics.AddError(
+				"Feature Not Supported",
+				fmt.Sprintf("Specifying identity names (tpm_names and tpmgroup_names) instead of IDs requires Vault version %s or later.", provider.VaultVersion230),
+			)
+			return
+		}
 	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
@@ -219,6 +268,16 @@ func (r *TPMAuthBackendRoleResource) Update(ctx context.Context, req resource.Up
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	if (!data.TPMNames.IsNull() && !data.TPMNames.IsUnknown()) || (!data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown()) {
+		if !r.Meta().IsAPISupported(provider.VaultVersion230) {
+			resp.Diagnostics.AddError(
+				"Feature Not Supported",
+				fmt.Sprintf("Specifying identity names (tpm_names and tpmgroup_names) instead of IDs requires Vault version %s or later.", provider.VaultVersion230),
+			)
+			return
+		}
 	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
@@ -323,11 +382,28 @@ func (r *TPMAuthBackendRoleResource) getAPIModel(ctx context.Context, data *TPMA
 		CertTTL:     data.CertTTL.ValueInt64(),
 	}
 
-	if diags := data.TPMIDs.ElementsAs(ctx, &apiModel.TPMIDs, false); diags.HasError() {
-		return nil, diags
+	hasTPMNames := !data.TPMNames.IsNull() && !data.TPMNames.IsUnknown()
+	hasTPMIDs := !data.TPMIDs.IsNull() && !data.TPMIDs.IsUnknown()
+	if hasTPMNames {
+		if diags := data.TPMNames.ElementsAs(ctx, &apiModel.TPMNames, false); diags.HasError() {
+			return nil, diags
+		}
+	} else if hasTPMIDs {
+		if diags := data.TPMIDs.ElementsAs(ctx, &apiModel.TPMIDs, false); diags.HasError() {
+			return nil, diags
+		}
 	}
-	if diags := data.TPMGroupIDs.ElementsAs(ctx, &apiModel.TPMGroupIDs, false); diags.HasError() {
-		return nil, diags
+
+	hasGroupNames := !data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown()
+	hasGroupIDs := !data.TPMGroupIDs.IsNull() && !data.TPMGroupIDs.IsUnknown()
+	if hasGroupNames {
+		if diags := data.TPMGroupNames.ElementsAs(ctx, &apiModel.TPMGroupNames, false); diags.HasError() {
+			return nil, diags
+		}
+	} else if hasGroupIDs {
+		if diags := data.TPMGroupIDs.ElementsAs(ctx, &apiModel.TPMGroupIDs, false); diags.HasError() {
+			return nil, diags
+		}
 	}
 
 	tokenDiags := token.PopulateTokenAPIFromModel(ctx, &data.TokenModel, &apiModel.TokenAPIModel)
@@ -340,6 +416,19 @@ func (r *TPMAuthBackendRoleResource) getAPIModel(ctx context.Context, data *TPMA
 		return nil, diag.Diagnostics{
 			diag.NewErrorDiagnostic("Failed to decode TPM role API model to map", err.Error()),
 		}
+	}
+
+	// When neither TPM names nor TPM IDs are configured (e.g. the role only uses group
+	// associations, or tpm_ids was removed on update), explicitly send an empty tpm_ids list
+	// so Vault clears any previously configured TPM IDs instead of leaving them untouched.
+	if !hasTPMNames && !hasTPMIDs {
+		requestBody[consts.FieldTPMIDs] = []string{}
+	}
+
+	// Symmetrically, if neither group names nor group IDs are configured, explicitly send
+	// an empty tpmgroup_ids list so Vault clears any previously configured group IDs.
+	if !hasGroupNames && !hasGroupIDs {
+		requestBody[consts.FieldTPMGroupIDs] = []string{}
 	}
 
 	return requestBody, nil
@@ -365,24 +454,67 @@ func (r *TPMAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Contex
 	// returns — 0 is valid and means "inherit default_cert_ttl from the backend config".
 	data.CertTTL = types.Int64Value(readResp.CertTTL)
 
-	if len(readResp.TPMIDs) == 0 {
+	// TPM identities and groups can be configured either by ID (tpm_ids / tpmgroup_ids)
+	// or by Name (tpm_names / tpmgroup_names). These are mutually exclusive representations.
+	//
+	// We intentionally do NOT mark these fields as Computed in schema:
+	// 1. If they were Computed, Vault's readback of both IDs and names would store both in state.
+	//    On subsequent updates, getAPIModel would send both fields to Vault, triggering
+	//    a "cannot specify both tpm_ids and tpm_names" error from Vault.
+	// 2. Omitting a field from HCL must allow the user to clear/unset it. With Computed: true,
+	//    omitting the field would retain the existing value from state rather than removing it.
+	//
+	// Instead, we inspect which identifier mode the user configured:
+	// - If tpm_names is configured, store readResp.TPMNames and ensure tpm_ids is null in state.
+	// - If tpm_ids is configured (or neither is set), store readResp.TPMIDs and ensure tpm_names is null.
+	// This preserves the user's chosen representation and avoids plan drift or inconsistent result errors.
+	if !data.TPMNames.IsNull() && !data.TPMNames.IsUnknown() {
+		if len(readResp.TPMNames) == 0 {
+			data.TPMNames = types.SetNull(types.StringType)
+		} else {
+			tpmNames, diags := types.SetValueFrom(ctx, types.StringType, readResp.TPMNames)
+			if diags.HasError() {
+				return diags
+			}
+			data.TPMNames = tpmNames
+		}
 		data.TPMIDs = types.SetNull(types.StringType)
 	} else {
-		tpmIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.TPMIDs)
-		if diags.HasError() {
-			return diags
+		if len(readResp.TPMIDs) == 0 {
+			data.TPMIDs = types.SetNull(types.StringType)
+		} else {
+			tpmIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.TPMIDs)
+			if diags.HasError() {
+				return diags
+			}
+			data.TPMIDs = tpmIDs
 		}
-		data.TPMIDs = tpmIDs
+		data.TPMNames = types.SetNull(types.StringType)
 	}
 
-	if len(readResp.TPMGroupIDs) == 0 {
+	// Apply the same symmetric logic for tpmgroup_names vs tpmgroup_ids.
+	if !data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown() {
+		if len(readResp.TPMGroupNames) == 0 {
+			data.TPMGroupNames = types.SetNull(types.StringType)
+		} else {
+			tpmGroupNames, diags := types.SetValueFrom(ctx, types.StringType, readResp.TPMGroupNames)
+			if diags.HasError() {
+				return diags
+			}
+			data.TPMGroupNames = tpmGroupNames
+		}
 		data.TPMGroupIDs = types.SetNull(types.StringType)
 	} else {
-		tpmGroupIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.TPMGroupIDs)
-		if diags.HasError() {
-			return diags
+		if len(readResp.TPMGroupIDs) == 0 {
+			data.TPMGroupIDs = types.SetNull(types.StringType)
+		} else {
+			tpmGroupIDs, diags := types.SetValueFrom(ctx, types.StringType, readResp.TPMGroupIDs)
+			if diags.HasError() {
+				return diags
+			}
+			data.TPMGroupIDs = tpmGroupIDs
 		}
-		data.TPMGroupIDs = tpmGroupIDs
+		data.TPMGroupNames = types.SetNull(types.StringType)
 	}
 
 	return token.PopulateTokenModelFromAPI(ctx, &data.TokenModel, &readResp.TokenAPIModel)

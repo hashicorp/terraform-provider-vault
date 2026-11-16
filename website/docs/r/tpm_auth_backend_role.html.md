@@ -15,6 +15,8 @@ from TPM identities and TPM groups to Vault policies and token parameters.
 
 ## Example Usage
 
+### Using IDs
+
 ```hcl
 resource "vault_auth_backend" "tpm" {
   type = "tpm"
@@ -44,9 +46,40 @@ resource "vault_tpm_auth_backend_role" "example" {
 }
 ```
 
+### Using Names
+
+```hcl
+resource "vault_auth_backend" "tpm" {
+  type = "tpm"
+  path = "tpm"
+}
+
+resource "vault_tpm_auth_backend_role" "example_by_name" {
+  mount        = vault_auth_backend.tpm.path
+  name         = "example-role"
+  display_name = "Example TPM Role"
+  cert_ttl     = 2592000
+
+  tpm_names = [
+    "server-01",
+    "server-02"
+  ]
+
+  tpmgroup_names = [
+    "production-web",
+    "production-db"
+  ]
+
+  token_ttl         = 3600
+  token_max_ttl     = 7200
+  token_policies    = ["default", "tpm-policy"]
+  token_bound_cidrs = ["10.0.0.0/8"]
+}
+```
+
 ## Argument Reference
 
-**Note:** At least one of `tpm_ids` or `tpmgroup_ids` must be specified. Both may be set.
+**Note:** At least one of `tpm_ids`, `tpm_names`, `tpmgroup_ids`, or `tpmgroup_names` must be specified. `tpm_ids` and `tpm_names` cannot be specified together. `tpmgroup_ids` and `tpmgroup_names` cannot be specified together.
 
 The following arguments are supported:
 
@@ -64,10 +97,18 @@ The following arguments are supported:
 
 * `tpm_ids` - (Optional) Set of TPM record IDs authorized to authenticate with this role.
   These are the unique IDs assigned by Vault to TPM records (SHA256 of the EK public key).
-  At least one of `tpm_ids` or `tpmgroup_ids` must be specified.
+  Cannot be specified with `tpm_names`.
+
+* `tpm_names` - (Optional) Set of TPM record names authorized to authenticate with this role.
+  Vault resolves these names to IDs upon creation or update. Cannot be specified with `tpm_ids`.
+  *Requires Vault Enterprise 2.3.0 or later.*
 
 * `tpmgroup_ids` - (Optional) Set of TPM group IDs authorized to authenticate with this role.
-  At least one of `tpm_ids` or `tpmgroup_ids` must be specified.
+  Cannot be specified with `tpmgroup_names`.
+
+* `tpmgroup_names` - (Optional) Set of TPM group names authorized to authenticate with this role.
+  Vault resolves these names to IDs upon creation or update. Cannot be specified with `tpmgroup_ids`.
+  *Requires Vault Enterprise 2.3.0 or later.*
 
 ### Common Token Arguments
 
