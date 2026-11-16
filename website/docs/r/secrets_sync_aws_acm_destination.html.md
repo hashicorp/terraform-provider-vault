@@ -94,12 +94,13 @@ The following arguments are supported:
 
 * `region` - (Optional) Region where certificates are imported into AWS Certificate Manager.
   Can be omitted and directly provided to Vault using the `AWS_REGION` environment
-  variable. Changing this value forces a new resource, because Vault does not allow the region of an
-  existing destination to change.
+  variable, in which case the region Vault uses is exported in state. Changing this value forces a new
+  resource, because Vault does not allow the region of an existing destination to change.
 
 * `role_arn` - (Optional) Specifies a role to assume when connecting to AWS. When assuming a role,
   Vault uses temporary STS credentials to authenticate. The value is mutable as long as the new role
-  targets the same AWS account ID. Required when using `identity_token_audience_wo`.
+  targets the same AWS account ID. Required when using `identity_token_audience_wo`. Removing it from the
+  configuration clears it in Vault.
 
 * `external_id` - (Optional) Extra protection that must match the trust policy granting access to the
   AWS IAM role ARN. Ignored if the `role_arn` field is empty. Conflicts with `identity_token_audience_wo`.
@@ -109,15 +110,17 @@ The following arguments are supported:
   syntax, including `.MountAccessor` and `.CommonName`. Defaults to
   `vault/{{ .MountAccessor }}/{{ .CommonName }}`. The rendered value must only contain letters, digits,
   spaces, and the characters `_ . : / = + - @`, and be at most 256 characters long, so a wildcard common
-  name containing `*` does not produce a valid tag value. Vault only checks that the template parses when
-  the destination is created; rendering errors are reported when a certificate is synced.
+  name containing `*` does not produce a valid tag value. The provider checks that the template parses when
+  the configuration is planned; rendering errors are only reported when a certificate is synced.
 
 * `custom_tags` - (Optional) Custom tags to set on the certificates imported into ACM. ACM allows at most
   50 tags per certificate, including the `hashicorp:vault` and `name` tags that Vault manages, so at most
   48 custom tags can be set. Tag keys must be at most 128 characters and values at most 256 characters.
+  These limits are validated when the configuration is planned. Removing all tags clears them in Vault.
 
 * `allowed_ipv4_addresses` - (Optional) Allowed IPv4 addresses for outbound connections from Vault to AWS ACM.
   Can also be set via an IP address range using CIDR notation. For example: `["192.168.1.0/24", "10.0.0.0/8"]`.
+  Removing the networking settings from the configuration clears them in Vault.
 
 * `allowed_ipv6_addresses` - (Optional) Allowed IPv6 addresses for outbound connections from Vault to AWS ACM.
   Can also be set via an IP address range using CIDR notation. For example: `["2001:db8::/32"]`.
@@ -131,21 +134,21 @@ The following arguments are supported:
 ### Workload Identity Federation
 
 * `identity_token_audience_wo` - (Optional) The audience claim value for identity tokens. This is a write-only
-  field and will not be read back from Vault. Requires `role_arn`.
+  field and will not be read back from Vault. Requires `role_arn` and `identity_token_audience_wo_version`.
 
 * `identity_token_audience_wo_version` - (Optional) This is used along with `identity_token_audience_wo` to track
   updates as `identity_token_audience_wo` is a write-only field. Increment this field to update `identity_token_audience_wo`.
-  Required with `identity_token_audience_wo`.
+  Required with `identity_token_audience_wo`, and the other way around.
 
-* `identity_token_ttl` - (Optional/Computed) The TTL of generated identity tokens in seconds.
+* `identity_token_ttl` - (Optional/Computed) The TTL of generated identity tokens in seconds. Must be at least 1.
   Vault sets a default of 3600 seconds when not provided.
 
 * `identity_token_key_wo` - (Optional) The key to use for signing identity tokens. This is a write-only field
-  and will not be read back from Vault.
+  and will not be read back from Vault. Requires `identity_token_key_wo_version`.
 
 * `identity_token_key_wo_version` - (Optional) This is used along with `identity_token_key_wo` to track
   updates as `identity_token_key_wo` is a write-only field. Increment this field to update `identity_token_key_wo`.
-  Required with `identity_token_key_wo`.
+  Required with `identity_token_key_wo`, and the other way around.
 
 ## Attributes Reference
 

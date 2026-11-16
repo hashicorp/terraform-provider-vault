@@ -5,13 +5,23 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"regexp"
+	"strings"
+	"sync"
 	"testing"
 
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	terraformtesting "github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -84,6 +94,11 @@ func TestAWSACMSecretsSyncDestination_schema(t *testing.T) {
 		}
 	}
 
+	// Vault falls back to AWS_REGION when region is omitted, so it must not plan a replacement.
+	if region := r.Schema[consts.FieldRegion]; !region.Computed || !region.Optional {
+		t.Errorf("field %q must be optional and computed", consts.FieldRegion)
+	}
+
 	deliveryMode := r.Schema[consts.FieldDeliveryMode]
 	if !deliveryMode.Required {
 		t.Errorf("field %q must be required", consts.FieldDeliveryMode)
@@ -111,6 +126,7 @@ func TestAWSACMSecretsSyncDestination(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAWSACMSecretsSyncDestinationDestroyed,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion230)
@@ -153,6 +169,16 @@ func TestAWSACMSecretsSyncDestination(t *testing.T) {
 					testCheckCustomTags(resourceName, nil),
 				),
 			},
+			{
+				// Vault keeps stored values unless they are explicitly cleared, so removing the
+				// networking settings must be sent to Vault as empty values.
+				Config: testAWSACMSecretsSyncDestinationConfig_networkingRemoved(creds, region, destName),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "allowed_ipv4_addresses.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, "allowed_ports.#", "0"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDisableStrictNetworking, "false"),
+				),
+			},
 			testutil.GetImportTestStep(resourceName, false, nil,
 				fieldAccessKeyID,
 				fieldSecretAccessKey,
@@ -179,6 +205,7 @@ func TestAWSACMSecretsSyncDestination_assumeRole(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAWSACMSecretsSyncDestinationDestroyed,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion230)
@@ -212,6 +239,7 @@ func TestAWSACMSecretsSyncDestination_invalidDeliveryMode(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAWSACMSecretsSyncDestinationDestroyed,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion230)
@@ -240,6 +268,7 @@ func TestAWSACMSecretsSyncDestinationWIF(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testAWSACMSecretsSyncDestinationDestroyed,
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
 			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion230)
@@ -281,6 +310,7 @@ resource "vault_secrets_sync_aws_acm_destination" "conflict" {
   delivery_mode              = "full_bundle"
   access_key_id              = "AKIAEXAMPLE"
   identity_token_audience_wo = "%s"
+  identity_token_audience_wo_version = 1
 }`, destName, region, audience),
 				ExpectError: regexp.MustCompile(`conflicts with`),
 			},
@@ -345,4 +375,396 @@ resource "vault_secrets_sync_aws_acm_destination" "test" {
   identity_token_ttl                 = %d
 %s
 }`, destName, region, roleArn, audience, audienceVersion, ttl, customTagsHCL(awsSyncCustomTagsWithOwner(nil)))
+}
+
+func testAWSACMSecretsSyncDestinationConfig_networkingRemoved(creds awsACMTestCreds, region, destName string) string {
+	return fmt.Sprintf(`
+resource "vault_secrets_sync_aws_acm_destination" "test" {
+  name                      = "%s"
+  region                    = "%s"
+  delivery_mode             = "full_bundle"
+  certificate_name_template = "%s"
+%s%s
+}
+`, destName, region, updatedAwsAcmCertificateNameTemplate, creds.hcl(),
+		customTagsHCL(awsSyncCustomTagsWithOwner(nil)))
+}
+
+func testAWSACMSecretsSyncDestinationDestroyed(s *terraformtesting.State) error {
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "vault_secrets_sync_aws_acm_destination" {
+			continue
+		}
+		client, err := provider.GetClient(rs.Primary, testProvider.Meta())
+		if err != nil {
+			return err
+		}
+		secret, err := client.Logical().Read(syncutilDestinationPath(rs.Primary.ID))
+		if err != nil {
+			return fmt.Errorf("error checking for aws-acm destination %q: %w", rs.Primary.ID, err)
+		}
+		if secret != nil {
+			return fmt.Errorf("aws-acm destination %q still exists", rs.Primary.ID)
+		}
+	}
+	return nil
+}
+
+func syncutilDestinationPath(name string) string {
+	return "sys/sync/destinations/" + awsAcmSyncType + "/" + name
+}
+
+// The tests below do not need Vault or AWS.
+
+func newAWSACMTestMeta(t *testing.T, address, versionOverride string) interface{} {
+	t.Helper()
+
+	raw := map[string]interface{}{
+		consts.FieldAddress: address,
+		consts.FieldToken:   "test-token",
+	}
+	if versionOverride != "" {
+		raw[consts.FieldVaultVersionOverride] = versionOverride
+	}
+
+	d := schema.TestResourceDataRaw(t,
+		map[string]*schema.Schema{
+			consts.FieldAddress:              {Type: schema.TypeString, Required: true},
+			consts.FieldToken:                {Type: schema.TypeString, Required: true},
+			consts.FieldVaultVersionOverride: {Type: schema.TypeString, Optional: true},
+			consts.FieldSkipChildToken:       {Type: schema.TypeBool, Optional: true},
+		}, raw)
+
+	meta, err := provider.NewProviderMeta(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return meta
+}
+
+type awsACMRecordedRequest struct {
+	method string
+	path   string
+	body   map[string]interface{}
+}
+
+// newAWSACMMockVault serves just enough of the Vault API for the provider client to be
+// created and records every request made to the aws-acm destination path.
+func newAWSACMMockVault(t *testing.T) (string, func() []awsACMRecordedRequest) {
+	t.Helper()
+
+	var (
+		mu       sync.Mutex
+		requests []awsACMRecordedRequest
+	)
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.URL.Path == "/v1/auth/token/lookup-self":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{
+				"id": "test-token", "policies": []string{"root"}, "ttl": 0,
+			}})
+		case r.URL.Path == "/v1/auth/token/create":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"auth": map[string]interface{}{
+				"client_token": "child-token", "policies": []string{"root"}, "lease_duration": 3600,
+			}})
+		case strings.HasPrefix(r.URL.Path, "/v1/sys/sync/destinations/aws-acm/"):
+			rec := awsACMRecordedRequest{method: r.Method, path: r.URL.Path}
+			if r.Method == http.MethodPut || r.Method == http.MethodPost {
+				b, _ := io.ReadAll(r.Body)
+				_ = json.Unmarshal(b, &rec.body)
+				mu.Lock()
+				requests = append(requests, rec)
+				mu.Unlock()
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			mu.Lock()
+			requests = append(requests, rec)
+			mu.Unlock()
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"data": map[string]interface{}{
+				"connection_details": map[string]interface{}{},
+				"options":            map[string]interface{}{},
+			}})
+		default:
+			w.WriteHeader(http.StatusNotImplemented)
+		}
+	})
+
+	config, ln := testutil.TestHTTPServer(t, handler)
+	t.Cleanup(func() { _ = ln.Close() })
+
+	return config.Address, func() []awsACMRecordedRequest {
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]awsACMRecordedRequest(nil), requests...)
+	}
+}
+
+func TestAWSACMSecretsSyncDestination_updateClearsRemovedFields(t *testing.T) {
+	addr, recorded := newAWSACMMockVault(t)
+	meta := newAWSACMTestMeta(t, addr, "2.3.0+ent")
+
+	r := UpdateSchemaResource(awsAcmSecretsSyncDestinationResource())
+
+	state := &terraform.InstanceState{
+		ID: "acm-dest",
+		Attributes: map[string]string{
+			"id":                        "acm-dest",
+			"name":                      "acm-dest",
+			"delivery_mode":             "full_bundle",
+			"region":                    "us-east-1",
+			"role_arn":                  "arn:aws:iam::123456789012:role/test",
+			"external_id":               "ext",
+			"custom_tags.%":             "1",
+			"custom_tags.foo":           "bar",
+			"disable_strict_networking": "true",
+			"certificate_name_template": "vault/{{ .MountAccessor }}/{{ .CommonName }}",
+			"identity_token_ttl":        "3600",
+			"allowed_ipv6_addresses.#":  "0",
+		},
+	}
+	ipv4Hash := schema.HashSchema(&schema.Schema{Type: schema.TypeString})("10.0.0.0/8")
+	portHash := schema.HashSchema(&schema.Schema{Type: schema.TypeInt})(443)
+	state.Attributes["allowed_ipv4_addresses.#"] = "1"
+	state.Attributes[fmt.Sprintf("allowed_ipv4_addresses.%d", ipv4Hash)] = "10.0.0.0/8"
+	state.Attributes["allowed_ports.#"] = "1"
+	state.Attributes[fmt.Sprintf("allowed_ports.%d", portHash)] = "443"
+
+	// the config only keeps the required fields, everything else was removed
+	config := terraform.NewResourceConfigRaw(map[string]interface{}{
+		"name":          "acm-dest",
+		"delivery_mode": "full_bundle",
+	})
+
+	diff, err := r.Diff(context.Background(), state, config, meta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff == nil {
+		t.Fatal("expected a diff")
+	}
+	d, err := schema.InternalMap(r.Schema).Data(state, diff)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diags := r.UpdateContext(context.Background(), d, meta); diags.HasError() {
+		t.Fatalf("unexpected error: %v", diags)
+	}
+
+	var write *awsACMRecordedRequest
+	for _, req := range recorded() {
+		if req.method == http.MethodPut || req.method == http.MethodPost {
+			req := req
+			write = &req
+		}
+	}
+	if write == nil {
+		t.Fatal("no write request was sent to Vault")
+	}
+
+	tags, ok := write.body[consts.FieldCustomTags].(map[string]interface{})
+	if !ok || len(tags) != 0 {
+		t.Errorf("custom_tags: expected an empty map to be sent, got %#v", write.body[consts.FieldCustomTags])
+	}
+	for _, f := range []string{consts.FieldAllowedIPv4Addresses, consts.FieldAllowedPorts} {
+		l, ok := write.body[f].([]interface{})
+		if !ok || len(l) != 0 {
+			t.Errorf("%s: expected an empty list to be sent, got %#v", f, write.body[f])
+		}
+	}
+	if v, ok := write.body[consts.FieldDisableStrictNetworking]; !ok || v != false {
+		t.Errorf("disable_strict_networking: expected false to be sent, got %#v", v)
+	}
+	for _, f := range []string{consts.FieldRoleArn, consts.FieldExternalID} {
+		if v, ok := write.body[f]; !ok || v != "" {
+			t.Errorf("%s: expected an empty string to be sent, got %#v", f, v)
+		}
+	}
+	for _, f := range []string{consts.FieldGranularity, consts.FieldSecretNameTemplate} {
+		if _, ok := write.body[f]; ok {
+			t.Errorf("%s must not be sent to aws-acm destinations", f)
+		}
+	}
+}
+
+func TestAWSACMSecretsSyncDestination_versionGate(t *testing.T) {
+	addr, recorded := newAWSACMMockVault(t)
+	meta := newAWSACMTestMeta(t, addr, "2.2.0+ent")
+	r := awsAcmSecretsSyncDestinationResource()
+
+	d := schema.TestResourceDataRaw(t, r.Schema, map[string]interface{}{
+		"name":          "acm-dest",
+		"delivery_mode": "full_bundle",
+	})
+
+	for name, f := range map[string]func(context.Context, *schema.ResourceData, interface{}) diag.Diagnostics{
+		"create": r.CreateContext,
+		"update": r.UpdateContext,
+	} {
+		diags := f(context.Background(), d, meta)
+		if !diags.HasError() || !strings.Contains(diags[0].Summary, "feature not enabled on current Vault version") {
+			t.Errorf("%s: expected a version error, got %v", name, diags)
+		}
+	}
+	if n := len(recorded()); n != 0 {
+		t.Errorf("no request should reach the destination path on unsupported versions, got %d", n)
+	}
+}
+
+func awsACMConfigValue(t *testing.T, attrs map[string]cty.Value) cty.Value {
+	t.Helper()
+	typ := awsAcmSecretsSyncDestinationResource().CoreConfigSchema().ImpliedType()
+	vals := map[string]cty.Value{}
+	for name, at := range typ.AttributeTypes() {
+		vals[name] = cty.NullVal(at)
+	}
+	for k, v := range attrs {
+		vals[k] = v
+	}
+	return cty.ObjectVal(vals)
+}
+
+func TestAWSACMSecretsSyncDestination_validateWIFConfig(t *testing.T) {
+	str := cty.StringVal
+	num := cty.NumberIntVal
+
+	tests := map[string]struct {
+		attrs     map[string]cty.Value
+		wantAttrs []string
+	}{
+		"no wif": {attrs: map[string]cty.Value{}},
+		"valid": {attrs: map[string]cty.Value{
+			consts.FieldRoleArn:                        str("arn"),
+			consts.FieldIdentityTokenAudienceWO:        str("aud"),
+			consts.FieldIdentityTokenAudienceWOVersion: num(1),
+		}},
+		"missing role_arn": {
+			attrs: map[string]cty.Value{
+				consts.FieldIdentityTokenAudienceWO:        str("aud"),
+				consts.FieldIdentityTokenAudienceWOVersion: num(1),
+			},
+			wantAttrs: []string{consts.FieldRoleArn},
+		},
+		"empty role_arn": {
+			attrs: map[string]cty.Value{
+				consts.FieldRoleArn:                        str(""),
+				consts.FieldIdentityTokenAudienceWO:        str("aud"),
+				consts.FieldIdentityTokenAudienceWOVersion: num(1),
+			},
+			wantAttrs: []string{consts.FieldRoleArn},
+		},
+		"missing audience version": {
+			attrs: map[string]cty.Value{
+				consts.FieldRoleArn:                 str("arn"),
+				consts.FieldIdentityTokenAudienceWO: str("aud"),
+			},
+			wantAttrs: []string{consts.FieldIdentityTokenAudienceWOVersion},
+		},
+		"missing key version": {
+			attrs: map[string]cty.Value{
+				consts.FieldIdentityTokenKeyWO: str("key"),
+			},
+			wantAttrs: []string{consts.FieldIdentityTokenKeyWOVersion},
+		},
+		"unknown role_arn is not validated": {attrs: map[string]cty.Value{
+			consts.FieldRoleArn:                        cty.UnknownVal(cty.String),
+			consts.FieldIdentityTokenAudienceWO:        str("aud"),
+			consts.FieldIdentityTokenAudienceWOVersion: num(1),
+		}},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			resp := &schema.ValidateResourceConfigFuncResponse{}
+			validateAwsAcmWIFConfig(context.Background(), schema.ValidateResourceConfigFuncRequest{
+				RawConfig: awsACMConfigValue(t, tt.attrs),
+			}, resp)
+
+			var got []string
+			for _, d := range resp.Diagnostics {
+				if len(d.AttributePath) == 0 {
+					t.Fatalf("diagnostic has no attribute path: %v", d)
+				}
+				got = append(got, d.AttributePath[0].(cty.GetAttrStep).Name)
+			}
+			if strings.Join(got, ",") != strings.Join(tt.wantAttrs, ",") {
+				t.Errorf("expected errors on %v, got %v (%v)", tt.wantAttrs, got, resp.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestAWSACMSecretsSyncDestination_validateConfig(t *testing.T) {
+	r := awsAcmSecretsSyncDestinationResource()
+
+	long := strings.Repeat("a", awsAcmMaxTagKeyLength+1)
+	longValue := strings.Repeat("a", awsAcmMaxTagValueLength+1)
+	tooMany := map[string]interface{}{}
+	for i := 0; i <= awsAcmMaxCustomTags; i++ {
+		tooMany[fmt.Sprintf("k%d", i)] = "v"
+	}
+	maxTags := map[string]interface{}{}
+	for i := 0; i < awsAcmMaxCustomTags; i++ {
+		maxTags[fmt.Sprintf("k%d", i)] = "v"
+	}
+
+	base := func(extra map[string]interface{}) map[string]interface{} {
+		m := map[string]interface{}{"name": "acm-dest", "delivery_mode": "full_bundle"}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+
+	tests := map[string]struct {
+		raw     map[string]interface{}
+		wantErr string
+	}{
+		"minimal":                 {raw: base(nil)},
+		"max custom tags":         {raw: base(map[string]interface{}{"custom_tags": maxTags})},
+		"too many custom tags":    {raw: base(map[string]interface{}{"custom_tags": tooMany}), wantErr: "too many custom tags"},
+		"custom tag key length":   {raw: base(map[string]interface{}{"custom_tags": map[string]interface{}{long: "v"}}), wantErr: "key too long"},
+		"custom tag value length": {raw: base(map[string]interface{}{"custom_tags": map[string]interface{}{"k": longValue}}), wantErr: "value too long"},
+		"valid template":          {raw: base(map[string]interface{}{"certificate_name_template": "vault-{{ .MountAccessor }}-{{ .CommonName }}"})},
+		"invalid template":        {raw: base(map[string]interface{}{"certificate_name_template": "{{ .CommonName "}), wantErr: "not a valid template"},
+		"zero identity ttl":       {raw: base(map[string]interface{}{"identity_token_ttl": 0}), wantErr: "expected identity_token_ttl to be at least"},
+		"missing delivery mode":   {raw: map[string]interface{}{"name": "acm-dest"}, wantErr: "delivery_mode"},
+		"access key with audience": {
+			raw:     base(map[string]interface{}{"access_key_id": "AKIA", "identity_token_audience_wo": "aud", "identity_token_audience_wo_version": 1}),
+			wantErr: "conflicts with",
+		},
+		"external id with audience": {
+			raw:     base(map[string]interface{}{"external_id": "id", "identity_token_audience_wo": "aud", "identity_token_audience_wo_version": 1}),
+			wantErr: "conflicts with",
+		},
+		"audience version without audience": {
+			raw:     base(map[string]interface{}{"identity_token_audience_wo_version": 1}),
+			wantErr: "all of",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			diags := r.Validate(terraform.NewResourceConfigRaw(tt.raw))
+			if tt.wantErr == "" {
+				if diags.HasError() {
+					t.Fatalf("unexpected error: %v", diags)
+				}
+				return
+			}
+			if !diags.HasError() {
+				t.Fatalf("expected an error containing %q", tt.wantErr)
+			}
+			var msgs []string
+			for _, d := range diags {
+				msgs = append(msgs, d.Summary+" "+d.Detail)
+			}
+			if !strings.Contains(strings.Join(msgs, "\n"), tt.wantErr) {
+				t.Errorf("expected an error containing %q, got %v", tt.wantErr, msgs)
+			}
+		})
+	}
 }
