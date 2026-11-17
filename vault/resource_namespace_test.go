@@ -307,6 +307,26 @@ func TestAccNamespace_customMetadataUpdate(t *testing.T) {
 			{
 				Config: testAccNamespaceConfig_metadata(namespacePath, "null"),
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.env", "dev"),
+					testNamespaceCustomMetadataInVault("", namespacePath, map[string]string{
+						"env": "dev",
+					}),
+				),
+			},
+			{
+				Config: testNamespaceConfig(namespacePath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.env", "dev"),
+					testNamespaceCustomMetadataInVault("", namespacePath, map[string]string{
+						"env": "dev",
+					}),
+				),
+			},
+			{
+				Config: testAccNamespaceConfig_metadata(namespacePath, "{}"),
+				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.%", "0"),
 					testNamespaceCustomMetadataInVault("", namespacePath, map[string]string{}),
 				),
