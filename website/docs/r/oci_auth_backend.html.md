@@ -32,6 +32,24 @@ resource "vault_oci_auth_backend" "example" {
 }
 ```
 
+Manage tune settings with [`vault_auth_tune`](auth_tune.html). Omit `tune` on the auth resource:
+
+```hcl
+resource "vault_auth_backend" "example" {
+  type = "oci"
+}
+
+resource "vault_oci_auth_backend" "example" {
+  path            = vault_auth_backend.example.path
+  home_tenancy_id = "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
+}
+
+resource "vault_auth_tune" "example" {
+  path               = vault_oci_auth_backend.example.path
+  listing_visibility = "unauth"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
@@ -45,7 +63,7 @@ The following arguments are supported:
 
 * `home_tenancy_id` - (Required) The Tenancy OCID of your OCI account.
 
-* `tune` - (Optional) Extra configuration block. Structure is documented below.
+* `tune` - (Optional) Extra configuration block. Structure is documented below. Omit this block to manage these settings with [`vault_auth_tune`](auth_tune.html).
 
 The `tune` block is used to tune the auth backend:
 
