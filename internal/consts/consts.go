@@ -892,6 +892,7 @@ const (
 	FieldCALifetime     = "ca_lifetime"
 	FieldCASoftExpiry   = "ca_soft_expiry"
 	FieldDefaultCertTTL = "default_cert_ttl"
+	FieldAliasMode      = "alias_mode"
 	FieldTPMEKPublicKey = "tpm_ek_public_key"
 	FieldTPMID          = "tpm_id"
 	FieldTPMGroupID     = "tpm_group_id"
@@ -1100,6 +1101,7 @@ const (
 	VaultVersion210   = "2.1.0"
 	VaultVersion211   = "2.1.1"
 	VaultVersion220   = "2.2.0"
+	VaultVersion223   = "2.2.3"
 
 	/*
 		CloudFoundry auth backend field names
