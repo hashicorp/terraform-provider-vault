@@ -9,6 +9,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_tpm_auth_backend_config`: Add `alias_mode` field to configure how the identity alias name is generated at login. Accepted values are `tpm_id` and `role_id`. Requires Vault Enterprise 2.2.3 or later. ([#3118](https://github.com/hashicorp/terraform-provider-vault/pull/3118))
+
 * `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#3093](https://github.com/hashicorp/terraform-provider-vault/pull/3093))
 
 
