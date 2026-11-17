@@ -373,7 +373,7 @@ func TestAccKeymgmtKey_metadataDrift(t *testing.T) {
 // TestAccKeymgmtKey_metadataClear verifies how metadata maps to what Vault
 // stores for a Plugin Framework resource: a map is written, {} clears it, and
 // removing the attribute also clears it, with no diff left over because Vault
-// returns an empty map after a clear. It also verifies that an import reads the
+// omits metadata after a clear. It also verifies that an import reads the
 // stored map back.
 func TestAccKeymgmtKey_metadataClear(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tf-test-keymgmt")

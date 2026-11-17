@@ -14,10 +14,11 @@ import (
 )
 
 // TestFrameworkMetadataFromRead verifies how a metadata value read from Vault
-// maps to Plugin Framework state. Vault omits metadata when no record exists
-// and returns {} after a clear; both must read back as null so a config that
-// omits the attribute stays clean, except that a configured {} is kept so it
-// does not diff against the read value.
+// maps to Plugin Framework state. Vault omits metadata when no record exists,
+// which includes after a clear, and an empty map is treated the same way; both
+// must read back as null so a config that omits the attribute stays clean,
+// except that a configured {} is kept so it does not diff against the read
+// value.
 func TestFrameworkMetadataFromRead(t *testing.T) {
 	t.Parallel()
 
