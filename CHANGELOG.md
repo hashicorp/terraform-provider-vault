@@ -1,8 +1,8 @@
-## 5.14.0 (Unreleased)
+## 5.14.0 (November 18, 2026)
 
 FEATURES:
 
-* `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
+* `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3013](https://github.com/hashicorp/terraform-provider-vault/pull/3013))
 * **New Resources**: Add support for Transit BYOK key import with the `vault_transit_secret_backend_imported_key` resource and `vault_transit_wrapping_key` data source. ([#3090](https://github.com/hashicorp/terraform-provider-vault/pull/3090))
 * **New Resources**: Add support for Transform BYOK key import with the `vault_transform_transformation_tokenization_imported_key` and `vault_transform_transformation_fpe_imported_key` resources and the `vault_transform_wrapping_key` data source. Requires Vault Enterprise. ([#3106](https://github.com/hashicorp/terraform-provider-vault/pull/3106))
 * **New Resource**: Manage FPE transformations in the Transform secrets engine with the `vault_transform_transformation_fpe` resource. ([#3108](https://github.com/hashicorp/terraform-provider-vault/pull/3108))
@@ -24,9 +24,35 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* `vault_ldap_secret_backend_static_role`: Fix `mount` and `role_name` not being populated in state when importing a role.
-* `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
+* `vault_ldap_secret_backend_static_role`: Fix `mount` and `role_name` not being populated in state when importing a role. ([#3121](https://github.com/hashicorp/terraform-provider-vault/pull/3121))
+* `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later. ([#3100](https://github.com/hashicorp/terraform-provider-vault/pull/3100))
+* Fix `FlattenVaultDuration` returning `"0s"` instead of `""` for zero or unset duration values, which caused spurious diffs for duration fields across multiple resources. ([#3030](https://github.com/hashicorp/terraform-provider-vault/pull/3030))
+* `vault_identity_group_alias`: Fix "Provider produced inconsistent result after apply" when the post-create Read hits a stale performance-replica; the Read now goes through the Client Controlled Consistency retry client (honors `max_retries_ccc`), matching `vault_identity_entity_alias`. ([#2959](https://github.com/hashicorp/terraform-provider-vault/pull/2959))
 
+DEPENDENCIES:
+
+  * Build with Go 1.27.4
+  * Bumped 20 Go module dependencies ([#3122](https://github.com/hashicorp/terraform-provider-vault/pull/3122), [#3114](https://github.com/hashicorp/terraform-provider-vault/pull/3114), [#3105](https://github.com/hashicorp/terraform-provider-vault/pull/3105), [#3102](https://github.com/hashicorp/terraform-provider-vault/pull/3102))
+  * `cloud.google.com/go/iam` v1.14.0 → v1.15.1
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.3 → v1.24.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.14.1 → v1.15.0
+  * `github.com/aws/aws-sdk-go-v2` v1.47.3 → v1.48.0
+  * `github.com/aws/aws-sdk-go-v2/config` v1.33.9 → v1.33.18
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.20.9 → v1.21.0
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.20.3 → v1.20.9
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.64.4 → v1.65.0
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.51.4 → v1.52.0
+  * `github.com/aws/smithy-go` v1.28.5 → v1.28.9
+  * `github.com/go-test/deep` v1.1.1 → v1.1.2
+  * `github.com/hashicorp/consul/api` v1.34.5 → v1.35.0
+  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.27.1 → v0.27.3
+  * `github.com/hashicorp/vault-plugin-auth-kerberos` v0.18.0 → v0.18.1
+  * `github.com/hashicorp/vault-plugin-auth-oci` v0.22.0 → v0.22.1
+  * `golang.org/x/crypto` v0.58.0 → v0.59.0
+  * `golang.org/x/net` v0.61.0 → v0.62.0
+  * `golang.org/x/oauth2` v0.37.0 → v0.38.0
+  * `google.golang.org/api` v0.301.0 → v0.314.0
+  * `google.golang.org/genproto` v0.0.0-20260911204522-f61a6ca850bd → v0.0.0-20261012220534-4341edf3f941
 
 ## 5.13.0 (October 14, 2026)
 
@@ -98,7 +124,6 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
-* Fix `FlattenVaultDuration` returning `"0s"` instead of `""` for zero or unset duration values, which caused spurious diffs for duration fields across multiple resources. ([#3030](https://github.com/hashicorp/terraform-provider-vault/pull/3030))
 * `vault_mount`: Fix spurious `ForceNew` destroy when importing a `kv-v2` mount. Vault returns `type=kv`+`options.version=2` on import; a `DiffSuppressFunc` now suppresses the `kv`/`kv-v2` alias diff so the next plan is clean. ([#3007](https://github.com/hashicorp/terraform-provider-vault/pull/3007))
 * `vault_terraform_cloud_secret_backend`: Fix logic gap in `Read` where execution would fall through to a stray `GET <backend>/config` call after `readMount` detected the mount was deleted out-of-band and cleared the resource ID. Add `util.Is404` guard to `Delete` so that `terraform destroy` succeeds cleanly when the mount has already been removed from Vault. ([#3006](https://github.com/hashicorp/terraform-provider-vault/pull/3006))
 
@@ -190,7 +215,6 @@ BUG FIXES:
 * `vault_jwt_auth_backend`: Fixed a perpetual diff where Vault returned non-string values that were silently dropped by Terraform’s TypeMap(TypeString) schema. All values are now converted to strings when read, preventing keys such as `fetch_groups` and `groups_recurse_max_depth` from appearing missing on every plan.([#2993](https://github.com/hashicorp/terraform-provider-vault/pull/2993))
 * Fixed the token namespace being set as the provider namespace, even when `set_namespace_from_token` was `false`. ([#2926](https://github.com/hashicorp/terraform-provider-vault/pull/2926/))
 * `vault_pki_secret_backend_role`: Fix crash when the Vault client was not successfully initialized ([#2964](https://github.com/hashicorp/terraform-provider-vault/pull/2964))
-* `vault_identity_group_alias`: Fix "Provider produced inconsistent result after apply" when the post-create Read hits a stale performance-replica; the Read now goes through the Client Controlled Consistency retry client (honors `max_retries_ccc`), matching `vault_identity_entity_alias`. ([#2959](https://github.com/hashicorp/terraform-provider-vault/pull/2959))
 
 ## 5.10.1 (June 26, 2026)
 
