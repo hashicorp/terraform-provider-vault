@@ -165,3 +165,9 @@ where the `tpm` component is the resource's `mount`, e.g.
 ```
 $ terraform import vault_tpm_auth_backend_role.example auth/tpm/role/example-role
 ```
+
+~> **Note** Vault stores only TPM and TPM group **IDs** for a role, so after import `tpm_ids` and
+`tpmgroup_ids` are populated in state. If the configuration specified either `tpm_names` or
+`tpmgroup_names`, the next plan shows an in-place update that applies the configured names
+to the role. If they resolve to the same identities already on the role, nothing changes in
+Vault; otherwise the role's TPM or group membership is replaced with the configured names.

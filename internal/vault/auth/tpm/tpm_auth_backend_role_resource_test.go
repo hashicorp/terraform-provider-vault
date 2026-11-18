@@ -93,7 +93,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 					groupName:      groupName,
 					useTPMIDs:      true,
 					useTPMGroupIDs: true,
-					certTTL:        86400,
+					certTTL:        ptr(int64(86400)),
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
@@ -111,7 +111,8 @@ func TestAccTPMAuthRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 4: Unset cert_ttl (back to 0) and clear tpm_ids by configuring only tpmgroup_ids.
+			// Step 4: Set cert_ttl back to 0 explicitly (Vault always returns a value; 0 means
+			// "use backend default") and clear tpm_ids by configuring only tpmgroup_ids.
 			// Verifies that omitting tpm_ids unsets it in Vault.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
@@ -121,6 +122,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 					publicKey:      publicKey,
 					groupName:      groupName,
 					useTPMGroupIDs: true,
+					certTTL:        ptr(int64(0)),
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
@@ -148,7 +150,7 @@ func TestAccTPMAuthRole(t *testing.T) {
 					publicKey:      publicKey,
 					groupName:      groupName,
 					useTPMGroupIDs: true,
-					certTTL:        86400,
+					certTTL:        ptr(int64(86400)),
 					tokenTTL:       3600,
 					tokenMaxTTL:    7200,
 					tokenPolicies:  []string{"policy-a", "policy-b"},
@@ -281,8 +283,8 @@ resource "vault_auth_backend" "tpm" {
 //   - Step 1: Create role with tpm_names
 //   - Step 2: Add tpmgroup_names
 //   - Step 3: Switch from names to IDs (in-place update)
-//   - Step 4: Switch back from IDs to names (in-place update)
-//   - Step 5: Import state
+//   - Step 4: Import state (verified against the IDs configuration)
+//   - Step 5: Switch back from IDs to names (in-place update)
 func TestAccTPMAuthRole_names(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tpm-mount")
 	roleName := acctest.RandomWithPrefix("tpm-role")
@@ -378,7 +380,17 @@ func TestAccTPMAuthRole_names(t *testing.T) {
 					},
 				},
 			},
-			// Step 4: Switch back to tpm_names and tpmgroup_names.
+			// Step 4: Import state while configured with IDs. On import there is no prior state,
+			// so Read always populates the ID attributes (Vault stores only IDs). Importing is
+			// therefore verified against the IDs configuration, with no ignored attributes.
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccTPMAuthRoleImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "mount",
+			},
+			// Step 5: Switch back to tpm_names and tpmgroup_names.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
 					mount:            mount,
@@ -406,20 +418,12 @@ func TestAccTPMAuthRole_names(t *testing.T) {
 					},
 				},
 			},
-			// Step 5: Import state.
-			{
-				ResourceName:                         resourceName,
-				ImportState:                          true,
-				ImportStateIdFunc:                    testAccTPMAuthRoleImportStateIdFunc(resourceName),
-				ImportStateVerify:                    true,
-				ImportStateVerifyIdentifierAttribute: "mount",
-				ImportStateVerifyIgnore:              []string{"tpm_names", "tpmgroup_names", "tpm_ids", "tpmgroup_ids"},
-			},
 		},
 	})
 }
 
-// TestAccTPMAuthRole_conflicts verifies validation errors for mutually exclusive attributes.
+// TestAccTPMAuthRole_conflicts verifies plan-time validation errors for mutually exclusive
+// attributes. No Vault calls are made, so no version or edition gating is needed.
 func TestAccTPMAuthRole_conflicts(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tpm-mount")
 	roleName := acctest.RandomWithPrefix("tpm-role")
@@ -428,10 +432,7 @@ func TestAccTPMAuthRole_conflicts(t *testing.T) {
 	publicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 
 	resource.ParallelTest(t, resource.TestCase{
-		PreCheck: func() {
-			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion230)
-		},
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
 			// Step 1: Reject both tpm_ids and tpm_names.
@@ -445,7 +446,7 @@ func TestAccTPMAuthRole_conflicts(t *testing.T) {
 					useTPMIDs:   true,
 					useTPMNames: true,
 				}),
-				ExpectError: regexp.MustCompile(`(?s)Attribute "(tpm_ids|tpm_names)" cannot be specified when "(tpm_ids|tpm_names)" is.*specified|cannot specify both tpm_ids and tpm_names`),
+				ExpectError: regexp.MustCompile(`(?s)Attribute "(tpm_ids|tpm_names)" cannot be specified when "(tpm_ids|tpm_names)" is.*specified`),
 			},
 			// Step 2: Reject both tpmgroup_ids and tpmgroup_names.
 			{
@@ -458,11 +459,13 @@ func TestAccTPMAuthRole_conflicts(t *testing.T) {
 					useTPMGroupIDs:   true,
 					useTPMGroupNames: true,
 				}),
-				ExpectError: regexp.MustCompile(`(?s)Attribute "(tpmgroup_ids|tpmgroup_names)" cannot be specified when "(tpmgroup_ids|tpmgroup_names)" is.*specified|cannot specify both tpmgroup_ids and tpmgroup_names`),
+				ExpectError: regexp.MustCompile(`(?s)Attribute "(tpmgroup_ids|tpmgroup_names)" cannot be specified when "(tpmgroup_ids|tpmgroup_names)" is.*specified`),
 			},
 		},
 	})
 }
+
+func ptr[T any](v T) *T { return &v }
 
 // tpmRoleFields holds all configurable parameters for testAccTPMAuthRoleConfig.
 // Only attributes explicitly set to true or non-zero are emitted into the HCL.
@@ -470,7 +473,7 @@ type tpmRoleFields struct {
 	mount            string
 	roleName         string
 	tpmName          string
-	certTTL          int64
+	certTTL          *int64 // nil omits cert_ttl from the HCL; a pointer to 0 emits an explicit 0
 	publicKey        string
 	groupName        string
 	useTPMIDs        bool
@@ -531,8 +534,8 @@ resource "vault_tpm_auth_backend_role" "test" {
 	if f.useTPMGroupNames {
 		role += "  tpmgroup_names = [vault_identity_tpm_group.test.name]\n"
 	}
-	if f.certTTL != 0 {
-		role += fmt.Sprintf("  cert_ttl = %d\n", f.certTTL)
+	if f.certTTL != nil {
+		role += fmt.Sprintf("  cert_ttl = %d\n", *f.certTTL)
 	}
 	if f.tokenTTL != 0 {
 		role += fmt.Sprintf("  token_ttl = %d\n", f.tokenTTL)

@@ -185,14 +185,9 @@ func (r *TPMAuthBackendRoleResource) Create(ctx context.Context, req resource.Cr
 		)
 		return
 	}
-	if (!data.TPMNames.IsNull() && !data.TPMNames.IsUnknown()) || (!data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown()) {
-		if !r.Meta().IsAPISupported(provider.VaultVersion230) {
-			resp.Diagnostics.AddError(
-				"Feature Not Supported",
-				fmt.Sprintf("Specifying identity names (tpm_names and tpmgroup_names) instead of IDs requires Vault version %s or later.", provider.VaultVersion230),
-			)
-			return
-		}
+	resp.Diagnostics.Append(r.checkNamesSupported(&data)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
@@ -270,14 +265,9 @@ func (r *TPMAuthBackendRoleResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
-	if (!data.TPMNames.IsNull() && !data.TPMNames.IsUnknown()) || (!data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown()) {
-		if !r.Meta().IsAPISupported(provider.VaultVersion230) {
-			resp.Diagnostics.AddError(
-				"Feature Not Supported",
-				fmt.Sprintf("Specifying identity names (tpm_names and tpmgroup_names) instead of IDs requires Vault version %s or later.", provider.VaultVersion230),
-			)
-			return
-		}
+	resp.Diagnostics.Append(r.checkNamesSupported(&data)...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
@@ -376,6 +366,23 @@ func (r *TPMAuthBackendRoleResource) path(data *TPMAuthBackendRoleModel) string 
 	return fmt.Sprintf("auth/%s/role/%s", data.Mount.ValueString(), data.Name.ValueString())
 }
 
+// checkNamesSupported returns an error diagnostic when tpm_names or tpmgroup_names is
+// configured against a Vault version that does not support resolving identity names.
+func (r *TPMAuthBackendRoleResource) checkNamesSupported(data *TPMAuthBackendRoleModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	hasTPMNames := !data.TPMNames.IsNull() && !data.TPMNames.IsUnknown()
+	hasGroupNames := !data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown()
+
+	if (hasTPMNames || hasGroupNames) && !r.Meta().IsAPISupported(provider.VaultVersion230) {
+		diags.AddError(
+			"Feature Not Supported",
+			fmt.Sprintf("Specifying identity names (tpm_names and tpmgroup_names) instead of IDs requires Vault version %s or later.", provider.VaultVersion230),
+		)
+	}
+	return diags
+}
+
 func (r *TPMAuthBackendRoleResource) getAPIModel(ctx context.Context, data *TPMAuthBackendRoleModel) (map[string]any, diag.Diagnostics) {
 	apiModel := tpmRoleAPIModel{
 		DisplayName: data.DisplayName.ValueString(),
@@ -451,7 +458,7 @@ func (r *TPMAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Contex
 	data.DisplayName = types.StringValue(readResp.DisplayName)
 
 	// Vault always returns an integer for cert_ttl (0 when unset). Store whatever Vault
-	// returns — 0 is valid and means "inherit default_cert_ttl from the backend config".
+	// returns. 0 is valid and means "inherit default_cert_ttl from the backend config".
 	data.CertTTL = types.Int64Value(readResp.CertTTL)
 
 	// TPM identities and groups can be configured either by ID (tpm_ids / tpmgroup_ids)
@@ -461,13 +468,18 @@ func (r *TPMAuthBackendRoleResource) populateDataModelFromAPI(ctx context.Contex
 	// 1. If they were Computed, Vault's readback of both IDs and names would store both in state.
 	//    On subsequent updates, getAPIModel would send both fields to Vault, triggering
 	//    a "cannot specify both tpm_ids and tpm_names" error from Vault.
-	// 2. Omitting a field from HCL must allow the user to clear/unset it. With Computed: true,
+	// 2. Omitting a field from config must allow the user to clear/unset it. With Computed: true,
 	//    omitting the field would retain the existing value from state rather than removing it.
 	//
 	// Instead, we inspect which identifier mode the user configured:
 	// - If tpm_names is configured, store readResp.TPMNames and ensure tpm_ids is null in state.
 	// - If tpm_ids is configured (or neither is set), store readResp.TPMIDs and ensure tpm_names is null.
 	// This preserves the user's chosen representation and avoids plan drift or inconsistent result errors.
+	//
+	// Note: on import there is no prior state to inspect, so IDs are always populated.
+	// A role that specifies tpm_names or tpmgroup_names in its terraform config will show an
+	// in-place update on the first plan after import. Applying it sends the names to Vault and
+	// replaces the IDs in state with names.
 	if !data.TPMNames.IsNull() && !data.TPMNames.IsUnknown() {
 		if len(readResp.TPMNames) == 0 {
 			data.TPMNames = types.SetNull(types.StringType)
