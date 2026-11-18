@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/util"
+	"github.com/hashicorp/terraform-provider-vault/util/mountutil"
 )
 
 var (
@@ -113,6 +114,11 @@ func samlAuthBackendResource() *schema.Resource {
 				Optional:    true,
 				Computed:    true,
 				Description: "Whether to validate the response signature.",
+			},
+			consts.FieldAccessor: {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The accessor of the SAML auth backend",
 			},
 			consts.FieldTune: authMountTuneSchema(),
 		},
@@ -225,6 +231,14 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 	}
 
 	if err := d.Set(consts.FieldPath, id); err != nil {
+		return diag.FromErr(err)
+	}
+
+	mount, err := mountutil.GetAuthMount(ctx, client, id)
+	if err != nil {
+		return diag.Errorf("error reading auth mount %q: %s", id, err)
+	}
+	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
 		return diag.FromErr(err)
 	}
 
