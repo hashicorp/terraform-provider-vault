@@ -11,10 +11,12 @@ import (
 	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
@@ -46,12 +48,14 @@ type TPMAuthBackendConfigModel struct {
 	CALifetime     types.Int64  `tfsdk:"ca_lifetime"`
 	CASoftExpiry   types.Int64  `tfsdk:"ca_soft_expiry"`
 	DefaultCertTTL types.Int64  `tfsdk:"default_cert_ttl"`
+	AliasMode      types.String `tfsdk:"alias_mode"`
 }
 
 type tpmAuthBackendConfigAPIModel struct {
-	CALifetime     int64 `json:"ca_lifetime" mapstructure:"ca_lifetime,omitempty"`
-	CASoftExpiry   int64 `json:"ca_soft_expiry" mapstructure:"ca_soft_expiry,omitempty"`
-	DefaultCertTTL int64 `json:"default_cert_ttl" mapstructure:"default_cert_ttl"`
+	CALifetime     int64  `json:"ca_lifetime" mapstructure:"ca_lifetime,omitempty"`
+	CASoftExpiry   int64  `json:"ca_soft_expiry" mapstructure:"ca_soft_expiry,omitempty"`
+	DefaultCertTTL int64  `json:"default_cert_ttl" mapstructure:"default_cert_ttl"`
+	AliasMode      string `json:"alias_mode" mapstructure:"alias_mode,omitempty"`
 }
 
 func (r *TPMAuthBackendConfigResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -81,9 +85,17 @@ func (r *TPMAuthBackendConfigResource) Schema(_ context.Context, _ resource.Sche
 				Description: "Default lifetime for issued client certificates when the role does not specify `cert_ttl`, in seconds. " +
 					"When unset or `0`, the effective TTL falls back to CA soft expiry. Vault always caps the actual certificate lifetime by the remaining validity of the signing CA.",
 			},
+			consts.FieldAliasMode: schema.StringAttribute{
+				Optional: true,
+				Computed: true,
+				Description: "The identity alias name mode used at login. `tpm_id` uses the TPM ID, so every role used from the same TPM shares one entity. " +
+					"`role_id` uses the generated `role_id` of the Vault role, so each role maps to a unique entity.",
+				Validators: []validator.String{
+					stringvalidator.OneOf("tpm_id", "role_id"),
+				},
+			},
 		},
 	}
-
 	base.MustAddBaseSchema(&resp.Schema)
 }
 
@@ -103,6 +115,15 @@ func (r *TPMAuthBackendConfigResource) Create(ctx context.Context, req resource.
 		resp.Diagnostics.AddError(
 			"Feature Not Supported",
 			fmt.Sprintf("TPM auth backend requires Vault version %s or later.", provider.VaultVersion220),
+		)
+		return
+	}
+
+	if !aliasModeSupported(r.Meta(), data.AliasMode) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			fmt.Sprintf("alias_mode requires Vault %s or later (detected %s).",
+				provider.VaultVersion223, r.Meta().GetVaultVersion()),
 		)
 		return
 	}
@@ -185,6 +206,15 @@ func (r *TPMAuthBackendConfigResource) Update(ctx context.Context, req resource.
 	vaultClient, err := client.GetClient(ctx, r.Meta(), data.Namespace.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errutil.ClientConfigureErr(err))
+		return
+	}
+
+	if !aliasModeSupported(r.Meta(), data.AliasMode) {
+		resp.Diagnostics.AddError(
+			"Feature Not Supported",
+			fmt.Sprintf("alias_mode requires Vault %s or later (detected %s).",
+				provider.VaultVersion223, r.Meta().GetVaultVersion()),
+		)
 		return
 	}
 
@@ -273,6 +303,7 @@ func (r *TPMAuthBackendConfigResource) getAPIModel(data *TPMAuthBackendConfigMod
 		CALifetime:     data.CALifetime.ValueInt64(),
 		CASoftExpiry:   data.CASoftExpiry.ValueInt64(),
 		DefaultCertTTL: data.DefaultCertTTL.ValueInt64(),
+		AliasMode:      data.AliasMode.ValueString(),
 	}
 
 	var requestBody map[string]any
@@ -296,11 +327,19 @@ func (r *TPMAuthBackendConfigResource) populateDataModelFromAPI(_ context.Contex
 	}
 
 	// Vault returns TypeDurationSecond fields as integer seconds. Always store
-	// whatever Vault returns because all three fields are Optional+Computed and
+	// whatever Vault returns because all four fields are Optional+Computed and
 	// a value is always returned for each.
 	data.CALifetime = types.Int64Value(readResp.CALifetime)
 	data.CASoftExpiry = types.Int64Value(readResp.CASoftExpiry)
 	data.DefaultCertTTL = types.Int64Value(readResp.DefaultCertTTL) // 0 is valid for default_cert_ttl
+	data.AliasMode = types.StringValue(readResp.AliasMode)
 
 	return nil
+}
+
+func aliasModeSupported(meta *provider.ProviderMeta, aliasMode types.String) bool {
+	if aliasMode.IsNull() || aliasMode.IsUnknown() {
+		return true
+	}
+	return meta.IsAPISupported(provider.VaultVersion223)
 }

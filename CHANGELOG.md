@@ -6,8 +6,11 @@ FEATURES:
 * **New Resources**: Add support for Transit BYOK key import with the `vault_transit_secret_backend_imported_key` resource and `vault_transit_wrapping_key` data source. ([#3090](https://github.com/hashicorp/terraform-provider-vault/pull/3090))
 * **New Resources**: Add support for Transform BYOK key import with the `vault_transform_transformation_tokenization_imported_key` and `vault_transform_transformation_fpe_imported_key` resources and the `vault_transform_wrapping_key` data source. Requires Vault Enterprise. ([#3106](https://github.com/hashicorp/terraform-provider-vault/pull/3106))
 * **New Resource**: Manage FPE transformations in the Transform secrets engine with the `vault_transform_transformation_fpe` resource. ([#3108](https://github.com/hashicorp/terraform-provider-vault/pull/3108))
+* **New Resource**: Add `vault_transform_transformation_masking` resource to manage Transform masking transformations. Requires Vault Enterprise. ([#3116](https://github.com/hashicorp/terraform-provider-vault/pull/3116))
 
 IMPROVEMENTS:
+
+* `vault_tpm_auth_backend_config`: Add `alias_mode` field to configure how the identity alias name is generated at login. Accepted values are `tpm_id` and `role_id`. Requires Vault Enterprise 2.2.3 or later. ([#3118](https://github.com/hashicorp/terraform-provider-vault/pull/3118))
 
 * `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#3093](https://github.com/hashicorp/terraform-provider-vault/pull/3093))
 
@@ -26,6 +29,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* `vault_ldap_secret_backend_static_role`: Fix `mount` and `role_name` not being populated in state when importing a role.
 * `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
 
 
