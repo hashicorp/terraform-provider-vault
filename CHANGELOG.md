@@ -1,3 +1,9 @@
+## Unreleased
+
+IMPROVEMENTS:
+
+* `vault_saml_auth_backend`: Add computed `accessor` attribute exporting the accessor of the SAML auth backend.
+
 ## 5.14.0 (November 18, 2026)
 
 FEATURES:
