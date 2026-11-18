@@ -473,7 +473,7 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
 `, path, extraConfig)
 }
 
-func TestPkiWarnManagedKeyWithInternalType(t *testing.T) {
+func TestPkiSecretBackendWarnManagedKeyWithInternalType(t *testing.T) {
 	tests := []struct {
 		name             string
 		intermediateType string
