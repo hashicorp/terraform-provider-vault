@@ -45,6 +45,8 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 						"acs_urls.0", "https://my.vault.primary/v1/auth/saml/callback"),
 					resource.TestCheckResourceAttr(resourceName,
 						consts.FieldDefaultRole, "admin"),
+					resource.TestCheckResourceAttrSet(resourceName,
+						consts.FieldAccessor),
 				),
 			},
 			{
