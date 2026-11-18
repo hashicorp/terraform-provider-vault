@@ -27,6 +27,7 @@ func namespaceResource() *schema.Resource {
 		CreateContext: namespaceCreate,
 		UpdateContext: namespaceUpdate,
 		DeleteContext: namespaceDelete,
+		CustomizeDiff: namespaceCustomizeDiff,
 		ReadContext:   provider.ReadContextWrapper(namespaceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -105,18 +106,34 @@ func namespaceUpdate(ctx context.Context, d *schema.ResourceData, meta interface
 
 	path := d.Get(consts.FieldPath).(string)
 
+	if !d.HasChange(consts.FieldCustomMetadata) {
+		return namespaceRead(ctx, d, meta)
+	}
+
 	var data map[string]interface{}
-	if v, ok := d.GetOk(consts.FieldCustomMetadata); ok {
-		data = map[string]interface{}{
-			consts.FieldCustomMetadata: v,
+	oldRaw, newRaw := d.GetChange(consts.FieldCustomMetadata)
+	oldMap, _ := oldRaw.(map[string]interface{})
+	newMap, _ := newRaw.(map[string]interface{})
+
+	merged := make(map[string]interface{})
+	for k, v := range newMap {
+		merged[k] = v
+	}
+
+	for k := range oldMap {
+		if _, exists := newMap[k]; !exists {
+			merged[k] = nil
 		}
 	}
 
-	log.Printf("[DEBUG] Creating namespace %s in Vault", path)
+	data = map[string]interface{}{
+		consts.FieldCustomMetadata: merged,
+	}
+
+	log.Printf("[DEBUG] Updating namespace %s in Vault", path)
 	if _, err := client.Logical().JSONMergePatch(ctx, consts.SysNamespaceRoot+path, data); err != nil {
 		return diag.Errorf("error writing to Vault: %s", err)
 	}
-
 	return namespaceRead(ctx, d, meta)
 }
 
@@ -229,4 +246,34 @@ func upgradeNonPathdNamespaceID(d *schema.ResourceData) {
 		log.Printf("[DEBUG] Setting namespace_id to old ID - %s", oldID)
 		d.Set(consts.FieldNamespaceID, oldID)
 	}
+}
+
+// Plan removal of custom_metadata keys set to null; the SDK map diff ignores them otherwise.
+func namespaceCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	if !provider.IsAPISupported(meta, provider.VaultVersion112) {
+		return nil
+	}
+	raw := d.GetRawConfig()
+	if !raw.IsKnown() || raw.IsNull() {
+		return nil
+	}
+	v := raw.GetAttr(consts.FieldCustomMetadata)
+	if !v.IsWhollyKnown() || v.IsNull() {
+		return nil
+	}
+
+	hasNull := false
+	filtered := make(map[string]interface{})
+	for it := v.ElementIterator(); it.Next(); {
+		k, ev := it.Element()
+		if ev.IsNull() {
+			hasNull = true
+			continue
+		}
+		filtered[k.AsString()] = ev.AsString()
+	}
+	if !hasNull {
+		return nil
+	}
+	return d.SetNew(consts.FieldCustomMetadata, filtered)
 }
