@@ -389,28 +389,17 @@ func (r *TPMAuthBackendRoleResource) getAPIModel(ctx context.Context, data *TPMA
 		CertTTL:     data.CertTTL.ValueInt64(),
 	}
 
-	hasTPMNames := !data.TPMNames.IsNull() && !data.TPMNames.IsUnknown()
-	hasTPMIDs := !data.TPMIDs.IsNull() && !data.TPMIDs.IsUnknown()
-	if hasTPMNames {
-		if diags := data.TPMNames.ElementsAs(ctx, &apiModel.TPMNames, false); diags.HasError() {
-			return nil, diags
-		}
-	} else if hasTPMIDs {
-		if diags := data.TPMIDs.ElementsAs(ctx, &apiModel.TPMIDs, false); diags.HasError() {
-			return nil, diags
-		}
+	if diags := data.TPMIDs.ElementsAs(ctx, &apiModel.TPMIDs, false); diags.HasError() {
+		return nil, diags
 	}
-
-	hasGroupNames := !data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown()
-	hasGroupIDs := !data.TPMGroupIDs.IsNull() && !data.TPMGroupIDs.IsUnknown()
-	if hasGroupNames {
-		if diags := data.TPMGroupNames.ElementsAs(ctx, &apiModel.TPMGroupNames, false); diags.HasError() {
-			return nil, diags
-		}
-	} else if hasGroupIDs {
-		if diags := data.TPMGroupIDs.ElementsAs(ctx, &apiModel.TPMGroupIDs, false); diags.HasError() {
-			return nil, diags
-		}
+	if diags := data.TPMNames.ElementsAs(ctx, &apiModel.TPMNames, false); diags.HasError() {
+		return nil, diags
+	}
+	if diags := data.TPMGroupIDs.ElementsAs(ctx, &apiModel.TPMGroupIDs, false); diags.HasError() {
+		return nil, diags
+	}
+	if diags := data.TPMGroupNames.ElementsAs(ctx, &apiModel.TPMGroupNames, false); diags.HasError() {
+		return nil, diags
 	}
 
 	tokenDiags := token.PopulateTokenAPIFromModel(ctx, &data.TokenModel, &apiModel.TokenAPIModel)
@@ -428,13 +417,13 @@ func (r *TPMAuthBackendRoleResource) getAPIModel(ctx context.Context, data *TPMA
 	// When neither TPM names nor TPM IDs are configured (e.g. the role only uses group
 	// associations, or tpm_ids was removed on update), explicitly send an empty tpm_ids list
 	// so Vault clears any previously configured TPM IDs instead of leaving them untouched.
-	if !hasTPMNames && !hasTPMIDs {
+	if len(apiModel.TPMNames) == 0 && len(apiModel.TPMIDs) == 0 {
 		requestBody[consts.FieldTPMIDs] = []string{}
 	}
 
 	// Symmetrically, if neither group names nor group IDs are configured, explicitly send
 	// an empty tpmgroup_ids list so Vault clears any previously configured group IDs.
-	if !hasGroupNames && !hasGroupIDs {
+	if len(apiModel.TPMGroupNames) == 0 && len(apiModel.TPMGroupIDs) == 0 {
 		requestBody[consts.FieldTPMGroupIDs] = []string{}
 	}
 
