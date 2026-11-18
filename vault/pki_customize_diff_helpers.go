@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -76,4 +77,25 @@ func pkiCertPlanAutoRenewal(d *schema.ResourceDiff) error {
 
 	log.Printf("[DEBUG] certificate %q is not due for renewal", d.Id())
 	return nil
+}
+
+func pkiWarnManagedKeyWithInternalType(intermediateType, managedKeyID, managedKeyName string) diag.Diagnostics {
+	var diags diag.Diagnostics
+	if intermediateType == consts.FieldInternal {
+		if managedKeyID != "" {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "managed_key_id is ignored when type is 'internal'",
+				Detail:   "managed_key_id is ignored when type is 'internal'; Vault will generate a regular key. Set type = \"kms\" to use a managed key.",
+			})
+		}
+		if managedKeyName != "" {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "managed_key_name is ignored when type is 'internal'",
+				Detail:   "managed_key_name is ignored when type is 'internal'; Vault will generate a regular key. Set type = \"kms\" to use a managed key.",
+			})
+		}
+	}
+	return diags
 }

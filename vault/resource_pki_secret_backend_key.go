@@ -103,13 +103,24 @@ func getPKIKeysIDPath(backend, keyID string) string {
 }
 
 func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client, e := provider.GetClient(d, meta)
-	if e != nil {
-		return diag.FromErr(e)
-	}
+	var diags diag.Diagnostics
 
 	backend := d.Get(consts.FieldBackend).(string)
 	keyType := d.Get(consts.FieldType).(string)
+
+	managedKeyID := d.Get(consts.FieldManagedKeyID).(string)
+	managedKeyName := d.Get(consts.FieldManagedKeyName).(string)
+
+	warnDiags := pkiWarnManagedKeyWithInternalType(keyType, managedKeyID, managedKeyName)
+	if len(warnDiags) > 0 {
+		diags = append(diags, warnDiags...)
+	}
+
+	client, e := provider.GetClient(d, meta)
+	if e != nil {
+		return append(diags, diag.FromErr(e)...)
+	}
+
 	keyPath := getPKIGenerateKeysPath(backend, keyType)
 
 	fields := []string{
@@ -135,12 +146,12 @@ func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	resp, err := client.Logical().WriteWithContext(ctx, keyPath, data)
 	if err != nil {
-		return diag.Errorf("error writing data to %q, err=%s", keyPath, err)
+		return append(diags, diag.Errorf("error writing data to %q, err=%s", keyPath, err)...)
 	}
 
 	keyID, ok := resp.Data[consts.FieldKeyID].(string)
 	if !ok {
-		return diag.Errorf("did not receive a key ID from Vault response; key ID required")
+		return append(diags, diag.Errorf("did not receive a key ID from Vault response; key ID required")...)
 	}
 
 	// set key ID path
@@ -148,13 +159,28 @@ func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta
 	rid := getPKIKeysIDPath(backend, keyID)
 	d.SetId(rid)
 
-	return pkiSecretBackendKeyRead(ctx, d, meta)
+	readDiags := pkiSecretBackendKeyRead(ctx, d, meta)
+	if len(readDiags) > 0 {
+		diags = append(diags, readDiags...)
+	}
+	return diags
 }
 
 func pkiSecretBackendKeyUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	keyType := d.Get(consts.FieldType).(string)
+	managedKeyID := d.Get(consts.FieldManagedKeyID).(string)
+	managedKeyName := d.Get(consts.FieldManagedKeyName).(string)
+
+	warnDiags := pkiWarnManagedKeyWithInternalType(keyType, managedKeyID, managedKeyName)
+	if len(warnDiags) > 0 {
+		diags = append(diags, warnDiags...)
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return diag.FromErr(e)
+		return append(diags, diag.FromErr(e)...)
 	}
 
 	keyPath := d.Id()
@@ -176,11 +202,15 @@ func pkiSecretBackendKeyUpdate(ctx context.Context, d *schema.ResourceData, meta
 	if patchRequired {
 		_, err := client.Logical().WriteWithContext(ctx, keyPath, data)
 		if err != nil {
-			return diag.Errorf("error writing data to %q, err=%s", keyPath, err)
+			return append(diags, diag.Errorf("error writing data to %q, err=%s", keyPath, err)...)
 		}
 	}
 
-	return pkiSecretBackendKeyRead(ctx, d, meta)
+	readDiags := pkiSecretBackendKeyRead(ctx, d, meta)
+	if len(readDiags) > 0 {
+		diags = append(diags, readDiags...)
+	}
+	return diags
 }
 
 func pkiSecretBackendKeyRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -470,4 +471,65 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   %s
 }
 `, path, extraConfig)
+}
+
+func TestPkiWarnManagedKeyWithInternalType(t *testing.T) {
+	tests := []struct {
+		name             string
+		intermediateType string
+		managedKeyID     string
+		managedKeyName   string
+		expectWarnings   int
+	}{
+		{
+			name:             "internal type with no managed key info",
+			intermediateType: "internal",
+			managedKeyID:     "",
+			managedKeyName:   "",
+			expectWarnings:   0,
+		},
+		{
+			name:             "internal type with managed_key_id",
+			intermediateType: "internal",
+			managedKeyID:     "some-id",
+			managedKeyName:   "",
+			expectWarnings:   1,
+		},
+		{
+			name:             "internal type with managed_key_name",
+			intermediateType: "internal",
+			managedKeyID:     "",
+			managedKeyName:   "some-name",
+			expectWarnings:   1,
+		},
+		{
+			name:             "kms type with managed_key_id",
+			intermediateType: "kms",
+			managedKeyID:     "some-id",
+			managedKeyName:   "",
+			expectWarnings:   0,
+		},
+		{
+			name:             "kms type with managed_key_name",
+			intermediateType: "kms",
+			managedKeyID:     "",
+			managedKeyName:   "some-name",
+			expectWarnings:   0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			diags := pkiWarnManagedKeyWithInternalType(tt.intermediateType, tt.managedKeyID, tt.managedKeyName)
+			warnings := 0
+			for _, d := range diags {
+				if d.Severity == diag.Warning {
+					warnings++
+				}
+			}
+			if warnings != tt.expectWarnings {
+				t.Errorf("expected %d warnings, got %d", tt.expectWarnings, warnings)
+			}
+		})
+	}
 }
