@@ -87,6 +87,10 @@ var (
 			Resource:      UpdateSchemaResource(nomadAccessCredentialsDataSource()),
 			PathInventory: []string{"/nomad/creds/{role}"},
 		},
+		"vault_secrets_import_plan": {
+			Resource:      UpdateSchemaResource(secretsImportPlanDataSource()),
+			PathInventory: []string{"/sys/import/sources/{type}/{name}/plan"},
+		},
 		"vault_aws_access_credentials": {
 			Resource:      UpdateSchemaResource(awsAccessCredentialsDataSource()),
 			PathInventory: []string{"/aws/creds"},
@@ -854,6 +858,22 @@ var (
 		"vault_secrets_sync_association": {
 			Resource:      UpdateSchemaResource(secretsSyncAssociationResource()),
 			PathInventory: []string{"/sys/sync/destinations/{type}/{name}/associations/set"},
+		},
+		"vault_secrets_import_aws_source": {
+			Resource:      UpdateSchemaResource(secretsImportAWSSourceResource()),
+			PathInventory: []string{"/sys/import/sources/aws-sm/{name}"},
+		},
+		"vault_secrets_import_gcp_source": {
+			Resource:      UpdateSchemaResource(secretsImportGCPSourceResource()),
+			PathInventory: []string{"/sys/import/sources/gcp-sm/{name}"},
+		},
+		"vault_secrets_import_azure_source": {
+			Resource:      UpdateSchemaResource(secretsImportAzureSourceResource()),
+			PathInventory: []string{"/sys/import/sources/azure-kv/{name}"},
+		},
+		"vault_secrets_import_apply": {
+			Resource:      UpdateSchemaResource(secretsImportApplyResource()),
+			PathInventory: []string{"/sys/import/sources/{type}/{name}/apply"},
 		},
 		"vault_config_ui_custom_message": {
 			Resource:      UpdateSchemaResource(configUICustomMessageResource()),
