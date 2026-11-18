@@ -5,6 +5,8 @@ package ephemeralsecrets_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -14,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
-	"testing"
 )
 
 // TestAccKVV2Secret confirms that a secret written to
@@ -78,4 +79,72 @@ provider "echo" {
 
 resource "echo" "test_krb" {}
 `, mount, name)
+}
+
+// TestAccKVV2Secret_namespace confirms the ephemeral resource reads a secret
+// from a Vault Enterprise namespace via the namespace argument.
+func TestAccKVV2Secret_namespace(t *testing.T) {
+	testutil.SkipTestAcc(t)
+
+	ns := acctest.RandomWithPrefix("ns")
+	mount := acctest.RandomWithPrefix("kvv2-mount")
+	name := acctest.RandomWithPrefix("secret")
+	resource.UnitTest(t, resource.TestCase{
+		PreCheck: func() {
+			testutil.TestAccPreCheck(t)
+			testutil.TestEntPreCheck(t)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testKVV2SecretNamespaceConfig(ns, mount, name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.test_ns", tfjsonpath.New("data").AtMapKey("password"), knownvalue.StringExact("password1")),
+				},
+			},
+		},
+	})
+}
+
+func testKVV2SecretNamespaceConfig(ns, mount, name string) string {
+	return fmt.Sprintf(`
+resource "vault_namespace" "test" {
+  path = "%s"
+}
+
+resource "vault_mount" "kvv2" {
+  namespace = vault_namespace.test.path
+  path      = "%s"
+  type      = "kv"
+  options   = { version = "2" }
+}
+
+resource "vault_kv_secret_v2" "secret" {
+  namespace = vault_namespace.test.path
+  mount     = vault_mount.kvv2.path
+  name      = "%s"
+  data_json_wo = jsonencode(
+    {
+      password = "password1"
+    }
+  )
+  data_json_wo_version = 0
+}
+
+ephemeral "vault_kv_secret_v2" "db_secret" {
+  namespace = vault_namespace.test.path
+  mount     = vault_mount.kvv2.path
+  mount_id  = vault_mount.kvv2.id
+  name      = vault_kv_secret_v2.secret.name
+}
+
+provider "echo" {
+  data = ephemeral.vault_kv_secret_v2.db_secret.data
+}
+
+resource "echo" "test_ns" {}
+`, ns, mount, name)
 }
