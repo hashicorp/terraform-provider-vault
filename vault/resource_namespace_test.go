@@ -331,6 +331,34 @@ func TestAccNamespace_customMetadataUpdate(t *testing.T) {
 					testNamespaceCustomMetadataInVault("", namespacePath, map[string]string{}),
 				),
 			},
+			{
+				Config: testAccNamespaceConfig_metadata(namespacePath, `{ env = "dev", owner = "hashi" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.%", "2"),
+					testNamespaceCustomMetadataInVault("", namespacePath, map[string]string{
+						"env": "dev", "owner": "hashi",
+					}),
+				),
+			},
+			{
+				// A key set to null must be removed from Vault.
+				Config: testAccNamespaceConfig_metadata(namespacePath, `{ env = null, owner = "hashi" }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.%", "1"),
+					resource.TestCheckNoResourceAttr(resourceNameTest, "custom_metadata.env"),
+					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.owner", "hashi"),
+					testNamespaceCustomMetadataInVault("", namespacePath, map[string]string{
+						"owner": "hashi",
+					}),
+				),
+			},
+			{
+				Config: testAccNamespaceConfig_metadata(namespacePath, `{ owner = null }`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceNameTest, "custom_metadata.%", "0"),
+					testNamespaceCustomMetadataInVault("", namespacePath, map[string]string{}),
+				),
+			},
 		},
 	})
 }

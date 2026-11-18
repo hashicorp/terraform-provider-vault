@@ -27,6 +27,7 @@ func namespaceResource() *schema.Resource {
 		CreateContext: namespaceCreate,
 		UpdateContext: namespaceUpdate,
 		DeleteContext: namespaceDelete,
+		CustomizeDiff: namespaceCustomizeDiff,
 		ReadContext:   provider.ReadContextWrapper(namespaceRead),
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -245,4 +246,34 @@ func upgradeNonPathdNamespaceID(d *schema.ResourceData) {
 		log.Printf("[DEBUG] Setting namespace_id to old ID - %s", oldID)
 		d.Set(consts.FieldNamespaceID, oldID)
 	}
+}
+
+// Plan removal of custom_metadata keys set to null; the SDK map diff ignores them otherwise.
+func namespaceCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
+	if !provider.IsAPISupported(meta, provider.VaultVersion112) {
+		return nil
+	}
+	raw := d.GetRawConfig()
+	if !raw.IsKnown() || raw.IsNull() {
+		return nil
+	}
+	v := raw.GetAttr(consts.FieldCustomMetadata)
+	if !v.IsWhollyKnown() || v.IsNull() {
+		return nil
+	}
+
+	hasNull := false
+	filtered := make(map[string]interface{})
+	for it := v.ElementIterator(); it.Next(); {
+		k, ev := it.Element()
+		if ev.IsNull() {
+			hasNull = true
+			continue
+		}
+		filtered[k.AsString()] = ev.AsString()
+	}
+	if !hasNull {
+		return nil
+	}
+	return d.SetNew(consts.FieldCustomMetadata, filtered)
 }

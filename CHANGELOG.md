@@ -27,7 +27,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
-* `vault_namespace`: Fix `custom_metadata` keys not being removed from Vault when deleted from configuration. Set `custom_metadata = {}` to remove all metadata. ([#3124](https://github.com/hashicorp/terraform-provider-vault/pull/3124))
+* `vault_namespace`: Fix `custom_metadata` keys not being removed from Vault when deleted from configuration or set to `null`. Set `custom_metadata = {}` to remove all metadata. ([#3124](https://github.com/hashicorp/terraform-provider-vault/pull/3124))
 
 
 ## 5.13.0 (October 14, 2026)
