@@ -73,9 +73,26 @@ func jwtAuthBackendResource() *schema.Resource {
 			},
 
 			consts.FieldOIDCClientID: {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Description: "Client ID used for OIDC",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Description:   "Client ID used for OIDC",
+				ConflictsWith: []string{consts.FieldOIDCClientIDWO},
+			},
+
+			consts.FieldOIDCClientIDWO: {
+				Type:          schema.TypeString,
+				Optional:      true,
+				WriteOnly:     true,
+				Description:   "Write-only Client ID used for OIDC. Use this instead of oidc_client_id to accept ephemeral values.",
+				ConflictsWith: []string{consts.FieldOIDCClientID},
+			},
+
+			consts.FieldOIDCClientIDWOVersion: {
+				Type:         schema.TypeInt,
+				Optional:     true,
+				Description:  "Version counter for write-only oidc_client_id_wo field. Increment this value to force update of the client ID.",
+				RequiredWith: []string{consts.FieldOIDCClientIDWO},
+				ValidateFunc: validation.IntAtLeast(1),
 			},
 			consts.FieldOIDCClientSecret: {
 				Type:          schema.TypeString,
@@ -352,6 +369,13 @@ func jwtAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta interf
 			continue
 		}
 
+		// Keep the client ID out of state when it is managed through oidc_client_id_wo.
+		if configOption == consts.FieldOIDCClientID {
+			if _, ok := d.GetOk(consts.FieldOIDCClientIDWOVersion); ok {
+				continue
+			}
+		}
+
 		if configOption == consts.FieldJWKSPairs && !useAPIVer116 {
 			continue
 		}
@@ -516,6 +540,12 @@ func jwtAuthBackendUpdate(ctx context.Context, d *schema.ResourceData, meta inte
 		if !woVal.IsNull() {
 			configuration[consts.FieldOIDCClientSecret] = woVal.AsString()
 		}
+	}
+
+	// Vault expects oidc_client_id on every OIDC config write, so send it regardless of the version counter.
+	clientIDWO, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldOIDCClientIDWO))
+	if !clientIDWO.IsNull() {
+		configuration[consts.FieldOIDCClientID] = clientIDWO.AsString()
 	}
 
 	_, err := client.Logical().WriteWithContext(ctx, jwtConfigEndpoint(path), configuration)
