@@ -12,6 +12,7 @@ import (
 const (
 	typeTokenization = "tokenization"
 	typeFPE          = "fpe"
+	typeMasking      = "masking"
 )
 
 var (
