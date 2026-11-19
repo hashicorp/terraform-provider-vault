@@ -168,6 +168,21 @@ func addPrefixToVKVPath(p, mountPath, apiPrefix string) string {
 		return path.Join(mountPath, apiPrefix)
 	default:
 		p = strings.TrimPrefix(p, mountPath)
+		if hasKVv2APIPrefix(p) {
+			return path.Join(mountPath, p)
+		}
 		return path.Join(mountPath, apiPrefix, p)
 	}
+}
+
+// hasKVv2APIPrefix reports whether the path relative to the mount already
+// starts with the data or metadata API prefix, in which case it is used as is.
+func hasKVv2APIPrefix(p string) bool {
+	p = strings.TrimPrefix(p, "/")
+	for _, prefix := range []string{"data", "metadata"} {
+		if strings.HasPrefix(p, prefix+"/") {
+			return true
+		}
+	}
+	return false
 }
