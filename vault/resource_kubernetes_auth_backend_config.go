@@ -318,13 +318,22 @@ func kubernetesAuthBackendConfigUpdate(d *schema.ResourceData, meta interface{})
 		setData(consts.FieldKubernetesCACert, v)
 	}
 
-	// Handle token_reviewer_jwt - check both regular and write-only fields
+	// Handle token_reviewer_jwt - check both regular and write-only fields.
+	//
+	// NOTE: The Vault auth/<mount>/config endpoint is a full-replace write
+	// (see vault-plugin-auth-kubernetes path_config.go::pathConfigWrite),
+	// so omitting token_reviewer_jwt from the request payload clears the
+	// previously-stored value on the server. The JWT is also not returned
+	// by Read, so we cannot detect drift.
+	//
+	// As a result, when token_reviewer_jwt_wo is configured we must always
+	// re-send the value on Update — not only when token_reviewer_jwt_wo_version
+	// changes — otherwise updating any other field on the resource will
+	// silently clear the JWT in Vault and break Kubernetes auth logins.
 	if v, ok := d.GetOk(consts.FieldTokenReviewerJWT); ok {
 		setData(consts.FieldTokenReviewerJWT, v.(string))
-	} else if d.HasChange(consts.FieldTokenReviewerJWTWOVersion) {
-		if tokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldTokenReviewerJWTWO)); !tokenWo.IsNull() {
-			setData(consts.FieldTokenReviewerJWT, tokenWo.AsString())
-		}
+	} else if tokenWo, _ := d.GetRawConfigAt(cty.GetAttrPath(consts.FieldTokenReviewerJWTWO)); !tokenWo.IsNull() {
+		setData(consts.FieldTokenReviewerJWT, tokenWo.AsString())
 	}
 
 	if v, ok := d.GetOkExists(consts.FieldPEMKeys); ok {
