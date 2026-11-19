@@ -1,3 +1,9 @@
+## Unreleased
+
+IMPROVEMENTS:
+
+* `vault_saml_auth_backend`: Add computed `accessor` attribute exporting the accessor of the SAML auth backend. ([#3127](https://github.com/hashicorp/terraform-provider-vault/pull/3127))
+
 ## 5.14.0 (November 18, 2026)
 
 FEATURES:
