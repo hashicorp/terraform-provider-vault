@@ -492,8 +492,9 @@ func pkiSecretBackendRootCertCreate(ctx context.Context, d *schema.ResourceData,
 	rootType := d.Get(consts.FieldType).(string)
 	managedKeyID := d.Get(consts.FieldManagedKeyID).(string)
 	managedKeyName := d.Get(consts.FieldManagedKeyName).(string)
+	keyRef := d.Get(consts.FieldKeyRef).(string)
 
-	warnDiags := pkiWarnManagedKeyWithInternalType(rootType, managedKeyID, managedKeyName)
+	warnDiags := pkiWarnManagedKeyWithInternalType(rootType, managedKeyID, managedKeyName, keyRef)
 	if len(warnDiags) > 0 {
 		diags = append(diags, warnDiags...)
 	}

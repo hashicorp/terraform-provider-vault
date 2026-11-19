@@ -263,8 +263,9 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	intermediateType := d.Get(consts.FieldType).(string)
 	managedKeyID := d.Get(consts.FieldManagedKeyID).(string)
 	managedKeyName := d.Get(consts.FieldManagedKeyName).(string)
+	keyRef := d.Get(consts.FieldKeyRef).(string)
 
-	warnDiags := pkiWarnManagedKeyWithInternalType(intermediateType, managedKeyID, managedKeyName)
+	warnDiags := pkiWarnManagedKeyWithInternalType(intermediateType, managedKeyID, managedKeyName, keyRef)
 	if len(warnDiags) > 0 {
 		diags = append(diags, warnDiags...)
 	}

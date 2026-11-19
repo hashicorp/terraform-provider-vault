@@ -135,7 +135,7 @@ The following arguments are supported:
   the name for this. The global ref `default` may not be used as a name.
 
 * `key_ref` - (Optional) Specifies the key (either default, by name, or by identifier) to use
-  for generating this request. Only suitable for `type=existing` requests.
+  for generating this request. Only suitable for `type=existing` requests, otherwise a warning is shown.
 
 * `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.
 

@@ -2,9 +2,9 @@
 
 IMPROVEMENTS:
 
-* `vault_pki_secret_backend_intermediate_cert_request`: Warn (instead of erroring or blocking) when `type = "internal"` is configured with `managed_key_id` or `managed_key_name` set, as Vault ignores these fields when the type is not `"kms"`.
-* `vault_pki_secret_backend_root_cert`: Warn (instead of erroring or blocking) when `type = "internal"` is configured with `managed_key_id` or `managed_key_name` set, as Vault ignores these fields when the type is not `"kms"`.
-* `vault_pki_secret_backend_key`: Warn (instead of erroring or blocking) when `type = "internal"` is configured with `managed_key_id` or `managed_key_name` set, as Vault ignores these fields when the type is not `"kms"`.
+* `vault_pki_secret_backend_intermediate_cert_request`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
+* `vault_pki_secret_backend_root_cert`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
+* `vault_pki_secret_backend_key`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
 
 
 ## 5.14.0 (November 18, 2026)
