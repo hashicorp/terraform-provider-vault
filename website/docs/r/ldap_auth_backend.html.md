@@ -43,7 +43,7 @@ The following arguments are supported:
 
 * `url` - (Required) The URL of the LDAP server
 
-* `starttls` - (Optional) Control use of TLS when conecting to LDAP
+* `starttls` - (Optional) Control use of TLS when connecting to LDAP
 
 * `case_sensitive_names` - (Optional) Control case senstivity of objects fetched from LDAP, this is used for object matching in vault
 
@@ -71,8 +71,6 @@ The following arguments are supported:
 * `userattr` - (Optional) Attribute on user object matching username passed in
 
 * `userfilter` - (Optional) LDAP user search filter
-
-* `upndomain` - (Optional) The userPrincipalDomain used to construct UPN string
 
 * `discoverdn`: (Optional) Use anonymous bind to discover the bind DN of a user.
 
