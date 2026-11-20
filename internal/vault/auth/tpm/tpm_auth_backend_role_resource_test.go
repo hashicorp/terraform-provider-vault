@@ -296,7 +296,7 @@ func TestAccTPMAuthRole_names(t *testing.T) {
 	resource.ParallelTest(t, resource.TestCase{
 		PreCheck: func() {
 			acctestutil.TestEntPreCheck(t)
-			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion230)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion223)
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{

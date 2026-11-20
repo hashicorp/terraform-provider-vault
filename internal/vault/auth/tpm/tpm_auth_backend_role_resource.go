@@ -374,10 +374,10 @@ func (r *TPMAuthBackendRoleResource) checkNamesSupported(data *TPMAuthBackendRol
 	hasTPMNames := !data.TPMNames.IsNull() && !data.TPMNames.IsUnknown()
 	hasGroupNames := !data.TPMGroupNames.IsNull() && !data.TPMGroupNames.IsUnknown()
 
-	if (hasTPMNames || hasGroupNames) && !r.Meta().IsAPISupported(provider.VaultVersion230) {
+	if (hasTPMNames || hasGroupNames) && !r.Meta().IsAPISupported(provider.VaultVersion223) {
 		diags.AddError(
 			"Feature Not Supported",
-			fmt.Sprintf("Specifying identity names (tpm_names and tpmgroup_names) instead of IDs requires Vault version %s or later.", provider.VaultVersion230),
+			fmt.Sprintf("Specifying identity names (tpm_names and tpmgroup_names) instead of IDs requires Vault version %s or later.", provider.VaultVersion223),
 		)
 	}
 	return diags

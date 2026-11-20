@@ -101,14 +101,14 @@ The following arguments are supported:
 
 * `tpm_names` - (Optional) Set of TPM record names authorized to authenticate with this role.
   Vault resolves these names to IDs upon creation or update. Cannot be specified with `tpm_ids`.
-  *Requires Vault Enterprise 2.3.0 or later.*
+  *Requires Vault Enterprise 2.2.3 or later.*
 
 * `tpmgroup_ids` - (Optional) Set of TPM group IDs authorized to authenticate with this role.
   Cannot be specified with `tpmgroup_names`.
 
 * `tpmgroup_names` - (Optional) Set of TPM group names authorized to authenticate with this role.
   Vault resolves these names to IDs upon creation or update. Cannot be specified with `tpmgroup_ids`.
-  *Requires Vault Enterprise 2.3.0 or later.*
+  *Requires Vault Enterprise 2.2.3 or later.*
 
 ### Common Token Arguments
 
