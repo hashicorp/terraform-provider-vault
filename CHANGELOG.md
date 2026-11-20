@@ -8,6 +8,10 @@ FEATURES:
 * **New Resource**: Manage FPE transformations in the Transform secrets engine with the `vault_transform_transformation_fpe` resource. ([#3108](https://github.com/hashicorp/terraform-provider-vault/pull/3108))
 * **New Resource**: Add `vault_transform_transformation_masking` resource to manage Transform masking transformations. Requires Vault Enterprise. ([#3116](https://github.com/hashicorp/terraform-provider-vault/pull/3116))
 
+FEATURES:
+
+* `resource/vault_identity_mfa_totp`: Add support for the `enable_self_enrollment` field, allowing users to control whether end users can self-enroll in the TOTP MFA method. Requires Vault Enterpise. ([#2919](https://github.com/hashicorp/terraform-provider-vault/pull/2920))
+
 IMPROVEMENTS:
 
 * `vault_jwt_auth_backend`: Add support for write-only `oidc_client_id_wo` and `oidc_client_id_wo_version` fields so the OIDC client ID can be set from ephemeral values. ([#3115](https://github.com/hashicorp/terraform-provider-vault/pull/3115))
