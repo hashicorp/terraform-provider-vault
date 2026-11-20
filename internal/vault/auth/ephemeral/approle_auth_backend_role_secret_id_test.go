@@ -61,6 +61,39 @@ func TestAccApproleAuthBackendRoleSecretID(t *testing.T) {
 	})
 }
 
+// TestAccApproleAuthBackendRoleSecretID_wrapped confirms the response-wrapped for ephemeral resources
+func TestAccApproleAuthBackendRoleSecretID_wrapped(t *testing.T) {
+	acctestutil.SkipTestAcc(t)
+	backend := acctest.RandomWithPrefix("approle")
+	roleName := acctest.RandomWithPrefix("role")
+	wrappingTTL := "600s"
+
+	// Regex to ensure secret_id and accessor are set to some value (UUIDs with hyphens)
+	expectedWrappingTokenRegex, err := regexp.Compile("^hvs\\.")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() { acctestutil.TestAccPreCheck(t) },
+		// Include the provider we want to test (v5)
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		// Include `echo` as a v6 provider from `terraform-plugin-testing`
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"echo": echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testApproleAuthBackendRoleSecretIDConfig_wrapped(backend, roleName, wrappingTTL),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.test_approle", tfjsonpath.New("data").AtMapKey(consts.FieldWrappingAccessor), knownvalue.NotNull()),
+					statecheck.ExpectKnownValue("echo.test_approle", tfjsonpath.New("data").AtMapKey(consts.FieldWrappingToken), knownvalue.StringRegexp(expectedWrappingTokenRegex)),
+				},
+			},
+		},
+	})
+}
+
 func testApproleAuthBackendRoleSecretIDConfig(backend, roleName string) string {
 	return fmt.Sprintf(`
 resource "vault_auth_backend" "approle" {
@@ -85,4 +118,31 @@ provider "echo" {
 
 resource "echo" "test_approle" {}
 `, backend, roleName)
+}
+
+func testApproleAuthBackendRoleSecretIDConfig_wrapped(backend, roleName, wrappingTTL string) string {
+	return fmt.Sprintf(`
+resource "vault_auth_backend" "approle" {
+  type = "approle"
+  path = "%s"
+}
+
+resource "vault_approle_auth_backend_role" "role" {
+  backend   = vault_auth_backend.approle.path
+  role_name = "%s"
+}
+
+ephemeral "vault_approle_auth_backend_role_secret_id" "secret" {
+  backend      = vault_auth_backend.approle.path
+  role_name    = vault_approle_auth_backend_role.role.role_name
+  mount_id     = vault_approle_auth_backend_role.role.id
+  wrapping_ttl = "%s"
+}
+
+provider "echo" {
+  data = ephemeral.vault_approle_auth_backend_role_secret_id.secret
+}
+
+resource "echo" "test_approle" {}
+`, backend, roleName, wrappingTTL)
 }
