@@ -21,6 +21,7 @@ IMPROVEMENTS:
 * `vault_transit_decrypt`: Add `hash_algorithm` and `padding_scheme` fields to support RSA key decryption with configurable hash algorithm and OAEP/PKCS1v15 padding. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
 * `vault_managed_keys`: Add `rsa_oaep_hash` field to PKCS configuration block to specify the hash algorithm for RSA-OAEP encryption with `CKM_RSA_PKCS_OAEP`. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
 * `vault_managed_keys`: Add `encryption_mode` field to Azure configuration block to control AES-GCM envelope vs. direct KMS encryption. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
+* `vault_tpm_auth_backend_role`: Add support for configuring roles using friendly identity names with `tpm_names` and `tpmgroup_names`. Requires Vault Enterprise 2.2.3 or later. ([#3123](https://github.com/hashicorp/terraform-provider-vault/pull/3123))
 
 BUG FIXES:
 
