@@ -586,7 +586,7 @@ func TestPkiSecretBackendWarnIncompatibleFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			diags := pkiWarnManagedKeyWithInternalType(tt.intermediateType, tt.managedKeyID, tt.managedKeyName, tt.keyRef)
+			diags := pkiWarnManagedKeyWithMismatchedType(tt.intermediateType, tt.managedKeyID, tt.managedKeyName, tt.keyRef)
 			warnings := 0
 			for _, d := range diags {
 				if d.Severity == diag.Warning {

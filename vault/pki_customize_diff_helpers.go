@@ -79,7 +79,7 @@ func pkiCertPlanAutoRenewal(d *schema.ResourceDiff) error {
 	return nil
 }
 
-func pkiWarnManagedKeyWithInternalType(intermediateType, managedKeyID, managedKeyName, keyRef string) diag.Diagnostics {
+func pkiWarnManagedKeyWithMismatchedType(intermediateType, managedKeyID, managedKeyName, keyRef string) diag.Diagnostics {
 	var diags diag.Diagnostics
 	// Conflict between non-KMS keys and managed_key fields
 	if intermediateType != keyTypeKMS {

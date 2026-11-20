@@ -111,7 +111,7 @@ func pkiSecretBackendKeyCreate(ctx context.Context, d *schema.ResourceData, meta
 	managedKeyID := d.Get(consts.FieldManagedKeyID).(string)
 	managedKeyName := d.Get(consts.FieldManagedKeyName).(string)
 
-	warnDiags := pkiWarnManagedKeyWithInternalType(keyType, managedKeyID, managedKeyName, "")
+	warnDiags := pkiWarnManagedKeyWithMismatchedType(keyType, managedKeyID, managedKeyName, "")
 	if len(warnDiags) > 0 {
 		diags = append(diags, warnDiags...)
 	}
@@ -173,7 +173,7 @@ func pkiSecretBackendKeyUpdate(ctx context.Context, d *schema.ResourceData, meta
 	managedKeyID := d.Get(consts.FieldManagedKeyID).(string)
 	managedKeyName := d.Get(consts.FieldManagedKeyName).(string)
 
-	warnDiags := pkiWarnManagedKeyWithInternalType(keyType, managedKeyID, managedKeyName, "")
+	warnDiags := pkiWarnManagedKeyWithMismatchedType(keyType, managedKeyID, managedKeyName, "")
 	if len(warnDiags) > 0 {
 		diags = append(diags, warnDiags...)
 	}
