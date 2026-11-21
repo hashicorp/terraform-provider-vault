@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"reflect"
 	"testing"
 
@@ -97,6 +98,7 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "0"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.%", "5"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.version", "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, "1"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.destroyed", "false"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.deletion_time", ""),
 					resource.TestCheckResourceAttr(resourceName, "metadata.custom_metadata", "null"),
@@ -104,6 +106,14 @@ func TestAccKVSecretV2(t *testing.T) {
 			},
 			{
 				Config: testKVSecretV2Config_updated(mount, name),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						// Updating the secret data must mark version as
+						// "(known after apply)" so the new version is available
+						// to dependent resources within the same apply.
+						plancheck.ExpectUnknownValue(resourceName, tfjsonpath.New(consts.FieldVersion)),
+					},
+				},
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, mount),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
@@ -118,6 +128,7 @@ func TestAccKVSecretV2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "custom_metadata.0.max_versions", "5"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.%", "5"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.version", "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, "2"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.destroyed", "false"),
 					resource.TestCheckResourceAttr(resourceName, "metadata.deletion_time", ""),
 					resource.TestCheckResourceAttr(resourceName, "metadata.custom_metadata", customMetadata),
@@ -179,6 +190,9 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "disable_read", "true"),
+					// version is populated from the write response even though
+					// reads are disabled.
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, "1"),
 				),
 			},
 			{
@@ -191,6 +205,10 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "disable_read", "true"),
+					// An external write bumped the secret to version 2, but with
+					// disable_read=true the config is unchanged so Terraform does
+					// not re-write and version stays 1 in state (no drift).
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, "1"),
 				),
 			},
 			{
@@ -203,6 +221,7 @@ func TestAccKVSecretV2_DisableRead(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldName, name),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, fmt.Sprintf("%s/data/%s", mount, name)),
 					resource.TestCheckResourceAttr(resourceName, "disable_read", "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, "1"),
 				),
 			},
 		},
@@ -229,6 +248,7 @@ func TestAccKVSecretV2_data_json_wo(t *testing.T) {
 						"foo": "baz",
 					}),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDataJSONWOVersion, "1"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, "1"),
 				),
 			},
 			{
@@ -237,6 +257,10 @@ func TestAccKVSecretV2_data_json_wo(t *testing.T) {
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+						// Bumping data_json_wo_version rewrites the secret, so
+						// version must be marked "(known after apply)" and resolved
+						// within the same apply.
+						plancheck.ExpectUnknownValue(resourceName, tfjsonpath.New(consts.FieldVersion)),
 					},
 				},
 				Check: resource.ComposeTestCheckFunc(
@@ -245,6 +269,7 @@ func TestAccKVSecretV2_data_json_wo(t *testing.T) {
 						"foo": "bar",
 					}),
 					resource.TestCheckResourceAttr(resourceName, consts.FieldDataJSONWOVersion, "2"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldVersion, "2"),
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDataJSONWO, consts.FieldDataJSONWOVersion,
