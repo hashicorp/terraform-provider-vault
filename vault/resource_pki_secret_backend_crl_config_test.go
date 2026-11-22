@@ -174,6 +174,32 @@ func TestPkiSecretBackendCrlConfig(t *testing.T) {
 			Steps:        steps,
 		})
 	})
+
+	// Regression test for #3037: the backend name ends in characters that are
+	// part of the "/config/crl" suffix, which used to be trimmed as a character set.
+	t.Run("importBackendNameTrailingConfigChars", func(t *testing.T) {
+		rootPath := fmt.Sprintf("pki-internal-%d-ctrl", acctest.RandInt())
+		resourceName := "vault_pki_secret_backend_crl_config.test"
+
+		steps := []resource.TestStep{
+			{
+				Config: testPkiSecretBackendCrlConfigConfig_backendName(rootPath),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldBackend, rootPath),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil),
+		}
+		resource.Test(t, resource.TestCase{
+			ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+			PreCheck: func() {
+				testutil.TestAccPreCheck(t)
+				SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion119)
+			},
+			CheckDestroy: testCheckMountDestroyed("vault_mount", consts.MountTypePKI, consts.FieldPath),
+			Steps:        steps,
+		})
+	})
 }
 
 func setupCRLConfigTest(t *testing.T, preCheck func(), ignoreImportFields ...string) {
@@ -223,6 +249,23 @@ resource "vault_pki_secret_backend_root_cert" "test-ca" {
   key_bits           = 4096
   ou                 = "Test OU"
   organization       = "ACME Ltd"
+}
+`, rootPath)
+}
+
+func testPkiSecretBackendCrlConfigConfig_backendName(rootPath string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "test-root" {
+  path                      = "%s"
+  type                      = "pki"
+  description               = "test root"
+  default_lease_ttl_seconds = "8640000"
+  max_lease_ttl_seconds     = "8640000"
+}
+
+resource "vault_pki_secret_backend_crl_config" "test" {
+  backend = vault_mount.test-root.path
+  expiry  = "72h"
 }
 `, rootPath)
 }
