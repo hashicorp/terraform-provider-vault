@@ -132,6 +132,46 @@ func TestResourceGenericSecret_deleted(t *testing.T) {
 	})
 }
 
+func TestResourceGenericSecret_skip_on_destroy_true(t *testing.T) {
+	resourceName := "vault_generic_secret.test"
+
+	fmt.Println(testResourceGenericSecret_initialConfig_skip_destroy("", "", true))
+
+	mount := acctest.RandomWithPrefix("secretsv1")
+	name := acctest.RandomWithPrefix("test")
+	path := fmt.Sprintf("%s/%s", mount, name)
+	resource.Test(t, resource.TestCase{
+		Providers: testProviders,
+		PreCheck:  func() { testutil.TestAccPreCheck(t) },
+		Steps: []resource.TestStep{
+			{
+				Config: testResourceGenericSecret_initialConfig_skip_destroy(mount, name, true),
+				Check:  testResourceGenericSecret_initialCheck(path),
+			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
+			{
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).GetClient()
+
+					_, err := client.Logical().Delete(path)
+					if err != nil {
+						t.Fatalf("unable to manually delete the secret via the SDK: %s", err)
+					}
+				},
+				Config: testResourceGenericSecret_initialConfig_skip_destroy(mount, name, true),
+				Check:  testResourceGenericSecret_initialCheck(path),
+			},
+			{
+				ImportState:  true,
+				ResourceName: resourceName,
+			},
+		},
+	})
+}
+
 func TestResourceGenericSecret_deleteAllVersions(t *testing.T) {
 	path := acctest.RandomWithPrefix("secretsv2/test")
 	resourceName := "vault_generic_secret.test"
@@ -179,6 +219,27 @@ resource "vault_generic_secret" "test" {
 }
 EOT
 }`, mount, name)
+}
+
+func testResourceGenericSecret_initialConfig_skip_destroy(mount, name string, skip_destroy bool) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "v1" {
+	path = "%s"
+	type = "kv"
+	options = {
+		version = "1"
+	}
+}
+
+resource "vault_generic_secret" "test" {
+    path = "${vault_mount.v1.path}/%s"
+	skip_destroy = %v
+    data_json = <<EOT
+{
+    "zip": "zap"
+}
+EOT
+}`, mount, name, skip_destroy)
 }
 
 func testResourceGenericSecret_updateConfig(mount, name string) string {
