@@ -5,6 +5,7 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_intermediate_cert_request`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
 * `vault_pki_secret_backend_root_cert`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
 * `vault_pki_secret_backend_key`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
+* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `elasticsearch` engine block, so the connection password can be configured without being persisted in Terraform state (parity with the connection-URL engines). ([#2961](https://github.com/hashicorp/terraform-provider-vault/pull/2961))
 
 
 ## 5.14.0 (November 18, 2026)
@@ -218,10 +219,6 @@ IMPROVEMENTS:
   * Go `1.26.4` → `1.26.6` (fixes GO-2026-6088, GO-2026-6089, GO-2026-6090, GO-2026-6091, GO-2026-6218 in stdlib)
   * Vault Enterprise test images: `1.19.19-ent` → `1.19.20-ent`, `1.20.13-ent` → `1.20.14-ent`, `1.21.8-ent` → `1.21.9-ent`, `2.0.3-ent` → `2.0.4-ent`
 
-
-IMPROVEMENTS:
-
-* `vault_database_secret_backend_connection`: Add write-only `password_wo` and `password_wo_version` fields to the `elasticsearch` engine block, so the connection password can be configured without being persisted in Terraform state (parity with the connection-URL engines). ([#2961](https://github.com/hashicorp/terraform-provider-vault/pull/2961))
 
 BUG FIXES:
 
