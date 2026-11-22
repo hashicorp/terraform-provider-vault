@@ -44,8 +44,49 @@ func TestAccKVV2Secret(t *testing.T) {
 					statecheck.ExpectKnownValue("echo.test_krb", tfjsonpath.New("data").AtMapKey("password"), knownvalue.StringExact("password1")),
 				},
 			},
+			{
+				Config: testKVV2SecretConfigJson(mount, name),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.test_krb", tfjsonpath.New("data").AtMapKey("password"), knownvalue.StringExact("password1")),
+				},
+			},
 		},
 	})
+}
+
+func testKVV2SecretConfigJson(mount, name string) string {
+	return fmt.Sprintf(`
+resource "vault_mount" "kvv2" {
+  path        = "%s"
+  type        = "kv"
+  options     = { version = "2" }
+}
+
+resource "vault_kv_secret_v2" "secret" {
+  mount                      = vault_mount.kvv2.path
+  name                       = "%s"
+  data_json_wo                  = jsonencode(
+    {
+      password       = "password1"
+    }
+  )
+  data_json_wo_version = 0
+}
+
+ephemeral "vault_kv_secret_v2" "db_secret" {
+	mount    = vault_mount.kvv2.path
+	mount_id = vault_mount.kvv2.id
+	name     = vault_kv_secret_v2.secret.name
+}
+
+provider "echo" {
+	data = jsondecode(ephemeral.vault_kv_secret_v2.db_secret.data_json)
+}
+
+resource "echo" "test_krb" {}
+
+
+`, mount, name)
 }
 
 func testKVV2SecretConfig(mount, name string) string {
@@ -78,6 +119,8 @@ provider "echo" {
 }
 
 resource "echo" "test_krb" {}
+
+
 `, mount, name)
 }
 
