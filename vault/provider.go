@@ -107,6 +107,10 @@ var (
 			Resource:      UpdateSchemaResource(genericSecretDataSource()),
 			PathInventory: []string{"/secret/data/{path}"},
 		},
+		"vault_policy_acl": {
+			Resource:      UpdateSchemaResource(policyAclDataSource()),
+			PathInventory: []string{"/sys/policies/acl/{name}"},
+		},
 		"vault_policy_document": {
 			Resource:      UpdateSchemaResource(policyDocumentDataSource()),
 			PathInventory: []string{"/sys/policy/{name}"},
