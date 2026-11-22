@@ -1,5 +1,9 @@
 ## Unreleased
 
+FEATURES:
+
+* `resource/vault_identity_mfa_totp`: Add support for the `enable_self_enrollment` field, allowing users to control whether end users can self-enroll in the TOTP MFA method. Requires Vault Enterpise. ([#2919](https://github.com/hashicorp/terraform-provider-vault/pull/2920))
+
 IMPROVEMENTS:
 
 * `vault_pki_secret_backend_intermediate_cert_request`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
