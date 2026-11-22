@@ -15,6 +15,10 @@ const (
 	// multiple endpoints in Vault.
 	GenericPath = "generic"
 
+	// MetaPath is used inventorying paths that do not represent any endpoints
+	// in Vault.
+	MetaPath = "meta"
+
 	// UnknownPath is used for inventorying paths that have no obvious
 	// current endpoint they serve in Vault, and may relate to previous
 	// versions of Vault.
@@ -41,6 +45,10 @@ func Provider() *schema.Provider {
 
 var (
 	DataSourceRegistry = map[string]*provider.Description{
+		"vault_address": {
+			Resource:      UpdateSchemaResource(addressDataSource()),
+			PathInventory: []string{MetaPath},
+		},
 		"vault_approle_auth_backend_role_id": {
 			Resource:      UpdateSchemaResource(approleAuthBackendRoleIDDataSource()),
 			PathInventory: []string{"/auth/approle/role/{role_name}/role-id"},
