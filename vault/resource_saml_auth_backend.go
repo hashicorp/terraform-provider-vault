@@ -118,7 +118,7 @@ func samlAuthBackendResource() *schema.Resource {
 			consts.FieldAccessor: {
 				Type:        schema.TypeString,
 				Computed:    true,
-				Description: "The accessor of the SAML auth backend",
+				Description: "The accessor of the SAML auth backend.",
 			},
 			consts.FieldTune: authMountTuneSchema(),
 		},
