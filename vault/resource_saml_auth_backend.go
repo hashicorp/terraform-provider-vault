@@ -217,6 +217,17 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(e)
 	}
 	id := d.Id()
+
+	mount, err := mountutil.GetAuthMount(ctx, client, id)
+	if err != nil {
+		if mountutil.IsMountNotFoundError(err) {
+			log.Printf("[WARN] Mount %q not found, removing from state.", id)
+			d.SetId("")
+			return nil
+		}
+		return diag.Errorf("error reading auth mount %q: %s", id, err)
+	}
+
 	log.Printf("[DEBUG] Reading saml auth backend config")
 	resp, err := client.Logical().Read(samlAuthBackendConfigPath(id))
 	if err != nil {
@@ -234,10 +245,6 @@ func samlAuthBackendRead(ctx context.Context, d *schema.ResourceData, meta inter
 		return diag.FromErr(err)
 	}
 
-	mount, err := mountutil.GetAuthMount(ctx, client, id)
-	if err != nil {
-		return diag.Errorf("error reading auth mount %q: %s", id, err)
-	}
 	if err := d.Set(consts.FieldAccessor, mount.Accessor); err != nil {
 		return diag.FromErr(err)
 	}
