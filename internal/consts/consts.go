@@ -947,6 +947,7 @@ const (
 	FieldRotateOnReadCooldown      = "rotate_on_read_cooldown"
 	FieldRotatedOnRead             = "rotated_on_read"
 	FieldAutoUnlock                = "auto_unlock"
+	FieldIncludeNoRevoke           = "include_norevoke"
 	FieldRotationPolicy            = "rotation_policy"
 	FieldAWSSecretAccessKeyWO      = "aws_secret_access_key_wo"
 	FieldSecretsWOVersion          = "secrets_wo_version"
@@ -1100,6 +1101,7 @@ const (
 	VaultVersion210   = "2.1.0"
 	VaultVersion211   = "2.1.1"
 	VaultVersion220   = "2.2.0"
+	VaultVersion230   = "2.3.0"
 
 	/*
 		CloudFoundry auth backend field names

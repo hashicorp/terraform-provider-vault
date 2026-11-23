@@ -91,10 +91,17 @@ The following arguments are supported:
 * `disable_automated_rotation` - (Optional) Cancels all upcoming rotations of the static credential until unset. Requires Vault Enterprise 2.0+.
 
 * `auto_unlock` - (Optional) Overrides the mount-level auto_unlock setting for this role.
-  When true, Vault unlocks the admin managed LDAP account automatically after a successful rotation.
+  When true, Vault unlocks the admin managed LDAP account automatically after every successful static-role password rotation for Active Directory, or as part of the rotation for RACF.
   When false, disables automatic unlock for this role even if the mount has `auto_unlock = true`.
-  When unset, the role inherits the mount-level setting. Active Directory schema only.
-  Requires Vault Enterprise 2.2.0+.
+  When unset, the role inherits the mount-level setting.
+  Requires Vault Enterprise 2.2.0+ for Active Directory or 2.3.0+ for RACF.
+
+* `include_norevoke` - (Optional) Overrides the mount-level `include_norevoke` setting for this role.
+  When true, also submits `NOREVOKE` during automatic RACF account unlocking, clearing an
+  admin set revocation date. When false, disables `NOREVOKE` even if enabled on the mount.
+  When initially unset, the role inherits the mount-level setting. Removing this attribute after it
+  has been set does not clear the override.
+  Requires effective `auto_unlock = true`, the mount's `schema = "racf"`, and Vault Enterprise 2.3.0+.
 
 * `password_wo_version` - (Optional) The version of the `password_wo`. For more info see [updating write-only attributes](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/guides/using_write_only_attributes.html#updating-write-only-attributes).
   Requires Vault Enterprise 2.0+.

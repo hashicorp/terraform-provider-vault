@@ -83,10 +83,19 @@ func ldapSecretBackendStaticRoleResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 			Description: "Overrides the mount-level auto_unlock setting for this role. " +
-				"When true, Vault unlocks the account automatically after a successful rotation. " +
+				"When true, Vault unlocks the account automatically after a successful rotation for Active Directory and as part of a successful rotation for RACF. " +
 				"When false, disables automatic unlock even if the mount enables it. " +
 				"When unset, inherits the mount-level setting. " +
-				"Currently only the Active Directory schema is supported. Requires Vault Enterprise 2.2.0+.",
+				"Requires Vault Enterprise 2.2.0+ for Active Directory or 2.3.0+ for RACF.",
+		},
+		consts.FieldIncludeNoRevoke: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+			Description: "Overrides the mount-level include_norevoke setting for this role. If true, submits NOREVOKE " +
+				"during automatic account unlocking, clearing an administrator-set revocation date. " +
+				"When false, disables NOREVOKE even if enabled on the mount. When unset, inherits the mount setting. " +
+				"Requires auto_unlock, RACF schema, and Vault Enterprise 2.3.0+.",
 		},
 	}
 	resource := &schema.Resource{
@@ -180,6 +189,14 @@ func createUpdateLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceD
 		data[consts.FieldAutoUnlock] = d.Get(consts.FieldAutoUnlock)
 	}
 
+	// only sends include_norevoke if explicitly set
+	if d.HasChange(consts.FieldIncludeNoRevoke) {
+		if !provider.IsAPISupported(meta, provider.VaultVersion230) || !provider.IsEnterpriseSupported(meta) {
+			return diag.Errorf("include_norevoke is only supported in Vault Enterprise 2.3.0 and later")
+		}
+		data[consts.FieldIncludeNoRevoke] = d.Get(consts.FieldIncludeNoRevoke)
+	}
+
 	if _, err := client.Logical().WriteWithContext(ctx, rolePath, data); err != nil {
 		return diag.FromErr(fmt.Errorf("error writing %q: %s", rolePath, err))
 	}
@@ -243,6 +260,14 @@ func readLDAPStaticRoleResource(ctx context.Context, d *schema.ResourceData, met
 		if val, ok := resp.Data[consts.FieldAutoUnlock]; ok {
 			if err := d.Set(consts.FieldAutoUnlock, val); err != nil {
 				return diag.FromErr(fmt.Errorf("error setting auto unlock field '%s': %s", consts.FieldAutoUnlock, err))
+			}
+		}
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		if val, ok := resp.Data[consts.FieldIncludeNoRevoke]; ok {
+			if err := d.Set(consts.FieldIncludeNoRevoke, val); err != nil {
+				return diag.Errorf("error setting %s: %s", consts.FieldIncludeNoRevoke, err)
 			}
 		}
 	}

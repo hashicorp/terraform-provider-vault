@@ -7,6 +7,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+* `vault_ldap_secret_backend`, `vault_ldap_secret_backend_static_role`: Add `include_norevoke` to control submission of `NOREVOKE` during automatic RACF account unlocking. Requires Vault Enterprise 2.3.0+.
+
 * `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#3093](https://github.com/hashicorp/terraform-provider-vault/pull/3093))
 
 
