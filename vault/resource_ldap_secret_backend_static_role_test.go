@@ -18,6 +18,69 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
+// TestParseLDAPStaticRolePath checks the ID split, since an empty mount or role would make updates write to the wrong path.
+func TestParseLDAPStaticRolePath(t *testing.T) {
+	tests := []struct {
+		in          string
+		mount, role string
+		ok          bool
+	}{
+		{"ldap/static-role/foo", "ldap", "foo", true},
+		{"a/b/static-role/foo/app/bar", "a/b", "foo/app/bar", true},
+		{"ldap/static-role/", "", "", false},
+		{"ldap/static-role", "", "", false},
+		{"/static-role/foo", "", "", false},
+		{"", "", "", false},
+	}
+	for _, tt := range tests {
+		mount, role, ok := parseLDAPStaticRolePath(tt.in)
+		if mount != tt.mount || role != tt.role || ok != tt.ok {
+			t.Errorf("parseLDAPStaticRolePath(%q) = (%q, %q, %v), want (%q, %q, %v)",
+				tt.in, mount, role, ok, tt.mount, tt.role, tt.ok)
+		}
+	}
+}
+
+// TestSetLDAPStaticRoleIdentityFromID checks mount and role_name are repaired from the ID, since Vault's read omits them.
+func TestSetLDAPStaticRoleIdentityFromID(t *testing.T) {
+	tests := []struct {
+		name                string
+		id                  string
+		mount, role         string
+		wantMount, wantRole string
+	}{
+		// Import leaves both fields empty, which otherwise forces a replace.
+		{"import populates both", "ldap-users/static-role/alice", "", "", "ldap-users", "alice"},
+		{"broken state with default mount is repaired", "ldap-users/static-role/alice", "ldap", "", "ldap-users", "alice"},
+		// Guards against only checking role_name, which left a wrong mount unrepaired.
+		{"wrong mount with role_name set is repaired", "ldap-users/static-role/alice", "ldap", "alice", "ldap-users", "alice"},
+		// Healthy state must not change on refresh.
+		{"matching values are preserved", "ldap-users/static-role/alice", "ldap-users", "alice", "ldap-users", "alice"},
+		// The first "/static-role/" split would be wrong here, so correct values must be kept.
+		{"ambiguous mount that matches the id is preserved", "a/static-role/b/static-role/r", "a/static-role/b", "r", "a/static-role/b", "r"},
+		// Read must not fail on bad IDs; the write path rejects them.
+		{"unparsable id is left untouched", "garbage", "ldap", "", "ldap", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := schema.TestResourceDataRaw(t, ldapSecretBackendStaticRoleResource().Schema, map[string]interface{}{
+				consts.FieldMount:    tt.mount,
+				consts.FieldRoleName: tt.role,
+			})
+			d.SetId(tt.id)
+			if err := setLDAPStaticRoleIdentityFromID(d); err != nil {
+				t.Fatal(err)
+			}
+			if got := d.Get(consts.FieldMount).(string); got != tt.wantMount {
+				t.Errorf("mount = %q, want %q", got, tt.wantMount)
+			}
+			if got := d.Get(consts.FieldRoleName).(string); got != tt.wantRole {
+				t.Errorf("role_name = %q, want %q", got, tt.wantRole)
+			}
+		})
+	}
+}
+
 func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 	var (
 		path                  = acctest.RandomWithPrefix("tf-test-ldap-static-role")
@@ -62,7 +125,7 @@ func TestAccLDAPSecretBackendStaticRole(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPeriod, updatedRotationPeriod),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
@@ -103,7 +166,7 @@ func TestAccLDAPSecretBackendStaticRole_SelfManaged(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldRotationPolicy, "test-policy-updated"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName,
+			testutil.GetImportTestStep(resourceName, false, nil,
 				consts.FieldSkipImportRotation,
 				consts.FieldPasswordWOVersion),
 		},
@@ -147,7 +210,7 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordPolicy, updatedPasswordPolicy),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName, consts.FieldSkipImportRotation),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSkipImportRotation),
 			{
 				Config: testLDAPSecretBackendStaticRoleConfig_withSkip(path, bindDN, bindPass, url, username, dn, username, rotationPeriod),
 				Check: resource.ComposeTestCheckFunc(
@@ -157,7 +220,7 @@ func TestAccLDAPSecretBackendStaticRole_PasswordPolicy(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldPasswordPolicy, ""),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName, consts.FieldSkipImportRotation, consts.FieldPasswordPolicy),
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldSkipImportRotation, consts.FieldPasswordPolicy),
 		},
 	})
 }
@@ -198,7 +261,7 @@ func TestAccLDAPSecretBackendStaticRole_autoUnlock(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, consts.FieldAutoUnlock, "true"),
 				),
 			},
-			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
+			testutil.GetImportTestStep(resourceName, false, nil),
 		},
 	})
 }
@@ -375,7 +438,7 @@ func TestAccLDAPSecretBackendStaticRole_RotateOnRead(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil,
-				consts.FieldMount, consts.FieldRoleName, consts.FieldSkipImportRotation),
+				consts.FieldSkipImportRotation),
 		},
 	})
 }
