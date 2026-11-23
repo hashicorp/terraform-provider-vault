@@ -893,6 +893,7 @@ const (
 	FieldCALifetime     = "ca_lifetime"
 	FieldCASoftExpiry   = "ca_soft_expiry"
 	FieldDefaultCertTTL = "default_cert_ttl"
+	FieldAliasMode      = "alias_mode"
 	FieldTPMEKPublicKey = "tpm_ek_public_key"
 	FieldTPMID          = "tpm_id"
 	FieldTPMGroupID     = "tpm_group_id"
@@ -974,6 +975,8 @@ const (
 	FieldUnactivatedFlags           = "unactivated_flags"
 	FieldOIDCClientSecretWO         = "oidc_client_secret_wo"
 	FieldOIDCClientSecretWOVersion  = "oidc_client_secret_wo_version"
+	FieldOIDCClientIDWO             = "oidc_client_id_wo"
+	FieldOIDCClientIDWOVersion      = "oidc_client_id_wo_version"
 	FieldServiceAccountJWTWO        = "service_account_jwt_wo"
 	FieldServiceAccountJWTWOVersion = "service_account_jwt_wo_version"
 	FieldBindPassWO                 = "bindpass_wo"
@@ -1101,6 +1104,7 @@ const (
 	VaultVersion210   = "2.1.0"
 	VaultVersion211   = "2.1.1"
 	VaultVersion220   = "2.2.0"
+	VaultVersion223   = "2.2.3"
 	VaultVersion230   = "2.3.0"
 
 	/*

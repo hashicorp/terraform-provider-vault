@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -76,4 +77,37 @@ func pkiCertPlanAutoRenewal(d *schema.ResourceDiff) error {
 
 	log.Printf("[DEBUG] certificate %q is not due for renewal", d.Id())
 	return nil
+}
+
+func pkiWarnManagedKeyWithMismatchedType(intermediateType, managedKeyID, managedKeyName, keyRef string) diag.Diagnostics {
+	var diags diag.Diagnostics
+	// Conflict between non-KMS keys and managed_key fields
+	if intermediateType != keyTypeKMS {
+		if managedKeyID != "" {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "managed_key_id is ignored when type is not 'kms'",
+				Detail:   "managed_key_id is ignored when type is not 'kms'; Vault will continue with the behavior of the type specified.",
+			})
+		}
+		if managedKeyName != "" {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "managed_key_name is ignored when type is not 'kms'",
+				Detail:   "managed_key_name is ignored when type is not 'kms'; Vault will continue with the behavior of the type specified.",
+			})
+		}
+	}
+	// Conflict between key_ref and non-existing keys
+	if intermediateType != consts.FieldExisting {
+		if keyRef != "" {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Warning,
+				Summary:  "key_ref is ignored when type is not 'existing'",
+				Detail:   "key_ref is ignored when type is not 'existing'; Vault will continue with the behavior of the type specified.",
+			})
+		}
+	}
+
+	return diags
 }

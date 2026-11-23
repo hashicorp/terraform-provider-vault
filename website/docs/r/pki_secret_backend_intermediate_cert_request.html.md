@@ -44,7 +44,7 @@ The following arguments are supported:
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
 * `type` - (Required) Type of intermediate to create. Must be either \"exported\" or \"internal\"
-  or \"kms\"
+  or \"kms\". Note that `managed_key_id` and `managed_key_name` are only supported when `type` is `"kms"`.
 
 * `common_name` - (Required) CN of intermediate to create
 
@@ -87,10 +87,10 @@ The following arguments are supported:
 * `serial_number` - (Optional) The requested Subject's named Serial Number
 
 * `managed_key_name` - (Optional) The name of the previously configured managed key. This field is
-  required if `type` is `kms`  and it conflicts with `managed_key_id`
+  required if `type` is `kms`  and it conflicts with `managed_key_id`. This field is ignored if `type` is not `kms` and a warning is shown.
 
 * `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
-  required if `type` is `kms` and it conflicts with `managed_key_name`
+  required if `type` is `kms` and it conflicts with `managed_key_name`. This field is ignored if `type` is not `kms` and a warning is shown.
 
 * `add_basic_constraints` - (Optional) Adds a Basic Constraints extension with 'CA: true'.
   Only needed as a workaround in some compatibility scenarios with Active Directory
@@ -102,7 +102,7 @@ The following arguments are supported:
   the name for this. The global ref `default` may not be used as a name.
 
 * `key_ref` - (Optional) Specifies the key (either default, by name, or by identifier) to use
-  for generating this request. Only suitable for `type=existing` requests.
+  for generating this request. Only suitable for `type=existing` requests, otherwise a warning is shown.
 
 ## Attributes Reference
 
