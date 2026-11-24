@@ -52,7 +52,7 @@ The following arguments are supported:
 * `backend` - (Required) The PKI secret backend the resource belongs to.
 
 * `type` - (Required) Type of intermediate to create. Must be either \"exported\", \"internal\"
-  or \"kms\"
+  or \"kms\". Note that `managed_key_id` and `managed_key_name` are only supported when `type` is `"kms"`.
 
 * `common_name` - (Required) CN of intermediate to create
 
@@ -123,10 +123,10 @@ The following arguments are supported:
 * `postal_code` - (Optional) The postal code
 
 * `managed_key_name` - (Optional) The name of the previously configured managed key. This field is
- required if `type` is `kms`  and it conflicts with `managed_key_id`
+ required if `type` is `kms`  and it conflicts with `managed_key_id`. This field is ignored if `type` is not `kms` and a warning is shown.
 
 * `managed_key_id` - (Optional) The ID of the previously configured managed key. This field is
-  required if `type` is `kms` and it conflicts with `managed_key_name`
+  required if `type` is `kms` and it conflicts with `managed_key_name`. This field is ignored if `type` is not `kms` and a warning is shown.
 
 * `issuer_name` - (Optional) Provides a name to the specified issuer. The name must be unique
   across all issuers and not be the reserved value `default`
@@ -135,7 +135,7 @@ The following arguments are supported:
   the name for this. The global ref `default` may not be used as a name.
 
 * `key_ref` - (Optional) Specifies the key (either default, by name, or by identifier) to use
-  for generating this request. Only suitable for `type=existing` requests.
+  for generating this request. Only suitable for `type=existing` requests, otherwise a warning is shown.
 
 * `not_before_duration` - (Optional) Specifies the duration by which to backdate the NotBefore property.
 
