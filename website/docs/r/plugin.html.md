@@ -25,7 +25,7 @@ For more information on managing external plugins, please refer to the Vault
 ### Register an Official Enterprise plugin (version vX.Y.Z+ent)
 
 The `version` is required for enterprise plugins.
-The `sha256` and `command` shoud not be set for an enterprise plugin.
+The `sha256` and `command` should not be set for an enterprise plugin.
 
 ```hcl
 resource "vault_plugin" "oracle" {
