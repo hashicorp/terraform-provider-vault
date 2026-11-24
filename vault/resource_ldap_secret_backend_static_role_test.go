@@ -266,6 +266,42 @@ func TestAccLDAPSecretBackendStaticRole_autoUnlock(t *testing.T) {
 	})
 }
 
+// TestAccLDAPSecretBackendStaticRole_includeNoRevoke verifies that the role-level
+// RACF include_norevoke setting overrides the mount-level value.
+func TestAccLDAPSecretBackendStaticRole_includeNoRevoke(t *testing.T) {
+	path := acctest.RandomWithPrefix("tf-test-ldap-racf-role")
+	resourceType := "vault_ldap_secret_backend_static_role"
+	resourceName := resourceType + ".role"
+	envVars := testutil.SkipTestEnvUnset(t,
+		"RACF_BINDDN", "RACF_BINDPASS", "RACF_URL", "RACF_STATIC_ROLE_DN", "RACF_STATIC_ROLE_USERNAME")
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion230)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldMount),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendStaticRoleConfig_includeNoRevoke(
+					path, envVars[0], envVars[1], envVars[2], envVars[3], envVars[4], "true", "false"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIncludeNoRevoke, "false"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendStaticRoleConfig_includeNoRevoke(
+					path, envVars[0], envVars[1], envVars[2], envVars[3], envVars[4], "false", "true"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIncludeNoRevoke, "true"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldMount, consts.FieldRoleName),
+		},
+	})
+}
+
 // TestLDAPSecretBackendStaticRoleResource_autoUnlockSchema is a unit test (no live
 // Vault required) confirming the static-role resource exposes the auto_unlock field
 // with Optional+Computed semantics so that an unset value inherits the mount setting.
@@ -491,4 +527,21 @@ resource "vault_ldap_secret_backend_static_role" "role" {
   auto_unlock     = %s
 }
 `, mount, url, mountAutoUnlock, username, dn, role, roleAutoUnlock)
+}
+
+func testLDAPSecretBackendStaticRoleConfig_includeNoRevoke(mount, bindDN, bindPass, url, dn, username, mountIncludeNoRevoke, roleIncludeNoRevoke string) string {
+	return testLDAPSecretBackendConfig_racf(mount, bindDN, bindPass, url,
+		"include_norevoke = "+mountIncludeNoRevoke) + fmt.Sprintf(`
+
+resource "vault_ldap_secret_backend_static_role" "role" {
+  mount                = vault_ldap_secret_backend.test.path
+  username             = %q
+  dn                   = %q
+  role_name            = %q
+  rotation_period      = 3600
+  skip_import_rotation = true
+  auto_unlock          = true
+  include_norevoke     = %s
+}
+`, username, dn, username, roleIncludeNoRevoke)
 }

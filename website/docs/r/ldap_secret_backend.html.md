@@ -114,9 +114,13 @@ The following arguments are supported:
   Requires Vault Enterprise 2.2.0+.
 
 * `auto_unlock` - (Optional) If true, Vault automatically attempts to unlock the admin managed LDAP account
-  after every successful static-role password rotation. Applies to all static roles on this mount
-  unless overridden at the role level. Defaults to false. Active Directory schema only.
-  Requires Vault Enterprise 2.2.0+.
+  after every successful static-role password rotation for Active Directory, or as part of the rotation for RACF. Applies to all static roles on this mount unless overridden at the role level.
+  Defaults to false. Requires Vault Enterprise 2.2.0+ for Active Directory or 2.3.0+ for RACF.
+
+* `include_norevoke` - (Optional) When true, also submits `NOREVOKE` during automatic RACF account
+  unlocking, clearing an admin set revocation date. Applies to all static roles on this
+  mount unless overridden at the role level. Defaults to false. Requires `auto_unlock = true`,
+  `schema = "racf"`, and Vault Enterprise 2.3.0+.
 
 ### Common Mount Arguments
 These arguments are common across all resources that mount a secret engine.

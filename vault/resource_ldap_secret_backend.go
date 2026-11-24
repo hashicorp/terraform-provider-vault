@@ -167,8 +167,17 @@ func ldapSecretBackendResource() *schema.Resource {
 			Optional: true,
 			Computed: true,
 			Description: "If true, Vault automatically unlocks the admin managed LDAP account after a successful " +
-				"static-role rotation. Applies to all roles on this mount unless overridden per role. " +
-				"Active Directory schema only. Requires Vault Enterprise 2.2.0+.",
+				"static-role rotation for Active Directory and as part of a successful static-role rotation for RACF. " +
+				"Applies to all roles on this mount unless overridden per role. " +
+				"Requires Vault Enterprise 2.2.0+ for Active Directory or 2.3.0+ for RACF.",
+		},
+		consts.FieldIncludeNoRevoke: {
+			Type:     schema.TypeBool,
+			Optional: true,
+			Computed: true,
+			Description: "If true, submits NOREVOKE during automatic account unlocking, clearing an administrator-set " +
+				"revocation date. Applies to all static roles unless overridden per role. Defaults to false. " +
+				"Requires auto_unlock, the RACF schema, and Vault Enterprise 2.3.0+.",
 		},
 	}
 	resource := provider.MustAddMountMigrationSchema(&schema.Resource{
@@ -198,6 +207,16 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
+	data := map[string]interface{}{}
+
+	// include_norevoke (mount-level), gated on Vault Enterprise 2.3.0+
+	if d.HasChange(consts.FieldIncludeNoRevoke) {
+		if !provider.IsAPISupported(meta, provider.VaultVersion230) || !provider.IsEnterpriseSupported(meta) {
+			return diag.Errorf("include_norevoke is only supported in Vault Enterprise 2.3.0 and later")
+		}
+		data[consts.FieldIncludeNoRevoke] = d.Get(consts.FieldIncludeNoRevoke)
+	}
+
 	path := d.Get(consts.FieldPath).(string)
 	log.Printf("[DEBUG] Mounting LDAP mount at %q", path)
 	if d.IsNewResource() {
@@ -213,7 +232,6 @@ func createUpdateLDAPConfigResource(ctx context.Context, d *schema.ResourceData,
 	log.Printf("[DEBUG] Mounted LDAP mount at %q", path)
 	d.SetId(path)
 
-	data := map[string]interface{}{}
 	fields := []string{
 		consts.FieldBindDN,
 		consts.FieldBindPass,
@@ -356,6 +374,10 @@ func readLDAPConfigResource(ctx context.Context, d *schema.ResourceData, meta in
 	}
 	if provider.IsAPISupported(meta, provider.VaultVersion118) {
 		fields = append(fields, consts.FieldCredentialType)
+	}
+
+	if provider.IsAPISupported(meta, provider.VaultVersion230) && provider.IsEnterpriseSupported(meta) {
+		fields = append(fields, consts.FieldIncludeNoRevoke)
 	}
 
 	for _, field := range fields {

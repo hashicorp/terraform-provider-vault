@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+* `vault_ldap_secret_backend`, `vault_ldap_secret_backend_static_role`: Add `include_norevoke` to control submission of `NOREVOKE` during automatic RACF account unlocking. Requires Vault Enterprise 2.3.0+.
 * `vault_pki_secret_backend_intermediate_cert_request`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
 * `vault_pki_secret_backend_root_cert`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
 * `vault_pki_secret_backend_key`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning.
