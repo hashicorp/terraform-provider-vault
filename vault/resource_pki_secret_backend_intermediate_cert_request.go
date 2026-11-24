@@ -258,13 +258,24 @@ a workaround in some compatibility scenarios with Active Directory Certificate S
 }
 
 func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	intermediateType := d.Get(consts.FieldType).(string)
+	managedKeyID := d.Get(consts.FieldManagedKeyID).(string)
+	managedKeyName := d.Get(consts.FieldManagedKeyName).(string)
+	keyRef := d.Get(consts.FieldKeyRef).(string)
+
+	warnDiags := pkiWarnManagedKeyWithMismatchedType(intermediateType, managedKeyID, managedKeyName, keyRef)
+	if len(warnDiags) > 0 {
+		diags = append(diags, warnDiags...)
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return diag.FromErr(e)
+		return append(diags, diag.FromErr(e)...)
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
-	intermediateType := d.Get(consts.FieldType).(string)
 
 	path := pkiSecretBackendIntermediateGeneratePath(backend, intermediateType, provider.IsAPISupported(meta, provider.VaultVersion111))
 
@@ -342,12 +353,12 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	log.Printf("[DEBUG] Creating intermediate cert request on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return diag.Errorf("error creating intermediate cert request for PKI secret backend %q: %s", backend, err)
+		return append(diags, diag.Errorf("error creating intermediate cert request for PKI secret backend %q: %s", backend, err)...)
 	}
 	log.Printf("[DEBUG] Created intermediate cert request on PKI secret backend %q", backend)
 
 	if err := d.Set(consts.FieldCSR, resp.Data[consts.FieldCSR]); err != nil {
-		return diag.FromErr(err)
+		return append(diags, diag.FromErr(err)...)
 	}
 
 	// multi-issuer API fields that are set to TF state
@@ -359,18 +370,18 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	if isIssuerAPISupported {
 		for _, k := range multiIssuerAPIComputedFields {
 			if err := d.Set(k, resp.Data[k]); err != nil {
-				return diag.FromErr(err)
+				return append(diags, diag.FromErr(err)...)
 			}
 		}
 	}
 
 	if d.Get(consts.FieldType) == consts.FieldExported {
 		if err := d.Set(consts.FieldPrivateKey, resp.Data[consts.FieldPrivateKey]); err != nil {
-			return diag.FromErr(err)
+			return append(diags, diag.FromErr(err)...)
 		}
 
 		if err := d.Set(consts.FieldPrivateKeyType, resp.Data[consts.FieldPrivateKeyType]); err != nil {
-			return diag.FromErr(err)
+			return append(diags, diag.FromErr(err)...)
 		}
 	}
 
@@ -383,7 +394,11 @@ func pkiSecretBackendIntermediateCertRequestCreate(ctx context.Context, d *schem
 	}
 
 	d.SetId(id)
-	return pkiSecretBackendIntermediateCertRequestRead(ctx, d, meta)
+	readDiags := pkiSecretBackendIntermediateCertRequestRead(ctx, d, meta)
+	if len(readDiags) > 0 {
+		diags = append(diags, readDiags...)
+	}
+	return diags
 }
 
 func pkiSecretBackendIntermediateCertRequestRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {

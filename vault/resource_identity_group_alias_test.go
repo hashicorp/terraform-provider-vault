@@ -37,6 +37,11 @@ func TestAccIdentityGroupAlias(t *testing.T) {
 					resource.TestCheckResourceAttrPair(nameGroupAlias, consts.FieldMountAccessor, nameGithubA, "accessor"),
 				),
 			},
+			{
+				ResourceName:      nameGroupAlias,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }
