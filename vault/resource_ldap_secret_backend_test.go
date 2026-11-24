@@ -384,6 +384,46 @@ func TestLDAPSecretBackend_autoUnlock(t *testing.T) {
 	})
 }
 
+// TestLDAPSecretBackend_includeNoRevoke verifies the mount-level RACF
+// include_norevoke setting. It requires Vault Enterprise 2.3.0+ and RACF env vars.
+func TestLDAPSecretBackend_includeNoRevoke(t *testing.T) {
+	var (
+		path         = acctest.RandomWithPrefix("tf-test-ldap-racf")
+		resourceType = "vault_ldap_secret_backend"
+		resourceName = resourceType + ".test"
+
+		env                   = testutil.SkipTestEnvUnset(t, "RACF_BINDDN", "RACF_BINDPASS", "RACF_URL")
+		bindDN, bindPass, url = env[0], env[1], env[2]
+	)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion230)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeLDAP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testLDAPSecretBackendConfig_racf(path, bindDN, bindPass, url, `include_norevoke = true`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldSchema, "racf"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldAutoUnlock, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIncludeNoRevoke, "true"),
+				),
+			},
+			{
+				Config: testLDAPSecretBackendConfig_racf(path, bindDN, bindPass, url, `include_norevoke = false`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldIncludeNoRevoke, "false"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil,
+				consts.FieldBindPass, consts.FieldConnectionTimeout, consts.FieldDisableRemount),
+		},
+	})
+}
+
 // TestLDAPSecretBackendResource_autoUnlockSchema is a unit test (no live Vault
 // required) confirming the mount resource exposes the auto_unlock field with the
 // expected schema definition.
@@ -402,6 +442,20 @@ func TestLDAPSecretBackendResource_autoUnlockSchema(t *testing.T) {
 	if !field.Computed {
 		t.Errorf("expected %q to be Computed", consts.FieldAutoUnlock)
 	}
+}
+
+func testLDAPSecretBackendConfig_racf(path, bindDN, bindPass, url, extraConfig string) string {
+	return fmt.Sprintf(`
+resource "vault_ldap_secret_backend" "test" {
+  path        = %q
+  binddn      = %q
+  bindpass    = %q
+  url         = %q
+  schema      = "racf"
+  auto_unlock = true
+  %s
+}
+`, path, bindDN, bindPass, url, extraConfig)
 }
 
 // testLDAPSecretBackendConfig_defaults is used to setup the backend defaults.
