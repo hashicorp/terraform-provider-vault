@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
@@ -470,4 +471,131 @@ resource "vault_pki_secret_backend_intermediate_cert_request" "test" {
   %s
 }
 `, path, extraConfig)
+}
+
+func TestPkiSecretBackendWarnIncompatibleFields(t *testing.T) {
+	tests := []struct {
+		name             string
+		intermediateType string
+		managedKeyID     string
+		managedKeyName   string
+		keyRef           string
+		expectWarnings   int
+	}{
+		{
+			name:             "internal type with no managed key info",
+			intermediateType: "internal",
+			managedKeyID:     "",
+			managedKeyName:   "",
+			keyRef:           "",
+			expectWarnings:   0,
+		},
+		{
+			name:             "internal type with managed_key_id",
+			intermediateType: "internal",
+			managedKeyID:     "some-id",
+			managedKeyName:   "",
+			keyRef:           "",
+			expectWarnings:   1,
+		},
+		{
+			name:             "internal type with managed_key_name",
+			intermediateType: "internal",
+			managedKeyID:     "",
+			managedKeyName:   "some-name",
+			keyRef:           "",
+			expectWarnings:   1,
+		},
+		{
+			name:             "internal type with key_ref",
+			intermediateType: "internal",
+			managedKeyID:     "",
+			managedKeyName:   "",
+			keyRef:           "some_ref",
+			expectWarnings:   1,
+		},
+		{
+			name:             "external type with managed_key_id",
+			intermediateType: "external",
+			managedKeyID:     "some-id",
+			managedKeyName:   "",
+			keyRef:           "",
+			expectWarnings:   1,
+		},
+		{
+			name:             "external type with managed_key_name",
+			intermediateType: "internal",
+			managedKeyID:     "",
+			managedKeyName:   "some-name",
+			keyRef:           "",
+			expectWarnings:   1,
+		},
+		{
+			name:             "external type with key_ref",
+			intermediateType: "external",
+			managedKeyID:     "",
+			managedKeyName:   "",
+			keyRef:           "some_ref",
+			expectWarnings:   1,
+		},
+		{
+			name:             "kms type with managed_key_id",
+			intermediateType: "kms",
+			managedKeyID:     "some-id",
+			managedKeyName:   "",
+			expectWarnings:   0,
+		},
+		{
+			name:             "kms type with managed_key_name",
+			intermediateType: "kms",
+			managedKeyID:     "",
+			managedKeyName:   "some-name",
+			expectWarnings:   0,
+		},
+		{
+			name:             "kms type with key_ref",
+			intermediateType: "kms",
+			managedKeyID:     "",
+			managedKeyName:   "",
+			keyRef:           "some_ref",
+			expectWarnings:   1,
+		},
+		{
+			name:             "existing type with managed_key_id",
+			intermediateType: "existing",
+			managedKeyID:     "some-id",
+			managedKeyName:   "",
+			expectWarnings:   1,
+		},
+		{
+			name:             "existing type with managed_key_name",
+			intermediateType: "existing",
+			managedKeyID:     "",
+			managedKeyName:   "some-name",
+			expectWarnings:   1,
+		},
+		{
+			name:             "existing type with key_ref",
+			intermediateType: "existing",
+			managedKeyID:     "",
+			managedKeyName:   "",
+			keyRef:           "some_ref",
+			expectWarnings:   0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			diags := pkiWarnManagedKeyWithMismatchedType(tt.intermediateType, tt.managedKeyID, tt.managedKeyName, tt.keyRef)
+			warnings := 0
+			for _, d := range diags {
+				if d.Severity == diag.Warning {
+					warnings++
+				}
+			}
+			if warnings != tt.expectWarnings {
+				t.Errorf("expected %d warnings, got %d", tt.expectWarnings, warnings)
+			}
+		})
+	}
 }
