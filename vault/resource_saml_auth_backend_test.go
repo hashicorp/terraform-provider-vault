@@ -45,6 +45,8 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 						"acs_urls.0", "https://my.vault.primary/v1/auth/saml/callback"),
 					resource.TestCheckResourceAttr(resourceName,
 						consts.FieldDefaultRole, "admin"),
+					resource.TestCheckResourceAttrSet(resourceName,
+						consts.FieldAccessor),
 				),
 			},
 			{
@@ -67,6 +69,45 @@ func TestAccSAMLAuthBackend_basic(t *testing.T) {
 				),
 			},
 			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldDisableRemount),
+		},
+	})
+}
+
+func TestAccSAMLAuthBackend_externallyDeleted(t *testing.T) {
+	path := acctest.RandomWithPrefix("saml")
+	resourceType := "vault_saml_auth_backend"
+	resourceName := resourceType + ".test"
+
+	resource.Test(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			SkipIfAPIVersionLT(t, testProvider.Meta(), provider.VaultVersion115)
+		},
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		CheckDestroy:             testCheckMountDestroyed(resourceType, consts.MountTypeSAML, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testAccSAMLAuthBackendConfig_basic(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+				),
+			},
+			{
+				// remove the mount outside of Terraform; the refresh should drop it from state
+				// so the next apply recreates it instead of failing
+				PreConfig: func() {
+					client := testProvider.Meta().(*provider.ProviderMeta).MustGetClient()
+
+					if err := client.Sys().DisableAuth(path); err != nil {
+						t.Fatal(err)
+					}
+				},
+				Config: testAccSAMLAuthBackendConfig_basic(path),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttrSet(resourceName, consts.FieldAccessor),
+				),
+			},
 		},
 	})
 }
