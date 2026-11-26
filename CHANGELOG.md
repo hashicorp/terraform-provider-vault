@@ -26,6 +26,8 @@ IMPROVEMENTS:
 * `vault_pki_secret_backend_key`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning. ([#3126](https://github.com/hashicorp/terraform-provider-vault/pull/3126))
 * `vault_tpm_auth_backend_role`: Add support for configuring roles using friendly identity names with `tpm_names` and `tpmgroup_names`. Requires Vault Enterprise 2.2.3 or later. ([#3123](https://github.com/hashicorp/terraform-provider-vault/pull/3123))
 
+* `vault_kmip_secret_role`: Add `deactivated_object_operations` parameter to allow specifying KMIP operations permitted on deactivated objects. Requires Vault 2.3 or later. ([#3113](https://github.com/hashicorp/terraform-provider-vault/pull/3113))
+
 BUG FIXES:
 
 * `vault_ldap_secret_backend_static_role`: Fix `mount` and `role_name` not being populated in state when importing a role. ([#3121](https://github.com/hashicorp/terraform-provider-vault/pull/3121))

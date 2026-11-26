@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
+	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
@@ -221,6 +222,66 @@ func TestAccKMIPSecretRole_newOperations(t *testing.T) {
 	})
 }
 
+func TestAccKMIPSecretRole_deactivatedObjectOperations(t *testing.T) {
+	acctestutil.SkipTestAccEnt(t)
+
+	path := acctest.RandomWithPrefix("tf-test-kmip-deact")
+	resourceType := "vault_kmip_secret_role"
+	resourceName := resourceType + ".test"
+
+	lns, closer, err := testutil.GetDynamicTCPListeners("127.0.0.1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = closer(); err != nil {
+		t.Fatal(err)
+	}
+
+	addr1 := lns[0].Addr().String()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProtoV5ProviderFactories(context.Background(), t),
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion230)
+		},
+		CheckDestroy: testCheckMountDestroyed(resourceType, consts.MountTypeKMIP, consts.FieldPath),
+		Steps: []resource.TestStep{
+			{
+				Config: testKMIPSecretRole_deactivatedObjectOperationsConfig(path, addr1, `["get", "locate"]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, "scope", "scope-1"),
+					resource.TestCheckResourceAttr(resourceName, "role", "test"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOperationGet, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldOperationLocate, "true"),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeactivatedObjectOperations+".#", "2"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldDeactivatedObjectOperations+".*", "get"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldDeactivatedObjectOperations+".*", "locate"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldScope, consts.FieldRole),
+			{
+				Config: testKMIPSecretRole_deactivatedObjectOperationsConfig(path, addr1, `["get"]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeactivatedObjectOperations+".#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, consts.FieldDeactivatedObjectOperations+".*", "get"),
+				),
+			},
+			{
+				Config: testKMIPSecretRole_deactivatedObjectOperationsConfig(path, addr1, `[]`),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, consts.FieldPath, path),
+					resource.TestCheckResourceAttr(resourceName, consts.FieldDeactivatedObjectOperations+".#", "0"),
+				),
+			},
+			testutil.GetImportTestStep(resourceName, false, nil, consts.FieldPath, consts.FieldScope, consts.FieldRole),
+		},
+	})
+}
+
 func testKMIPSecretRole_initialConfig(path string, listenAddr string) string {
 	return fmt.Sprintf(`
 resource "vault_kmip_secret_backend" "kmip" {
@@ -313,4 +374,31 @@ resource "vault_kmip_secret_role" "test" {
 	operation_rekey_key_pair = true
 }
 `, path, listenAddr)
+}
+
+func testKMIPSecretRole_deactivatedObjectOperationsConfig(path string, listenAddr string, deactOps string) string {
+	return fmt.Sprintf(`
+resource "vault_kmip_secret_backend" "kmip" {
+  path = "%s"
+  listen_addrs = ["%s"]
+  description = "test description"
+}
+
+resource "vault_kmip_secret_scope" "scope-1" {
+  path = vault_kmip_secret_backend.kmip.path
+  scope = "scope-1"
+}
+
+resource "vault_kmip_secret_role" "test" {
+  path = vault_kmip_secret_scope.scope-1.path
+  scope = "scope-1"
+  role = "test"
+  tls_client_key_type = "ec"
+  tls_client_key_bits = 256
+  operation_get = true
+  operation_locate = true
+  operation_get_attributes = true
+  deactivated_object_operations = %s
+}
+`, path, listenAddr, deactOps)
 }
