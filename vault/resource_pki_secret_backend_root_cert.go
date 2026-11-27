@@ -486,14 +486,25 @@ integrity format (PBMAC1).`,
 	}
 }
 
-func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func pkiSecretBackendRootCertCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	rootType := d.Get(consts.FieldType).(string)
+	managedKeyID := d.Get(consts.FieldManagedKeyID).(string)
+	managedKeyName := d.Get(consts.FieldManagedKeyName).(string)
+	keyRef := d.Get(consts.FieldKeyRef).(string)
+
+	warnDiags := pkiWarnManagedKeyWithMismatchedType(rootType, managedKeyID, managedKeyName, keyRef)
+	if len(warnDiags) > 0 {
+		diags = append(diags, warnDiags...)
+	}
+
 	client, e := provider.GetClient(d, meta)
 	if e != nil {
-		return diag.FromErr(e)
+		return append(diags, diag.FromErr(e)...)
 	}
 
 	backend := d.Get(consts.FieldBackend).(string)
-	rootType := d.Get(consts.FieldType).(string)
 
 	path := pkiSecretBackendGenerateRootPath(backend, rootType, provider.IsAPISupported(meta, provider.VaultVersion111))
 
@@ -616,7 +627,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 	log.Printf("[DEBUG] Creating root cert on PKI secret backend %q", backend)
 	resp, err := client.Logical().Write(path, data)
 	if err != nil {
-		return diag.Errorf("error creating root cert for PKI secret backend %q: %s", backend, err)
+		return append(diags, diag.Errorf("error creating root cert for PKI secret backend %q: %s", backend, err)...)
 	}
 	log.Printf("[DEBUG] Created root cert on PKI secret backend %q", backend)
 
@@ -642,7 +653,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 
 	for k, v := range certFieldsMap {
 		if err := d.Set(k, resp.Data[v]); err != nil {
-			return diag.FromErr(err)
+			return append(diags, diag.FromErr(err)...)
 		}
 	}
 
@@ -656,7 +667,7 @@ func pkiSecretBackendRootCertCreate(_ context.Context, d *schema.ResourceData, m
 
 	d.SetId(id)
 
-	return nil
+	return diags
 }
 
 func getCACertificate(client *api.Client, path string) (*x509.Certificate, error) {

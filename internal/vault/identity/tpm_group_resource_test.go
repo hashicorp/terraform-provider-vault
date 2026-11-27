@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
 // TestAccIdentityTPMGroup validates the complete lifecycle of a TPM group resource:
@@ -25,8 +26,8 @@ import (
 func TestAccIdentityTPMGroup(t *testing.T) {
 	renamedName := acctest.RandomWithPrefix("tpm-group")
 	resourceName := "vault_identity_tpm_group.test"
-	tpmOnePublicKey := testTPMPublicKey(t)
-	tpmTwoPublicKey := testTPMPublicKey(t)
+	tpmOnePublicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
+	tpmTwoPublicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 	var originalTPMGroupID string
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -132,8 +133,8 @@ func TestAccIdentityTPMGroup(t *testing.T) {
 func TestAccIdentityTPMGroup_metadata(t *testing.T) {
 	resourceName := "vault_identity_tpm_group.test"
 	groupName := acctest.RandomWithPrefix("tpm-group")
-	tpmOnePublicKey := testTPMPublicKey(t)
-	tpmTwoPublicKey := testTPMPublicKey(t)
+	tpmOnePublicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
+	tpmTwoPublicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 	var tpmGroupID string
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -270,8 +271,8 @@ func TestAccIdentityTPMGroup_metadata(t *testing.T) {
 func TestAccIdentityTPMGroup_memberTPMIds(t *testing.T) {
 	resourceName := "vault_identity_tpm_group.test"
 	groupName := acctest.RandomWithPrefix("tpm-group")
-	tpmOnePublicKey := testTPMPublicKey(t)
-	tpmTwoPublicKey := testTPMPublicKey(t)
+	tpmOnePublicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
+	tpmTwoPublicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 	var tpmGroupID string
 
 	resource.ParallelTest(t, resource.TestCase{

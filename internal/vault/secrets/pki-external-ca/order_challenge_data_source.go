@@ -5,14 +5,17 @@ package pki_external_ca
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	datasourcetimeouts "github.com/hashicorp/terraform-plugin-framework-timeouts/datasource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 
@@ -24,8 +27,8 @@ import (
 )
 
 const (
-	maxPollAttempts = 30
-	pollInterval    = 2 * time.Second
+	defaultPollInterval = 2 * time.Second
+	defaultPollTimeout  = 60 * time.Second
 )
 
 // Ensure the implementation satisfies the datasource.DataSource interface
@@ -45,12 +48,13 @@ type PKIExternalCAOrderChallengeDataSource struct {
 type PKIExternalCAOrderChallengeModel struct {
 	base.BaseModel
 
-	ID            types.String `tfsdk:"id"`
-	Mount         types.String `tfsdk:"mount"`
-	RoleName      types.String `tfsdk:"role_name"`
-	OrderID       types.String `tfsdk:"order_id"`
-	ChallengeType types.String `tfsdk:"challenge_type"`
-	Identifier    types.String `tfsdk:"identifier"`
+	ID            types.String             `tfsdk:"id"`
+	Mount         types.String             `tfsdk:"mount"`
+	RoleName      types.String             `tfsdk:"role_name"`
+	OrderID       types.String             `tfsdk:"order_id"`
+	ChallengeType types.String             `tfsdk:"challenge_type"`
+	Identifier    types.String             `tfsdk:"identifier"`
+	Timeouts      datasourcetimeouts.Value `tfsdk:"timeouts"`
 
 	// Computed fields
 	Token   types.String `tfsdk:"token"`
@@ -71,7 +75,7 @@ func (d *PKIExternalCAOrderChallengeDataSource) Metadata(_ context.Context, req 
 	resp.TypeName = req.ProviderTypeName + "_pki_external_ca_secret_backend_order_challenge"
 }
 
-func (d *PKIExternalCAOrderChallengeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *PKIExternalCAOrderChallengeDataSource) Schema(ctx context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			consts.FieldMount: schema.StringAttribute{
@@ -115,6 +119,9 @@ func (d *PKIExternalCAOrderChallengeDataSource) Schema(_ context.Context, _ data
 				Computed:            true,
 			},
 		},
+		Blocks: map[string]schema.Block{
+			"timeouts": datasourcetimeouts.Block(ctx),
+		},
 		MarkdownDescription: "Retrieves ACME challenge details for a specific identifier in an order.",
 	}
 
@@ -157,14 +164,44 @@ func orderStatus(ctx context.Context, cli *api.Client, mount, roleName, orderID 
 	return status, nil
 }
 
-func pollOrderStatus(ctx context.Context, cli *api.Client, mount, roleName, orderID string, attempts int, interval time.Duration, desired []string) error {
-	var status string
-	var err error
-	for range attempts {
-		status, err = orderStatus(ctx, cli, mount, roleName, orderID)
+// pollOrderStatus polls the order status endpoint every interval until the
+// order reaches one of the desired statuses, enters a terminal state, the
+// timeout elapses, or ctx is cancelled.
+//
+// The timeout is enforced through a context deadline, so it bounds the total
+// elapsed time including the Vault requests themselves. Invalid arguments are
+// replaced with their defaults: a non-positive timeout becomes
+// defaultPollTimeout and a non-positive interval becomes defaultPollInterval.
+// The status is always checked at least once before the deadline is evaluated.
+func pollOrderStatus(ctx context.Context, cli *api.Client, mount, roleName, orderID string, timeout, interval time.Duration, desired []string) error {
+	if timeout <= 0 {
+		timeout = defaultPollTimeout
+	}
+	if interval <= 0 {
+		interval = defaultPollInterval
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	var lastStatus string
+	for {
+		status, err := orderStatus(ctx, cli, mount, roleName, orderID)
 		if err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return pollStopError(orderID, desired, timeout, lastStatus, ctxErr)
+			}
 			return err
 		}
+		lastStatus = status
+
+		tflog.Debug(ctx, "Polling order status", map[string]any{
+			"mount":     mount,
+			"role_name": roleName,
+			"order_id":  orderID,
+			"status":    status,
+			"desired":   desired,
+		})
 
 		if strutil.StrListContains(desired, status) {
 			return nil
@@ -173,11 +210,24 @@ func pollOrderStatus(ctx context.Context, cli *api.Client, mount, roleName, orde
 			return fmt.Errorf("order %s is in terminal state '%s'", orderID, status)
 		}
 
-		time.Sleep(interval)
+		timer := time.NewTimer(interval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return pollStopError(orderID, desired, timeout, lastStatus, ctx.Err())
+		case <-timer.C:
+		}
 	}
+}
 
-	return fmt.Errorf("order %s did not reach %s status after %d attempts. Last status: %s",
-		orderID, desired, attempts, status)
+// pollStopError describes why polling stopped because the context ended,
+// wrapping the context error so callers can use errors.Is.
+func pollStopError(orderID string, desired []string, timeout time.Duration, lastStatus string, ctxErr error) error {
+	if errors.Is(ctxErr, context.DeadlineExceeded) {
+		return fmt.Errorf("order %s did not reach %s status within %s. Last status: %s: %w",
+			orderID, desired, timeout, lastStatus, ctxErr)
+	}
+	return fmt.Errorf("polling order %s was cancelled. Last status: %s: %w", orderID, lastStatus, ctxErr)
 }
 
 func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
@@ -207,10 +257,17 @@ func (d *PKIExternalCAOrderChallengeDataSource) Read(ctx context.Context, req da
 	challengeType := data.ChallengeType.ValueString()
 	identifier := data.Identifier.ValueString()
 
+	// Use the configured (or default) read timeout to bound order polling.
+	readTimeout, diags := data.Timeouts.Read(ctx, defaultPollTimeout)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Poll the order status endpoint until it reaches AwaitingChallengeFulfillment
-	if err := pollOrderStatus(ctx, cli, mount, roleName, orderID, maxPollAttempts, pollInterval, []string{"completed", "awaiting-challenge-fulfillment"}); err != nil {
+	if err := pollOrderStatus(ctx, cli, mount, roleName, orderID, readTimeout, defaultPollInterval, []string{"completed", "awaiting-challenge-fulfillment"}); err != nil {
 		resp.Diagnostics.AddError(
-			"Order status not awaiting-challenge-fulfillment",
+			"Order status not awaiting-challenge-fulfillment or completed",
 			err.Error())
 		return
 	}

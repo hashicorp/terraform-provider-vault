@@ -59,6 +59,26 @@ resource "vault_jwt_auth_backend" "example" {
 }
 ```
 
+Manage OIDC auth backend with write-only client ID and secret fed from an ephemeral KVv2 secret:
+
+```hcl
+ephemeral "vault_kv_secret_v2" "oidc" {
+    mount = "secret"
+    name  = "okta/vault-oidc"
+}
+
+resource "vault_jwt_auth_backend" "example" {
+    path                          = "oidc"
+    type                          = "oidc"
+    oidc_discovery_url            = "https://myco.auth0.com/"
+    oidc_client_id_wo             = ephemeral.vault_kv_secret_v2.oidc.data["client_id"]
+    oidc_client_id_wo_version     = 1  # Increment to update the client ID
+    oidc_client_secret_wo         = ephemeral.vault_kv_secret_v2.oidc.data["client_secret"]
+    oidc_client_secret_wo_version = 1  # Increment to update the secret
+    bound_issuer                  = "https://myco.auth0.com/"
+}
+```
+
 Configuring the auth backend with a `provider_config:
 
 ```hcl
@@ -94,6 +114,21 @@ resource "vault_jwt_auth_backend" "okta" {
 }
 ```
 
+Configuring the auth backend with custom/unsupported critical certificate extensions:
+
+```hcl
+resource "vault_jwt_auth_backend" "example" {
+    description                          = "OIDC backend in custom PKI environment"
+    path                                 = "oidc"
+    type                                 = "oidc"
+    oidc_discovery_url                   = "https://custom-idp.example.com"
+    oidc_client_id                       = "1234567890"
+    oidc_client_secret                   = "secret123456"
+    bound_issuer                         = "https://custom-idp.example.com"
+    unsupported_critical_cert_extensions = ["1.3.6.1.4.1.55813.1.2.1", "2.5.29.14"]
+}
+```
+
 
 ## Argument Reference
 
@@ -117,7 +152,9 @@ The following arguments are supported:
 
 * `oidc_discovery_ca_pem` - (Optional) The CA certificate or chain of certificates, in PEM format, to use to validate connections to the OIDC Discovery URL. If not set, system certificates are used
 
-* `oidc_client_id` - (Optional) Client ID used for OIDC backends
+* `oidc_client_id` - (Optional) Client ID used for OIDC backends. **Note:** This field is stored in state. To accept an ephemeral value, use `oidc_client_id_wo` instead.
+
+* `oidc_client_id_wo_version` - (Optional) Version counter for the write-only `oidc_client_id_wo` field. Must be at least `1`. Increment this value to trigger an update of the client ID in Vault. Required when using `oidc_client_id_wo`.
 
 * `oidc_client_secret` - (Optional) Client Secret used for OIDC backends. **Note:** This field is stored in state. For enhanced security, use `oidc_client_secret_wo` instead.
 
@@ -146,6 +183,8 @@ The following arguments are supported:
 * `local` - (Optional) Specifies if the auth method is local only.
 
 * `namespace_in_state` - (Optional) Pass namespace in the OIDC state parameter instead of as a separate query parameter. With this setting, the allowed redirect URL(s) in Vault and on the provider side should not contain a namespace query parameter. This means only one redirect URL entry needs to be maintained on the OIDC provider side for all vault namespaces that will be authenticating against it. Defaults to true for new configs
+
+* `unsupported_critical_cert_extensions` - (Optional) A list of ASN1 OIDs of certificate extensions marked Critical that are unsupported by Vault and should be ignored. This option should very rarely be needed except in specialized PKI environments. Requires Vault 1.18+.
 
 * tune - (Optional) Extra configuration block. Structure is documented below.
 
@@ -180,6 +219,8 @@ The `tune` block is used to tune the auth backend:
 ## Ephemeral Attributes Reference
 
 The following write-only attributes are supported:
+
+* `oidc_client_id_wo` - (Optional) Write-only Client ID used for OIDC backends. Accepts ephemeral values and is **never** stored in Terraform state. Mutually exclusive with `oidc_client_id`. Must be used with `oidc_client_id_wo_version`. To change the client ID, update the value and increment `oidc_client_id_wo_version`.
 
 * `oidc_client_secret_wo` - (Optional) Write-only Client Secret used for OIDC backends. This value will **never** be stored in Terraform state. Mutually exclusive with `oidc_client_secret`. Must be used with `oidc_client_secret_wo_version`. To rotate the secret, update the value and increment `oidc_client_secret_wo_version`.
 

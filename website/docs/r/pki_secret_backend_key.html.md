@@ -40,7 +40,7 @@ The following arguments are supported:
 
 * `backend` - (Required) The path the PKI secret backend is mounted at, with no leading or trailing `/`s.
 
-* `type` - (Required) Specifies the type of the key to create. Can be `exported`,`internal` or `kms`.
+* `type` - (Required) Specifies the type of the key to create. Can be `exported`,`internal` or `kms`. Note that `managed_key_id` and `managed_key_name` are only supported when `type` is `kms`.
 
 * `key_name` - (Optional) When a new key is created with this request, optionally specifies the name for this. 
   The global ref `default` may not be used as a name.
@@ -54,9 +54,9 @@ The following arguments are supported:
   2048 (default), 3072, or 4096; with `key_type=ec`, allowed values are: 224, 256 (default), 
   384, or 521; ignored with `key_type=ed25519`.
 
-* `managed_key_name` - (Optional) The managed key's configured name.
+* `managed_key_name` - (Optional) The managed key's configured name. This field is ignored if `type` is not `kms` and a warning is shown.
 
-* `managed_key_id` - (Optional) The managed key's UUID.
+* `managed_key_id` - (Optional) The managed key's UUID. This field is ignored if `type` is not `kms` and a warning is shown.
 
 
 ## Attributes Reference

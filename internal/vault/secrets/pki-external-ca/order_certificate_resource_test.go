@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/consts"
@@ -45,7 +46,7 @@ func TestAccPKIExternalCAOrderCertificateResource_basic(t *testing.T) {
 		},
 		Steps: []resource.TestStep{
 			{
-				Config: testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca),
+				Config: testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca, "2m"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, consts.FieldMount, backend),
 					resource.TestCheckResourceAttr(resourceName, "role_name", roleName),
@@ -60,13 +61,127 @@ func TestAccPKIExternalCAOrderCertificateResource_basic(t *testing.T) {
 				ImportState:                          true,
 				ImportStateVerify:                    true,
 				ImportStateIdFunc:                    testAccPKIExternalCAOrderCertificateImportStateIdFunc(resourceName),
+				ImportStateVerifyIgnore:              []string{"timeouts"},
 				ImportStateVerifyIdentifierAttribute: consts.FieldMount,
 			},
 		},
 	})
 }
 
-func testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca string) string {
+// TestAccPKIExternalCAOrderCertificateResource_timeoutUpdate verifies that adding,
+// changing, and removing the timeouts block updates the resource in-place and
+// preserves the computed certificate fields.
+func TestAccPKIExternalCAOrderCertificateResource_timeoutUpdate(t *testing.T) {
+	backend := acctest.RandomWithPrefix("tf-test-pki-ext-ca")
+	roleName := acctest.RandomWithPrefix("tf-role")
+	accountName := acctest.RandomWithPrefix("tf-acme-account")
+	identifier := "host.docker.internal"
+
+	resourceName := "vault_pki_external_ca_secret_backend_order_certificate.test"
+
+	acctestutil.SkipTestAccEnt(t)
+	ca, directoryUrl := setupVaultAndPebble(t)
+
+	computedAttrs := []string{"certificate", "ca_chain.#", "private_key", "serial_number"}
+	initial := map[string]string{}
+
+	// captureComputed records the computed attributes after the first step.
+	captureComputed := func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+		for _, k := range computedAttrs {
+			initial[k] = rs.Primary.Attributes[k]
+		}
+		return nil
+	}
+
+	// checkComputedUnchanged asserts the computed attributes match those captured earlier.
+	checkComputedUnchanged := func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("not found: %s", resourceName)
+		}
+		for _, k := range computedAttrs {
+			if got := rs.Primary.Attributes[k]; got != initial[k] {
+				return fmt.Errorf("attribute %q changed after timeout-only update", k)
+			}
+		}
+		return nil
+	}
+
+	expectUpdate := resource.ConfigPlanChecks{
+		PreApply: []plancheck.PlanCheck{
+			plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+		},
+	}
+
+	resource.Test(t, resource.TestCase{
+		ExternalProviders: map[string]resource.ExternalProvider{
+			"null": {
+				Source:            "hashicorp/null",
+				VersionConstraint: "3.2.4",
+			},
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion200)
+		},
+		Steps: []resource.TestStep{
+			{
+				// no timeouts block
+				Config: testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca, ""),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "certificate"),
+					resource.TestCheckResourceAttrSet(resourceName, "serial_number"),
+					captureComputed,
+				),
+			},
+			{
+				// add timeouts
+				Config:           testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca, "2m"),
+				ConfigPlanChecks: expectUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "timeouts.create", "2m"),
+					checkComputedUnchanged,
+				),
+			},
+			{
+				// change timeouts
+				Config:           testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca, "3m"),
+				ConfigPlanChecks: expectUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "timeouts.create", "3m"),
+					checkComputedUnchanged,
+				),
+			},
+			{
+				// remove timeouts
+				Config:           testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca, ""),
+				ConfigPlanChecks: expectUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckNoResourceAttr(resourceName, "timeouts.create"),
+					checkComputedUnchanged,
+				),
+			},
+		},
+	})
+}
+
+// testPKIExternalCAOrderCertificateResource_config returns the test configuration.
+// When createTimeout is empty, no timeouts block is rendered.
+func testPKIExternalCAOrderCertificateResource_config(backend, accountName, roleName, identifier, directoryUrl, ca, createTimeout string) string {
+	timeouts := ""
+	if createTimeout != "" {
+		timeouts = fmt.Sprintf(`
+  timeouts {
+    create = "%s"
+  }
+`, createTimeout)
+	}
+
 	return fmt.Sprintf(`
 resource "vault_mount" "test" {
   path        = "%s"
@@ -131,10 +246,10 @@ resource "vault_pki_external_ca_secret_backend_order_certificate" "test" {
   mount     = vault_mount.test.path
   role_name = vault_pki_external_ca_secret_backend_role.test.name
   order_id  = vault_pki_external_ca_secret_backend_order.test.order_id
-  
+
   depends_on = [vault_pki_external_ca_secret_backend_order_challenge_fulfilled.test]
-}
-`, backend, accountName, directoryUrl, ca, roleName, identifier, identifier, identifier)
+%s}
+`, backend, accountName, directoryUrl, ca, roleName, identifier, identifier, identifier, timeouts)
 }
 
 func testAccPKIExternalCAOrderCertificateImportStateIdFunc(resourceName string) resource.ImportStateIdFunc {

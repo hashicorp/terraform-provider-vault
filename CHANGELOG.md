@@ -1,12 +1,65 @@
-## 5.14.0 (Unreleased)
+## 5.14.0 (November 24, 2026)
 
 FEATURES:
 
-* `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3010](https://github.com/hashicorp/terraform-provider-vault/issues/3010))
+* `vault_ldap_auth_backend`: Add `schema` field to select the LDAP schema used when storing entry passwords. Accepted values are `openldap` (default) and `ad`. Active Directory users must set `ad`, as the schema also drives the encoding used by root credential rotation (`unicodePwd` vs `userPassword`). Requires Vault 2.0.0+, or Vault Enterprise 1.19.16+/1.20.10+/1.21.5+. ([#3013](https://github.com/hashicorp/terraform-provider-vault/pull/3013))
+* **New Resources**: Add support for Transit BYOK key import with the `vault_transit_secret_backend_imported_key` resource and `vault_transit_wrapping_key` data source. ([#3090](https://github.com/hashicorp/terraform-provider-vault/pull/3090))
+* **New Resources**: Add support for Transform BYOK key import with the `vault_transform_transformation_tokenization_imported_key` and `vault_transform_transformation_fpe_imported_key` resources and the `vault_transform_wrapping_key` data source. Requires Vault Enterprise. ([#3106](https://github.com/hashicorp/terraform-provider-vault/pull/3106))
+* **New Resource**: Manage FPE transformations in the Transform secrets engine with the `vault_transform_transformation_fpe` resource. ([#3108](https://github.com/hashicorp/terraform-provider-vault/pull/3108))
+* **New Resource**: Add `vault_transform_transformation_masking` resource to manage Transform masking transformations. Requires Vault Enterprise. ([#3116](https://github.com/hashicorp/terraform-provider-vault/pull/3116))
+
+IMPROVEMENTS:
+
+* `vault_jwt_auth_backend`: Add support for write-only `oidc_client_id_wo` and `oidc_client_id_wo_version` fields so the OIDC client ID can be set from ephemeral values. ([#3115](https://github.com/hashicorp/terraform-provider-vault/pull/3115))
+* docs: Document the `namespace` argument on the ephemeral resource `vault_kv_secret_v2`. ([#3115](https://github.com/hashicorp/terraform-provider-vault/pull/3115))
+* `vault_tpm_auth_backend_config`: Add `alias_mode` field to configure how the identity alias name is generated at login. Accepted values are `tpm_id` and `role_id`. Requires Vault Enterprise 2.2.3 or later. ([#3118](https://github.com/hashicorp/terraform-provider-vault/pull/3118))
+* `vault_pki_secret_backend_config_urls`, `vault_pki_secret_backend_issuer`: Add support for `delta_crl_distribution_points` to configure Delta CRL URLs. Requires Vault 1.20 or later. ([#3093](https://github.com/hashicorp/terraform-provider-vault/pull/3093))
+* `vault_jwt_auth_backend`: Add `unsupported_critical_cert_extensions` field to support whitelisting unsupported critical X.509 certificate extensions during OIDC discovery TLS handshakes. ([#3088](https://github.com/hashicorp/terraform-provider-vault/pull/3088))
+* `vault_pki_external_ca_secret_backend_order_challenge`: Add `timeouts` block with a `read` attribute to make the order-status polling duration configurable. Defaults to `60s`. ([#3095](https://github.com/hashicorp/terraform-provider-vault/pull/3095))
+* `vault_pki_external_ca_secret_backend_order_certificate`: Add `timeouts` block with a `create` attribute to make the order-status polling duration configurable. Defaults to `60s`. ([#3095](https://github.com/hashicorp/terraform-provider-vault/pull/3095))
+* `vault_transit_encrypt`: Add `hash_algorithm` and `padding_scheme` fields to support RSA key encryption with configurable hash algorithm and OAEP/PKCS1v15 padding. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
+* `vault_transit_decrypt`: Add `hash_algorithm` and `padding_scheme` fields to support RSA key decryption with configurable hash algorithm and OAEP/PKCS1v15 padding. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
+* `vault_managed_keys`: Add `rsa_oaep_hash` field to PKCS configuration block to specify the hash algorithm for RSA-OAEP encryption with `CKM_RSA_PKCS_OAEP`. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
+* `vault_managed_keys`: Add `encryption_mode` field to Azure configuration block to control AES-GCM envelope vs. direct KMS encryption. Requires Vault 2.2.0 or later. ([#3063](https://github.com/hashicorp/terraform-provider-vault/pull/3063))
+* `vault_pki_secret_backend_intermediate_cert_request`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning. ([#3126](https://github.com/hashicorp/terraform-provider-vault/pull/3126))
+* `vault_pki_secret_backend_root_cert`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`, or when `key_ref` is set while `type` is not `"existing"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning. ([#3126](https://github.com/hashicorp/terraform-provider-vault/pull/3126))
+* `vault_pki_secret_backend_key`: Warn when `managed_key_id` or `managed_key_name` is set while `type` is not `"kms"`. These configurations are silently ignored by Vault and will now emit a non-blocking warning. ([#3126](https://github.com/hashicorp/terraform-provider-vault/pull/3126))
+* `vault_tpm_auth_backend_role`: Add support for configuring roles using friendly identity names with `tpm_names` and `tpmgroup_names`. Requires Vault Enterprise 2.2.3 or later. ([#3123](https://github.com/hashicorp/terraform-provider-vault/pull/3123))
 
 BUG FIXES:
 
-* `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later.
+* `vault_ldap_secret_backend_static_role`: Fix `mount` and `role_name` not being populated in state when importing a role. ([#3121](https://github.com/hashicorp/terraform-provider-vault/pull/3121))
+* `vault_ldap_secret_backend_static_role`, `vault_ldap_secret_backend_dynamic_role`: Fix acceptance tests for `password_policy` failing on Vault Community Edition. Role-level `password_policy` is a Vault Enterprise feature and Vault Community Edition does not return it on read, so the tests now run only against Vault Enterprise 2.2.0 or later. ([#3100](https://github.com/hashicorp/terraform-provider-vault/pull/3100))
+* Fix `FlattenVaultDuration` returning `"0s"` instead of `""` for zero or unset duration values, which caused spurious diffs for duration fields across multiple resources. ([#3030](https://github.com/hashicorp/terraform-provider-vault/pull/3030))
+* `vault_identity_group_alias`: Fix "Provider produced inconsistent result after apply" when the post-create Read hits a stale performance-replica; the Read now goes through the Client Controlled Consistency retry client (honors `max_retries_ccc`), matching `vault_identity_entity_alias`. ([#2959](https://github.com/hashicorp/terraform-provider-vault/pull/2959))
+
+DEPENDENCIES:
+
+  * Build with Go 1.27.4
+  * Bumped 23 Go module dependencies ([#3129](https://github.com/hashicorp/terraform-provider-vault/pull/3129), [#3122](https://github.com/hashicorp/terraform-provider-vault/pull/3122), [#3114](https://github.com/hashicorp/terraform-provider-vault/pull/3114), [#3105](https://github.com/hashicorp/terraform-provider-vault/pull/3105), [#3102](https://github.com/hashicorp/terraform-provider-vault/pull/3102))
+  * `cloud.google.com/go/iam` v1.14.0 → v1.15.1
+  * `github.com/Azure/azure-sdk-for-go/sdk/azcore` v1.23.3 → v1.24.0
+  * `github.com/Azure/azure-sdk-for-go/sdk/azidentity` v1.14.1 → v1.15.0
+  * `github.com/aws/aws-sdk-go-v2` v1.47.3 → v1.48.0
+  * `github.com/aws/aws-sdk-go-v2/config` v1.33.9 → v1.33.21
+  * `github.com/aws/aws-sdk-go-v2/credentials` v1.20.9 → v1.21.3
+  * `github.com/aws/aws-sdk-go-v2/feature/ec2/imds` v1.20.3 → v1.20.9
+  * `github.com/aws/aws-sdk-go-v2/service/iam` v1.64.4 → v1.68.0
+  * `github.com/aws/aws-sdk-go-v2/service/sts` v1.51.4 → v1.53.0
+  * `github.com/aws/smithy-go` v1.28.5 → v1.28.9
+  * `github.com/go-sql-driver/mysql` v1.10.1 → v1.10.2
+  * `github.com/go-test/deep` v1.1.1 → v1.1.2
+  * `github.com/hashicorp/consul/api` v1.34.5 → v1.35.0
+  * `github.com/hashicorp/terraform-plugin-sdk/v2` v2.40.1 → v2.41.1
+  * `github.com/hashicorp/vault-plugin-auth-jwt` v0.27.1 → v0.27.3
+  * `github.com/hashicorp/vault-plugin-auth-kerberos` v0.18.0 → v0.18.1
+  * `github.com/hashicorp/vault-plugin-auth-oci` v0.22.0 → v0.22.1
+  * `github.com/moby/moby/client` v0.6.2 → v0.6.3
+  * `golang.org/x/crypto` v0.58.0 → v0.59.0
+  * `golang.org/x/net` v0.61.0 → v0.63.0
+  * `golang.org/x/oauth2` v0.37.0 → v0.38.0
+  * `google.golang.org/api` v0.301.0 → v0.316.0
+  * `google.golang.org/genproto` v0.0.0-20260911204522-f61a6ca850bd → v0.0.0-20261012220534-4341edf3f941
 
 ## 5.13.0 (October 14, 2026)
 
@@ -17,6 +70,7 @@ FEATURES:
 * **New Resources**: Add support for TPM Auth backend with `vault_identity_tpm`, `vault_identity_tpm_group`, `vault_tpm_auth_backend_config`, `vault_tpm_auth_backend_role` resources. Requires Vault Enterprise 2.2.0 or later. ([#2979](https://github.com/hashicorp/terraform-provider-vault/pull/2979))
 * **Azure Automated Rotation for Static Roles**: added support for automated rotation of credentials for static roles. Requires Vault 2.2.0 or later. ([#3069](https://github.com/hashicorp/terraform-provider-vault/pull/3069))
 * **New Resource for transform rewrapping**: Add new resource `vault_transform_rewrap` to support rewrapping FPE transformations. Requires Vault 2.2.0 or later. ([#3064](https://github.com/hashicorp/terraform-provider-vault/pull/3064))
+
 
 IMPROVEMENTS:
 

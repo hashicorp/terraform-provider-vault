@@ -53,9 +53,24 @@ resource "vault_database_secret_backend_connection" "postgres" {
 }
 ```
 
+Read a secret from a Vault Enterprise namespace:
+
+```hcl
+ephemeral "vault_kv_secret_v2" "okta" {
+  namespace = "devops"
+  mount     = "common"
+  name      = "okta/vault-oidc"
+}
+```
+
 ## Argument Reference
 
 The following arguments are supported:
+
+* `namespace` - (Optional) The namespace of the target resource.
+  The value should not contain leading or trailing forward slashes.
+  The `namespace` is always relative to the provider's configured [namespace](/docs/providers/vault/index.html#namespace).
+  *Available only for Vault Enterprise*.
 
 * `mount` - (Required) Mount path for the KVV2 engine in Vault without trailing or leading slashes.
 

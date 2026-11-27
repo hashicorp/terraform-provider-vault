@@ -97,6 +97,12 @@ func TestAccSpiffeSecretRoleResource(t *testing.T) {
 						"name", "the-role-name",
 						"template", subTemplate),
 					checkPresent(resourceAddress, "ttl", "use_jti_claim"),
+					resource.TestCheckResourceAttrWith(resourceAddress, "ttl", func(v string) error {
+						if v == "0s" {
+							return fmt.Errorf("ttl is %q: FlattenVaultDuration stored \"0s\" for an unset field", v)
+						}
+						return nil
+					}),
 				),
 			},
 			// Test that we can set TTL
