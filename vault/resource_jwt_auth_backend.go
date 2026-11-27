@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -153,11 +154,12 @@ func jwtAuthBackendResource() *schema.Resource {
 			},
 
 			consts.FieldJWTValidationPubkeys: {
-				Type:          schema.TypeList,
-				Elem:          &schema.Schema{Type: schema.TypeString},
-				Optional:      true,
-				ConflictsWith: []string{consts.FieldJWKSURL, consts.FieldOIDCDiscoveryURL},
-				Description:   "A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with 'jwks_url' or 'oidc_discovery_url'. ",
+				Type:             schema.TypeList,
+				Elem:             &schema.Schema{Type: schema.TypeString},
+				Optional:         true,
+				ConflictsWith:    []string{consts.FieldJWKSURL, consts.FieldOIDCDiscoveryURL},
+				DiffSuppressFunc: jwtValidationPubkeysDiffSuppress,
+				Description:      "A list of PEM-encoded public keys to use to authenticate signatures locally. Cannot be used with 'jwks_url' or 'oidc_discovery_url'. ",
 			},
 
 			consts.FieldBoundIssuer: {
@@ -219,6 +221,14 @@ func jwtAuthBackendResource() *schema.Resource {
 			"tune": authMountTuneSchema(),
 		},
 	}, false)
+}
+
+
+func jwtValidationPubkeysDiffSuppress(k, old, new string, d *schema.ResourceData) bool {
+	// Vault may return PEM material with different trailing whitespace than
+	// heredoc / HCL input. Compare trimmed values so unchanged keys do not
+	// permanently dirty the plan.
+	return strings.TrimSpace(old) == strings.TrimSpace(new)
 }
 
 func jwtCustomizeDiff(ctx context.Context, d *schema.ResourceDiff, meta interface{}) error {
