@@ -80,7 +80,10 @@ The following arguments are supported:
 * `path` - (Required) The path of the namespace. Must not have a trailing `/`.
 
 * `custom_metadata` - (Optional) Custom metadata describing this namespace. Value type
-  is `map[string]string`. Requires Vault version 1.12+.
+  is `map[string]string`. Requires Vault version 1.12+. Keys removed from this map, or
+  whose value is set to `null`, are removed from Vault. To remove all custom metadata, set
+  `custom_metadata = {}`. If the
+  argument is omitted, existing metadata on the namespace is left unchanged.
 
 ## Attributes Reference
 

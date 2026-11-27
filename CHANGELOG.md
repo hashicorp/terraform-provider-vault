@@ -1,3 +1,9 @@
+## Unreleased
+
+BUG FIXES:
+
+* `vault_namespace`: Fix `custom_metadata` keys not being removed from Vault when deleted from configuration or set to `null`. Set `custom_metadata = {}` to remove all metadata. ([#3124](https://github.com/hashicorp/terraform-provider-vault/pull/3124))
+
 ## 5.14.0 (November 24, 2026)
 
 FEATURES:
