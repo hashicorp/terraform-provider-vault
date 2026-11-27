@@ -16,22 +16,25 @@ import (
 	"github.com/hashicorp/terraform-provider-vault/acctestutil"
 	"github.com/hashicorp/terraform-provider-vault/internal/provider"
 	"github.com/hashicorp/terraform-provider-vault/internal/providertest"
+	"github.com/hashicorp/terraform-provider-vault/testutil"
 )
 
-// TestAccTPMAuthRole validates the complete lifecycle of vault_tpm_auth_backend_role:
-//   - Step 0: Validator rejects config with neither tpm_ids nor tpmgroup_ids
-//   - Step 1: Create with only required fields to verify Vault-computed defaults
+// TestAccTPMAuthRole validates the complete lifecycle of vault_tpm_auth_backend_role with IDs:
+//   - Step 1: Validator rejects config with neither tpm_ids/tpm_names nor tpmgroup_ids/tpmgroup_names
+//   - Step 2: Create with only required fields to verify Vault-computed defaults
 //     (display_name defaults to role name, cert_ttl=0, token_type="default")
-//   - Step 2: Set cert_ttl explicitly and add tpmgroup_ids
-//   - Step 3: Set cert_ttl back to 0 to "unset" it (Vault always returns a value)
-//   - Step 4: Set all token fields to verify token field round-trip
-//   - Step 5: Clear token fields and revert to minimal config, confirming defaults are restored
-//   - Step 6: Import to verify zero drift
-//   - Step 7: Destroy the role (keep the mount)
+//   - Step 3: Set cert_ttl explicitly and add tpmgroup_ids
+//   - Step 4: Set cert_ttl back to 0 to "unset" it (Vault always returns a value)
+//   - Step 5: Set all token fields to verify token field round-trip
+//   - Step 6: Clear token fields and revert to minimal config, confirming defaults are restored
+//   - Step 7: Import to verify zero drift
+//   - Step 8: Destroy the role (keep the mount)
 func TestAccTPMAuthRole(t *testing.T) {
 	mount := acctest.RandomWithPrefix("tpm-mount")
 	roleName := acctest.RandomWithPrefix("tpm-role")
 	tpmName := acctest.RandomWithPrefix("tpm")
+	groupName := acctest.RandomWithPrefix("tpm-grp")
+	publicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 	resourceName := "vault_tpm_auth_backend_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -41,15 +44,15 @@ func TestAccTPMAuthRole(t *testing.T) {
 		},
 		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
 		Steps: []resource.TestStep{
-			// Step 1: Validator rejects when neither tpm_ids nor tpmgroup_ids is set.
+			// Step 1: Validator rejects when no TPM IDs or names are set.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
 					mount:     mount,
 					roleName:  roleName,
 					tpmName:   tpmName,
-					omitTPMID: true,
+					publicKey: publicKey,
 				}),
-				ExpectError: regexp.MustCompile(`At least one attribute out of \[tpm_ids,tpmgroup_ids\] must be specified`),
+				ExpectError: regexp.MustCompile(`(?s)At least one attribute out of \[tpm_ids,tpm_names,tpmgroup_ids,tpmgroup_names\].*must be specified`),
 			},
 			// Step 2: Create with only required fields. Either tpm_ids or tpmgroup_ids must be set.
 			// Verifies that Vault-computed defaults are read back correctly:
@@ -58,9 +61,11 @@ func TestAccTPMAuthRole(t *testing.T) {
 			//   - token_type defaults to "default"
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
-					mount:    mount,
-					roleName: roleName,
-					tpmName:  tpmName,
+					mount:     mount,
+					roleName:  roleName,
+					tpmName:   tpmName,
+					publicKey: publicKey,
+					useTPMIDs: true,
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
@@ -84,9 +89,11 @@ func TestAccTPMAuthRole(t *testing.T) {
 					mount:          mount,
 					roleName:       roleName,
 					tpmName:        tpmName,
-					certTTL:        86400,
-					specifyCertTTL: true,
-					withTPMGroupID: true,
+					publicKey:      publicKey,
+					groupName:      groupName,
+					useTPMIDs:      true,
+					useTPMGroupIDs: true,
+					certTTL:        ptr(int64(86400)),
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
@@ -104,18 +111,18 @@ func TestAccTPMAuthRole(t *testing.T) {
 					},
 				},
 			},
-			// Step 4: Set cert_ttl back to 0 to "unset" it explicitly
-			// Vault always returns a value; 0 means "use backend default".
-			// Omit tpm_id to clear the entry.
+			// Step 4: Set cert_ttl back to 0 explicitly (Vault always returns a value; 0 means
+			// "use backend default") and clear tpm_ids by configuring only tpmgroup_ids.
+			// Verifies that omitting tpm_ids unsets it in Vault.
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
 					mount:          mount,
 					roleName:       roleName,
 					tpmName:        tpmName,
-					omitTPMID:      true,
-					withTPMGroupID: true,
-					certTTL:        0,
-					specifyCertTTL: true,
+					publicKey:      publicKey,
+					groupName:      groupName,
+					useTPMGroupIDs: true,
+					certTTL:        ptr(int64(0)),
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
@@ -140,9 +147,10 @@ func TestAccTPMAuthRole(t *testing.T) {
 					mount:          mount,
 					roleName:       roleName,
 					tpmName:        tpmName,
-					certTTL:        86400,
-					specifyCertTTL: true,
-					withTPMGroupID: true,
+					publicKey:      publicKey,
+					groupName:      groupName,
+					useTPMGroupIDs: true,
+					certTTL:        ptr(int64(86400)),
 					tokenTTL:       3600,
 					tokenMaxTTL:    7200,
 					tokenPolicies:  []string{"policy-a", "policy-b"},
@@ -170,9 +178,11 @@ func TestAccTPMAuthRole(t *testing.T) {
 			// cert_ttl reverts to 0 (Vault always returns a value).
 			{
 				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
-					mount:    mount,
-					roleName: roleName,
-					tpmName:  tpmName,
+					mount:     mount,
+					roleName:  roleName,
+					tpmName:   tpmName,
+					publicKey: publicKey,
+					useTPMIDs: true,
 				}),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
@@ -221,6 +231,7 @@ func TestAccTPMAuthRoleNamespace(t *testing.T) {
 	ns := acctest.RandomWithPrefix("ns")
 	roleName := acctest.RandomWithPrefix("tpm-role")
 	tpmName := acctest.RandomWithPrefix("tpm")
+	publicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
 	resourceName := "vault_tpm_auth_backend_role.test"
 
 	resource.ParallelTest(t, resource.TestCase{
@@ -233,7 +244,7 @@ func TestAccTPMAuthRoleNamespace(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Step 1: Create the role inside a namespace.
 			{
-				Config: testAccTPMAuthRoleNamespaceConfig(ns, mount, roleName, tpmName),
+				Config: testAccTPMAuthRoleNamespaceConfig(ns, mount, roleName, tpmName, publicKey),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "namespace", ns),
 					resource.TestCheckResourceAttr(resourceName, "mount", mount),
@@ -268,67 +279,263 @@ resource "vault_auth_backend" "tpm" {
 `, mount)
 }
 
+// TestAccTPMAuthRole_names validates vault_tpm_auth_backend_role configured using names:
+//   - Step 1: Create role with tpm_names
+//   - Step 2: Add tpmgroup_names
+//   - Step 3: Switch from names to IDs (in-place update)
+//   - Step 4: Import state (verified against the IDs configuration)
+//   - Step 5: Switch back from IDs to names (in-place update)
+func TestAccTPMAuthRole_names(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tpm-mount")
+	roleName := acctest.RandomWithPrefix("tpm-role")
+	tpmName := acctest.RandomWithPrefix("tpm")
+	groupName := acctest.RandomWithPrefix("tpm-grp")
+	publicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
+	resourceName := "vault_tpm_auth_backend_role.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctestutil.TestEntPreCheck(t)
+			acctestutil.SkipIfAPIVersionLT(t, provider.VaultVersion223)
+		},
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create with tpm_names.
+			{
+				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
+					mount:       mount,
+					roleName:    roleName,
+					tpmName:     tpmName,
+					publicKey:   publicKey,
+					groupName:   groupName,
+					useTPMNames: true,
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "display_name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "tpm_names.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tpm_names.*", tpmName),
+					resource.TestCheckNoResourceAttr(resourceName, "tpm_ids"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 2: Add tpmgroup_names.
+			{
+				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
+					mount:            mount,
+					roleName:         roleName,
+					tpmName:          tpmName,
+					publicKey:        publicKey,
+					groupName:        groupName,
+					useTPMNames:      true,
+					useTPMGroupNames: true,
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "tpm_names.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tpm_names.*", tpmName),
+					resource.TestCheckResourceAttr(resourceName, "tpmgroup_names.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tpmgroup_names.*", groupName),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 3: Switch to tpm_ids and tpmgroup_ids (in-place update).
+			{
+				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
+					mount:          mount,
+					roleName:       roleName,
+					tpmName:        tpmName,
+					publicKey:      publicKey,
+					groupName:      groupName,
+					useTPMIDs:      true,
+					useTPMGroupIDs: true,
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "tpm_ids.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "tpmgroup_ids.#", "1"),
+					resource.TestCheckNoResourceAttr(resourceName, "tpm_names"),
+					resource.TestCheckNoResourceAttr(resourceName, "tpmgroup_names"),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+			// Step 4: Import state while configured with IDs. On import there is no prior state,
+			// so Read always populates the ID attributes (Vault stores only IDs). Importing is
+			// therefore verified against the IDs configuration, with no ignored attributes.
+			{
+				ResourceName:                         resourceName,
+				ImportState:                          true,
+				ImportStateIdFunc:                    testAccTPMAuthRoleImportStateIdFunc(resourceName),
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "mount",
+			},
+			// Step 5: Switch back to tpm_names and tpmgroup_names.
+			{
+				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
+					mount:            mount,
+					roleName:         roleName,
+					tpmName:          tpmName,
+					publicKey:        publicKey,
+					groupName:        groupName,
+					useTPMNames:      true,
+					useTPMGroupNames: true,
+				}),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "mount", mount),
+					resource.TestCheckResourceAttr(resourceName, "name", roleName),
+					resource.TestCheckResourceAttr(resourceName, "tpm_names.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tpm_names.*", tpmName),
+					resource.TestCheckResourceAttr(resourceName, "tpmgroup_names.#", "1"),
+					resource.TestCheckTypeSetElemAttr(resourceName, "tpmgroup_names.*", groupName),
+				),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(resourceName, plancheck.ResourceActionUpdate),
+					},
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
+				},
+			},
+		},
+	})
+}
+
+// TestAccTPMAuthRole_conflicts verifies plan-time validation errors for mutually exclusive
+// attributes. No Vault calls are made, so no version or edition gating is needed.
+func TestAccTPMAuthRole_conflicts(t *testing.T) {
+	mount := acctest.RandomWithPrefix("tpm-mount")
+	roleName := acctest.RandomWithPrefix("tpm-role")
+	tpmName := acctest.RandomWithPrefix("tpm")
+	groupName := acctest.RandomWithPrefix("tpm-grp")
+	publicKey := testutil.GenerateRSAPublicKeyPEM(t, 2048)
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck:                 func() { acctestutil.TestAccPreCheck(t) },
+		ProtoV5ProviderFactories: providertest.ProtoV5ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Reject both tpm_ids and tpm_names.
+			{
+				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
+					mount:       mount,
+					roleName:    roleName,
+					tpmName:     tpmName,
+					publicKey:   publicKey,
+					groupName:   groupName,
+					useTPMIDs:   true,
+					useTPMNames: true,
+				}),
+				ExpectError: regexp.MustCompile(`(?s)Attribute "(tpm_ids|tpm_names)" cannot be specified when "(tpm_ids|tpm_names)" is.*specified`),
+			},
+			// Step 2: Reject both tpmgroup_ids and tpmgroup_names.
+			{
+				Config: testAccTPMAuthRoleConfig(tpmRoleFields{
+					mount:            mount,
+					roleName:         roleName,
+					tpmName:          tpmName,
+					publicKey:        publicKey,
+					groupName:        groupName,
+					useTPMGroupIDs:   true,
+					useTPMGroupNames: true,
+				}),
+				ExpectError: regexp.MustCompile(`(?s)Attribute "(tpmgroup_ids|tpmgroup_names)" cannot be specified when "(tpmgroup_ids|tpmgroup_names)" is.*specified`),
+			},
+		},
+	})
+}
+
+func ptr[T any](v T) *T { return &v }
+
 // tpmRoleFields holds all configurable parameters for testAccTPMAuthRoleConfig.
-// Zero-value fields are omitted from the rendered HCL.
+// Only attributes explicitly set to true or non-zero are emitted into the HCL.
 type tpmRoleFields struct {
-	mount          string
-	roleName       string
-	tpmName        string
-	certTTL        int64
-	specifyCertTTL bool
-	omitTPMID      bool
-	withTPMGroupID bool
-	tokenTTL       int64
-	tokenMaxTTL    int64
-	tokenPolicies  []string
-	tokenType      string
+	mount            string
+	roleName         string
+	tpmName          string
+	certTTL          *int64 // nil omits cert_ttl from the HCL; a pointer to 0 emits an explicit 0
+	publicKey        string
+	groupName        string
+	useTPMIDs        bool
+	useTPMNames      bool
+	useTPMGroupIDs   bool
+	useTPMGroupNames bool
+	tokenTTL         int64
+	tokenMaxTTL      int64
+	tokenPolicies    []string
+	tokenType        string
 }
 
 // testAccTPMAuthRoleConfig renders the full HCL for a vault_tpm_auth_backend_role
 // and its dependencies (mount, vault_identity_tpm, optionally vault_identity_tpm_group).
-// Only fields explicitly set via the fields struct are emitted.
 func testAccTPMAuthRoleConfig(f tpmRoleFields) string {
 	// Start with the auth backend mount.
 	config := testAccTPMAuthRoleMountOnlyConfig(f.mount)
 
-	// only needed when tpm_ids will be referenced
-	if !f.omitTPMID {
+	if f.groupName == "" {
+		f.groupName = f.roleName
+	}
+
+	// TPM identity resource
+	if f.tpmName != "" && f.publicKey != "" {
 		config += fmt.Sprintf(`
 resource "vault_identity_tpm" "test" {
   name              = %q
-  tpm_ek_public_key = <<EOT
------BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
------END PUBLIC KEY-----
-EOT
+  tpm_ek_public_key = %q
 }
-`, f.tpmName)
+`, f.tpmName, f.publicKey)
 	}
 
-	// only needed when tpmgroup_ids will be referenced
-	if f.withTPMGroupID {
+	// TPM group resource (created when groupName is provided and groups are referenced)
+	if f.groupName != "" && (f.useTPMGroupIDs || f.useTPMGroupNames) {
 		config += fmt.Sprintf(`
 resource "vault_identity_tpm_group" "test" {
   name = %q
 }
-`, f.roleName)
+`, f.groupName)
 	}
 
-	// Role resource and possible parameters
+	// Role resource and parameters
 	role := fmt.Sprintf(`
 resource "vault_tpm_auth_backend_role" "test" {
   mount = vault_auth_backend.tpm.path
   name  = %q
 `, f.roleName)
 
-	if !f.omitTPMID {
+	if f.useTPMIDs {
 		role += "  tpm_ids = [vault_identity_tpm.test.tpm_id]\n"
 	}
-	if f.withTPMGroupID {
+	if f.useTPMNames {
+		role += "  tpm_names = [vault_identity_tpm.test.name]\n"
+	}
+	if f.useTPMGroupIDs {
 		role += "  tpmgroup_ids = [vault_identity_tpm_group.test.tpm_group_id]\n"
 	}
-	if f.specifyCertTTL {
-		role += fmt.Sprintf("  cert_ttl = %d\n", f.certTTL)
+	if f.useTPMGroupNames {
+		role += "  tpmgroup_names = [vault_identity_tpm_group.test.name]\n"
+	}
+	if f.certTTL != nil {
+		role += fmt.Sprintf("  cert_ttl = %d\n", *f.certTTL)
 	}
 	if f.tokenTTL != 0 {
 		role += fmt.Sprintf("  token_ttl = %d\n", f.tokenTTL)
@@ -347,7 +554,7 @@ resource "vault_tpm_auth_backend_role" "test" {
 	return config + role
 }
 
-func testAccTPMAuthRoleNamespaceConfig(ns, mount, roleName, tpmName string) string {
+func testAccTPMAuthRoleNamespaceConfig(ns, mount, roleName, tpmName, publicKey string) string {
 	return fmt.Sprintf(`
 resource "vault_namespace" "test" {
   path = %q
@@ -362,11 +569,7 @@ resource "vault_auth_backend" "tpm" {
 resource "vault_identity_tpm" "test" {
   namespace = vault_namespace.test.path
   name      = %q
-  tpm_ek_public_key = <<EOT
------BEGIN PUBLIC KEY-----
-MCowBQYDK2VwAyEAu5YIWbS0JtKO6mgJrmMa24RHTACn2BF3OOd9N7BxtIA=
------END PUBLIC KEY-----
-EOT
+  tpm_ek_public_key = %q
 }
 
 resource "vault_tpm_auth_backend_role" "test" {
@@ -375,7 +578,7 @@ resource "vault_tpm_auth_backend_role" "test" {
   name      = %q
   tpm_ids   = [vault_identity_tpm.test.tpm_id]
 }
-`, ns, mount, tpmName, roleName)
+`, ns, mount, tpmName, publicKey, roleName)
 }
 
 // renderStringSlice renders a Go string slice as an HCL list literal,
